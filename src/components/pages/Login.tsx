@@ -34,7 +34,7 @@ const Login = () => {
   });
 
   const onSubmit = async (data: LoginFormValues) => {
-    console.log("login data", data);
+    console.log("login data ..", data);
   };
 
   return (
