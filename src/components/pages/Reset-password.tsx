@@ -29,11 +29,31 @@ import {
   ResetPasswordFormValues,
   resetPasswordSchema,
 } from "@/lib/schema/resetPasswordSchema";
+import { authClient } from "@/lib/auth-client";
 
 const ResetPassword = () => {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
-
+  if (!token) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-background/80 p-4">
+        <div className="w-full max-w-md">
+          <Card className="border-none shadow-lg">
+            <CardHeader className="space-y-1">
+              <CardTitle className="text-2xl font-bold text-center text-destructive">
+                Invalid Token
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-center">
+              <p className="text-muted-foreground mb-4">
+                The password reset link is invalid or has expired.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
   const form = useForm<ResetPasswordFormValues>({
     resolver: zodResolver(resetPasswordSchema),
     defaultValues: {
@@ -47,7 +67,26 @@ const ResetPassword = () => {
   const { toast } = useToast();
 
   const onSubmit = async (data: ResetPasswordFormValues) => {
-    console.log("reset password data", data);
+    setPending(true);
+    const { error } = await authClient.resetPassword({
+      newPassword: data.password,
+      token,
+    });
+    if (error) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description:
+          "Your password has been reset successfully. login to continue",
+      });
+      router.push("/login");
+    }
+    setPending(false);
   };
 
   return (

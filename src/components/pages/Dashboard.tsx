@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import { authClient } from "@/lib/auth-client";
 
 const Dashboard = () => {
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -11,7 +12,23 @@ const Dashboard = () => {
   const { toast } = useToast();
 
   const handleSignOut = async () => {
-    console.log('signout')
+    setIsSigningOut(true);
+    try {
+      await authClient.signOut();
+      toast({
+        title: "Signed out successfully",
+        description: "You have been signed out successfully.",
+      });
+      router.push("/login");
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "error signing out",
+        description: "there is a problem signing out",
+      });
+    } finally {
+      setIsSigningOut(false);
+    }
   };
 
   return (

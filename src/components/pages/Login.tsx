@@ -20,6 +20,7 @@ import { useRouter } from "next/navigation";
 import { GoogleAuthButton } from "@/components/Auth/GoogleAuthButton";
 import { InputField, CheckboxField } from "@/components/Auth/FormFields";
 import { LoginFormValues, loginSchema } from "@/lib/schema/loginSchema";
+import { authClient } from "@/lib/auth-client";
 const Login = () => {
   const [pending, setPending] = useState(false);
   const { toast } = useToast();
@@ -34,7 +35,31 @@ const Login = () => {
   });
 
   const onSubmit = async (data: LoginFormValues) => {
-    console.log("login data ..", data);
+    form.reset();
+    await authClient.signIn.email(
+      {
+        email: data.email,
+        password: data.password,
+        rememberMe: data.rememberMe,
+      },
+      {
+        onRequest: () => {
+          setPending(true);
+        },
+        onSuccess: () => {
+          router.push("/dashboard");
+        },
+        onError: (ctx) => {
+          console.log("error", ctx);
+          toast({
+            variant: "destructive",
+            title: "something went wrong",
+            description: ctx.error.message ?? "something went wrong",
+          });
+        },
+      },
+    );
+    setPending(false);
   };
 
   return (

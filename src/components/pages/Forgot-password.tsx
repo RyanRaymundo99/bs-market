@@ -29,6 +29,7 @@ import {
   ForgotPasswordFormValues,
   forgotPasswordSchema,
 } from "@/lib/schema/forgotPasswordSchema";
+import { authClient } from "@/lib/auth-client";
 
 const ForgotPassword = () => {
   const form = useForm<ForgotPasswordFormValues>({
@@ -41,7 +42,26 @@ const ForgotPassword = () => {
   const { toast } = useToast();
 
   const onSubmit = async (data: ForgotPasswordFormValues) => {
-    console.log("this is forget password data", data);
+    setPending(true);
+    const { error } = await authClient.forgetPassword({
+      email: data.email,
+      redirectTo: "/reset-password",
+    });
+    if (error) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Success",
+        description:
+          "If an account exists with this email, you will receive a password reset link",
+        variant: "default",
+      });
+    }
+    setPending(false);
   };
 
   return (
