@@ -1,5 +1,5 @@
 "use client";
-import { Mail, Lock, Eye, EyeOff } from "lucide-react";
+import {  Eye, EyeOff } from "lucide-react";
 import {
   FormField,
   FormItem,
@@ -10,10 +10,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
+import { Control, FieldValues, Path } from "react-hook-form";
 
-type InputFieldProps = {
-  control: any;
-  name: string;
+// Generic type for InputFieldProps
+// Default to FieldValues if not specified
+
+type InputFieldProps<T extends FieldValues = FieldValues> = {
+  control: Control<T>;
+  name: Path<T>;
   label: string;
   placeholder: string;
   type: "email" | "password" | "text";
@@ -21,17 +25,16 @@ type InputFieldProps = {
   showPasswordToggle?: boolean;
 };
 
-export const InputField = ({
+export function InputField<T extends FieldValues = FieldValues>({
   control,
   name,
   label,
   placeholder,
   type,
-  icon = <Mail className="h-5 w-5 text-muted-foreground" />,
+  icon,
   showPasswordToggle = false,
-}: InputFieldProps) => {
+}: InputFieldProps<T>) {
   const [showPassword, setShowPassword] = useState(false);
-
   return (
     <FormField
       control={control}
@@ -42,24 +45,33 @@ export const InputField = ({
           <FormControl>
             <div className="relative">
               {icon && (
-                <div className="absolute left-3 top-2.5 h-5 w-5">{icon}</div>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2">
+                  {icon}
+                </span>
               )}
               <Input
-                type={showPasswordToggle && showPassword ? "text" : type}
-                placeholder={placeholder}
-                className={icon ? "pl-10" : ""}
                 {...field}
+                type={
+                  type === "password"
+                    ? showPassword
+                      ? "text"
+                      : "password"
+                    : type
+                }
+                placeholder={placeholder}
+                className={`pl-10 pr-10 ${showPasswordToggle ? "pr-16" : ""}`}
               />
-              {showPasswordToggle && (
+              {showPasswordToggle && type === "password" && (
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground"
+                  tabIndex={-1}
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                  onClick={() => setShowPassword((prev) => !prev)}
                 >
                   {showPassword ? (
-                    <EyeOff className="h-5 w-5" />
+                    <EyeOff className="h-5 w-5 text-muted-foreground" />
                   ) : (
-                    <Eye className="h-5 w-5" />
+                    <Eye className="h-5 w-5 text-muted-foreground" />
                   )}
                 </button>
               )}
@@ -70,32 +82,33 @@ export const InputField = ({
       )}
     />
   );
-};
+}
 
-type CheckboxFieldProps = {
-  control: any;
-  name: string;
+// CheckboxField for boolean fields
+
+type CheckboxFieldProps<T extends FieldValues = FieldValues> = {
+  control: Control<T>;
+  name: Path<T>;
   label: string;
 };
 
-export const CheckboxField = ({ control, name, label }: CheckboxFieldProps) => {
+export function CheckboxField<T extends FieldValues = FieldValues>({
+  control,
+  name,
+  label,
+}: CheckboxFieldProps<T>) {
   return (
     <FormField
       control={control}
       name={name}
       render={({ field }) => (
-        <FormItem>
-          <div className="flex items-center space-x-2">
-            <FormControl>
-              <Checkbox
-                checked={field.value}
-                onCheckedChange={field.onChange}
-              />
-            </FormControl>
-            <FormLabel className="!mt-0 cursor-pointer">{label}</FormLabel>
-          </div>
+        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+          <FormControl>
+            <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+          </FormControl>
+          <FormLabel className="font-normal">{label}</FormLabel>
         </FormItem>
       )}
     />
   );
-};
+}

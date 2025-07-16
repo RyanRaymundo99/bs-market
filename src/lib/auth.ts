@@ -5,6 +5,11 @@ import { sendEmail } from "@/lib/email";
 import { nextCookies } from "better-auth/next-js";
 
 const prisma = new PrismaClient();
+
+
+
+
+
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "mongodb",
@@ -24,15 +29,18 @@ export const auth = betterAuth({
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID as string,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+      redirectURL: `${process.env.BETTER_AUTH_URL}/api/auth/callback/google`,
     },
   },
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     updateAge: 60 * 60 * 24 * 7,
     cookieCache: {
-      enabled: true,
-      maxAge: 5 * 60,
+      enabled: false, // Disable cookie caching to prevent session data size issues
     },
+    cookieName: "better-auth.session",
+    cookieSecure: process.env.NODE_ENV === "production",
+    cookieSameSite: "lax",
   },
   emailVerification: {
     sendOnSignUp: true,
