@@ -41,20 +41,20 @@ const NEWS = [
     time: "Há 2h",
     description:
       "Após uma forte alta na semana passada que levou o Bitcoin a um novo recorde histórico de $118.667, a principal criptomoeda do mundo parece estar fazendo uma pausa.",
-    image: "https://bitcoin.org/img/icons/opengraph.png?1648897668",
+    image: "/next.svg",
   },
   {
     title: "Meus colegas porcos e eu estamos nos banqueteando.",
     time: "Há 2h",
     description:
       "Robert Kiyosaki, autor de “Pai Rico, Pai Pobre”, voltou ao mercado de Bitcoin com uma jogada ousada.",
-    image: "https://bitcoin.org/img/icons/opengraph.png?1648897668",
+    image: "/next.svg",
   },
   {
     title: "",
     time: "Há 3h",
     description: "",
-    image: "https://bitcoin.org/img/icons/opengraph.png?1648897668",
+    image: "/next.svg",
   },
 ];
 
