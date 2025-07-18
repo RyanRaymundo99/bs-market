@@ -2,14 +2,21 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { sendEmail } from "@/lib/email";
 import { nextCookies } from "better-auth/next-js";
-import prisma from "@/lib/prisma";
 
+// Lazy initialization to avoid build-time issues
+let prismaInstance: any = null;
 
-
-
+const getPrisma = () => {
+  if (!prismaInstance) {
+    // Dynamic import to avoid build-time instantiation
+    const { default: prisma } = require("@/lib/prisma");
+    prismaInstance = prisma;
+  }
+  return prismaInstance;
+};
 
 export const auth = betterAuth({
-  database: prismaAdapter(prisma, {
+  database: prismaAdapter(getPrisma(), {
     provider: "mongodb",
   }),
   emailAndPassword: {
