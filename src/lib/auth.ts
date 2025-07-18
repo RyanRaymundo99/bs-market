@@ -2,13 +2,16 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { sendEmail } from "@/lib/email";
 import { nextCookies } from "better-auth/next-js";
+import type { BetterAuth } from "better-auth";
 
 // Lazy initialization - only create auth when accessed
-let authInstance: any = null;
+let authInstance: BetterAuth | null = null;
 
-export const getAuth = () => {
+export const getAuth = (): BetterAuth => {
   if (!authInstance) {
     // Only import and instantiate Prisma when this function is called
+    // Using dynamic import with synchronous require for compatibility
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { default: prisma } = require("@/lib/prisma");
 
     authInstance = betterAuth({
