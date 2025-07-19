@@ -50,12 +50,27 @@ export const getAuth = (): BetterAuth => {
         sendOnSignUp: true,
         autoSignInAfterVerification: true,
         sendVerificationEmail: async ({ user, token }) => {
+          console.log("🔍 Verification email requested for:", user.email);
+          console.log("🔍 Token:", token);
+          console.log("🔍 BETTER_AUTH_URL:", process.env.BETTER_AUTH_URL);
+          console.log(
+            "🔍 EMAIL_VERIFICATION_CALLBACK_URL:",
+            process.env.EMAIL_VERIFICATION_CALLBACK_URL
+          );
+
           const verificationUrl = `${process.env.BETTER_AUTH_URL}/api/auth/verify-email?token=${token}&callbackURL=${process.env.EMAIL_VERIFICATION_CALLBACK_URL}`;
-          await sendEmail({
-            to: user.email,
-            subject: "Verify your email address",
-            text: `Click the link to verify your email address: ${verificationUrl}`,
-          });
+          console.log("🔍 Verification URL:", verificationUrl);
+
+          try {
+            const result = await sendEmail({
+              to: user.email,
+              subject: "Verify your email address",
+              text: `Click the link to verify your email address: ${verificationUrl}`,
+            });
+            console.log("🔍 Email send result:", result);
+          } catch (error) {
+            console.error("❌ Error in sendVerificationEmail:", error);
+          }
         },
       },
       plugins: [nextCookies()],
