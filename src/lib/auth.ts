@@ -2,12 +2,11 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { sendEmail } from "@/lib/email";
 import { nextCookies } from "better-auth/next-js";
-import type { BetterAuth } from "better-auth";
 
 // Lazy initialization - only create auth when accessed
-let authInstance: BetterAuth | null = null;
+let authInstance: ReturnType<typeof betterAuth> | null = null;
 
-export const getAuth = (): BetterAuth => {
+export const getAuth = (): ReturnType<typeof betterAuth> => {
   if (!authInstance) {
     // Only import and instantiate Prisma when this function is called
     // Using dynamic import with synchronous require for compatibility
