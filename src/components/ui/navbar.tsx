@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Gift, Calculator, ChevronDown, LogOut } from "lucide-react";
+import { Calculator, ChevronDown, LogOut } from "lucide-react";
 import CalculatorModal from "./calculator-modal";
 
 // Import translations type for type safety
@@ -153,10 +153,6 @@ export default function Navbar({ isLoggingOut, handleLogout }: NavbarProps) {
           <LogOut className="w-4 h-4" />
           {isLoggingOut ? "Saindo..." : "Sair"}
         </Button>
-        <Badge className="bg-primary text-primary-foreground">
-          <Gift className="w-3 h-3 mr-1" />
-          CRIPTO GRÁTIS
-        </Badge>
         <Button
           variant="ghost"
           size="sm"
