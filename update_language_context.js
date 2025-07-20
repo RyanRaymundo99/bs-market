@@ -2,7 +2,6 @@ const fs = require("fs");
 const path = require("path");
 
 const pagesToUpdate = [
-  "src/app/pacotes/page.tsx",
   "src/app/otc/page.tsx",
   "src/app/negociacao-maxima/page.tsx",
   "src/app/negociacao-basica/page.tsx",

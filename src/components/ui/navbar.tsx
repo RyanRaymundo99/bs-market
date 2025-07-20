@@ -7,13 +7,13 @@ import CalculatorModal from "./calculator-modal";
 
 // Import translations type for type safety
 const NAV_LINKS = [
-  { label: "home", href: "/dashboard" },
-  { label: "trade", href: "#", dropdown: true },
-  { label: "deposit", href: "/depositar" },
-  { label: "withdraw", href: "/sacar" },
-  { label: "pay", href: "/pagar" },
-  { label: "portfolio", href: "/portfolio" },
-  { label: "transactions", href: "/extrato" },
+  { label: "Início", href: "/dashboard" },
+  { label: "Negociar", href: "#", dropdown: true },
+  { label: "Depositar", href: "/depositar" },
+  { label: "Sacar", href: "/sacar" },
+  { label: "Pagar", href: "/pagar" },
+  { label: "Portfólio", href: "/portfolio" },
+  { label: "Transações", href: "/extrato" },
 ];
 
 const NEGOCIAR_OPTIONS = [
@@ -40,12 +40,6 @@ const NEGOCIAR_OPTIONS = [
     desc: "Negocie altos valores com liquidez, agilidade e segurança",
     icon: null,
     href: "/otc",
-  },
-  {
-    title: "Pacotes",
-    desc: "Pacotes compostos de criptomoedas",
-    icon: null,
-    href: "/pacotes",
   },
 ];
 
