@@ -1,6 +1,5 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calculator, ChevronDown, LogOut } from "lucide-react";
 import CalculatorModal from "./calculator-modal";
