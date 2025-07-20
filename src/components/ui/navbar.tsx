@@ -7,7 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Calculator, ChevronDown, LogOut } from "lucide-react";
+import { Clock, ChevronDown, LogOut } from "lucide-react";
 import CalculatorModal from "./calculator-modal";
 
 // Import translations type for type safety
@@ -149,7 +149,7 @@ export default function Navbar({ isLoggingOut, handleLogout }: NavbarProps) {
           title="Calculadora"
           className="text-white hover:text-blue-300 hover:bg-white/10"
         >
-          <Calculator className="w-4 h-4" />
+          <Clock className="w-4 h-4" />
         </Button>
       </div>
       {/* Calculator Modal */}
