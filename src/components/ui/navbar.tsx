@@ -1,6 +1,12 @@
 "use client";
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Calculator, ChevronDown, LogOut } from "lucide-react";
 import CalculatorModal from "./calculator-modal";
 
@@ -48,28 +54,9 @@ interface NavbarProps {
 }
 
 export default function Navbar({ isLoggingOut, handleLogout }: NavbarProps) {
-  const [showNegociar, setShowNegociar] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        setShowNegociar(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
 
   const handleNavigation = (href: string) => {
-    setShowNegociar(false);
     if (href.startsWith("/")) {
       window.location.href = window.location.origin + href;
     } else {
@@ -78,7 +65,7 @@ export default function Navbar({ isLoggingOut, handleLogout }: NavbarProps) {
   };
 
   return (
-    <header className="w-full bg-black/60 border-b border-white/10 backdrop-blur-[20px] flex items-center justify-between px-6 py-3">
+    <header className="w-full bg-black/60 border-b border-white/10 backdrop-blur-[20px] flex items-center justify-between px-6 py-3 relative z-50">
       <div className="flex items-center gap-6">
         {/* Logo */}
         <div
@@ -94,42 +81,42 @@ export default function Navbar({ isLoggingOut, handleLogout }: NavbarProps) {
         <nav className="hidden md:flex gap-6 relative">
           {NAV_LINKS.map((link) =>
             link.dropdown ? (
-              <div key={link.label} className="relative" ref={dropdownRef}>
-                <button
-                  className="text-white/80 hover:text-blue-300 font-medium transition-colors flex items-center gap-1 focus:outline-none"
-                  onClick={() => setShowNegociar(!showNegociar)}
+              <DropdownMenu key={link.label}>
+                <DropdownMenuTrigger asChild>
+                  <button className="text-white/80 hover:text-blue-300 font-medium transition-colors flex items-center gap-1 focus:outline-none">
+                    {link.label} <ChevronDown className="w-4 h-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  className="w-80 bg-black/90 border border-white/20 backdrop-blur-[20px] relative overflow-hidden"
+                  sideOffset={8}
                 >
-                  {link.label} <ChevronDown className="w-4 h-4" />
-                </button>
-                {showNegociar && (
-                  <div className="absolute left-0 mt-2 w-80 bg-black/80 border border-white/10 rounded-xl shadow-2xl backdrop-blur-[20px] z-50 p-4 relative overflow-hidden">
-                    {/* Mirror effect overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-50"></div>
-                    <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-                    <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
+                  {/* Mirror effect overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-50"></div>
+                  <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                  <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
 
-                    <div className="flex flex-col gap-3 relative z-10">
-                      {NEGOCIAR_OPTIONS.map((opt) => (
-                        <div
-                          key={opt.title}
-                          className="flex gap-3 items-start hover:bg-white/10 rounded-lg p-2 cursor-pointer transition-colors"
-                          onClick={() => handleNavigation(opt.href)}
-                        >
-                          {opt.icon && <span>{opt.icon}</span>}
-                          <div>
-                            <div className="font-semibold text-base text-white">
-                              {opt.title}
-                            </div>
-                            <div className="text-sm text-gray-300">
-                              {opt.desc}
-                            </div>
+                  <div className="relative z-10 p-2">
+                    {NEGOCIAR_OPTIONS.map((opt) => (
+                      <DropdownMenuItem
+                        key={opt.title}
+                        className="flex gap-3 items-start hover:bg-white/10 rounded-lg p-3 cursor-pointer transition-colors focus:bg-white/10 focus:text-white"
+                        onClick={() => handleNavigation(opt.href)}
+                      >
+                        {opt.icon && <span>{opt.icon}</span>}
+                        <div>
+                          <div className="font-semibold text-base text-white">
+                            {opt.title}
+                          </div>
+                          <div className="text-sm text-gray-300">
+                            {opt.desc}
                           </div>
                         </div>
-                      ))}
-                    </div>
+                      </DropdownMenuItem>
+                    ))}
                   </div>
-                )}
-              </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : (
               <a
                 key={link.label}
