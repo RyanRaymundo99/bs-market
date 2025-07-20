@@ -13,7 +13,7 @@ import Link from "next/link";
 interface AuthLayoutProps {
   children: React.ReactNode;
   title: string;
-  description: string;
+  description: React.ReactNode;
   showLogo?: boolean;
   showBackButton?: boolean;
   onBack?: () => void;

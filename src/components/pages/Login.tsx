@@ -67,7 +67,7 @@ const Login = () => {
 
   return (
     <AuthLayout
-      title="Entrar no Build Strategy"
+      title="Build Strategy"
       description={
         <>
           Não tem uma conta?{" "}
