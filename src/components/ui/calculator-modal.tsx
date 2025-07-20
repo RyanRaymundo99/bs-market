@@ -19,6 +19,8 @@ export default function CalculatorModal({
   isOpen,
   onClose,
 }: CalculatorModalProps) {
+  console.log("CalculatorModal rendered with isOpen:", isOpen);
+
   const [fromCurrency, setFromCurrency] = useState<"BRL" | "BTC">("BRL");
   const [toCurrency, setToCurrency] = useState<"BRL" | "BTC">("BTC");
   const [quantity, setQuantity] = useState("");
@@ -78,7 +80,7 @@ export default function CalculatorModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-black/80 border border-white/10 max-w-md backdrop-blur-[20px] relative overflow-hidden">
+      <DialogContent className="bg-black/80 border border-white/10 max-w-md backdrop-blur-[20px] relative overflow-hidden z-[9999]">
         {/* Mirror effect overlay */}
         <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-50"></div>
         <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>

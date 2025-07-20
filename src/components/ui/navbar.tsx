@@ -65,10 +65,12 @@ export default function Navbar({ isLoggingOut, handleLogout }: NavbarProps) {
   };
 
   const handleCalculatorOpen = () => {
+    console.log("Opening calculator modal...");
     setShowCalculator(true);
   };
 
   const handleCalculatorClose = () => {
+    console.log("Closing calculator modal...");
     setShowCalculator(false);
   };
 
@@ -160,6 +162,14 @@ export default function Navbar({ isLoggingOut, handleLogout }: NavbarProps) {
           <Timer className="w-4 h-4" />
         </Button>
       </div>
+
+      {/* Debug info */}
+      {showCalculator && (
+        <div className="fixed top-0 left-0 bg-red-500 text-white p-2 z-[9999]">
+          Modal should be open! State: {showCalculator.toString()}
+        </div>
+      )}
+
       {/* Calculator Modal */}
       <CalculatorModal
         isOpen={showCalculator}
