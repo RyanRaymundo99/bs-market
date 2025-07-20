@@ -7,12 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
-// import { GoogleAuthButton } from "@/components/Auth/GoogleAuthButton";
 import { InputField } from "@/components/Auth/FormFields";
 import { SignUpFormValues, signUpSchema } from "@/lib/schema/signupSchema";
 import { authClient } from "@/lib/auth-client";
 import { AuthLayout } from "@/components/ui/auth-layout";
-// import { Separator } from "@/components/ui/separator";
 
 const Signup = () => {
   const form = useForm<SignUpFormValues>({
@@ -72,17 +70,27 @@ const Signup = () => {
   return (
     <AuthLayout
       title="Criar uma conta"
-      description="Digite suas informações para criar sua conta"
+      description={
+        <>
+          Já tem uma conta?{" "}
+          <Link href="/login" className="text-blue-300 hover:text-blue-200 hover:underline transition-colors">
+            Fazer login
+          </Link>
+          .
+        </>
+      }
+      showLogo={false}
     >
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <InputField
             control={form.control}
             name="name"
             label="Nome completo"
             placeholder="João Silva"
             type="text"
-            icon={<User className="h-5 w-5 text-muted-foreground" />}
+            icon={<User className="h-5 w-5 text-gray-300" />}
+            labelPosition="top"
           />
 
           <InputField
@@ -91,7 +99,8 @@ const Signup = () => {
             label="Email"
             placeholder="joao.silva@exemplo.com"
             type="email"
-            icon={<Mail className="h-5 w-5 text-muted-foreground" />}
+            icon={<Mail className="h-5 w-5 text-gray-300" />}
+            labelPosition="top"
           />
 
           <InputField
@@ -100,8 +109,9 @@ const Signup = () => {
             label="Senha"
             placeholder="••••••••"
             type="password"
-            icon={<Lock className="h-5 w-5 text-muted-foreground" />}
+            icon={<Lock className="h-5 w-5 text-gray-300" />}
             showPasswordToggle={true}
+            labelPosition="top"
           />
 
           <InputField
@@ -110,57 +120,48 @@ const Signup = () => {
             label="Confirmar senha"
             placeholder="••••••••"
             type="password"
-            icon={<Lock className="h-5 w-5 text-muted-foreground" />}
+            icon={<Lock className="h-5 w-5 text-gray-300" />}
             showPasswordToggle={true}
+            labelPosition="top"
           />
 
-          <Button type="submit" className="w-full" disabled={pending}>
+          <Button 
+            type="submit" 
+            className="w-full bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-white/30 transition-all duration-200 h-12 text-base font-medium backdrop-blur-[10px] relative overflow-hidden" 
+            disabled={pending}
+            style={{
+              boxShadow: 'inset 0 1px 0 0 rgba(255, 255, 255, 0.1)',
+            }}
+          >
+            {/* Mirror effect for button */}
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-30 pointer-events-none rounded-md"></div>
+            <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+            
             {pending ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Aguarde...
+                <Loader2 className="h-4 w-4 animate-spin mr-2 relative z-10" />
+                <span className="relative z-10">Aguarde...</span>
               </>
             ) : (
               <>
-                Criar conta <ArrowRight className="h-4 w-4" />
+                <span className="relative z-10">Criar conta</span>
+                <ArrowRight className="h-4 w-4 ml-2 relative z-10" />
               </>
             )}
           </Button>
         </form>
       </Form>
 
-      {/* Google Authentication - Temporarily Hidden */}
-      {/* 
-      <div className="mt-6">
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <Separator />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-card px-2 text-muted-foreground">
-              Ou continue com
-            </span>
-          </div>
-        </div>
-
-        <div className="mt-4">
-          <GoogleAuthButton
-            action="login"
-            buttonText="Entrar com Google"
-            redirectTo="/dashboard"
-          />
-        </div>
-      </div>
-      */}
-
-      <div className="mt-6 text-center text-sm">
-        Já tem uma conta?{" "}
-        <Link
-          href="/login"
-          className="font-medium text-primary underline-offset-4 hover:underline"
-        >
-          Fazer login
+      <div className="mt-8 text-center text-xs text-gray-300">
+        Ao criar uma conta, você concorda com nossos{" "}
+        <Link href="/terms" className="text-blue-300 hover:text-blue-200 hover:underline">
+          Termos
+        </Link>{" "}
+        e{" "}
+        <Link href="/privacy" className="text-blue-300 hover:text-blue-200 hover:underline">
+          Política de Privacidade
         </Link>
+        .
       </div>
     </AuthLayout>
   );

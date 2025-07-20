@@ -70,16 +70,21 @@ const ResetPassword = () => {
   if (!token) {
     return (
       <AuthLayout
-        title="Invalid Reset Link"
-        description="The password reset link is invalid or has expired"
+        title="Link de redefinição inválido"
+        description="O link de redefinição de senha é inválido ou expirou"
         showLogo={true}
       >
         <div className="text-center space-y-4">
-          <p className="text-muted-foreground">
-            Please request a new password reset link.
+          <p className="text-gray-400">
+            Por favor, solicite um novo link de redefinição de senha.
           </p>
           <Link href="/forgot-password">
-            <Button variant="outline">Request New Link</Button>
+            <Button
+              variant="outline"
+              className="border-gray-700 text-gray-300 hover:bg-gray-800"
+            >
+              Solicitar novo link
+            </Button>
           </Link>
         </div>
       </AuthLayout>
@@ -88,55 +93,59 @@ const ResetPassword = () => {
 
   return (
     <AuthLayout
-      title="Reset Password"
-      description="Enter your new password"
+      title="Redefinir senha"
+      description="Digite sua nova senha"
       showBackButton={true}
       onBack={() => router.back()}
     >
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <InputField
             control={form.control}
             name="password"
-            label="New Password"
+            label="Nova senha"
             placeholder="••••••••"
             type="password"
-            icon={<Lock className="h-5 w-5 text-muted-foreground" />}
+            icon={<Lock className="h-5 w-5 text-gray-400" />}
             showPasswordToggle={true}
           />
 
           <InputField
             control={form.control}
             name="confirmPassword"
-            label="Confirm New Password"
+            label="Confirmar nova senha"
             placeholder="••••••••"
             type="password"
-            icon={<Lock className="h-5 w-5 text-muted-foreground" />}
+            icon={<Lock className="h-5 w-5 text-gray-400" />}
             showPasswordToggle={true}
           />
 
-          <Button type="submit" className="w-full" disabled={pending}>
+          <Button
+            type="submit"
+            className="w-full bg-gray-800 hover:bg-gray-700 text-white border border-gray-700 hover:border-gray-600 transition-all duration-200 h-12 text-base font-medium"
+            disabled={pending}
+          >
             {pending ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Please wait...
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Aguarde...
               </>
             ) : (
               <>
-                Reset password <ArrowRight className="h-4 w-4" />
+                Redefinir senha <ArrowRight className="h-4 w-4 ml-2" />
               </>
             )}
           </Button>
         </form>
       </Form>
 
-      <div className="mt-6 text-center text-sm">
-        Remember your password?{" "}
+      <div className="mt-8 text-center text-sm text-gray-400">
+        Lembra da sua senha?{" "}
         <Link
           href="/login"
-          className="font-medium text-primary underline-offset-4 hover:underline"
+          className="font-medium text-blue-400 underline-offset-4 hover:text-blue-300 hover:underline transition-colors"
         >
-          Back to login
+          Voltar ao login
         </Link>
       </div>
     </AuthLayout>
