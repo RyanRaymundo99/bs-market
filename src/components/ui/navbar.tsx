@@ -29,12 +29,12 @@ const NEGOCIAR_OPTIONS = [
     icon: null,
     href: "/negociacao-avancada",
   },
-  {
-    title: "Negociação maximizada",
-    desc: "Maximize suas negociações de criptoativos e aumente o potencial de retorno",
-    icon: null,
-    href: "/negociacao-maxima",
-  },
+  // {
+  //   title: "Negociação maximizada",
+  //   desc: "Maximize suas negociações de criptoativos e aumente o potencial de retorno",
+  //   icon: null,
+  //   href: "/negociacao-maxima",
+  // },
   {
     title: "OTC",
     desc: "Negocie altos valores com liquidez, agilidade e segurança",
