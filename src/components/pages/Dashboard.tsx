@@ -47,7 +47,7 @@ const NEWS = [
     title: "Meus colegas porcos e eu estamos nos banqueteando.",
     time: "Há 2h",
     description:
-      "Robert Kiyosaki, autor de "Pai Rico, Pai Pobre", voltou ao mercado de Bitcoin com uma jogada ousada.",
+      "Robert Kiyosaki, autor de 'Pai Rico, Pai Pobre', voltou ao mercado de Bitcoin com uma jogada ousada.",
     image: "/next.svg",
   },
   {
@@ -87,13 +87,11 @@ export default function Dashboard() {
               <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-50"></div>
               <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
               <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
-              
+
               <div className="text-lg font-bold mb-2 relative z-10">Saldo</div>
               <div className="flex justify-between items-center relative z-10">
                 <div>
-                  <div className="text-sm text-gray-300">
-                    Disponível
-                  </div>
+                  <div className="text-sm text-gray-300">Disponível</div>
                   <div className="text-2xl font-bold">R$0,00</div>
                 </div>
                 <div className="flex flex-col gap-2">
@@ -101,7 +99,7 @@ export default function Dashboard() {
                     size="sm"
                     className="bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-white/30 transition-all duration-200 backdrop-blur-[10px] relative overflow-hidden"
                     style={{
-                      boxShadow: 'inset 0 1px 0 0 rgba(255, 255, 255, 0.1)',
+                      boxShadow: "inset 0 1px 0 0 rgba(255, 255, 255, 0.1)",
                     }}
                     onClick={() => (window.location.href = "/depositar")}
                   >
@@ -115,7 +113,7 @@ export default function Dashboard() {
                     variant="outline"
                     className="bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-white/30 transition-all duration-200 backdrop-blur-[10px] relative overflow-hidden"
                     style={{
-                      boxShadow: 'inset 0 1px 0 0 rgba(255, 255, 255, 0.1)',
+                      boxShadow: "inset 0 1px 0 0 rgba(255, 255, 255, 0.1)",
                     }}
                     onClick={() => (window.location.href = "/sacar")}
                   >
@@ -144,9 +142,13 @@ export default function Dashboard() {
                     <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-50"></div>
                     <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
                     <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
-                    
-                    <Badge className="mb-2 relative z-10 bg-white/10 text-white border-white/20">{coin.name}</Badge>
-                    <div className="text-lg font-bold relative z-10">{coin.price}</div>
+
+                    <Badge className="mb-2 relative z-10 bg-white/10 text-white border-white/20">
+                      {coin.name}
+                    </Badge>
+                    <div className="text-lg font-bold relative z-10">
+                      {coin.price}
+                    </div>
                     <div className="text-green-400 font-semibold relative z-10">
                       {coin.change}
                     </div>
@@ -164,8 +166,10 @@ export default function Dashboard() {
               <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-50"></div>
               <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
               <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
-              
-              <div className="text-lg font-bold mb-2 relative z-10">Portfólio</div>
+
+              <div className="text-lg font-bold mb-2 relative z-10">
+                Portfólio
+              </div>
               <div className="flex justify-between items-center mb-2 relative z-10">
                 <div className="text-sm text-gray-300">Total</div>
                 <div className="text-2xl font-bold">R$0,00</div>
@@ -211,7 +215,7 @@ export default function Dashboard() {
               <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-50"></div>
               <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
               <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
-              
+
               <Image
                 src="/user-profile.svg"
                 alt="Statement"
@@ -232,8 +236,10 @@ export default function Dashboard() {
             <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-50"></div>
             <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
             <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
-            
-            <div className="text-lg font-bold mb-4 relative z-10">Novidades</div>
+
+            <div className="text-lg font-bold mb-4 relative z-10">
+              Novidades
+            </div>
             <div className="flex flex-col gap-4 relative z-10">
               {NEWS.map((item, idx) => (
                 <div
@@ -241,9 +247,7 @@ export default function Dashboard() {
                   className="flex flex-col gap-2 border-b border-white/10 pb-4 last:border-b-0 last:pb-0"
                 >
                   <div className="font-semibold text-base">{item.title}</div>
-                  <div className="text-xs text-gray-300">
-                    {item.time}
-                  </div>
+                  <div className="text-xs text-gray-300">{item.time}</div>
                   <div className="text-sm text-gray-300">
                     {item.description}
                   </div>
