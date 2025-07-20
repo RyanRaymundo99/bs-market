@@ -78,19 +78,17 @@ export default function Navbar({ isLoggingOut, handleLogout }: NavbarProps) {
   };
 
   return (
-    <header className="w-full bg-card/80 border-b border-border flex items-center justify-between px-6 py-3">
+    <header className="w-full bg-black/60 border-b border-white/10 backdrop-blur-[20px] flex items-center justify-between px-6 py-3">
       <div className="flex items-center gap-6">
         {/* Logo */}
         <div
           className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
           onClick={() => handleNavigation("/dashboard")}
         >
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <span className="text-sm font-bold text-primary-foreground">
-              📈
-            </span>
+          <div className="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center border border-white/20">
+            <span className="text-sm font-bold text-white">📈</span>
           </div>
-          <span className="text-lg font-bold text-primary">Build Strategy</span>
+          <span className="text-lg font-bold text-white">Build Strategy</span>
         </div>
         {/* Navigation */}
         <nav className="hidden md:flex gap-6 relative">
@@ -98,26 +96,31 @@ export default function Navbar({ isLoggingOut, handleLogout }: NavbarProps) {
             link.dropdown ? (
               <div key={link.label} className="relative" ref={dropdownRef}>
                 <button
-                  className="text-foreground/80 hover:text-primary font-medium transition-colors flex items-center gap-1 focus:outline-none"
+                  className="text-white/80 hover:text-blue-300 font-medium transition-colors flex items-center gap-1 focus:outline-none"
                   onClick={() => setShowNegociar(!showNegociar)}
                 >
                   {link.label} <ChevronDown className="w-4 h-4" />
                 </button>
                 {showNegociar && (
-                  <div className="absolute left-0 mt-2 w-80 bg-card border border-border rounded-xl shadow-lg z-50 p-4">
-                    <div className="flex flex-col gap-3">
+                  <div className="absolute left-0 mt-2 w-80 bg-black/80 border border-white/10 rounded-xl shadow-2xl backdrop-blur-[20px] z-50 p-4 relative overflow-hidden">
+                    {/* Mirror effect overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-50"></div>
+                    <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                    <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
+
+                    <div className="flex flex-col gap-3 relative z-10">
                       {NEGOCIAR_OPTIONS.map((opt) => (
                         <div
                           key={opt.title}
-                          className="flex gap-3 items-start hover:bg-primary/10 rounded-lg p-2 cursor-pointer transition-colors"
+                          className="flex gap-3 items-start hover:bg-white/10 rounded-lg p-2 cursor-pointer transition-colors"
                           onClick={() => handleNavigation(opt.href)}
                         >
                           {opt.icon && <span>{opt.icon}</span>}
                           <div>
-                            <div className="font-semibold text-base text-foreground">
+                            <div className="font-semibold text-base text-white">
                               {opt.title}
                             </div>
-                            <div className="text-sm text-muted-foreground">
+                            <div className="text-sm text-gray-300">
                               {opt.desc}
                             </div>
                           </div>
@@ -131,7 +134,7 @@ export default function Navbar({ isLoggingOut, handleLogout }: NavbarProps) {
               <a
                 key={link.label}
                 href={link.href}
-                className="text-foreground/80 hover:text-primary font-medium transition-colors"
+                className="text-white/80 hover:text-blue-300 font-medium transition-colors"
               >
                 {link.label}
               </a>
@@ -147,7 +150,7 @@ export default function Navbar({ isLoggingOut, handleLogout }: NavbarProps) {
           size="sm"
           onClick={handleLogout}
           disabled={isLoggingOut}
-          className="gap-2"
+          className="gap-2 text-white hover:text-blue-300 hover:bg-white/10"
         >
           <LogOut className="w-4 h-4" />
           {isLoggingOut ? "Saindo..." : "Sair"}
@@ -157,6 +160,7 @@ export default function Navbar({ isLoggingOut, handleLogout }: NavbarProps) {
           size="sm"
           onClick={() => setShowCalculator(true)}
           title="Calculadora"
+          className="text-white hover:text-blue-300 hover:bg-white/10"
         >
           <Calculator className="w-4 h-4" />
         </Button>

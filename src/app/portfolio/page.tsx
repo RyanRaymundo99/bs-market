@@ -20,7 +20,6 @@ import {
 } from "lucide-react";
 
 export default function PortfolioPage() {
-
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = async () => {
@@ -113,7 +112,7 @@ export default function PortfolioPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-black text-white">
       {/* Universal Navbar */}
       <Navbar isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
 
@@ -125,14 +124,19 @@ export default function PortfolioPage() {
         </div>
 
         {/* Total Assets Summary */}
-        <div className="bg-card rounded-xl p-6 mb-8 shadow-lg">
-          <div className="flex items-center justify-between">
+        <div className="bg-black/60 border border-white/10 rounded-xl p-6 mb-8 shadow-2xl backdrop-blur-[20px] relative overflow-hidden">
+          {/* Mirror effect overlay */}
+          <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-50"></div>
+          <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+          <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
+
+          <div className="flex items-center justify-between relative z-10">
             <div>
-              <h2 className="text-lg font-semibold text-muted-foreground mb-2">
+              <h2 className="text-lg font-semibold text-gray-300 mb-2">
                 Patrimônio Total
               </h2>
               <div className="flex items-center gap-4">
-                <div className="text-3xl font-bold">R$ 0,00</div>
+                <div className="text-3xl font-bold text-white">R$ 0,00</div>
                 <div className="flex items-center gap-1 text-green-500 font-semibold">
                   <TrendingUp className="w-4 h-4" />
                   +0,00%
@@ -141,52 +145,72 @@ export default function PortfolioPage() {
             </div>
             <div className="flex gap-3">
               <Button
-                variant="secondary"
-                className="bg-muted hover:bg-muted/80 text-white"
+                className="bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-white/30 transition-all duration-200 backdrop-blur-[10px] relative overflow-hidden"
+                style={{
+                  boxShadow: "inset 0 1px 0 0 rgba(255, 255, 255, 0.1)",
+                }}
                 onClick={() => (window.location.href = "/depositar")}
               >
-                Depositar
+                {/* Mirror effect for button */}
+                <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-30 pointer-events-none rounded-md"></div>
+                <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                <span className="relative z-10">Depositar</span>
               </Button>
               <Button
-                variant="secondary"
-                className="bg-muted hover:bg-muted/80 text-white"
+                className="bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-white/30 transition-all duration-200 backdrop-blur-[10px] relative overflow-hidden"
+                style={{
+                  boxShadow: "inset 0 1px 0 0 rgba(255, 255, 255, 0.1)",
+                }}
                 onClick={() => (window.location.href = "/negociacao-basica")}
               >
-                Negociar
+                {/* Mirror effect for button */}
+                <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-30 pointer-events-none rounded-md"></div>
+                <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                <span className="relative z-10">Negociar</span>
               </Button>
               <Button
-                variant="secondary"
-                className="bg-muted hover:bg-muted/80 text-white"
+                className="bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-white/30 transition-all duration-200 backdrop-blur-[10px] relative overflow-hidden"
+                style={{
+                  boxShadow: "inset 0 1px 0 0 rgba(255, 255, 255, 0.1)",
+                }}
                 onClick={() => (window.location.href = "/sacar")}
               >
-                Sacar
+                {/* Mirror effect for button */}
+                <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-30 pointer-events-none rounded-md"></div>
+                <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                <span className="relative z-10">Sacar</span>
               </Button>
             </div>
           </div>
         </div>
 
         {/* Assets Table */}
-        <div className="bg-card rounded-xl shadow-lg overflow-hidden">
-          <div className="overflow-x-auto">
+        <div className="bg-black/60 border border-white/10 rounded-xl shadow-2xl backdrop-blur-[20px] overflow-hidden relative">
+          {/* Mirror effect overlay */}
+          <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-50"></div>
+          <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+          <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
+
+          <div className="overflow-x-auto relative z-10">
             <table className="w-full">
-              <thead className="bg-muted/50 border-b border-border">
+              <thead className="bg-white/5 border-b border-white/10">
                 <tr>
-                  <th className="text-left p-4 font-semibold text-muted-foreground">
+                  <th className="text-left p-4 font-semibold text-gray-300">
                     Moeda
                   </th>
-                  <th className="text-left p-4 font-semibold text-muted-foreground">
+                  <th className="text-left p-4 font-semibold text-gray-300">
                     Saldo disponível
                   </th>
-                  <th className="text-left p-4 font-semibold text-muted-foreground">
+                  <th className="text-left p-4 font-semibold text-gray-300">
                     Saldo em uso
                   </th>
-                  <th className="text-left p-4 font-semibold text-muted-foreground">
+                  <th className="text-left p-4 font-semibold text-gray-300">
                     <div className="flex items-center gap-1">
                       Saldo total
                       <ChevronDown className="w-4 h-4" />
                     </div>
                   </th>
-                  <th className="text-left p-4 font-semibold text-muted-foreground">
+                  <th className="text-left p-4 font-semibold text-gray-300">
                     Ações
                   </th>
                 </tr>
@@ -195,7 +219,7 @@ export default function PortfolioPage() {
                 {portfolioAssets.map((asset) => (
                   <tr
                     key={asset.id}
-                    className="border-b border-border/50 hover:bg-muted/20 transition-colors"
+                    className="border-b border-white/10 hover:bg-white/5 transition-colors"
                   >
                     <td className="p-4">
                       <div className="flex items-center gap-3">
@@ -205,37 +229,37 @@ export default function PortfolioPage() {
                           {asset.icon}
                         </div>
                         <div>
-                          <div className="font-semibold">{asset.name}</div>
-                          <div className="text-sm text-muted-foreground">
+                          <div className="font-semibold text-white">
+                            {asset.name}
+                          </div>
+                          <div className="text-sm text-gray-300">
                             {asset.symbol}
                           </div>
                         </div>
                       </div>
                     </td>
                     <td className="p-4">
-                      <div className="font-semibold">
+                      <div className="font-semibold text-white">
                         {asset.availableBalance}
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        {asset.value}
-                      </div>
+                      <div className="text-sm text-gray-300">{asset.value}</div>
                     </td>
                     <td className="p-4">
-                      <div className="font-semibold">{asset.inUseBalance}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {asset.value}
+                      <div className="font-semibold text-white">
+                        {asset.inUseBalance}
                       </div>
+                      <div className="text-sm text-gray-300">{asset.value}</div>
                     </td>
                     <td className="p-4">
-                      <div className="font-semibold">{asset.totalBalance}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {asset.value}
+                      <div className="font-semibold text-white">
+                        {asset.totalBalance}
                       </div>
+                      <div className="text-sm text-gray-300">{asset.value}</div>
                     </td>
                     <td className="p-4">
                       <div className="flex gap-4">
                         <button
-                          className="text-primary hover:text-primary/80 transition-colors flex items-center gap-1 text-sm"
+                          className="text-blue-300 hover:text-blue-200 transition-colors flex items-center gap-1 text-sm"
                           onClick={() =>
                             (window.location.href = "/negociacao-basica")
                           }
@@ -244,14 +268,14 @@ export default function PortfolioPage() {
                           Negociar
                         </button>
                         <button
-                          className="text-primary hover:text-primary/80 transition-colors flex items-center gap-1 text-sm"
+                          className="text-blue-300 hover:text-blue-200 transition-colors flex items-center gap-1 text-sm"
                           onClick={() => (window.location.href = "/depositar")}
                         >
                           <ArrowDown className="w-3 h-3" />
                           Depositar
                         </button>
                         <button
-                          className="text-primary hover:text-primary/80 transition-colors flex items-center gap-1 text-sm"
+                          className="text-blue-300 hover:text-blue-200 transition-colors flex items-center gap-1 text-sm"
                           onClick={() => (window.location.href = "/sacar")}
                         >
                           <ArrowUp className="w-3 h-3" />
@@ -273,25 +297,40 @@ export default function PortfolioPage() {
             parseFloat(asset.inUseBalance.replace(",", ".")) === 0
         ) && (
           <div className="text-center py-12">
-            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-              <Building2 className="w-8 h-8 text-muted-foreground" />
+            <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/20">
+              <Building2 className="w-8 h-8 text-gray-300" />
             </div>
-            <h3 className="text-lg font-semibold mb-2">Portfólio Vazio</h3>
-            <p className="text-muted-foreground mb-6">
+            <h3 className="text-lg font-semibold mb-2 text-white">
+              Portfólio Vazio
+            </h3>
+            <p className="text-gray-300 mb-6">
               Comece a investir depositando fundos ou negociando ativos
             </p>
             <div className="flex gap-3 justify-center">
               <Button
                 onClick={() => (window.location.href = "/depositar")}
-                className="bg-primary hover:bg-primary/90"
+                className="bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-white/30 transition-all duration-200 backdrop-blur-[10px] relative overflow-hidden"
+                style={{
+                  boxShadow: "inset 0 1px 0 0 rgba(255, 255, 255, 0.1)",
+                }}
               >
-                Fazer Primeiro Depósito
+                {/* Mirror effect for button */}
+                <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-30 pointer-events-none rounded-md"></div>
+                <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                <span className="relative z-10">Fazer Primeiro Depósito</span>
               </Button>
               <Button
                 variant="outline"
                 onClick={() => (window.location.href = "/negociacao-basica")}
+                className="bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-white/30 transition-all duration-200 backdrop-blur-[10px] relative overflow-hidden"
+                style={{
+                  boxShadow: "inset 0 1px 0 0 rgba(255, 255, 255, 0.1)",
+                }}
               >
-                Começar a Negociar
+                {/* Mirror effect for button */}
+                <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-30 pointer-events-none rounded-md"></div>
+                <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                <span className="relative z-10">Começar a Negociar</span>
               </Button>
             </div>
           </div>

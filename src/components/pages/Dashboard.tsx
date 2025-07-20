@@ -47,7 +47,7 @@ const NEWS = [
     title: "Meus colegas porcos e eu estamos nos banqueteando.",
     time: "Há 2h",
     description:
-      "Robert Kiyosaki, autor de “Pai Rico, Pai Pobre”, voltou ao mercado de Bitcoin com uma jogada ousada.",
+      "Robert Kiyosaki, autor de "Pai Rico, Pai Pobre", voltou ao mercado de Bitcoin com uma jogada ousada.",
     image: "/next.svg",
   },
   {
@@ -71,7 +71,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-black text-white">
       {/* Universal Navbar */}
       <Navbar isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
 
@@ -82,11 +82,16 @@ export default function Dashboard() {
           {/* Balance and Top Movers */}
           <div className="grid md:grid-cols-3 gap-8">
             {/* Balance */}
-            <div className="bg-card rounded-xl p-6 flex flex-col gap-4 shadow">
-              <div className="text-lg font-bold mb-2">Saldo</div>
-              <div className="flex justify-between items-center">
+            <div className="bg-black/60 border border-white/10 rounded-xl p-6 flex flex-col gap-4 shadow-2xl backdrop-blur-[20px] relative overflow-hidden">
+              {/* Mirror effect overlay */}
+              <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-50"></div>
+              <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+              <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
+              
+              <div className="text-lg font-bold mb-2 relative z-10">Saldo</div>
+              <div className="flex justify-between items-center relative z-10">
                 <div>
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-sm text-gray-300">
                     Disponível
                   </div>
                   <div className="text-2xl font-bold">R$0,00</div>
@@ -94,22 +99,35 @@ export default function Dashboard() {
                 <div className="flex flex-col gap-2">
                   <Button
                     size="sm"
-                    variant="secondary"
+                    className="bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-white/30 transition-all duration-200 backdrop-blur-[10px] relative overflow-hidden"
+                    style={{
+                      boxShadow: 'inset 0 1px 0 0 rgba(255, 255, 255, 0.1)',
+                    }}
                     onClick={() => (window.location.href = "/depositar")}
                   >
-                    Depositar
+                    {/* Mirror effect for button */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-30 pointer-events-none rounded-md"></div>
+                    <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                    <span className="relative z-10">Depositar</span>
                   </Button>
                   <Button
                     size="sm"
                     variant="outline"
+                    className="bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-white/30 transition-all duration-200 backdrop-blur-[10px] relative overflow-hidden"
+                    style={{
+                      boxShadow: 'inset 0 1px 0 0 rgba(255, 255, 255, 0.1)',
+                    }}
                     onClick={() => (window.location.href = "/sacar")}
                   >
-                    Sacar
+                    {/* Mirror effect for button */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-30 pointer-events-none rounded-md"></div>
+                    <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                    <span className="relative z-10">Sacar</span>
                   </Button>
                 </div>
               </div>
-              <div className="flex justify-between items-center mt-2">
-                <div className="text-sm text-muted-foreground">Em uso</div>
+              <div className="flex justify-between items-center mt-2 relative z-10">
+                <div className="text-sm text-gray-300">Em uso</div>
                 <div className="text-lg font-semibold">R$0,00</div>
               </div>
             </div>
@@ -120,11 +138,16 @@ export default function Dashboard() {
                 {TOP_MOVERS.map((coin) => (
                   <div
                     key={coin.name}
-                    className="bg-card rounded-xl p-4 flex-1 flex flex-col items-center shadow"
+                    className="bg-black/60 border border-white/10 rounded-xl p-4 flex-1 flex flex-col items-center shadow-2xl backdrop-blur-[20px] relative overflow-hidden"
                   >
-                    <Badge className="mb-2">{coin.name}</Badge>
-                    <div className="text-lg font-bold">{coin.price}</div>
-                    <div className="text-green-400 font-semibold">
+                    {/* Mirror effect overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-50"></div>
+                    <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                    <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
+                    
+                    <Badge className="mb-2 relative z-10 bg-white/10 text-white border-white/20">{coin.name}</Badge>
+                    <div className="text-lg font-bold relative z-10">{coin.price}</div>
+                    <div className="text-green-400 font-semibold relative z-10">
                       {coin.change}
                     </div>
                   </div>
@@ -136,14 +159,19 @@ export default function Dashboard() {
           {/* Portfolio and Statement */}
           <div className="grid md:grid-cols-2 gap-8">
             {/* Portfolio */}
-            <div className="bg-card rounded-xl p-6 flex flex-col gap-4 shadow">
-              <div className="text-lg font-bold mb-2">Portfólio</div>
-              <div className="flex justify-between items-center mb-2">
-                <div className="text-sm text-muted-foreground">Total</div>
+            <div className="bg-black/60 border border-white/10 rounded-xl p-6 flex flex-col gap-4 shadow-2xl backdrop-blur-[20px] relative overflow-hidden">
+              {/* Mirror effect overlay */}
+              <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-50"></div>
+              <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+              <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
+              
+              <div className="text-lg font-bold mb-2 relative z-10">Portfólio</div>
+              <div className="flex justify-between items-center mb-2 relative z-10">
+                <div className="text-sm text-gray-300">Total</div>
                 <div className="text-2xl font-bold">R$0,00</div>
                 <div className="text-green-400 font-semibold">0,00%</div>
               </div>
-              <div className="divide-y divide-border">
+              <div className="divide-y divide-white/10 relative z-10">
                 {PORTFOLIO.map((asset) => (
                   <div
                     key={asset.name}
@@ -151,7 +179,7 @@ export default function Dashboard() {
                   >
                     <div className="flex flex-col">
                       <span className="font-semibold">{asset.name}</span>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs text-gray-300">
                         {asset.amount} {asset.symbol}
                       </span>
                     </div>
@@ -171,22 +199,27 @@ export default function Dashboard() {
                 ))}
               </div>
               <div
-                className="text-primary text-sm mt-2 cursor-pointer hover:underline"
+                className="text-blue-300 text-sm mt-2 cursor-pointer hover:text-blue-200 hover:underline transition-colors relative z-10"
                 onClick={() => (window.location.href = "/portfolio")}
               >
                 Ver tudo
               </div>
             </div>
             {/* Statement */}
-            <div className="bg-card rounded-xl p-6 flex flex-col gap-4 items-center justify-center shadow min-h-[200px]">
+            <div className="bg-black/60 border border-white/10 rounded-xl p-6 flex flex-col gap-4 items-center justify-center shadow-2xl backdrop-blur-[20px] relative overflow-hidden min-h-[200px]">
+              {/* Mirror effect overlay */}
+              <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-50"></div>
+              <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+              <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
+              
               <Image
                 src="/user-profile.svg"
                 alt="Statement"
                 width={128}
                 height={128}
-                className="w-32 h-32 mb-4"
+                className="w-32 h-32 mb-4 relative z-10"
               />
-              <div className="text-center text-muted-foreground">
+              <div className="text-center text-gray-300 relative z-10">
                 Você poderá ver suas transações recentes aqui :)
               </div>
             </div>
@@ -194,19 +227,24 @@ export default function Dashboard() {
         </div>
         {/* News */}
         <aside className="lg:col-span-1 flex flex-col gap-8">
-          <div className="bg-card rounded-xl p-6 shadow">
-            <div className="text-lg font-bold mb-4">Novidades</div>
-            <div className="flex flex-col gap-4">
+          <div className="bg-black/60 border border-white/10 rounded-xl p-6 shadow-2xl backdrop-blur-[20px] relative overflow-hidden">
+            {/* Mirror effect overlay */}
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-50"></div>
+            <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+            <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
+            
+            <div className="text-lg font-bold mb-4 relative z-10">Novidades</div>
+            <div className="flex flex-col gap-4 relative z-10">
               {NEWS.map((item, idx) => (
                 <div
                   key={idx}
-                  className="flex flex-col gap-2 border-b border-border pb-4 last:border-b-0 last:pb-0"
+                  className="flex flex-col gap-2 border-b border-white/10 pb-4 last:border-b-0 last:pb-0"
                 >
                   <div className="font-semibold text-base">{item.title}</div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-xs text-gray-300">
                     {item.time}
                   </div>
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-sm text-gray-300">
                     {item.description}
                   </div>
                   <Image

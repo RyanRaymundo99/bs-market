@@ -78,30 +78,37 @@ export default function CalculatorModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-card border border-border max-w-md">
-        <DialogHeader className="flex items-center justify-between">
-          <DialogTitle className="text-xl font-bold">Calculadora</DialogTitle>
+      <DialogContent className="bg-black/80 border border-white/10 max-w-md backdrop-blur-[20px] relative overflow-hidden">
+        {/* Mirror effect overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-50"></div>
+        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+        <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
+
+        <DialogHeader className="flex items-center justify-between relative z-10">
+          <DialogTitle className="text-xl font-bold text-white">
+            Calculadora
+          </DialogTitle>
           <Button
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="h-8 w-8 p-0"
+            className="h-8 w-8 p-0 text-white hover:text-blue-300 hover:bg-white/10"
           >
             <X className="h-4 w-4" />
           </Button>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-6 relative z-10">
           {/* Currency Selection */}
           <div className="flex items-center justify-between">
             <div className="text-center">
-              <div className="text-sm text-muted-foreground mb-2">De</div>
+              <div className="text-sm text-gray-300 mb-2">De</div>
               <Button
                 variant={fromCurrency === "BRL" ? "default" : "secondary"}
                 className={`h-12 px-4 ${
                   fromCurrency === "BRL"
                     ? "bg-green-500 hover:bg-green-600"
-                    : "bg-muted hover:bg-muted/80"
+                    : "bg-white/10 hover:bg-white/20 text-white border border-white/20"
                 }`}
                 onClick={() => setFromCurrency("BRL")}
               >
@@ -116,19 +123,19 @@ export default function CalculatorModal({
               variant="ghost"
               size="sm"
               onClick={handleCurrencySwap}
-              className="mx-4"
+              className="mx-4 text-white hover:text-blue-300 hover:bg-white/10"
             >
               <ArrowLeftRight className="w-4 h-4" />
             </Button>
 
             <div className="text-center">
-              <div className="text-sm text-muted-foreground mb-2">Para</div>
+              <div className="text-sm text-gray-300 mb-2">Para</div>
               <Button
                 variant={toCurrency === "BTC" ? "default" : "secondary"}
                 className={`h-12 px-4 ${
                   toCurrency === "BTC"
                     ? "bg-orange-500 hover:bg-orange-600"
-                    : "bg-muted hover:bg-muted/80"
+                    : "bg-white/10 hover:bg-white/20 text-white border border-white/20"
                 }`}
                 onClick={() => setToCurrency("BTC")}
               >
@@ -142,47 +149,53 @@ export default function CalculatorModal({
 
           {/* Quantity Input */}
           <div>
-            <label className="text-sm text-muted-foreground mb-2 block">
+            <label className="text-sm text-gray-300 mb-2 block">
               Quantidade
             </label>
             <Input
               value={quantity}
               onChange={(e) => handleQuantityChange(e.target.value)}
               placeholder="0,00"
-              className="h-12 text-lg"
+              className="h-12 text-lg bg-black/60 border border-white/10 text-white placeholder:text-gray-400 focus:border-white/20"
             />
           </div>
 
           {/* Received Amount */}
           <div>
-            <label className="text-sm text-muted-foreground mb-2 block">
+            <label className="text-sm text-gray-300 mb-2 block">
               Vou receber
             </label>
             <Input
               value={receivedAmount}
               readOnly
               placeholder="0,00000000"
-              className="h-12 text-lg bg-muted/50"
+              className="h-12 text-lg bg-black/60 border border-white/10 text-white placeholder:text-gray-400"
             />
           </div>
 
           {/* Price Display */}
           <div>
-            <label className="text-sm text-muted-foreground mb-2 block">
-              Preço
-            </label>
-            <div className="h-12 flex items-center px-3 bg-muted/50 rounded-md">
-              <span className="text-lg font-semibold">{getPriceDisplay()}</span>
+            <label className="text-sm text-gray-300 mb-2 block">Preço</label>
+            <div className="h-12 flex items-center px-3 bg-black/60 border border-white/10 rounded-md">
+              <span className="text-lg font-semibold text-white">
+                {getPriceDisplay()}
+              </span>
             </div>
           </div>
 
           {/* Trade Button */}
           <Button
             onClick={handleTrade}
-            className="w-full h-12 bg-primary hover:bg-primary/90 text-lg font-semibold"
+            className="w-full h-12 bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-white/30 transition-all duration-200 backdrop-blur-[10px] relative overflow-hidden text-lg font-semibold"
+            style={{
+              boxShadow: "inset 0 1px 0 0 rgba(255, 255, 255, 0.1)",
+            }}
             disabled={!quantity || !receivedAmount}
           >
-            NEGOCIAR
+            {/* Mirror effect for button */}
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-30 pointer-events-none rounded-md"></div>
+            <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+            <span className="relative z-10">NEGOCIAR</span>
           </Button>
         </div>
       </DialogContent>

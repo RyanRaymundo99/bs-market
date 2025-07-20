@@ -4,25 +4,25 @@
 
 @layer base {
   :root {
-    --background: 220 100% 5%; /* almost black */
+    --background: 0 0% 0%; /* pure black */
     --foreground: 0 0% 100%; /* white */
-    --card: 220 30% 10%; /* dark gray */
+    --card: 0 0% 0%; /* black */
     --card-foreground: 0 0% 100%;
-    --popover: 220 30% 10%;
+    --popover: 0 0% 0%;
     --popover-foreground: 0 0% 100%;
-    --primary: 180 100% 45%; /* cyan */
-    --primary-foreground: 0 0% 0%; /* black text on cyan */
-    --secondary: 220 30% 20%;
-    --secondary-foreground: 180 100% 45%;
-    --muted: 220 10% 20%;
-    --muted-foreground: 180 100% 45%;
-    --accent: 180 100% 45%;
-    --accent-foreground: 0 0% 0%;
+    --primary: 210 100% 50%; /* blue */
+    --primary-foreground: 0 0% 100%; /* white text on blue */
+    --secondary: 0 0% 10%; /* very dark gray */
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 15%; /* dark gray */
+    --muted-foreground: 0 0% 70%; /* light gray */
+    --accent: 210 100% 50%; /* blue */
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 220 13% 20%;
-    --input: 220 13% 20%;
-    --ring: 180 100% 45%;
+    --border: 0 0% 20%; /* gray border */
+    --input: 0 0% 10%; /* dark input */
+    --ring: 210 100% 50%; /* blue ring */
     --radius: 1rem;
   }
 }
@@ -33,7 +33,7 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased overflow-x-hidden;
+    @apply bg-black text-white antialiased overflow-x-hidden;
   }
 
   html {
@@ -52,7 +52,7 @@
 
 @layer utilities {
   .glass-card {
-    @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-sm;
+    @apply bg-black/60 backdrop-blur-[20px] border border-white/10 shadow-2xl;
   }
 
   .text-balance {
@@ -60,7 +60,7 @@
   }
 
   .text-gradient {
-    @apply bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent;
   }
 
   .animation-delay-100 {
@@ -93,6 +93,6 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-black text-white;
   }
 }
