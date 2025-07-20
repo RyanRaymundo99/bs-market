@@ -86,7 +86,7 @@ export default function CalculatorModal({
 
         <DialogHeader className="flex items-center justify-between relative z-10">
           <DialogTitle className="text-xl font-bold text-white">
-            Calculadora
+            Calculadora de Conversão
           </DialogTitle>
           <Button
             variant="ghost"

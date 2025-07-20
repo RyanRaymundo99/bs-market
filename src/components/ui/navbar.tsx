@@ -64,6 +64,14 @@ export default function Navbar({ isLoggingOut, handleLogout }: NavbarProps) {
     }
   };
 
+  const handleCalculatorOpen = () => {
+    setShowCalculator(true);
+  };
+
+  const handleCalculatorClose = () => {
+    setShowCalculator(false);
+  };
+
   return (
     <header className="w-full bg-black/60 border-b border-white/10 backdrop-blur-[20px] flex items-center justify-between px-6 py-3 relative z-50">
       <div className="flex items-center gap-6">
@@ -145,8 +153,8 @@ export default function Navbar({ isLoggingOut, handleLogout }: NavbarProps) {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => setShowCalculator(true)}
-          title="Calculadora"
+          onClick={handleCalculatorOpen}
+          title="Calculadora de Conversão"
           className="text-white hover:text-blue-300 hover:bg-white/10"
         >
           <Timer className="w-4 h-4" />
@@ -155,7 +163,7 @@ export default function Navbar({ isLoggingOut, handleLogout }: NavbarProps) {
       {/* Calculator Modal */}
       <CalculatorModal
         isOpen={showCalculator}
-        onClose={() => setShowCalculator(false)}
+        onClose={handleCalculatorClose}
       />
     </header>
   );
