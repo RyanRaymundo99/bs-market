@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { SessionManager, setupSessionAutoExtension } from "@/lib/session";
 import { SessionStatus } from "@/components/ui/session-status";
 import { isLocalhostDev } from "@/lib/utils";
+import { authClient } from "@/lib/auth-client";
 
 // Static data - moved outside component to avoid recreation
 const TOP_MOVERS = [
@@ -97,9 +98,14 @@ export default function Dashboard() {
         router.push("/login");
       }
     } else {
-      // Not on localhost:3000, check for regular authentication
-      // For now, redirect to login - you can implement proper auth check here
-      router.push("/login");
+      // Production: check real session
+      authClient.getSession().then((session) => {
+        if (!session) {
+          router.push("/login");
+        } else {
+          setIsLoading(false);
+        }
+      });
     }
   }, [router, toast]);
 
