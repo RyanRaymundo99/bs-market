@@ -80,7 +80,7 @@ export default function CalculatorModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-black/80 border border-white/10 max-w-md backdrop-blur-[20px] relative overflow-hidden z-[9999]">
+      <DialogContent className="bg-black/90 border border-white/10 max-w-md backdrop-blur-[20px] relative overflow-hidden z-[9999] shadow-2xl">
         {/* Mirror effect overlay */}
         <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-50"></div>
         <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
@@ -88,13 +88,13 @@ export default function CalculatorModal({
 
         <DialogHeader className="flex items-center justify-between relative z-10">
           <DialogTitle className="text-xl font-bold text-white">
-            Calculadora de Conversão
+            Calculadora
           </DialogTitle>
           <Button
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="h-8 w-8 p-0 text-white hover:text-blue-300 hover:bg-white/10"
+            className="h-8 w-8 p-0 text-white hover:text-blue-300 hover:bg-white/10 rounded-full"
           >
             <X className="h-4 w-4" />
           </Button>
@@ -106,16 +106,16 @@ export default function CalculatorModal({
             <div className="text-center">
               <div className="text-sm text-gray-300 mb-2">De</div>
               <Button
-                variant={fromCurrency === "BRL" ? "default" : "secondary"}
-                className={`h-12 px-4 ${
+                variant="outline"
+                className={`h-12 px-4 bg-black/60 border border-white/10 hover:bg-white/10 text-white ${
                   fromCurrency === "BRL"
-                    ? "bg-green-500 hover:bg-green-600"
-                    : "bg-white/10 hover:bg-white/20 text-white border border-white/20"
+                    ? "border-green-500 bg-green-500/20"
+                    : ""
                 }`}
                 onClick={() => setFromCurrency("BRL")}
               >
-                <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center mr-2">
-                  <DollarSign className="w-3 h-3 text-green-500" />
+                <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center mr-2">
+                  <span className="text-white font-bold text-xs">R$</span>
                 </div>
                 BRL
               </Button>
@@ -125,7 +125,7 @@ export default function CalculatorModal({
               variant="ghost"
               size="sm"
               onClick={handleCurrencySwap}
-              className="mx-4 text-white hover:text-blue-300 hover:bg-white/10"
+              className="mx-4 text-white hover:text-blue-300 hover:bg-white/10 rounded-full"
             >
               <ArrowLeftRight className="w-4 h-4" />
             </Button>
@@ -133,16 +133,16 @@ export default function CalculatorModal({
             <div className="text-center">
               <div className="text-sm text-gray-300 mb-2">Para</div>
               <Button
-                variant={toCurrency === "BTC" ? "default" : "secondary"}
-                className={`h-12 px-4 ${
+                variant="outline"
+                className={`h-12 px-4 bg-black/60 border border-white/10 hover:bg-white/10 text-white ${
                   toCurrency === "BTC"
-                    ? "bg-orange-500 hover:bg-orange-600"
-                    : "bg-white/10 hover:bg-white/20 text-white border border-white/20"
+                    ? "border-orange-500 bg-orange-500/20"
+                    : ""
                 }`}
                 onClick={() => setToCurrency("BTC")}
               >
-                <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center mr-2">
-                  <Bitcoin className="w-3 h-3 text-orange-500" />
+                <div className="w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center mr-2">
+                  <Bitcoin className="w-3 h-3 text-white" />
                 </div>
                 BTC
               </Button>
@@ -188,7 +188,7 @@ export default function CalculatorModal({
           {/* Trade Button */}
           <Button
             onClick={handleTrade}
-            className="w-full h-12 bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-white/30 transition-all duration-200 backdrop-blur-[10px] relative overflow-hidden text-lg font-semibold"
+            className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white border border-blue-500 hover:border-blue-400 transition-all duration-200 text-lg font-semibold relative overflow-hidden"
             style={{
               boxShadow: "inset 0 1px 0 0 rgba(255, 255, 255, 0.1)",
             }}
