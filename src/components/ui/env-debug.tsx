@@ -1,10 +1,17 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function EnvDebug() {
-  const [envInfo, setEnvInfo] = useState<any>(null);
+  const [envInfo, setEnvInfo] = useState<{
+    nodeEnv?: string;
+    hasGoogleClientId?: boolean;
+    hasGoogleClientSecret?: boolean;
+    hasBetterAuthUrl?: boolean;
+    betterAuthUrl?: string;
+    error?: string;
+  } | null>(null);
   const [loading, setLoading] = useState(false);
 
   const checkEnvironment = async () => {
