@@ -5,6 +5,17 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// Check if running on localhost:3000
+export function isLocalhostDev(): boolean {
+  if (typeof window === "undefined") return false;
+
+  return (
+    (window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1") &&
+    window.location.port === "3000"
+  );
+}
+
 // Performance optimization utilities
 export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,

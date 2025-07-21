@@ -13,6 +13,7 @@ import { LoginFormValues, loginSchema } from "@/lib/schema/loginSchema";
 import { authClient } from "@/lib/auth-client";
 import { AuthLayout } from "@/components/ui/auth-layout";
 import { SessionManager } from "@/lib/session";
+import { isLocalhostDev } from "@/lib/utils";
 
 const Login = () => {
   const [pending, setPending] = useState(false);
@@ -29,10 +30,14 @@ const Login = () => {
     },
   });
 
-  // Check for existing dev session on mount
+  // Check for existing dev session on mount - only on localhost:3000
   useEffect(() => {
-    const sessionInfo = SessionManager.getSessionInfo();
-    setHasDevSession(sessionInfo.isValid);
+    if (isLocalhostDev()) {
+      const sessionInfo = SessionManager.getSessionInfo();
+      setHasDevSession(sessionInfo.isValid);
+    } else {
+      setHasDevSession(false);
+    }
   }, []);
 
   const onSubmit = useCallback(
@@ -186,44 +191,48 @@ const Login = () => {
         </form>
       </Form>
 
-      {/* Developer Access Section */}
-      <div className="mt-6 pt-4 border-t border-white/10">
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            onClick={handleDevAccess}
-            variant="ghost"
-            className="flex-1 text-xs text-gray-400 hover:text-blue-300 hover:bg-white/5 transition-all duration-200 h-8 relative overflow-hidden"
-          >
-            {/* Mirror effect for button */}
-            <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-white/2 opacity-20 pointer-events-none rounded-md"></div>
-            <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
-
-            <Code className="h-3 w-3 mr-2 relative z-10" />
-            <span className="relative z-10">
-              {hasDevSession ? "DEV: Acessar Dashboard" : "DEV: Acesso Direto"}
-            </span>
-          </Button>
-
-          {hasDevSession && (
+      {/* Developer Access Section - Only on localhost:3000 */}
+      {isLocalhostDev() && (
+        <div className="mt-6 pt-4 border-t border-white/10">
+          <div className="flex gap-2">
             <Button
               type="button"
-              onClick={clearDevSession}
+              onClick={handleDevAccess}
               variant="ghost"
-              className="text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-200 h-8 px-2 relative overflow-hidden"
-              title="Clear Dev Session"
+              className="flex-1 text-xs text-gray-400 hover:text-blue-300 hover:bg-white/5 transition-all duration-200 h-8 relative overflow-hidden"
             >
-              <Trash2 className="h-3 w-3 relative z-10" />
+              {/* Mirror effect for button */}
+              <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-white/2 opacity-20 pointer-events-none rounded-md"></div>
+              <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+
+              <Code className="h-3 w-3 mr-2 relative z-10" />
+              <span className="relative z-10">
+                {hasDevSession
+                  ? "DEV: Acessar Dashboard"
+                  : "DEV: Acesso Direto"}
+              </span>
             </Button>
+
+            {hasDevSession && (
+              <Button
+                type="button"
+                onClick={clearDevSession}
+                variant="ghost"
+                className="text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-200 h-8 px-2 relative overflow-hidden"
+                title="Clear Dev Session"
+              >
+                <Trash2 className="h-3 w-3 relative z-10" />
+              </Button>
+            )}
+          </div>
+
+          {hasDevSession && (
+            <div className="mt-2 text-xs text-yellow-400 text-center">
+              ⚠️ Dev session active - dev@buildstrategy.com
+            </div>
           )}
         </div>
-
-        {hasDevSession && (
-          <div className="mt-2 text-xs text-yellow-400 text-center">
-            ⚠️ Dev session active - dev@buildstrategy.com
-          </div>
-        )}
-      </div>
+      )}
 
       <div className="mt-8 text-center text-xs text-gray-300">
         Ao fazer login, você concorda com nossos{" "}

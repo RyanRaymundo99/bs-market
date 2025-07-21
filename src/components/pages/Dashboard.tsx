@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { SessionManager, setupSessionAutoExtension } from "@/lib/session";
 import { SessionStatus } from "@/components/ui/session-status";
+import { isLocalhostDev } from "@/lib/utils";
 
 // Static data - moved outside component to avoid recreation
 const TOP_MOVERS = [
@@ -72,26 +73,32 @@ export default function Dashboard() {
 
   // Memoize the auth check function
   const checkAuth = useCallback(() => {
-    const sessionInfo = SessionManager.getSessionInfo();
+    if (isLocalhostDev()) {
+      const sessionInfo = SessionManager.getSessionInfo();
 
-    if (sessionInfo.isValid && sessionInfo.user) {
-      setIsDevMode(true);
-      setIsLoading(false);
+      if (sessionInfo.isValid && sessionInfo.user) {
+        setIsDevMode(true);
+        setIsLoading(false);
 
-      // Show dev mode indicator with remaining time
-      toast({
-        title: "Developer Mode Active",
-        description: `You are logged in as a developer. Session expires in ${sessionInfo.remainingMinutes} minutes.`,
-      });
-    } else {
-      // No valid session, redirect to login
-      if (sessionInfo.user) {
+        // Show dev mode indicator with remaining time
         toast({
-          title: "Session Expired",
-          description: "Your session has expired. Please log in again.",
-          variant: "destructive",
+          title: "Developer Mode Active",
+          description: `You are logged in as a developer. Session expires in ${sessionInfo.remainingMinutes} minutes.`,
         });
+      } else {
+        // No valid session, redirect to login
+        if (sessionInfo.user) {
+          toast({
+            title: "Session Expired",
+            description: "Your session has expired. Please log in again.",
+            variant: "destructive",
+          });
+        }
+        router.push("/login");
       }
+    } else {
+      // Not on localhost:3000, check for regular authentication
+      // For now, redirect to login - you can implement proper auth check here
       router.push("/login");
     }
   }, [router, toast]);
@@ -341,8 +348,10 @@ export default function Dashboard() {
         </aside>
       </main>
 
-      {/* Session Status Component */}
-      {isDevMode && <SessionStatus onLogout={handleLogout} />}
+      {/* Session Status Component - Only on localhost:3000 */}
+      {isDevMode && isLocalhostDev() && (
+        <SessionStatus onLogout={handleLogout} />
+      )}
     </div>
   );
 }
