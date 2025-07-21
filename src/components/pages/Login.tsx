@@ -16,6 +16,9 @@ import { SessionManager } from "@/lib/session";
 import { isLocalhostDev } from "@/lib/utils";
 import { EnvDebug } from "@/components/ui/env-debug";
 
+const REMEMBER_EMAIL_KEY = "remembered-email";
+const REMEMBER_PASSWORD_KEY = "remembered-password";
+
 const Login = () => {
   const [pending, setPending] = useState(false);
   const [hasDevSession, setHasDevSession] = useState(false);
@@ -30,6 +33,21 @@ const Login = () => {
       rememberMe: false,
     },
   });
+
+  // Autofill remembered credentials on mount
+  useEffect(() => {
+    const rememberedEmail = localStorage.getItem(REMEMBER_EMAIL_KEY);
+    const rememberedPassword = localStorage.getItem(REMEMBER_PASSWORD_KEY);
+    if (rememberedEmail && rememberedPassword) {
+      form.setValue("email", rememberedEmail);
+      try {
+        form.setValue("password", atob(rememberedPassword));
+      } catch {
+        form.setValue("password", "");
+      }
+      form.setValue("rememberMe", true);
+    }
+  }, [form]);
 
   // Check for existing dev session on mount - only on localhost:3000
   useEffect(() => {
@@ -56,6 +74,17 @@ const Login = () => {
           },
           {
             onSuccess: () => {
+              // Remember Me logic
+              if (data.rememberMe) {
+                localStorage.setItem(REMEMBER_EMAIL_KEY, data.email);
+                localStorage.setItem(
+                  REMEMBER_PASSWORD_KEY,
+                  btoa(data.password)
+                );
+              } else {
+                localStorage.removeItem(REMEMBER_EMAIL_KEY);
+                localStorage.removeItem(REMEMBER_PASSWORD_KEY);
+              }
               console.log("✅ Login successful");
               router.push("/dashboard");
             },
