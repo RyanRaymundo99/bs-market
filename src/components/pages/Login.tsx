@@ -235,21 +235,8 @@ const Login = () => {
       )}
 
       <div className="mt-8 text-center text-xs text-gray-300">
-        Ao fazer login, você concorda com nossos{" "}
-        <Link
-          href="/terms"
-          className="text-blue-300 hover:text-blue-200 hover:underline"
-        >
-          Termos
-        </Link>{" "}
-        e{" "}
-        <Link
-          href="/privacy"
-          className="text-blue-300 hover:text-blue-200 hover:underline"
-        >
-          Política de Privacidade
-        </Link>
-        .
+        Ao fazer login, você concorda com nossos termos de serviço e política de
+        privacidade.
       </div>
     </AuthLayout>
   );
