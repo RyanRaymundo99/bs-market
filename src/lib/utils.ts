@@ -36,7 +36,7 @@ export function memoize<T extends (...args: unknown[]) => unknown>(
   fn: T,
   getKey?: (...args: Parameters<T>) => string
 ): T {
-  const cache = new Map<string, ReturnType<T>>();
+  const cache = new Map<string, unknown>();
 
   return ((...args: Parameters<T>) => {
     const key = getKey ? getKey(...args) : JSON.stringify(args);

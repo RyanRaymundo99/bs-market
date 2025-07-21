@@ -13,7 +13,7 @@ export function PerformanceMonitor({
   enabled = process.env.NODE_ENV === "development",
 }: PerformanceMonitorProps) {
   const renderCount = useRef(0);
-  const startTime = useRef<number>();
+  const startTime = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     if (!enabled) return;
