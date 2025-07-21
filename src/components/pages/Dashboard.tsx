@@ -1,12 +1,11 @@
 "use client";
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/ui/navbar";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { safeLocalStorageGet, safeLocalStorageRemove } from "@/lib/utils";
 import { SessionManager, setupSessionAutoExtension } from "@/lib/session";
 import { SessionStatus } from "@/components/ui/session-status";
 

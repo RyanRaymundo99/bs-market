@@ -12,11 +12,6 @@ import { InputField, CheckboxField } from "@/components/Auth/FormFields";
 import { LoginFormValues, loginSchema } from "@/lib/schema/loginSchema";
 import { authClient } from "@/lib/auth-client";
 import { AuthLayout } from "@/components/ui/auth-layout";
-import {
-  safeLocalStorageGet,
-  safeLocalStorageSet,
-  safeLocalStorageRemove,
-} from "@/lib/utils";
 import { SessionManager } from "@/lib/session";
 
 const Login = () => {

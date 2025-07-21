@@ -37,21 +37,21 @@ export default function OTCPage() {
   }, []);
 
   // Update time every second - optimized with useCallback
-  useEffect(() => {
-    const updateTime = useCallback(() => {
-      const now = new Date();
-      const timeString = now.toLocaleTimeString("pt-BR", {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      });
-      setCurrentTime(timeString);
-    }, []);
+  const updateTime = useCallback(() => {
+    const now = new Date();
+    const timeString = now.toLocaleTimeString("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+    setCurrentTime(timeString);
+  }, []);
 
+  useEffect(() => {
     updateTime();
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [updateTime]);
 
   // Check if user has chosen not to see the modal
   useEffect(() => {
@@ -92,9 +92,12 @@ export default function OTCPage() {
     setActiveTab(tab);
   }, []);
 
-  const handleAgreementChange = useCallback((key: string) => {
-    setDontShowAgain((prev) => !prev);
-  }, []);
+  const handleAgreementChange = useCallback(
+    (checked: boolean | "indeterminate") => {
+      setDontShowAgain(checked === true);
+    },
+    []
+  );
 
   return (
     <div className="min-h-screen bg-black text-white">

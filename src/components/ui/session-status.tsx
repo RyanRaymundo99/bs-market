@@ -42,7 +42,7 @@ export function SessionStatus({ onLogout }: SessionStatusProps) {
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Extension Failed",
         description: "An error occurred while extending your session.",
