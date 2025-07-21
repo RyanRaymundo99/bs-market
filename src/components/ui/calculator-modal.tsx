@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { X, ArrowLeftRight, DollarSign, Bitcoin } from "lucide-react";
+import { X, ArrowLeftRight, Bitcoin } from "lucide-react";
 
 interface CalculatorModalProps {
   isOpen: boolean;
