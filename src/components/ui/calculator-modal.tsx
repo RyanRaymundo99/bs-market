@@ -78,9 +78,14 @@ export default function CalculatorModal({
     return "R$ 0,00";
   };
 
+  if (!isOpen) return null;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-black/90 border border-white/10 max-w-md backdrop-blur-[20px] relative overflow-hidden z-[9999] shadow-2xl">
+      <DialogContent className="bg-black border border-white/10 max-w-md backdrop-blur-[20px] relative overflow-hidden shadow-2xl">
+        {/* Test background to ensure content is visible */}
+        <div className="absolute inset-0 bg-red-500 opacity-20"></div>
+
         {/* Mirror effect overlay */}
         <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-50"></div>
         <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
