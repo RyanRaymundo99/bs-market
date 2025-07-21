@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,6 +10,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import Navbar from "@/components/ui/navbar";
 import { ChevronDown, Copy, ExternalLink, AlertCircle } from "lucide-react";
+import { safeLocalStorageGet, safeLocalStorageSet } from "@/lib/utils";
 
 export default function DepositarPage() {
   const [showModal, setShowModal] = useState(true);
@@ -26,29 +27,30 @@ export default function DepositarPage() {
 
   // Check if user has already agreed to terms
   useEffect(() => {
-    const hasAgreed = localStorage.getItem("deposit-terms-agreed");
+    const hasAgreed = safeLocalStorageGet("deposit-terms-agreed");
     if (hasAgreed === "true") {
       setShowModal(false);
     }
   }, []);
 
-  const handleAgreementChange = (key: keyof typeof agreements) => {
+  const handleAgreementChange = useCallback((key: keyof typeof agreements) => {
     setAgreements((prev) => ({
       ...prev,
       [key]: !prev[key],
     }));
-  };
+  }, []);
 
-  const allAgreementsChecked = Object.values(agreements).every(
-    (agreement) => agreement
+  const allAgreementsChecked = useMemo(
+    () => Object.values(agreements).every((agreement) => agreement),
+    [agreements]
   );
 
-  const handleProceed = () => {
+  const handleProceed = useCallback(() => {
     if (allAgreementsChecked) {
-      localStorage.setItem("deposit-terms-agreed", "true");
+      safeLocalStorageSet("deposit-terms-agreed", "true");
       setShowModal(false);
     }
-  };
+  }, [allAgreementsChecked]);
 
   const handleCopyPixKey = async () => {
     try {
@@ -256,7 +258,7 @@ export default function DepositarPage() {
 
       {/* Terms Agreement Modal */}
       <Dialog open={showModal} onOpenChange={() => {}}>
-        <DialogContent className="bg-black/80 border border-white/10 max-w-md backdrop-blur-[20px] relative overflow-hidden">
+        <DialogContent className="bg-black/80 border border-white/10 max-w-md backdrop-blur-[20px] relative overflow-hidden z-[9999] !fixed !top-[15%] !left-[50%] !transform !-translate-x-1/2 !-translate-y-0">
           {/* Mirror effect overlay */}
           <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-50"></div>
           <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>

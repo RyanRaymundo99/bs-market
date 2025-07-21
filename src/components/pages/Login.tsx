@@ -1,6 +1,6 @@
 "use client";
-import React, { useState, useCallback } from "react";
-import { Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
+import React, { useState, useCallback, useEffect } from "react";
+import { Mail, Lock, ArrowRight, Loader2, Code, Trash2 } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
@@ -12,9 +12,16 @@ import { InputField, CheckboxField } from "@/components/Auth/FormFields";
 import { LoginFormValues, loginSchema } from "@/lib/schema/loginSchema";
 import { authClient } from "@/lib/auth-client";
 import { AuthLayout } from "@/components/ui/auth-layout";
+import {
+  safeLocalStorageGet,
+  safeLocalStorageSet,
+  safeLocalStorageRemove,
+} from "@/lib/utils";
+import { SessionManager } from "@/lib/session";
 
 const Login = () => {
   const [pending, setPending] = useState(false);
+  const [hasDevSession, setHasDevSession] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -26,6 +33,12 @@ const Login = () => {
       rememberMe: false,
     },
   });
+
+  // Check for existing dev session on mount
+  useEffect(() => {
+    const sessionInfo = SessionManager.getSessionInfo();
+    setHasDevSession(sessionInfo.isValid);
+  }, []);
 
   const onSubmit = useCallback(
     async (data: LoginFormValues) => {
@@ -64,6 +77,34 @@ const Login = () => {
     },
     [router, toast]
   );
+
+  const handleDevAccess = () => {
+    SessionManager.createSession({
+      email: "dev@buildstrategy.com",
+      name: "Developer",
+      role: "developer",
+    });
+
+    setHasDevSession(true);
+
+    toast({
+      title: "Dev Access Granted",
+      description: "Welcome, Developer! You'll stay logged in for 1 hour.",
+    });
+
+    // Redirect to dashboard
+    router.push("/dashboard");
+  };
+
+  const clearDevSession = () => {
+    SessionManager.clearSession();
+    setHasDevSession(false);
+
+    toast({
+      title: "Dev Session Cleared",
+      description: "Developer session has been cleared",
+    });
+  };
 
   return (
     <AuthLayout
@@ -149,6 +190,45 @@ const Login = () => {
           </Button>
         </form>
       </Form>
+
+      {/* Developer Access Section */}
+      <div className="mt-6 pt-4 border-t border-white/10">
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            onClick={handleDevAccess}
+            variant="ghost"
+            className="flex-1 text-xs text-gray-400 hover:text-blue-300 hover:bg-white/5 transition-all duration-200 h-8 relative overflow-hidden"
+          >
+            {/* Mirror effect for button */}
+            <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-white/2 opacity-20 pointer-events-none rounded-md"></div>
+            <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+
+            <Code className="h-3 w-3 mr-2 relative z-10" />
+            <span className="relative z-10">
+              {hasDevSession ? "DEV: Acessar Dashboard" : "DEV: Acesso Direto"}
+            </span>
+          </Button>
+
+          {hasDevSession && (
+            <Button
+              type="button"
+              onClick={clearDevSession}
+              variant="ghost"
+              className="text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-200 h-8 px-2 relative overflow-hidden"
+              title="Clear Dev Session"
+            >
+              <Trash2 className="h-3 w-3 relative z-10" />
+            </Button>
+          )}
+        </div>
+
+        {hasDevSession && (
+          <div className="mt-2 text-xs text-yellow-400 text-center">
+            ⚠️ Dev session active - dev@buildstrategy.com
+          </div>
+        )}
+      </div>
 
       <div className="mt-8 text-center text-xs text-gray-300">
         Ao fazer login, você concorda com nossos{" "}

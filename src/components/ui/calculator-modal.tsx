@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -19,43 +19,47 @@ export default function CalculatorModal({
   isOpen,
   onClose,
 }: CalculatorModalProps) {
-  console.log("CalculatorModal rendered with isOpen:", isOpen);
-
   const [fromCurrency, setFromCurrency] = useState<"BRL" | "BTC">("BRL");
   const [toCurrency, setToCurrency] = useState<"BRL" | "BTC">("BTC");
   const [quantity, setQuantity] = useState("");
   const [receivedAmount, setReceivedAmount] = useState("");
 
-  // Mock BTC price (you can replace with real API data)
-  const btcPrice = 657672.43; // R$ 657.672,43
+  // Memoize BTC price to prevent recalculation
+  const btcPrice = useMemo(() => 657672.43, []); // R$ 657.672,43
 
-  const handleQuantityChange = (value: string) => {
-    setQuantity(value);
+  const handleQuantityChange = useCallback(
+    (value: string) => {
+      setQuantity(value);
 
-    if (value && !isNaN(parseFloat(value))) {
-      const numValue = parseFloat(value);
-      if (fromCurrency === "BRL" && toCurrency === "BTC") {
-        // Convert BRL to BTC
-        const btcAmount = numValue / btcPrice;
-        setReceivedAmount(btcAmount.toFixed(8));
-      } else if (fromCurrency === "BTC" && toCurrency === "BRL") {
-        // Convert BTC to BRL
-        const brlAmount = numValue * btcPrice;
-        setReceivedAmount(brlAmount.toFixed(2));
+      if (value && !isNaN(parseFloat(value))) {
+        const numValue = parseFloat(value);
+
+        if (fromCurrency === "BRL" && toCurrency === "BTC") {
+          // Convert BRL to BTC
+          const btcAmount = numValue / btcPrice;
+          const result = btcAmount.toFixed(8);
+          setReceivedAmount(result);
+        } else if (fromCurrency === "BTC" && toCurrency === "BRL") {
+          // Convert BTC to BRL
+          const brlAmount = numValue * btcPrice;
+          const result = brlAmount.toFixed(2);
+          setReceivedAmount(result);
+        }
+      } else {
+        setReceivedAmount("");
       }
-    } else {
-      setReceivedAmount("");
-    }
-  };
+    },
+    [fromCurrency, toCurrency, btcPrice]
+  );
 
-  const handleCurrencySwap = () => {
+  const handleCurrencySwap = useCallback(() => {
     setFromCurrency(toCurrency);
     setToCurrency(fromCurrency);
     setQuantity(receivedAmount);
     setReceivedAmount(quantity);
-  };
+  }, [fromCurrency, toCurrency, quantity, receivedAmount]);
 
-  const handleTrade = () => {
+  const handleTrade = useCallback(() => {
     // Navigate to trading page with pre-filled values
     const params = new URLSearchParams({
       from: fromCurrency,
@@ -63,29 +67,28 @@ export default function CalculatorModal({
       amount: quantity,
     });
     window.location.href = `/negociacao-basica?${params.toString()}`;
-  };
+  }, [fromCurrency, toCurrency, quantity]);
 
-  const getPriceDisplay = () => {
-    if (fromCurrency === "BRL" && toCurrency === "BTC") {
-      return `R$ ${btcPrice.toLocaleString("pt-BR", {
-        minimumFractionDigits: 2,
-      })}`;
-    } else if (fromCurrency === "BTC" && toCurrency === "BRL") {
-      return `R$ ${btcPrice.toLocaleString("pt-BR", {
-        minimumFractionDigits: 2,
-      })}`;
-    }
-    return "R$ 0,00";
-  };
+  const handleFromCurrencyChange = useCallback((currency: "BRL" | "BTC") => {
+    setFromCurrency(currency);
+  }, []);
+
+  const handleToCurrencyChange = useCallback((currency: "BRL" | "BTC") => {
+    setToCurrency(currency);
+  }, []);
+
+  // Memoize price display to prevent recalculation
+  const priceDisplay = useMemo(() => {
+    return `R$ ${btcPrice.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+    })}`;
+  }, [btcPrice]);
 
   if (!isOpen) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-black border border-white/10 max-w-md backdrop-blur-[20px] relative overflow-hidden shadow-2xl">
-        {/* Test background to ensure content is visible */}
-        <div className="absolute inset-0 bg-red-500 opacity-20"></div>
-
+      <DialogContent className="bg-black/90 border border-white/10 max-w-md backdrop-blur-[20px] relative overflow-hidden shadow-2xl z-[9999] !fixed !top-[20px] !left-[50%] !transform !-translate-x-1/2 !-translate-y-0">
         {/* Mirror effect overlay */}
         <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-50"></div>
         <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
@@ -117,7 +120,7 @@ export default function CalculatorModal({
                     ? "border-green-500 bg-green-500/20"
                     : ""
                 }`}
-                onClick={() => setFromCurrency("BRL")}
+                onClick={() => handleFromCurrencyChange("BRL")}
               >
                 <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center mr-2">
                   <span className="text-white font-bold text-xs">R$</span>
@@ -144,7 +147,7 @@ export default function CalculatorModal({
                     ? "border-orange-500 bg-orange-500/20"
                     : ""
                 }`}
-                onClick={() => setToCurrency("BTC")}
+                onClick={() => handleToCurrencyChange("BTC")}
               >
                 <div className="w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center mr-2">
                   <Bitcoin className="w-3 h-3 text-white" />
@@ -185,7 +188,7 @@ export default function CalculatorModal({
             <label className="text-sm text-gray-300 mb-2 block">Preço</label>
             <div className="h-12 flex items-center px-3 bg-black/60 border border-white/10 rounded-md">
               <span className="text-lg font-semibold text-white">
-                {getPriceDisplay()}
+                {priceDisplay}
               </span>
             </div>
           </div>

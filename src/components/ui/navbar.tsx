@@ -7,7 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Timer, ChevronDown, LogOut } from "lucide-react";
+import { ChevronDown, LogOut, Timer } from "lucide-react";
 import CalculatorModal from "./calculator-modal";
 
 // Import translations type for type safety
@@ -65,12 +65,10 @@ export default function Navbar({ isLoggingOut, handleLogout }: NavbarProps) {
   };
 
   const handleCalculatorOpen = () => {
-    console.log("Opening calculator modal...");
     setShowCalculator(true);
   };
 
   const handleCalculatorClose = () => {
-    console.log("Closing calculator modal...");
     setShowCalculator(false);
   };
 
@@ -163,13 +161,6 @@ export default function Navbar({ isLoggingOut, handleLogout }: NavbarProps) {
             <Timer className="w-4 h-4" />
           </Button>
         </div>
-
-        {/* Debug info */}
-        {showCalculator && (
-          <div className="fixed top-0 left-0 bg-red-500 text-white p-2 z-[9999]">
-            Modal should be open! State: {showCalculator.toString()}
-          </div>
-        )}
       </header>
 
       {/* Calculator Modal - Rendered outside navbar to avoid z-index conflicts */}

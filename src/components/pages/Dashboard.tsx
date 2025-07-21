@@ -1,10 +1,16 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/ui/navbar";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
+import { safeLocalStorageGet, safeLocalStorageRemove } from "@/lib/utils";
+import { SessionManager, setupSessionAutoExtension } from "@/lib/session";
+import { SessionStatus } from "@/components/ui/session-status";
 
+// Static data - moved outside component to avoid recreation
 const TOP_MOVERS = [
   { name: "Pudgy Pe...", price: "R$ 0,1714", change: "+34,01%" },
   { name: "Mog Coin", price: "R$ 0,00001076", change: "+14,35%" },
@@ -60,18 +66,89 @@ const NEWS = [
 
 export default function Dashboard() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDevMode, setIsDevMode] = useState(false);
+  const router = useRouter();
+  const { toast } = useToast();
 
-  const handleLogout = async () => {
+  // Memoize the auth check function
+  const checkAuth = useCallback(() => {
+    const sessionInfo = SessionManager.getSessionInfo();
+
+    if (sessionInfo.isValid && sessionInfo.user) {
+      setIsDevMode(true);
+      setIsLoading(false);
+
+      // Show dev mode indicator with remaining time
+      toast({
+        title: "Developer Mode Active",
+        description: `You are logged in as a developer. Session expires in ${sessionInfo.remainingMinutes} minutes.`,
+      });
+    } else {
+      // No valid session, redirect to login
+      if (sessionInfo.user) {
+        toast({
+          title: "Session Expired",
+          description: "Your session has expired. Please log in again.",
+          variant: "destructive",
+        });
+      }
+      router.push("/login");
+    }
+  }, [router, toast]);
+
+  useEffect(() => {
+    // Small delay to ensure localStorage is available
+    const timeoutId = setTimeout(checkAuth, 100);
+
+    // Setup session auto-extension if user is logged in
+    let cleanupAutoExtension: (() => void) | undefined;
+    if (isDevMode) {
+      cleanupAutoExtension = setupSessionAutoExtension();
+    }
+
+    return () => {
+      clearTimeout(timeoutId);
+      if (cleanupAutoExtension) {
+        cleanupAutoExtension();
+      }
+    };
+  }, [checkAuth, isDevMode]);
+
+  const handleLogout = useCallback(async () => {
     setIsLoggingOut(true);
     try {
+      // Clear dev session if in dev mode
+      if (isDevMode) {
+        SessionManager.clearSession();
+      }
       window.location.href = "/login";
     } finally {
       setIsLoggingOut(false);
     }
-  };
+  }, [isDevMode]);
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-gray-300">Verificando autenticação...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black text-white">
+      {/* Developer Mode Indicator */}
+      {isDevMode && (
+        <div className="fixed top-0 left-0 right-0 bg-yellow-600 text-black text-center py-1 text-xs font-medium z-[9999]">
+          🚀 DEVELOPER MODE ACTIVE - dev@buildstrategy.com
+        </div>
+      )}
+
       {/* Universal Navbar */}
       <Navbar isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
 
@@ -94,39 +171,39 @@ export default function Dashboard() {
                   <div className="text-sm text-gray-300">Disponível</div>
                   <div className="text-2xl font-bold">R$0,00</div>
                 </div>
-                <div className="flex flex-col gap-2">
-                  <Button
-                    size="sm"
-                    className="bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-white/30 transition-all duration-200 backdrop-blur-[10px] relative overflow-hidden"
-                    style={{
-                      boxShadow: "inset 0 1px 0 0 rgba(255, 255, 255, 0.1)",
-                    }}
-                    onClick={() => (window.location.href = "/depositar")}
-                  >
-                    {/* Mirror effect for button */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-30 pointer-events-none rounded-md"></div>
-                    <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-                    <span className="relative z-10">Depositar</span>
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-white/30 transition-all duration-200 backdrop-blur-[10px] relative overflow-hidden"
-                    style={{
-                      boxShadow: "inset 0 1px 0 0 rgba(255, 255, 255, 0.1)",
-                    }}
-                    onClick={() => (window.location.href = "/sacar")}
-                  >
-                    {/* Mirror effect for button */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-30 pointer-events-none rounded-md"></div>
-                    <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-                    <span className="relative z-10">Sacar</span>
-                  </Button>
-                </div>
               </div>
               <div className="flex justify-between items-center mt-2 relative z-10">
                 <div className="text-sm text-gray-300">Em uso</div>
                 <div className="text-lg font-semibold">R$0,00</div>
+              </div>
+              <div className="flex flex-col gap-2 mt-4 relative z-10">
+                <Button
+                  size="sm"
+                  className="bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-white/30 transition-all duration-200 backdrop-blur-[10px] relative overflow-hidden"
+                  style={{
+                    boxShadow: "inset 0 1px 0 0 rgba(255, 255, 255, 0.1)",
+                  }}
+                  onClick={() => (window.location.href = "/depositar")}
+                >
+                  {/* Mirror effect for button */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-30 pointer-events-none rounded-md"></div>
+                  <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                  <span className="relative z-10">Depositar</span>
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-white/30 transition-all duration-200 backdrop-blur-[10px] relative overflow-hidden"
+                  style={{
+                    boxShadow: "inset 0 1px 0 0 rgba(255, 255, 255, 0.1)",
+                  }}
+                  onClick={() => (window.location.href = "/sacar")}
+                >
+                  {/* Mirror effect for button */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-30 pointer-events-none rounded-md"></div>
+                  <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                  <span className="relative z-10">Sacar</span>
+                </Button>
               </div>
             </div>
             {/* Top Movers */}
@@ -264,6 +341,9 @@ export default function Dashboard() {
           </div>
         </aside>
       </main>
+
+      {/* Session Status Component */}
+      {isDevMode && <SessionStatus onLogout={handleLogout} />}
     </div>
   );
 }
