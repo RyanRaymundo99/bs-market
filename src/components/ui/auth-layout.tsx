@@ -1,5 +1,4 @@
 import React from "react";
-import Image from "next/image";
 import {
   Card,
   CardContent,
@@ -54,11 +53,12 @@ const AuthLayout = ({
               <div className="text-center">
                 <Link href="/" className="inline-block">
                   <div className="h-24 ml-8 overflow-hidden flex items-center">
-                    <Image
+                    <img
                       src="/shortname-logo.svg"
                       alt="Build Strategy"
                       width={200}
                       height={200}
+                      className="h-auto"
                     />
                   </div>
                 </Link>
