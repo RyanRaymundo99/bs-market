@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { nutzPayService } from "@/lib/nutzpay";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Get USDT balance from NutzPay
     const balance = await nutzPayService.getUSDTBalance();

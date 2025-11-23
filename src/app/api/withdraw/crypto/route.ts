@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
 
 
       // Update withdrawal with NutzPay response data
-      const updatedWithdrawal = await prisma.withdrawal.update({
+      await prisma.withdrawal.update({
         where: { id: withdrawal.id },
         data: {
           hash: transactionId || null,
@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
           message: responseData.message || "Withdrawal request submitted for processing. You will receive a webhook notification when completed",
         },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       // If NutzPay API call fails, update withdrawal status to failed
       await prisma.withdrawal.update({
         where: { id: withdrawal.id },
@@ -175,16 +175,43 @@ export async function POST(request: NextRequest) {
       console.error("NutzPay withdrawal error:", error);
       
       // Return user-friendly error message
-      const errorMessage = error.response?.data?.error?.message || 
-                          error.message || 
-                          "Failed to process USDT withdrawal with NutzPay";
+      let errorMessage = "Failed to process USDT withdrawal with NutzPay";
+      let errorDetails: unknown = undefined;
+      let statusCode = 500;
+
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (
+        error &&
+        typeof error === "object" &&
+        "response" in error
+      ) {
+        const axiosError = error as { response?: { data?: unknown; status?: number } };
+        if (axiosError.response?.data) {
+          errorDetails = axiosError.response.data;
+          if (
+            axiosError.response.data &&
+            typeof axiosError.response.data === "object" &&
+            "error" in axiosError.response.data &&
+            axiosError.response.data.error &&
+            typeof axiosError.response.data.error === "object" &&
+            "message" in axiosError.response.data.error &&
+            typeof axiosError.response.data.error.message === "string"
+          ) {
+            errorMessage = axiosError.response.data.error.message;
+          }
+        }
+        if (axiosError.response?.status) {
+          statusCode = axiosError.response.status;
+        }
+      }
 
       return NextResponse.json(
         { 
           error: errorMessage,
-          details: error.response?.data 
+          ...(errorDetails ? { details: errorDetails } : {}),
         },
-        { status: error.response?.status || 500 }
+        { status: statusCode }
       );
     }
   } catch (error) {

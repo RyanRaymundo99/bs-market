@@ -2,7 +2,6 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import NavbarNew from '@/components/ui/navbar-new';
-import { useRouter } from 'next/navigation';
 import Breadcrumb from '@/components/ui/breadcrumb';
 import {
   Dialog,
@@ -15,7 +14,6 @@ import { useToast } from '@/hooks/use-toast';
 
 const TradePage = () => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const router = useRouter();
   const { toast } = useToast();
 
   const handleLogout = useCallback(async () => {
@@ -112,9 +110,19 @@ const TradePage = () => {
       if (response.ok) {
         const data = await response.json();
         if (data.orders) {
-          const buyOrders = data.orders
-            .filter((order: any) => order.type === 'BUY' && order.baseCurrency === 'USDT')
-            .map((order: any) => ({
+          interface OrderResponse {
+            id: string;
+            type: string;
+            baseCurrency: string;
+            total: number | string;
+            amount: number | string;
+            price: number | string;
+            createdAt: string;
+            status: string;
+          }
+          const buyOrders = (data.orders as OrderResponse[])
+            .filter((order) => order.type === 'BUY' && order.baseCurrency === 'USDT')
+            .map((order) => ({
               id: order.id,
               date: new Date(order.createdAt),
               type: 'buy' as const,
@@ -201,11 +209,12 @@ const TradePage = () => {
           description: 'Escaneie o QR Code PIX para finalizar o pagamento',
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Purchase error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao processar compra de USDT';
       toast({
         title: 'Erro',
-        description: error.message || 'Erro ao processar compra de USDT',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {

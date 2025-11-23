@@ -244,7 +244,7 @@ export async function GET(request: NextRequest) {
     // Format transactions for the frontend
     const formattedTransactions = recentTransactions.map((transaction) => {
       let status = "PENDING";
-      let type = transaction.type;
+      const type = transaction.type;
 
       // Determine status based on related entity
       if (transaction.deposit) {

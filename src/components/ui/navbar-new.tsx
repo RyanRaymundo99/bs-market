@@ -9,7 +9,6 @@ import {
   X,
   Home,
   TrendingDown,
-  Wallet,
   BarChart3,
   User,
 } from "lucide-react";

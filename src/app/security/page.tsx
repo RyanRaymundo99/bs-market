@@ -1,13 +1,11 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { TwoFactorManagement } from "@/components/Auth/TwoFactorManagement";
 import NavbarNew from "@/components/ui/navbar-new";
 import { Shield } from "lucide-react";
 
 export default function SecurityPage() {
-  const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = useCallback(async () => {

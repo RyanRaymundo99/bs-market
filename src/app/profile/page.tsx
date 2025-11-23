@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -48,7 +47,6 @@ interface KYCDocuments {
 }
 
 export default function ProfilePage() {
-  const router = useRouter();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [kycDocuments, setKycDocuments] = useState<KYCDocuments | null>(null);
   const [loading, setLoading] = useState(true);

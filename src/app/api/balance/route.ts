@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    let balances = await prisma.balance.findMany({
+    const balances = await prisma.balance.findMany({
       where: { userId: session.user.id },
       orderBy: { currency: "asc" },
     });

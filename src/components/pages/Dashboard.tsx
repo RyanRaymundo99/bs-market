@@ -3,30 +3,15 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
-import {
-  TrendingUp,
   TrendingDown,
-  DollarSign,
   Bitcoin,
-  BarChart3,
   ArrowUpRight,
   Eye,
   EyeOff,
   RefreshCw,
-  Activity,
   Globe,
   Clock,
   Plus,
-  User,
   Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -73,6 +58,22 @@ interface UserStatus {
   kycRejectionReason: string | null;
 }
 
+interface Deposit {
+  id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  createdAt: string;
+}
+
+interface Withdrawal {
+  id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  createdAt: string;
+}
+
 export default function Dashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -85,8 +86,8 @@ export default function Dashboard() {
   const [totalBalance, setTotalBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [userStatus, setUserStatus] = useState<UserStatus | null>(null);
-  const [latestDeposit, setLatestDeposit] = useState<any>(null);
-  const [latestWithdrawal, setLatestWithdrawal] = useState<any>(null);
+  const [latestDeposit, setLatestDeposit] = useState<Deposit | null>(null);
+  const [latestWithdrawal, setLatestWithdrawal] = useState<Withdrawal | null>(null);
   const [showKYCBanner, setShowKYCBanner] = useState(() => {
     // Check localStorage to see if banner was dismissed
     if (typeof window !== "undefined") {
@@ -278,19 +279,11 @@ export default function Dashboard() {
           }
         }
 
-        // Fetch crypto prices
-        const btcResponse = await fetch("/api/crypto/price?symbol=BTCBRL");
-        const ethResponse = await fetch("/api/crypto/price?symbol=ETHBRL");
-
-        if (btcResponse.ok && ethResponse.ok) {
-          const btcData = await btcResponse.json();
-          const ethData = await ethResponse.json();
-
-          // Mock data for demonstration - replace with real API data
-          const mockCryptoData: CryptoPrice[] = [
+        // Mock crypto prices (price API removed)
+        const mockCryptoData: CryptoPrice[] = [
             {
               symbol: "BTC",
-              price: btcData.price || 350000,
+              price: 350000,
               change24h: 2500,
               changePercent: 0.72,
               volume: 1250000000,
@@ -298,7 +291,7 @@ export default function Dashboard() {
             },
             {
               symbol: "ETH",
-              price: ethData.price || 18500,
+              price: 18500,
               change24h: -150,
               changePercent: -0.8,
               volume: 850000000,
@@ -331,10 +324,6 @@ export default function Dashboard() {
           ];
 
           setCryptoPrices(mockCryptoData);
-        } else {
-          // If API calls fail, clear crypto prices
-          setCryptoPrices([]);
-        }
       } catch (error) {
         console.error("Failed to fetch data:", error);
         toast({

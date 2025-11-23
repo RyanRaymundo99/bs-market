@@ -9,7 +9,6 @@ import {
   X,
   Home,
   TrendingDown,
-  Wallet,
   BarChart3,
 } from "lucide-react";
 import CalculatorModal from "./calculator-modal";

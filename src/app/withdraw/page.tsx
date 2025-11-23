@@ -40,7 +40,6 @@ import {
   ExternalLink
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import NavbarNew from "@/components/ui/navbar-new";
 import Breadcrumb from "@/components/ui/breadcrumb";
 
@@ -74,7 +73,6 @@ interface WithdrawalHistory {
 type WithdrawalType = "PIX" | "USDT";
 
 export default function WithdrawPage() {
-  const router = useRouter();
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -251,8 +249,6 @@ export default function WithdrawPage() {
       });
       return;
     }
-
-    const usdtBalance = walletData?.balances.find((b) => b.currency === "USDT");
 
     try {
       setProcessing(true);

@@ -95,7 +95,7 @@ export class LedgerService {
         currency: data.currency,
         balance: balance.amount,
         description: data.description,
-        metadata: data.metadata || {},
+        metadata: data.metadata ? JSON.parse(JSON.stringify(data.metadata)) : null,
       },
     });
   }

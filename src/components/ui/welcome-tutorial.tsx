@@ -18,8 +18,6 @@ import {
   ArrowRight,
   CheckCircle,
   DollarSign,
-  CreditCard,
-  Banknote,
   Zap,
 } from "lucide-react";
 

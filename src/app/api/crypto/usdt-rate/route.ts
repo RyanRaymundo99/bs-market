@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { bancoCentralService } from "@/lib/banco-central";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Get USD/BRL rate from Banco Central (USDT is pegged 1:1 with USD)
     const rate = await bancoCentralService.getUSDTRate();
