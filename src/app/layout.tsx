@@ -21,8 +21,11 @@ export const metadata: Metadata = {
   authors: [{ name: "Build Strategy" }],
   manifest: "/manifest.json",
   icons: {
-    icon: "/favicon.ico",
-    apple: "/apple-touch-icon.png",
+    icon: [
+      { url: "/shortname-logo.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+    apple: "/shortname-logo.svg",
     shortcut: "/shortname-logo.svg",
   },
 };
@@ -45,6 +48,16 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable}`}
     >
       <head>
+        {/* Favicon */}
+        <link
+          rel="icon"
+          type="image/svg+xml"
+          href="/shortname-logo.svg"
+        />
+        <link
+          rel="alternate icon"
+          href="/favicon.ico"
+        />
         {/* Preload critical resources */}
         <link
           rel="preload"
