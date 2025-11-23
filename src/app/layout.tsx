@@ -22,11 +22,11 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   icons: {
     icon: [
+      { url: "/favicon.ico", sizes: "16x16 32x32", type: "image/x-icon" },
       { url: "/shortname-logo.svg", type: "image/svg+xml" },
-      { url: "/favicon.ico", sizes: "any" },
     ],
     apple: "/shortname-logo.svg",
-    shortcut: "/shortname-logo.svg",
+    shortcut: "/favicon.ico",
   },
 };
 
@@ -49,15 +49,7 @@ export default function RootLayout({
     >
       <head>
         {/* Favicon */}
-        <link
-          rel="icon"
-          type="image/svg+xml"
-          href="/shortname-logo.svg"
-        />
-        <link
-          rel="alternate icon"
-          href="/favicon.ico"
-        />
+        <link rel="icon" href="/favicon.ico" sizes="16x16 32x32" type="image/x-icon" />
         {/* Preload critical resources */}
         <link
           rel="preload"
