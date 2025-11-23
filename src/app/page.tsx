@@ -5,12 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, Shield, Zap, BarChart3, ArrowRight } from "lucide-react";
-import StarfallBackground from "@/components/ui/starfall-background";
 
 const Home = () => {
   return (
     <div className="relative min-h-screen bg-black text-white">
-      <StarfallBackground />
       {/* Navigation */}
       <nav className="border-b border-white/10 bg-black/60 backdrop-blur-[20px] supports-[backdrop-filter]:bg-black/60">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
@@ -32,9 +30,9 @@ const Home = () => {
             <Link href="/login">
               <Button
                 variant="ghost"
-                className="text-white hover:text-blue-300 hover:bg-white/10 nav-blur"
+                className="text-white hover:text-brand-300 hover:bg-white/10 nav-blur"
               >
-                Sign In
+                Entrar
               </Button>
             </Link>
             <Link href="/signup">
@@ -42,7 +40,7 @@ const Home = () => {
                 {/* Mirror effect for button */}
                 <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-30 pointer-events-none rounded-md"></div>
                 <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-                <span className="relative z-10">Get Started</span>
+                <span className="relative z-10">Começar</span>
               </Button>
             </Link>
           </div>
@@ -52,20 +50,13 @@ const Home = () => {
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-20">
         <div className="text-center space-y-8">
-          <Badge className="mb-4 bg-white/10 text-white border-white/20 text-blur">
-            <Zap className="w-4 h-4 mr-2" />
-            Next-Gen Investment Platform
-          </Badge>
           <h1 className="text-5xl md:text-7xl font-bold text-white">
-            Invista de Forma Mais Inteligente com
             <span className="text-gradient block text-blur">
               Build Strategy
             </span>
           </h1>
           <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-            Experimente o futuro dos investimentos com nossa plataforma. Obtenha
-            insights em tempo real, estratégias de negociação automatizadas e
-            gerenciamento profissional de portfólio em um só lugar.
+            A integração do mercado cripto com o sua finanças
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link href="/signup">
@@ -95,7 +86,7 @@ const Home = () => {
                 {/* Mirror effect for button */}
                 <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-30 pointer-events-none rounded-md"></div>
                 <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-                <span className="relative z-10">Entrar no Dashboard</span>
+                <span className="relative z-10">Entrar</span>
               </Button>
             </Link>
           </div>
@@ -106,11 +97,10 @@ const Home = () => {
       <section className="container mx-auto px-4 py-20">
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold text-white mb-4 text-blur">
-            Why Choose BS Consulting?
+            Por Que Escolher a BS Consulting?
           </h2>
           <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-            Our platform combines cutting-edge technology with proven investment
-            strategies
+            Nossa plataforma combina tecnologia de ponta com estratégias de investimento comprovadas
           </p>
         </div>
 
@@ -126,11 +116,10 @@ const Home = () => {
                 <TrendingUp className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-xl font-semibold text-white mb-2 text-blur">
-                AI-Powered Insights
+                Insights Impulsionados por IA
               </h3>
               <p className="text-gray-300">
-                Get real-time market analysis and personalized investment
-                recommendations powered by advanced machine learning algorithms.
+                Obtenha análise de mercado em tempo real e recomendações de investimento personalizadas alimentadas por algoritmos avançados de aprendizado de máquina.
               </p>
             </CardContent>
           </Card>
@@ -146,11 +135,10 @@ const Home = () => {
                 <Shield className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-xl font-semibold text-white mb-2 text-blur">
-                Secure & Compliant
+                Seguro e Conforme
               </h3>
               <p className="text-gray-300">
-                Bank-level security with SOC 2 compliance. Your investments and
-                data are protected with enterprise-grade encryption.
+                Segurança de nível bancário com conformidade SOC 2. Seus investimentos e dados são protegidos com criptografia de nível empresarial.
               </p>
             </CardContent>
           </Card>
@@ -166,11 +154,10 @@ const Home = () => {
                 <BarChart3 className="w-6 h-6 text-white" />
               </div>
               <h3 className="text-xl font-semibold text-white mb-2 text-blur">
-                Advanced Analytics
+                Análises Avançadas
               </h3>
               <p className="text-gray-300">
-                Comprehensive portfolio analytics with detailed performance
-                metrics, risk assessment, and optimization suggestions.
+                Análises abrangentes de portfólio com métricas de desempenho detalhadas, avaliação de risco e sugestões de otimização.
               </p>
             </CardContent>
           </Card>
@@ -186,11 +173,11 @@ const Home = () => {
             <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
             <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
 
-            <div className="text-4xl font-bold text-blue-300 mb-2 relative z-10 text-blur">
+            <div className="text-4xl font-bold text-brand-300 mb-2 relative z-10 text-blur">
               $2.5B+
             </div>
             <div className="text-gray-300 relative z-10">
-              Assets Under Management
+              Ativos Sob Gestão
             </div>
           </div>
           <div className="bg-black/60 border border-white/10 rounded-xl p-6 shadow-2xl backdrop-blur-[20px] relative overflow-hidden card-blur">
@@ -199,10 +186,10 @@ const Home = () => {
             <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
             <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
 
-            <div className="text-4xl font-bold text-blue-300 mb-2 relative z-10 text-blur">
+            <div className="text-4xl font-bold text-brand-300 mb-2 relative z-10 text-blur">
               50K+
             </div>
-            <div className="text-gray-300 relative z-10">Active Investors</div>
+            <div className="text-gray-300 relative z-10">Investidores Ativos</div>
           </div>
           <div className="bg-black/60 border border-white/10 rounded-xl p-6 shadow-2xl backdrop-blur-[20px] relative overflow-hidden card-blur">
             {/* Mirror effect overlay */}
@@ -210,11 +197,11 @@ const Home = () => {
             <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
             <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
 
-            <div className="text-4xl font-bold text-blue-300 mb-2 relative z-10 text-blur">
+            <div className="text-4xl font-bold text-brand-300 mb-2 relative z-10 text-blur">
               15.8%
             </div>
             <div className="text-gray-300 relative z-10">
-              Average Annual Return
+              Retorno Médio Anual
             </div>
           </div>
           <div className="bg-black/60 border border-white/10 rounded-xl p-6 shadow-2xl backdrop-blur-[20px] relative overflow-hidden card-blur">
@@ -223,11 +210,11 @@ const Home = () => {
             <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
             <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
 
-            <div className="text-4xl font-bold text-blue-300 mb-2 relative z-10 text-blur">
+            <div className="text-4xl font-bold text-brand-300 mb-2 relative z-10 text-blur">
               99.9%
             </div>
             <div className="text-gray-300 relative z-10">
-              Uptime Reliability
+              Confiabilidade de Uptime
             </div>
           </div>
         </div>
@@ -278,7 +265,7 @@ const Home = () => {
                   {/* Mirror effect for button */}
                   <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-30 pointer-events-none rounded-md"></div>
                   <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-                  <span className="relative z-10">Acessar Dashboard</span>
+                  <span className="relative z-10">Entrar</span>
                 </Button>
               </Link>
             </div>
@@ -307,7 +294,7 @@ const Home = () => {
               <span>© 2024 Build Strategy. Todos os direitos reservados.</span>
               <Link
                 href="/login"
-                className="hover:text-blue-300 transition-colors text-blur"
+                className="hover:text-brand-300 transition-colors text-blur"
               >
                 Entrar
               </Link>

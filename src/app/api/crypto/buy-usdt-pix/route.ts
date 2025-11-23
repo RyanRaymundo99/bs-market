@@ -1,0 +1,207 @@
+import { NextRequest, NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
+import { nutzPayService } from "@/lib/nutzpay";
+import { ledgerService } from "@/lib/ledger";
+import { Decimal } from "@prisma/client/runtime/library";
+
+export async function POST(request: NextRequest) {
+  try {
+    // Get the session cookie
+    const sessionCookie = request.cookies.get("better-auth.session");
+
+    if (!sessionCookie?.value) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Find the session in the database
+    const session = await prisma.session.findUnique({
+      where: { token: sessionCookie.value },
+      include: { user: true },
+    });
+
+    if (!session || session.expiresAt <= new Date()) {
+      return NextResponse.json(
+        { error: "Invalid or expired session" },
+        { status: 401 }
+      );
+    }
+
+    const user = session.user;
+
+    // Parse request body
+    const { amount, usdt_amount } = await request.json();
+
+    // Validate input
+    if (!amount || amount <= 0) {
+      return NextResponse.json(
+        { error: "Amount must be greater than 0" },
+        { status: 400 }
+      );
+    }
+
+    if (!usdt_amount || usdt_amount <= 0) {
+      return NextResponse.json(
+        { error: "USDT amount must be greater than 0" },
+        { status: 400 }
+      );
+    }
+
+    // Validate user has required information
+    if (!user.name || !user.email) {
+      return NextResponse.json(
+        { error: "User name and email are required" },
+        { status: 400 }
+      );
+    }
+
+    // Get user CPF/document
+    const document = user.cpf || user.documentNumber || "";
+    if (!document) {
+      return NextResponse.json(
+        { error: "User document (CPF) is required for purchase" },
+        { status: 400 }
+      );
+    }
+
+    // Generate external ID for NutzPay
+    const externalId = `purchase_${user.id}_${Date.now()}`;
+
+    // Create order record first
+    const order = await prisma.order.create({
+      data: {
+        userId: user.id,
+        type: "BUY",
+        baseCurrency: "USDT",
+        quoteCurrency: "BRL",
+        amount: new Decimal(usdt_amount),
+        price: new Decimal(amount / usdt_amount),
+        total: new Decimal(amount),
+        status: "PENDING",
+      },
+    });
+
+    try {
+      // Call NutzPay API to create USDT purchase
+      const callbackUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"}/api/webhooks/nutzpay`;
+
+      const nutzPayResponse = await nutzPayService.createUSDTPurchase({
+        amount: amount,
+        usdt_amount: usdt_amount,
+        customer: {
+          name: user.name,
+          document: document,
+          email: user.email,
+        },
+        external_id: externalId,
+        callback_url: callbackUrl,
+      });
+
+      // Extract response data
+      const responseData = nutzPayResponse.data || nutzPayResponse;
+      const transactionId = responseData.transaction_id;
+      const responseStatus = responseData.status || "pending";
+      const isCompleted = responseStatus === "completed";
+
+      // Update order with NutzPay transaction ID
+      await prisma.order.update({
+        where: { id: order.id },
+        data: {
+          externalOrderId: transactionId || externalId,
+          status: isCompleted ? "COMPLETED" : "PENDING",
+          executedAt: isCompleted ? new Date() : null,
+        },
+      });
+
+      // Create deposit record for tracking
+      const deposit = await prisma.deposit.create({
+        data: {
+          userId: user.id,
+          amount: new Decimal(amount),
+          fee: new Decimal(0), // Fee is already included in the amount
+          status: isCompleted ? "CONFIRMED" : "PENDING",
+          paymentMethod: "PIX",
+          externalId: transactionId || externalId,
+          pixQrCode: responseData.pix_data?.qr_code || null,
+          pixQrCodeBase64: responseData.pix_data?.qr_code_base64 || null,
+        },
+      });
+
+      // If payment is completed, update user balance immediately
+      if (isCompleted) {
+        // Update USDT balance (add the USDT amount)
+        await ledgerService.updateBalance(
+          user.id,
+          "USDT",
+          new Decimal(usdt_amount),
+          "ADD"
+        );
+
+        // Create transaction record for USDT credit
+        await ledgerService.createTransaction({
+          userId: user.id,
+          type: "BUY_CRYPTO",
+          amount: new Decimal(usdt_amount),
+          currency: "USDT",
+          description: `USDT purchase via PIX - ${usdt_amount} USDT`,
+          metadata: {
+            orderId: order.id,
+            depositId: deposit.id,
+            transactionId: transactionId,
+            amountBRL: amount,
+            amountUSDT: usdt_amount,
+            exchangeRate: amount / usdt_amount,
+          },
+        });
+
+        console.log(`User ${user.id} balance credited with ${usdt_amount} USDT`);
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: "USDT purchase request created successfully",
+        data: {
+          transaction_id: nutzPayResponse.data?.transaction_id,
+          external_id: externalId,
+          status: nutzPayResponse.data?.status || "pending",
+          amount_brl: amount,
+          amount_usdt: usdt_amount,
+          exchange_rate: amount / usdt_amount,
+          pix_data: nutzPayResponse.data?.pix_data || null,
+          order_id: order.id,
+          deposit_id: deposit.id,
+        },
+      });
+    } catch (error: any) {
+      // If NutzPay API call fails, update order status to failed
+      await prisma.order.update({
+        where: { id: order.id },
+        data: {
+          status: "FAILED",
+        },
+      });
+
+      console.error("NutzPay purchase error:", error);
+
+      // Return user-friendly error message
+      const errorMessage =
+        error.response?.data?.error?.message ||
+        error.message ||
+        "Failed to process USDT purchase with NutzPay";
+
+      return NextResponse.json(
+        {
+          error: errorMessage,
+          details: error.response?.data,
+        },
+        { status: error.response?.status || 500 }
+      );
+    }
+  } catch (error) {
+    console.error("USDT purchase error:", error);
+    return NextResponse.json(
+      { error: "Failed to process USDT purchase" },
+      { status: 500 }
+    );
+  }
+}
+

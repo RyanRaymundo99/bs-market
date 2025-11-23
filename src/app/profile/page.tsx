@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -47,9 +48,11 @@ interface KYCDocuments {
 }
 
 export default function ProfilePage() {
+  const router = useRouter();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [kycDocuments, setKycDocuments] = useState<KYCDocuments | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -63,6 +66,35 @@ export default function ProfilePage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const { toast } = useToast();
+
+  const handleLogout = useCallback(async () => {
+    setIsLoggingOut(true);
+    try {
+      // Call logout API to clear session
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+      
+      // Clear local storage
+      localStorage.removeItem("auth-session");
+      localStorage.removeItem("user");
+      sessionStorage.clear();
+      
+      // Force redirect to home page using window.location for reliability
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Even if API fails, clear local storage and redirect
+      localStorage.removeItem("auth-session");
+      localStorage.removeItem("user");
+      sessionStorage.clear();
+      // Force redirect using window.location
+      window.location.href = "/";
+    } finally {
+      setIsLoggingOut(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetchUserProfile();
@@ -217,7 +249,7 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background text-foreground">
-        <NavbarNew isLoggingOut={false} handleLogout={() => {}} />
+        <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">

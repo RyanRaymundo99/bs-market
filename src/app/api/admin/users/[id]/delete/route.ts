@@ -72,17 +72,6 @@ export async function DELETE(
         where: { userId: id },
       });
 
-      // Delete P2P offers created by user
-      await tx.p2POffer.deleteMany({
-        where: { userId: id },
-      });
-
-      // Delete P2P trades where user is buyer or seller
-      await tx.p2PTrade.deleteMany({
-        where: {
-          OR: [{ buyerId: id }, { sellerId: id }],
-        },
-      });
 
       // Delete user balances
       await tx.balance.deleteMany({

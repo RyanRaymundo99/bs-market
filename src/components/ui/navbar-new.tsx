@@ -19,7 +19,6 @@ import { BalanceDisplay } from "./balance-display";
 const NAV_LINKS = [
   { label: "Dashboard", href: "/dashboard", icon: Home },
   { label: "Trade", href: "/trade", icon: BarChart3 },
-  { label: "Deposits", href: "/deposits", icon: Wallet },
   { label: "Withdraw", href: "/withdraw", icon: TrendingDown },
   { label: "Profile", href: "/profile", icon: User },
 ];
@@ -104,14 +103,14 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
             {NAV_LINKS.map((link) => {
               const IconComponent = link.icon;
               return (
-                <a
+                <button
                   key={link.label}
-                  href={link.href}
-                  className="text-white/80 hover:text-blue-300 font-medium transition-colors flex items-center gap-2 group"
+                  onClick={() => handleNavigation(link.href)}
+                  className="text-white/80 hover:text-brand-300 font-medium transition-colors flex items-center gap-2 group cursor-pointer"
                 >
-                  <IconComponent className="w-4 h-4 group-hover:text-blue-300 transition-colors" />
+                  <IconComponent className="w-4 h-4 group-hover:text-brand-300 transition-colors" />
                   {link.label}
-                </a>
+                </button>
               );
             })}
           </nav>
@@ -126,7 +125,7 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
             size="sm"
             onClick={handleLogout}
             disabled={isLoggingOut}
-            className="gap-2 text-white hover:text-blue-300 hover:bg-white/10"
+            className="gap-2 text-white hover:text-brand-300 hover:bg-white/10"
           >
             <LogOut className="w-4 h-4" />
             {isLoggingOut ? "Saindo..." : "Sair"}
@@ -136,28 +135,53 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
             size="sm"
             onClick={handleCalculatorOpen}
             title="Calculadora de Conversão"
-            className="text-white hover:text-blue-300 hover:bg-white/10"
+            className="text-white hover:text-brand-300 hover:bg-white/10"
           >
             <Timer className="w-4 h-4" />
           </Button>
         </div>
       </header>
 
-      {/* Mobile Sticky Hamburger Menu */}
-      <div className="fixed top-4 right-4 z-50 md:hidden">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={toggleMobileMenu}
-          className="bg-black/60 backdrop-blur-[20px] border border-white/10 text-white hover:text-blue-300 hover:bg-black/80 p-3 rounded-lg shadow-lg"
+      {/* Mobile Header with Logo, Sign Out, and Hamburger */}
+      <header className="w-full bg-black/60 border-b border-white/10 backdrop-blur-[20px] items-center justify-between px-4 py-3 sticky top-0 z-50 flex md:hidden">
+        <div
+          className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+          onClick={() => handleNavigation("/dashboard")}
         >
-          {isMobileMenuOpen ? (
-            <X className="w-5 h-5" />
-          ) : (
-            <Menu className="w-5 h-5" />
-          )}
-        </Button>
-      </div>
+          <Image
+            src="/shortname-logo.svg"
+            alt="Build Strategy"
+            width={120}
+            height={60}
+            priority
+            className="h-12 w-auto"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+            className="text-white hover:text-blue-300 hover:bg-white/10 p-2"
+            title="Sair"
+          >
+            <LogOut className="w-5 h-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleMobileMenu}
+            className="bg-black/60 backdrop-blur-[20px] border border-white/10 text-white hover:text-blue-300 hover:bg-black/80 p-2 rounded-lg"
+          >
+            {isMobileMenuOpen ? (
+              <X className="w-5 h-5" />
+            ) : (
+              <Menu className="w-5 h-5" />
+            )}
+          </Button>
+        </div>
+      </header>
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
@@ -174,16 +198,7 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
       >
         {/* Mobile Menu Header */}
         <div className="flex items-center justify-between p-6 border-b border-white/10">
-          <div className="flex items-center gap-2">
-            <Image
-              src="/shortname-logo.svg"
-              alt="Build Strategy"
-              width={32}
-              height={32}
-              className="h-8 w-auto"
-            />
-            <span className="text-lg font-bold text-white">Menu</span>
-          </div>
+          <span className="text-lg font-bold text-white">Menu</span>
           <Button
             variant="ghost"
             size="sm"
@@ -203,7 +218,7 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
                 onClick={() => handleMobileNavigation("/dashboard")}
                 className="w-full flex items-center gap-3 p-3 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 group"
               >
-                <Home className="w-5 h-5 group-hover:text-blue-300 transition-colors" />
+                <Home className="w-5 h-5 group-hover:text-brand-300 transition-colors" />
                 <span className="font-medium">Dashboard</span>
               </button>
 
@@ -211,23 +226,15 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
                 onClick={() => handleMobileNavigation("/trade")}
                 className="w-full flex items-center gap-3 p-3 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 group"
               >
-                <BarChart3 className="w-5 h-5 group-hover:text-blue-300 transition-colors" />
+                <BarChart3 className="w-5 h-5 group-hover:text-brand-300 transition-colors" />
                 <span className="font-medium">Trade</span>
-              </button>
-
-              <button
-                onClick={() => handleMobileNavigation("/deposits")}
-                className="w-full flex items-center gap-3 p-3 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 group"
-              >
-                <Wallet className="w-5 h-5 group-hover:text-blue-300 transition-colors" />
-                <span className="font-medium">Deposits</span>
               </button>
 
               <button
                 onClick={() => handleMobileNavigation("/withdraw")}
                 className="w-full flex items-center gap-3 p-3 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 group"
               >
-                <TrendingDown className="w-5 h-5 group-hover:text-blue-300 transition-colors" />
+                <TrendingDown className="w-5 h-5 group-hover:text-brand-300 transition-colors" />
                 <span className="font-medium">Withdraw</span>
               </button>
 
@@ -235,7 +242,7 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
                 onClick={() => handleMobileNavigation("/profile")}
                 className="w-full flex items-center gap-3 p-3 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 group"
               >
-                <User className="w-5 h-5 group-hover:text-blue-300 transition-colors" />
+                <User className="w-5 h-5 group-hover:text-brand-300 transition-colors" />
                 <span className="font-medium">Profile</span>
               </button>
             </div>
@@ -253,7 +260,7 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
                 onClick={handleCalculatorOpen}
                 className="flex-1 flex items-center justify-center gap-2 p-3 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 group"
               >
-                <Timer className="w-5 h-5 group-hover:text-blue-300 transition-colors" />
+                <Timer className="w-5 h-5 group-hover:text-brand-300 transition-colors" />
                 <span className="font-medium">Calculadora</span>
               </button>
 

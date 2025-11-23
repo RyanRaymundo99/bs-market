@@ -81,27 +81,9 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Calculate total trade volume (P2P trades completed)
-    const totalTrades = await prisma.p2PTrade.aggregate({
-      where: {
-        status: "COMPLETED",
-      },
-      _sum: {
-        fiatAmount: true,
-      },
-    });
-
-    const totalTradesLastWeek = await prisma.p2PTrade.aggregate({
-      where: {
-        status: "COMPLETED",
-        createdAt: {
-          gte: oneWeekAgo,
-        },
-      },
-      _sum: {
-        fiatAmount: true,
-      },
-    });
+    // Total trades volume (removed P2P)
+    const totalTrades = { _sum: { fiatAmount: 0 } };
+    const totalTradesLastWeek = { _sum: { fiatAmount: 0 } };
 
     // Calculate total commissions based on actual fees charged
     // 1. Commission from deposits (3% fee on confirmed deposits)
@@ -128,27 +110,9 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // 2. Commission from P2P trades (3% fee on completed trades)
-    // Calculate 3% of the fiat amount for each completed trade
-    const completedTrades = await prisma.p2PTrade.findMany({
-      where: {
-        status: "COMPLETED",
-      },
-      select: {
-        fiatAmount: true,
-        createdAt: true,
-      },
-    });
-
-    const tradeCommissions = completedTrades.reduce((sum, trade) => {
-      return sum + Number(trade.fiatAmount) * 0.03; // 3% fee
-    }, 0);
-
-    const tradeCommissionsLastWeek = completedTrades
-      .filter(trade => trade.createdAt >= oneWeekAgo)
-      .reduce((sum, trade) => {
-        return sum + Number(trade.fiatAmount) * 0.03; // 3% fee
-      }, 0);
+    // 2. Commission from P2P trades (removed)
+    const tradeCommissions = 0;
+    const tradeCommissionsLastWeek = 0;
 
     // 3. Commission from crypto trades (3% fee on buy/sell operations)
     const cryptoTradeCommissions = await prisma.transaction.aggregate({
@@ -270,16 +234,6 @@ export async function GET(request: NextRequest) {
             status: true,
           },
         },
-        buyerTrade: {
-          select: {
-            status: true,
-          },
-        },
-        sellerTrade: {
-          select: {
-            status: true,
-          },
-        },
       },
       orderBy: {
         createdAt: "desc",
@@ -299,11 +253,6 @@ export async function GET(request: NextRequest) {
       } else if (transaction.withdrawal) {
         status = transaction.withdrawal.status === "COMPLETED" ? "APPROVED" : 
                  transaction.withdrawal.status === "FAILED" ? "REJECTED" : "PENDING";
-      } else if (transaction.buyerTrade || transaction.sellerTrade) {
-        const trade = transaction.buyerTrade || transaction.sellerTrade;
-        status = trade?.status === "COMPLETED" ? "APPROVED" : 
-                 trade?.status === "CANCELLED" ? "REJECTED" : "PENDING";
-        type = "P2P_TRADE";
       }
 
       return {
@@ -350,18 +299,7 @@ export async function GET(request: NextRequest) {
         },
       });
 
-      const dayTrades = await prisma.p2PTrade.aggregate({
-        where: {
-          status: "COMPLETED",
-          createdAt: {
-            gte: date,
-            lt: nextDate,
-          },
-        },
-        _sum: {
-          fiatAmount: true,
-        },
-      });
+      const dayTrades = { _sum: { fiatAmount: 0 } };
 
       chartData.push({
         date: date.toISOString().split('T')[0],

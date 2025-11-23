@@ -40,6 +40,7 @@ import {
   ExternalLink
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import NavbarNew from "@/components/ui/navbar-new";
 import Breadcrumb from "@/components/ui/breadcrumb";
 
@@ -73,8 +74,10 @@ interface WithdrawalHistory {
 type WithdrawalType = "PIX" | "USDT";
 
 export default function WithdrawPage() {
+  const router = useRouter();
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [withdrawalType, setWithdrawalType] = useState<WithdrawalType>("PIX");
   const [processing, setProcessing] = useState(false);
   const [withdrawalHistory, setWithdrawalHistory] = useState<WithdrawalHistory[]>([]);
@@ -92,6 +95,35 @@ export default function WithdrawPage() {
   const [selectedNetwork, setSelectedNetwork] = useState("TRC20");
 
   const { toast } = useToast();
+
+  const handleLogout = useCallback(async () => {
+    setIsLoggingOut(true);
+    try {
+      // Call logout API to clear session
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+      
+      // Clear local storage
+      localStorage.removeItem("auth-session");
+      localStorage.removeItem("user");
+      sessionStorage.clear();
+      
+      // Force redirect to home page using window.location for reliability
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Even if API fails, clear local storage and redirect
+      localStorage.removeItem("auth-session");
+      localStorage.removeItem("user");
+      sessionStorage.clear();
+      // Force redirect using window.location
+      window.location.href = "/";
+    } finally {
+      setIsLoggingOut(false);
+    }
+  }, []);
 
   // Fetch wallet data
   const fetchWalletData = useCallback(async () => {
@@ -221,14 +253,6 @@ export default function WithdrawPage() {
     }
 
     const usdtBalance = walletData?.balances.find((b) => b.currency === "USDT");
-    if (!usdtBalance || parseFloat(usdtAmount) > usdtBalance.amount) {
-      toast({
-        title: "Saldo Insuficiente",
-        description: "Você não possui saldo suficiente em USDT",
-        variant: "destructive",
-      });
-      return;
-    }
 
     try {
       setProcessing(true);
@@ -321,7 +345,7 @@ export default function WithdrawPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <NavbarNew isLoggingOut={false} handleLogout={() => {}} />
+        <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
         <div className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
@@ -537,9 +561,8 @@ export default function WithdrawPage() {
                           <SelectValue placeholder="Selecione a rede" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="TRC20">TRC20 (Tron)</SelectItem>
-                          <SelectItem value="ERC20">ERC20 (Ethereum)</SelectItem>
-                          <SelectItem value="BSC">BSC (Binance Smart Chain)</SelectItem>
+                          <SelectItem value="TRC20">TRC20 (Tron) - Taxa menor</SelectItem>
+                          <SelectItem value="ERC20">ERC20 (Ethereum) - Taxa maior</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

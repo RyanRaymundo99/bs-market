@@ -1,14 +1,47 @@
 "use client";
 
-import React from "react";
+import React, { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { TwoFactorManagement } from "@/components/Auth/TwoFactorManagement";
 import NavbarNew from "@/components/ui/navbar-new";
 import { Shield } from "lucide-react";
 
 export default function SecurityPage() {
+  const router = useRouter();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = useCallback(async () => {
+    setIsLoggingOut(true);
+    try {
+      // Call logout API to clear session
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+      
+      // Clear local storage
+      localStorage.removeItem("auth-session");
+      localStorage.removeItem("user");
+      sessionStorage.clear();
+      
+      // Force redirect to home page using window.location for reliability
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Even if API fails, clear local storage and redirect
+      localStorage.removeItem("auth-session");
+      localStorage.removeItem("user");
+      sessionStorage.clear();
+      // Force redirect using window.location
+      window.location.href = "/";
+    } finally {
+      setIsLoggingOut(false);
+    }
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
-      <NavbarNew isLoggingOut={false} handleLogout={() => {}} />
+      <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
 
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">

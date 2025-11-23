@@ -26,10 +26,24 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const balances = await prisma.balance.findMany({
+    let balances = await prisma.balance.findMany({
       where: { userId: session.user.id },
       orderBy: { currency: "asc" },
     });
+
+    // Ensure USDT balance exists (create if it doesn't)
+    const usdtBalance = balances.find((b) => b.currency === "USDT");
+    if (!usdtBalance) {
+      const newUsdtBalance = await prisma.balance.create({
+        data: {
+          userId: session.user.id,
+          currency: "USDT",
+          amount: 0,
+          locked: 0,
+        },
+      });
+      balances.push(newUsdtBalance);
+    }
 
     // Convert Decimal to number for frontend compatibility
     const formattedBalances = balances.map((balance) => ({

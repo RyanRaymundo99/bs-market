@@ -89,7 +89,7 @@ const ForgotPassword = () => {
         Lembra da sua senha?{" "}
         <Link
           href="/login"
-          className="font-medium text-blue-400 underline-offset-4 hover:text-blue-300 hover:underline transition-colors"
+          className="font-medium text-brand-300 underline-offset-4 hover:text-brand-400 hover:underline transition-colors"
         >
           Voltar ao login
         </Link>

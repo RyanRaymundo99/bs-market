@@ -39,13 +39,6 @@ export async function POST(request: NextRequest) {
     const deletedWithdrawals = await prisma.withdrawal.deleteMany({});
     console.log(`Deleted ${deletedWithdrawals.count} withdrawals`);
 
-    // Reset P2P trades
-    const deletedTrades = await prisma.p2PTrade.deleteMany({});
-    console.log(`Deleted ${deletedTrades.count} P2P trades`);
-
-    // Reset P2P offers
-    const deletedOffers = await prisma.p2POffer.deleteMany({});
-    console.log(`Deleted ${deletedOffers.count} P2P offers`);
 
     // Reset orders
     const deletedOrders = await prisma.order.deleteMany({});
@@ -72,8 +65,6 @@ export async function POST(request: NextRequest) {
       deleted: {
         deposits: deletedDeposits.count,
         withdrawals: deletedWithdrawals.count,
-        trades: deletedTrades.count,
-        offers: deletedOffers.count,
         orders: deletedOrders.count,
         transactions: deletedTransactions.count,
         balances: resetBalances.count,

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { binanceService } from "@/lib/binance";
 
 export async function GET(request: NextRequest) {
   try {
@@ -33,78 +32,17 @@ export async function GET(request: NextRequest) {
       orderBy: { amount: "desc" },
     });
 
-    // Get popular crypto pairs for price conversion
-    const popularPairs = await binanceService.getPopularPairs();
+    // Format balances without price conversion
+    const portfolioData = balances.map((balance) => {
+      const amount = parseFloat(balance.amount.toString());
+      const locked = parseFloat(balance.locked.toString());
 
-    // Calculate portfolio value in USDT
-    let totalPortfolioValue = 0;
-    const portfolioData = await Promise.all(
-      balances.map(async (balance) => {
-        if (balance.currency === "USDT" || balance.currency === "BRL") {
-          // For fiat currencies, we'll convert BRL to USDT later
-          const amount = parseFloat(balance.amount.toString());
-          const locked = parseFloat(balance.locked.toString());
-
-          if (balance.currency === "USDT") {
-            totalPortfolioValue += amount;
-            return {
-              currency: balance.currency,
-              amount,
-              locked,
-              usdtValue: amount,
-              brlValue: 0,
-            };
-          } else {
-            // BRL to USDT conversion (1 USDT = R$ 5.00)
-            const usdtValue = amount / 5.0;
-            totalPortfolioValue += usdtValue;
-            return {
-              currency: balance.currency,
-              amount,
-              locked,
-              usdtValue,
-              brlValue: amount,
-            };
-          }
-        }
-
-        try {
-          // For crypto currencies, get USDT price
-          const symbol = `${balance.currency}USDT`;
-          if (popularPairs.includes(symbol)) {
-            const price = await binanceService.getPrice(symbol);
-            const usdtValue = parseFloat(balance.amount.toString()) * price;
-            totalPortfolioValue += usdtValue;
-
-            return {
-              currency: balance.currency,
-              amount: parseFloat(balance.amount.toString()),
-              locked: parseFloat(balance.locked.toString()),
-              usdtValue,
-              usdtPrice: price,
-            };
-          } else {
-            // If no direct USDT pair, try to get price through other means
-            return {
-              currency: balance.currency,
-              amount: parseFloat(balance.amount.toString()),
-              locked: parseFloat(balance.locked.toString()),
-              usdtValue: 0,
-              usdtPrice: 0,
-            };
-          }
-        } catch (error) {
-          console.error(`Error getting price for ${balance.currency}:`, error);
-          return {
-            currency: balance.currency,
-            amount: parseFloat(balance.amount.toString()),
-            locked: parseFloat(balance.locked.toString()),
-            usdtValue: 0,
-            usdtPrice: 0,
-          };
-        }
-      })
-    );
+      return {
+        currency: balance.currency,
+        amount,
+        locked,
+      };
+    });
 
     // Get recent transactions
     const recentTransactions = await prisma.transaction.findMany({
@@ -131,7 +69,6 @@ export async function GET(request: NextRequest) {
       success: true,
       data: {
         balances: portfolioData,
-        totalPortfolioValue,
         recentTransactions,
         openOrders,
         lastUpdated: new Date().toISOString(),

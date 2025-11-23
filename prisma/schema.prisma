@@ -136,9 +136,9 @@ model Deposit {
   transaction   Transaction?  @relation(fields: [transactionId], references: [id])
   user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  // Mercado Pago integration fields
-  paymentId     String?       // Mercado Pago payment ID
-  paymentStatus String?       // Mercado Pago payment status
+  // Payment integration fields
+  paymentId     String?       // External payment provider payment ID
+  paymentStatus String?       // External payment provider payment status
   paymentAmount Decimal?      @db.Decimal(20, 2) // Actual amount paid
   fee           Decimal?      @db.Decimal(20, 2) // Processing fee charged
   pixQrCode    String?       // PIX QR code data

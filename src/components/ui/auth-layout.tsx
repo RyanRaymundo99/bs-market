@@ -31,9 +31,9 @@ const AuthLayout = ({
   return (
     <div className="min-h-screen flex items-center justify-center bg-black relative overflow-hidden">
       {/* Enhanced gradient shapes with more pronounced effects */}
-      <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-gradient-to-br from-blue-500/30 via-purple-600/20 to-cyan-500/25 rounded-full blur-[100px] -translate-x-1/2 -translate-y-1/2 animate-pulse"></div>
-      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-gradient-to-tl from-cyan-500/30 via-blue-600/20 to-purple-500/25 rounded-full blur-[100px] translate-x-1/2 translate-y-1/2 animate-pulse"></div>
-      <div className="absolute top-1/2 left-1/2 w-[300px] h-[300px] bg-gradient-to-r from-purple-500/20 via-pink-500/15 to-blue-500/20 rounded-full blur-[80px] -translate-x-1/2 -translate-y-1/2 animate-pulse"></div>
+      <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-gradient-to-br from-[#12E0A1]/30 via-purple-600/20 to-cyan-500/25 rounded-full blur-[100px] -translate-x-1/2 -translate-y-1/2 animate-pulse"></div>
+      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-gradient-to-tl from-cyan-500/30 via-[#12E0A1]/20 to-purple-500/25 rounded-full blur-[100px] translate-x-1/2 translate-y-1/2 animate-pulse"></div>
+      <div className="absolute top-1/2 left-1/2 w-[300px] h-[300px] bg-gradient-to-r from-purple-500/20 via-pink-500/15 to-[#12E0A1]/20 rounded-full blur-[80px] -translate-x-1/2 -translate-y-1/2 animate-pulse"></div>
 
       {/* Additional floating elements for mirror effect */}
       <div className="absolute top-1/4 right-1/4 w-32 h-32 bg-gradient-to-br from-white/5 to-transparent rounded-full blur-sm"></div>

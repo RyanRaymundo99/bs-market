@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useCallback, useEffect } from "react";
-import { Lock, ArrowRight, Loader2, Code } from "lucide-react";
+import { Lock, ArrowRight, Loader2, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
@@ -23,7 +23,6 @@ const REMEMBER_PASSWORD_KEY = "remembered-password";
 
 const Login = () => {
   const [pending, setPending] = useState(false);
-  const [isLocalhost, setIsLocalhost] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -50,16 +49,6 @@ const Login = () => {
     }
   }, [form]);
 
-  // Check if we're on localhost
-  useEffect(() => {
-    const isLocalhostCheck =
-      typeof window !== "undefined" &&
-      (window.location.hostname === "localhost" ||
-        window.location.hostname === "127.0.0.1") &&
-      window.location.port === "3000";
-
-    setIsLocalhost(isLocalhostCheck);
-  }, []);
 
   // Clear any existing form errors when component mounts
   useEffect(() => {
@@ -91,7 +80,6 @@ const Login = () => {
         setPending(true);
 
         // Use our simple custom login endpoint
-        console.log("Using custom login with email:", data.emailOrCpf);
 
         const response = await fetch("/api/auth/custom-login", {
           method: "POST",
@@ -120,8 +108,12 @@ const Login = () => {
           localStorage.setItem("auth-user", JSON.stringify(result.user));
           localStorage.setItem("auth-session", "true");
 
-          console.log("Login successful, redirecting to dashboard");
-          router.push("/dashboard");
+          // Mark that we just logged in to prevent back navigation
+          sessionStorage.setItem("just-logged-in", "true");
+
+          
+          // Redirect to dashboard immediately
+          window.location.href = "/dashboard";
         } else {
           toast({
             variant: "destructive",
@@ -142,88 +134,34 @@ const Login = () => {
     [router, toast]
   );
 
-  const handleCreateDevAccess = async () => {
-    try {
-      setPending(true);
-
-      // Create a dev user with all permissions
-      const response = await fetch("/api/auth/create-dev-user", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: "dev@buildstrategy.com",
-          password: "12345678",
-          name: "Developer User",
-          cpf: "12345678901",
-        }),
-      });
-
-      const result = await response.json();
-
-      if (response.ok && result.success) {
-        toast({
-          title: "Dev User Created!",
-          description: `Use ${result.credentials.email} / ${result.credentials.password} to login`,
-        });
-
-        // Auto-fill the form with the unique credentials
-        form.setValue("emailOrCpf", result.credentials.email);
-        form.setValue("password", result.credentials.password);
-
-        // Show success message with credentials
-        console.log("Form auto-filled with:", {
-          email: result.credentials.email,
-          password: result.credentials.password,
-        });
-
-        // Focus on the password field for better UX
-        setTimeout(() => {
-          const passwordInput = document.querySelector(
-            'input[name="password"]'
-          ) as HTMLInputElement;
-          if (passwordInput) {
-            passwordInput.focus();
-            passwordInput.select(); // Select the password text for easy replacement
-          }
-        }, 100);
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Error Creating Dev User",
-          description: result.error || "Failed to create dev user",
-        });
-      }
-    } catch (error) {
-      console.error("Error creating dev user:", error);
-      toast({
-        variant: "destructive",
-        title: "Error Creating Dev User",
-        description: "Failed to create dev user",
-      });
-    } finally {
-      setPending(false);
-    }
-  };
 
   return (
-    <AuthLayout
-      title=""
-      description={
-        <>
-          Não tem uma conta?{" "}
-          <Link
-            href="/signup"
-            className="text-blue-300 hover:text-blue-200 hover:underline transition-colors"
-          >
-            Criar conta
-          </Link>
-          .
-        </>
-      }
-      showLogo={true}
-    >
+    <div className="relative">
+      {/* Home Icon Button */}
+      <Link
+        href="/"
+        className="fixed top-4 left-4 z-50 flex items-center justify-center w-10 h-10 bg-black/60 backdrop-blur-[20px] border border-white/10 text-white hover:text-brand-300 hover:bg-black/80 rounded-lg transition-all duration-200"
+        title="Voltar para a página inicial"
+      >
+        <Home className="w-5 h-5" />
+      </Link>
+
+      <AuthLayout
+        title=""
+        description={
+          <>
+            Não tem uma conta?{" "}
+            <Link
+              href="/signup"
+              className="text-brand-300 hover:text-brand-400 hover:underline transition-colors"
+            >
+              Criar conta
+            </Link>
+            .
+          </>
+        }
+        showLogo={true}
+      >
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <EmailField
@@ -236,7 +174,7 @@ const Login = () => {
             <div className="flex items-center justify-end">
               <Link
                 href="/forgot-password"
-                className="text-sm font-medium text-blue-300 hover:text-blue-200 hover:underline transition-colors"
+                className="text-sm font-medium text-brand-300 hover:text-brand-400 hover:underline transition-colors"
               >
                 Esqueceu a senha?
               </Link>
@@ -288,30 +226,12 @@ const Login = () => {
         </form>
       </Form>
 
-      {/* Create Dev Access Button - Only on localhost */}
-      {isLocalhost && (
-        <div className="mt-6 pt-4 border-t border-white/10">
-          <Button
-            type="button"
-            onClick={handleCreateDevAccess}
-            variant="ghost"
-            className="w-full text-xs text-gray-400 hover:text-blue-300 hover:bg-white/5 transition-all duration-200 h-8 relative overflow-hidden"
-          >
-            {/* Mirror effect for button */}
-            <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-white/2 opacity-20 pointer-events-none rounded-md"></div>
-            <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
-
-            <Code className="h-3 w-3 mr-2 relative z-10" />
-            <span className="relative z-10">Create Dev Access</span>
-          </Button>
-        </div>
-      )}
-
       <div className="mt-8 text-center text-xs text-gray-300">
         Ao fazer login, você concorda com nossos termos de serviço e política de
         privacidade.
       </div>
     </AuthLayout>
+    </div>
   );
 };
 

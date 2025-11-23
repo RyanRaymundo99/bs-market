@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { nutzPayService } from "@/lib/nutzpay";
 
 export async function POST(request: NextRequest) {
   try {
@@ -44,10 +45,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate network
-    const validNetworks = ["TRC20", "ERC20", "BSC"];
+    const validNetworks = ["TRC20", "ERC20"];
     if (!validNetworks.includes(network)) {
       return NextResponse.json(
-        { error: "Invalid network. Must be TRC20, ERC20, or BSC" },
+        { error: "Invalid network. Must be TRC20 or ERC20" },
         { status: 400 }
       );
     }
@@ -60,89 +61,132 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    if (!usdtBalance || usdtBalance.amount < amount) {
+    if (!usdtBalance) {
       return NextResponse.json(
-        { error: "Insufficient USDT balance" },
+        { error: "USDT balance not found" },
         { status: 400 }
       );
     }
 
-    // Calculate fee (1 USDT fixed)
-    const fee = 1;
-    const netAmount = amount - fee;
 
-    if (netAmount <= 0) {
-      return NextResponse.json(
-        { error: "Amount must be greater than 1 USDT to cover network fee" },
-        { status: 400 }
-      );
-    }
+    // Generate external ID for NutzPay
+    const externalId = `withdrawal_${user.id}_${Date.now()}`;
 
-    // Generate transaction hash (simulated)
-    const hash = `0x${Date.now().toString(16)}${Math.random().toString(16).substr(2, 8)}`;
-
-    // Create withdrawal record
+    // Create withdrawal record first (before API call)
     const withdrawal = await prisma.withdrawal.create({
       data: {
         userId: user.id,
         type: "USDT",
         amount: amount,
-        fee: fee,
-        netAmount: netAmount,
+        fee: null, // Will be updated from API response
+        netAmount: null, // Will be updated from API response
         status: "PENDING",
         paymentMethod: "USDT",
         walletAddress: walletAddress,
         network: network,
-        hash: hash,
+        hash: null,
         createdAt: new Date(),
       },
     });
 
-    // Update user balance (subtract the amount)
-    await prisma.balance.update({
-      where: {
-        id: usdtBalance.id,
-      },
-      data: {
-        amount: Number(usdtBalance.amount) - amount,
-        updatedAt: new Date(),
-      },
-    });
+    try {
+      // Call NutzPay API to create withdrawal
+      const callbackUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"}/api/webhooks/nutzpay`;
+      
+      const nutzPayResponse = await nutzPayService.createUSDTWithdrawal({
+        amount: amount, // Send the full amount, NutzPay will calculate fee
+        recipient_address: walletAddress,
+        recipient_network: network,
+        description: `USDT withdrawal - ${user.email || user.id}`,
+        external_id: externalId,
+        callback_url: callbackUrl,
+      });
 
-    // Create transaction record
-    await prisma.transaction.create({
-      data: {
-        userId: user.id,
-        type: "WITHDRAWAL",
-        amount: amount,
-        currency: "USDT",
-        balance: Number(usdtBalance.amount) - amount,
-        description: `USDT withdrawal to ${walletAddress} (${network})`,
-        createdAt: new Date(),
-      },
-    });
+      // Extract data from response (response structure: { success: true, data: {...} })
+      const responseData = nutzPayResponse.data || nutzPayResponse;
+      const transactionId = responseData.transaction_id;
+      const responseFee = responseData.fee || 0;
+      const responseAmount = responseData.amount || amount;
+      const totalDeducted = responseData.total_deducted || (responseAmount + responseFee);
+      const responseStatus = responseData.status || "pending";
 
-    // TODO: In a real implementation, you would:
-    // 1. Send the transaction to the blockchain
-    // 2. Monitor the transaction status
-    // 3. Update the withdrawal status based on confirmations
-    // 4. Handle failed transactions and refunds
 
-    return NextResponse.json({
-      success: true,
-      message: "USDT withdrawal request created successfully",
-      withdrawal: {
-        id: withdrawal.id,
-        amount: withdrawal.amount,
-        netAmount: withdrawal.netAmount,
-        fee: withdrawal.fee,
-        hash: withdrawal.hash,
-        network: withdrawal.network,
-        walletAddress: withdrawal.walletAddress,
-        status: withdrawal.status,
-        createdAt: withdrawal.createdAt,
-      },
-    });
+      // Update withdrawal with NutzPay response data
+      const updatedWithdrawal = await prisma.withdrawal.update({
+        where: { id: withdrawal.id },
+        data: {
+          hash: transactionId || null,
+          fee: responseFee,
+          netAmount: responseAmount,
+          status: responseStatus === "completed" ? "COMPLETED" : 
+                  responseStatus === "pending" ? "PENDING" : 
+                  responseStatus === "failed" ? "FAILED" : "PENDING",
+        },
+      });
+
+      // Update user balance (subtract total_deducted)
+      await prisma.balance.update({
+        where: {
+          id: usdtBalance.id,
+        },
+        data: {
+          amount: Number(usdtBalance.amount) - totalDeducted,
+          updatedAt: new Date(),
+        },
+      });
+
+      // Create transaction record
+      await prisma.transaction.create({
+        data: {
+          userId: user.id,
+          type: "WITHDRAWAL",
+          amount: totalDeducted,
+          currency: "USDT",
+          balance: Number(usdtBalance.amount) - totalDeducted,
+          description: `USDT withdrawal to ${walletAddress} (${network})`,
+          createdAt: new Date(),
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          transaction_id: transactionId,
+          external_id: responseData.external_id || externalId,
+          status: responseStatus,
+          amount: responseAmount,
+          fee: responseFee,
+          total_deducted: totalDeducted,
+          recipient_address: responseData.recipient_address || walletAddress,
+          recipient_network: responseData.recipient_network || network,
+          created_at: responseData.created_at || new Date().toISOString(),
+          message: responseData.message || "Withdrawal request submitted for processing. You will receive a webhook notification when completed",
+        },
+      });
+    } catch (error: any) {
+      // If NutzPay API call fails, update withdrawal status to failed
+      await prisma.withdrawal.update({
+        where: { id: withdrawal.id },
+        data: {
+          status: "FAILED",
+        },
+      });
+
+      console.error("NutzPay withdrawal error:", error);
+      
+      // Return user-friendly error message
+      const errorMessage = error.response?.data?.error?.message || 
+                          error.message || 
+                          "Failed to process USDT withdrawal with NutzPay";
+
+      return NextResponse.json(
+        { 
+          error: errorMessage,
+          details: error.response?.data 
+        },
+        { status: error.response?.status || 500 }
+      );
+    }
   } catch (error) {
     console.error("USDT withdrawal error:", error);
     return NextResponse.json(

@@ -126,7 +126,7 @@ export const EmailField: React.FC<EmailFieldProps> = ({
           placeholder={placeholder}
           disabled={disabled}
           className={cn(
-            "w-full pl-10 pr-10 h-12 bg-white/5 border border-white/10 text-white placeholder:text-gray-400 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition-all duration-200",
+            "w-full pl-10 pr-10 h-12 bg-white/5 border border-white/10 text-white placeholder:text-gray-400 focus:border-[#12E0A1] focus:ring-1 focus:ring-[#12E0A1] transition-all duration-200",
             validationResult?.isValid === true &&
               "border-green-500 focus:border-green-500 focus:ring-green-500",
             validationResult?.isValid === false &&

@@ -89,13 +89,13 @@ export class LedgerService {
           | "WITHDRAWAL"
           | "BUY_CRYPTO"
           | "SELL_CRYPTO"
-          | "P2P_TRADE"
           | "FEE"
           | "REFUND",
         amount: data.amount,
         currency: data.currency,
         balance: balance.amount,
         description: data.description,
+        metadata: data.metadata || {},
       },
     });
   }

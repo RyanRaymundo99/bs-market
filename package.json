@@ -23,7 +23,6 @@
     "preview": "npm run build && npm run start"
   },
   "dependencies": {
-    "@binance/connector": "^3.6.1",
     "@hookform/resolvers": "^5.0.1",
     "@neondatabase/serverless": "^1.0.1",
     "@prisma/client": "^6.12.0",

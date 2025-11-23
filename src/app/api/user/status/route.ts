@@ -33,6 +33,8 @@ export async function GET(request: NextRequest) {
         id: session.user.id,
         name: session.user.name,
         email: session.user.email,
+        phone: session.user.phone,
+        cpf: session.user.cpf,
         approvalStatus: session.user.approvalStatus,
         kycStatus: session.user.kycStatus,
         emailVerified: session.user.emailVerified,

@@ -50,7 +50,7 @@ interface FinanceStats {
 interface Transaction {
   id: string;
   date: string;
-  type: 'DEPOSIT' | 'WITHDRAWAL' | 'P2P_TRADE' | 'FEE' | 'BUY_CRYPTO' | 'SELL_CRYPTO' | 'REFUND';
+  type: 'DEPOSIT' | 'WITHDRAWAL' | 'FEE' | 'BUY_CRYPTO' | 'SELL_CRYPTO' | 'REFUND';
   user: string;
   value: number;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -189,7 +189,6 @@ export default function AdminDashboard() {
     const labels = {
       DEPOSIT: 'Depósito',
       WITHDRAWAL: 'Saque',
-      P2P_TRADE: 'Trade P2P',
       FEE: 'Comissão',
       BUY_CRYPTO: 'Compra Crypto',
       SELL_CRYPTO: 'Venda Crypto',
@@ -256,7 +255,6 @@ export default function AdminDashboard() {
         "Isso inclui:\n" +
         "• Todos os depósitos\n" +
         "• Todos os saques\n" +
-        "• Todos os trades P2P\n" +
         "• Todas as transações\n" +
         "• Todos os saldos dos usuários\n\n" +
         "Esta ação NÃO pode ser desfeita!\n\n" +
@@ -718,7 +716,6 @@ export default function AdminDashboard() {
                           <span className={`px-2 py-1 rounded text-xs font-medium ${
                             transaction.type === 'DEPOSIT' ? 'bg-green-900 text-green-300' :
                             transaction.type === 'WITHDRAWAL' ? 'bg-red-900 text-red-300' :
-                            transaction.type === 'P2P_TRADE' ? 'bg-blue-900 text-blue-300' :
                             transaction.type === 'FEE' ? 'bg-purple-900 text-purple-300' :
                             transaction.type === 'BUY_CRYPTO' ? 'bg-emerald-900 text-emerald-300' :
                             transaction.type === 'SELL_CRYPTO' ? 'bg-orange-900 text-orange-300' :

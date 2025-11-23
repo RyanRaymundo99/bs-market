@@ -34,7 +34,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import NavbarNew from "@/components/ui/navbar-new";
-import Breadcrumb from "@/components/ui/breadcrumb";
 import KYCBanner from "@/components/ui/kyc-banner";
 
 interface CryptoPrice {
@@ -86,6 +85,8 @@ export default function Dashboard() {
   const [totalBalance, setTotalBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [userStatus, setUserStatus] = useState<UserStatus | null>(null);
+  const [latestDeposit, setLatestDeposit] = useState<any>(null);
+  const [latestWithdrawal, setLatestWithdrawal] = useState<any>(null);
   const [showKYCBanner, setShowKYCBanner] = useState(() => {
     // Check localStorage to see if banner was dismissed
     if (typeof window !== "undefined") {
@@ -97,6 +98,35 @@ export default function Dashboard() {
   const [chartData, setChartData] = useState<
     Array<{ date: string; BRL: number; USDT: number }>
   >([]);
+
+  // Check if user is authenticated
+  useEffect(() => {
+    const authSession = localStorage.getItem("auth-session");
+    const justLoggedIn = sessionStorage.getItem("just-logged-in");
+    
+    // If user just logged in, clear the flag
+    if (justLoggedIn) {
+      sessionStorage.removeItem("just-logged-in");
+    }
+    
+    // Only redirect to home if user is not authenticated
+    if (!authSession) {
+      router.replace("/");
+      return;
+    }
+
+    // Prevent back navigation to login page
+    const handlePopState = (event: PopStateEvent) => {
+      // If user tries to go back, redirect to home instead
+      if (window.location.pathname === "/login") {
+        window.history.pushState(null, "", "/");
+        router.replace("/");
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [router]);
 
   // Check if redirected from KYC submission
   useEffect(() => {
@@ -143,7 +173,7 @@ export default function Dashboard() {
       case "BTC":
         return <Bitcoin className="w-8 h-8 text-orange-500" />;
       case "ETH":
-        return <Globe className="w-8 h-8 text-blue-500" />;
+        return <Globe className="w-8 h-8 text-brand-300" />;
       case "BNB":
         return (
           <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center text-white font-bold text-xs">
@@ -152,7 +182,7 @@ export default function Dashboard() {
         );
       case "ADA":
         return (
-          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-xs">
+          <div className="w-8 h-8 bg-brand-500 rounded-full flex items-center justify-center text-white font-bold text-xs">
             ADA
           </div>
         );
@@ -223,10 +253,29 @@ export default function Dashboard() {
         }
 
         // Fetch transactions
-        const transactionResponse = await fetch("/api/transactions?limit=10");
+        const transactionResponse = await fetch("/api/transactions?limit=50");
         if (transactionResponse.ok) {
           const transactionData = await transactionResponse.json();
-          setTransactions(transactionData.transactions || []);
+          const allTransactions = transactionData.transactions || [];
+          setTransactions(allTransactions);
+
+          // Find latest deposit (BUY_CRYPTO or DEPOSIT)
+          const deposits = allTransactions.filter(
+            (t: Transaction) =>
+              t.type === "DEPOSIT" || t.type === "BUY_CRYPTO"
+          );
+          if (deposits.length > 0) {
+            setLatestDeposit(deposits[0]);
+          }
+
+          // Find latest withdrawal
+          const withdrawals = allTransactions.filter(
+            (t: Transaction) =>
+              t.type === "WITHDRAWAL" || t.type === "WITHDRAW"
+          );
+          if (withdrawals.length > 0) {
+            setLatestWithdrawal(withdrawals[0]);
+          }
         }
 
         // Fetch crypto prices
@@ -301,11 +350,33 @@ export default function Dashboard() {
     fetchData();
   }, [toast]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setIsLoggingOut(true);
-    localStorage.removeItem("auth-session");
-    localStorage.removeItem("user");
-    router.push("/login");
+    try {
+      // Call logout API to clear session
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+      
+      // Clear local storage
+      localStorage.removeItem("auth-session");
+      localStorage.removeItem("user");
+      sessionStorage.clear();
+      
+      // Force redirect to home page using window.location for reliability
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Even if API fails, clear local storage and redirect
+      localStorage.removeItem("auth-session");
+      localStorage.removeItem("user");
+      sessionStorage.clear();
+      // Force redirect using window.location
+      window.location.href = "/";
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   if (isLoading) {
@@ -314,7 +385,7 @@ export default function Dashboard() {
         <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
         <div className="container mx-auto px-4 py-6 mobile-page-padding">
           <div className="flex items-center justify-center h-64">
-            <RefreshCw className="w-8 h-8 animate-spin text-blue-500" />
+            <RefreshCw className="w-8 h-8 animate-spin text-brand-300" />
           </div>
         </div>
       </div>
@@ -326,8 +397,6 @@ export default function Dashboard() {
       <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
 
       <div className="container mx-auto px-4 py-6 mobile-page-padding">
-        <Breadcrumb items={[{ label: "Dashboard" }]} />
-
         {/* KYC Status Banner */}
         {showKYCBanner && userStatus && (
           <KYCBanner
@@ -339,8 +408,8 @@ export default function Dashboard() {
 
         {/* Welcome Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 bg-clip-text text-transparent mb-2">
-            Bem-vindo ao Dashboard
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-brand-500 via-purple-600 to-brand-600 bg-clip-text text-transparent mb-2">
+            Bem-vindo a Build Strategy
           </h1>
           <p className="text-xl text-muted-foreground">
             Monitore seus investimentos e acompanhe o mercado crypto
@@ -361,7 +430,7 @@ export default function Dashboard() {
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowBalances(!showBalances)}
-                  className="text-foreground hover:text-blue-500 hover:bg-muted"
+                  className="text-foreground hover:text-brand-300 hover:bg-muted"
                 >
                   {showBalances ? (
                     <EyeOff className="w-4 h-4" />
@@ -373,23 +442,6 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-8">
-                {/* BRL Balance */}
-                {(() => {
-                  const brlBalance = balances.find((b) => b.currency === "BRL");
-                  return (
-                    <div className="flex items-center gap-3">
-                      <DollarSign className="w-6 h-6 text-green-600" />
-                      <span className="text-2xl font-bold text-foreground">
-                        {showBalances
-                          ? brlBalance
-                            ? formatCurrency(brlBalance.amount)
-                            : formatCurrency(0)
-                          : "••••••"}
-                      </span>
-                    </div>
-                  );
-                })()}
-
                 {/* USDT Balance */}
                 {(() => {
                   const usdtBalance = balances.find(
@@ -397,7 +449,7 @@ export default function Dashboard() {
                   );
                   return (
                     <div className="flex items-center gap-3">
-                      <span className="w-6 h-6 flex items-center justify-center text-blue-600 font-bold text-2xl">
+                      <span className="w-6 h-6 flex items-center justify-center text-brand-500 font-bold text-2xl">
                         U$
                       </span>
                       <span className="text-2xl font-bold text-foreground">
@@ -412,115 +464,76 @@ export default function Dashboard() {
                 })()}
               </div>
 
-              {/* Balance Progress Chart */}
-              {chartData.length > 0 && (
-                <div className="mt-6">
-                  <h3 className="text-sm font-medium text-foreground mb-4">
-                    Progresso dos Saldos (7 dias)
-                  </h3>
-                  <div className="h-64 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart
-                        data={chartData}
-                        margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+              {/* Latest Transaction */}
+              {(() => {
+                // Determine which is more recent: deposit or withdrawal
+                let latestItem = null;
+                let isDeposit = false;
+
+                if (latestDeposit && latestWithdrawal) {
+                  const depositDate = new Date(latestDeposit.createdAt);
+                  const withdrawalDate = new Date(latestWithdrawal.createdAt);
+                  if (depositDate > withdrawalDate) {
+                    latestItem = latestDeposit;
+                    isDeposit = true;
+                  } else {
+                    latestItem = latestWithdrawal;
+                    isDeposit = false;
+                  }
+                } else if (latestDeposit) {
+                  latestItem = latestDeposit;
+                  isDeposit = true;
+                } else if (latestWithdrawal) {
+                  latestItem = latestWithdrawal;
+                  isDeposit = false;
+                }
+
+                if (latestItem) {
+                  return (
+                    <div className="mt-6 flex items-center gap-3 p-4 rounded-lg bg-muted/50">
+                      <div
+                        className={`flex items-center justify-center w-10 h-10 rounded-full ${
+                          isDeposit
+                            ? "bg-green-500/20 text-green-500"
+                            : "bg-red-500/20 text-red-500"
+                        }`}
                       >
-                        <defs>
-                          <linearGradient
-                            id="colorBRL"
-                            x1="0"
-                            y1="0"
-                            x2="0"
-                            y2="1"
-                          >
-                            <stop
-                              offset="5%"
-                              stopColor="#10b981"
-                              stopOpacity={0.8}
-                            />
-                            <stop
-                              offset="95%"
-                              stopColor="#10b981"
-                              stopOpacity={0.1}
-                            />
-                          </linearGradient>
-                          <linearGradient
-                            id="colorUSDT"
-                            x1="0"
-                            y1="0"
-                            x2="0"
-                            y2="1"
-                          >
-                            <stop
-                              offset="5%"
-                              stopColor="#3b82f6"
-                              stopOpacity={0.8}
-                            />
-                            <stop
-                              offset="95%"
-                              stopColor="#3b82f6"
-                              stopOpacity={0.1}
-                            />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid
-                          strokeDasharray="3 3"
-                          stroke="#374151"
-                          opacity={0.2}
-                        />
-                        <XAxis
-                          dataKey="date"
-                          stroke="#9ca3af"
-                          style={{ fontSize: "12px" }}
-                        />
-                        <YAxis
-                          stroke="#9ca3af"
-                          style={{ fontSize: "12px" }}
-                          tickFormatter={(value) => {
-                            if (value >= 1000) {
-                              return `${(value / 1000).toFixed(1)}k`;
+                        {isDeposit ? (
+                          <ArrowUpRight className="w-5 h-5" />
+                        ) : (
+                          <TrendingDown className="w-5 h-5" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-muted-foreground">
+                          {isDeposit ? "Último Depósito" : "Último Saque"}
+                        </p>
+                        <p
+                          className={`text-lg font-semibold ${
+                            isDeposit ? "text-green-500" : "text-red-500"
+                          }`}
+                        >
+                          {isDeposit ? "+" : "-"}
+                          {latestItem.currency === "BRL" || (!latestItem.currency && isDeposit)
+                            ? formatCurrency(Number(latestItem.amount))
+                            : `${Number(latestItem.amount).toFixed(2)} ${latestItem.currency || "USDT"}`}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(latestItem.createdAt).toLocaleDateString(
+                            "pt-BR",
+                            {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
                             }
-                            return value.toFixed(0);
-                          }}
-                        />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: "#1f2937",
-                            border: "1px solid #374151",
-                            borderRadius: "8px",
-                            color: "#f9fafb",
-                          }}
-                          labelStyle={{ color: "#9ca3af" }}
-                          formatter={(value: number, name: string) => {
-                            if (name === "BRL") {
-                              return [formatCurrency(value), "BRL"];
-                            }
-                            return [`${value.toFixed(2)}`, "USDT"];
-                          }}
-                        />
-                        <Legend
-                          wrapperStyle={{ color: "#9ca3af", fontSize: "12px" }}
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="BRL"
-                          stroke="#10b981"
-                          fillOpacity={1}
-                          fill="url(#colorBRL)"
-                          strokeWidth={2}
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="USDT"
-                          stroke="#3b82f6"
-                          fillOpacity={1}
-                          fill="url(#colorUSDT)"
-                          strokeWidth={2}
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              )}
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
             </CardContent>
           </Card>
 
@@ -575,8 +588,7 @@ export default function Dashboard() {
                         title = "SAQUE";
                         description = `Saque de ${formattedAmount}`;
                       } else if (
-                        transaction.type === "BUY" ||
-                        transaction.type === "P2P_TRADE"
+                        transaction.type === "BUY"
                       ) {
                         color = "#3b82f6"; // blue
                         title = "COMPRA";

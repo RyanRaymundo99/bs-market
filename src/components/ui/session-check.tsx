@@ -59,7 +59,7 @@ export function SessionCheck() {
     return (
       <Card className="w-full max-w-md mx-auto">
         <CardContent className="p-6 text-center">
-          <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-500" />
+          <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-brand-300" />
           <p>Checking session...</p>
         </CardContent>
       </Card>

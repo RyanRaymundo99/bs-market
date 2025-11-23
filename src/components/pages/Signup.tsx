@@ -96,7 +96,7 @@ const Signup = () => {
           Já tem uma conta?{" "}
           <Link
             href="/login"
-            className="text-blue-300 hover:text-blue-200 hover:underline transition-colors"
+            className="text-brand-300 hover:text-brand-400 hover:underline transition-colors"
           >
             Fazer login
           </Link>

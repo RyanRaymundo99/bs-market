@@ -151,7 +151,7 @@ export function CheckboxField<T extends FieldValues = FieldValues>({
             <Checkbox
               checked={field.value}
               onCheckedChange={field.onChange}
-              className="border-gray-700 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500 bg-black/50 backdrop-blur-[5px]"
+              className="border-gray-700 data-[state=checked]:bg-[#12E0A1] data-[state=checked]:border-[#12E0A1] bg-black/50 backdrop-blur-[5px]"
             />
           </FormControl>
           <FormLabel className="font-normal text-gray-200">{label}</FormLabel>

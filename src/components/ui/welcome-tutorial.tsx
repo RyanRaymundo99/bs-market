@@ -64,38 +64,12 @@ export function WelcomeTutorial({
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card className="text-center p-4">
-              <CreditCard className="h-8 w-8 text-blue-500 mx-auto mb-2" />
-              <h4 className="font-semibold">Credit Card</h4>
-              <p className="text-sm text-gray-600">
-                Instant deposits via Mercado Pago
-              </p>
-            </Card>
-            <Card className="text-center p-4">
-              <Banknote className="h-8 w-8 text-green-500 mx-auto mb-2" />
-              <h4 className="font-semibold">Bank Transfer</h4>
-              <p className="text-sm text-gray-600">Direct bank deposits</p>
-            </Card>
-            <Card className="text-center p-4">
               <Zap className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
               <h4 className="font-semibold">PIX</h4>
               <p className="text-sm text-gray-600">
                 Instant Brazilian PIX transfers
               </p>
             </Card>
-          </div>
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <h4 className="font-semibold text-blue-800 mb-2">
-              How to Deposit:
-            </h4>
-            <ol className="text-sm text-blue-700 space-y-1">
-              <li>
-                1. Go to the <strong>Deposits</strong> page
-              </li>
-              <li>2. Choose your payment method</li>
-              <li>3. Enter the amount you want to deposit</li>
-              <li>4. Complete the payment process</li>
-              <li>5. Your balance will be updated instantly</li>
-            </ol>
           </div>
         </div>
       ),
@@ -115,7 +89,7 @@ export function WelcomeTutorial({
               <ul className="text-sm text-gray-600 space-y-1">
                 <li>• Choose from BTC, ETH, USDT</li>
                 <li>• Enter amount in BRL</li>
-                <li>• Get real-time prices from Binance</li>
+                <li>• Real-time market prices</li>
                 <li>• Instant execution</li>
               </ul>
             </Card>
@@ -136,8 +110,8 @@ export function WelcomeTutorial({
               Trading Features:
             </h4>
             <ul className="text-sm text-purple-700 space-y-1">
-              <li>• Real-time price updates every 30 seconds</li>
-              <li>• Secure trading through Binance API</li>
+              <li>• Real-time price updates</li>
+              <li>• Secure trading platform</li>
               <li>• Complete transaction history</li>
               <li>• Portfolio tracking</li>
             </ul>
