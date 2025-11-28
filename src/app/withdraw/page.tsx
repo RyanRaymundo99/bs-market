@@ -300,15 +300,19 @@ export default function WithdrawPage() {
   const calculatePIXNetAmount = () => {
     if (!pixAmount || parseFloat(pixAmount) <= 0) return 0;
     const amount = parseFloat(pixAmount);
+    if (isNaN(amount)) return 0;
     const fee = amount * 0.03; // 3% fee
-    return amount - fee;
+    const netAmount = amount - fee;
+    return isNaN(netAmount) ? 0 : netAmount;
   };
 
   // Calculate USDT net amount (1 USDT fee)
   const calculateUSDTNetAmount = () => {
     if (!usdtAmount || parseFloat(usdtAmount) <= 0) return 0;
     const amount = parseFloat(usdtAmount);
-    return amount - 1; // 1 USDT fee
+    if (isNaN(amount)) return 0;
+    const netAmount = amount - 1; // 1 USDT fee
+    return isNaN(netAmount) || netAmount < 0 ? 0 : netAmount;
   };
 
   const getStatusBadge = (status: string) => {
@@ -458,7 +462,10 @@ export default function WithdrawPage() {
                       </span>
                     </div>
                     <p className="text-2xl font-bold text-green-700">
-                      R$ {brlBalance ? brlBalance.amount.toFixed(2) : "0.00"}
+                      R${" "}
+                      {brlBalance && typeof brlBalance.amount === "number"
+                        ? brlBalance.amount.toFixed(2)
+                        : "0.00"}
                     </p>
                   </div>
 
@@ -509,7 +516,12 @@ export default function WithdrawPage() {
                         <span className="text-sm font-medium text-red-600">
                           -R${" "}
                           {pixAmount
-                            ? (parseFloat(pixAmount) * 0.03).toFixed(2)
+                            ? (() => {
+                                const amount = parseFloat(pixAmount);
+                                return isNaN(amount)
+                                  ? "0.00"
+                                  : (amount * 0.03).toFixed(2);
+                              })()
                             : "0.00"}
                         </span>
                       </div>
@@ -518,7 +530,7 @@ export default function WithdrawPage() {
                           Você receberá:
                         </span>
                         <span className="text-lg font-bold text-green-600">
-                          R$ {calculatePIXNetAmount().toFixed(2)}
+                          R$ {(calculatePIXNetAmount() || 0).toFixed(2)}
                         </span>
                       </div>
                     </div>
@@ -562,7 +574,9 @@ export default function WithdrawPage() {
                       </span>
                     </div>
                     <p className="text-2xl font-bold text-blue-700">
-                      {usdtBalance ? usdtBalance.amount.toFixed(2) : "0.00"}{" "}
+                      {usdtBalance && typeof usdtBalance.amount === "number"
+                        ? usdtBalance.amount.toFixed(2)
+                        : "0.00"}{" "}
                       USDT
                     </p>
                   </div>
@@ -631,7 +645,7 @@ export default function WithdrawPage() {
                           Total líquido:
                         </span>
                         <span className="text-lg font-bold text-blue-600">
-                          {calculateUSDTNetAmount().toFixed(2)} USDT
+                          {(calculateUSDTNetAmount() || 0).toFixed(2)} USDT
                         </span>
                       </div>
                     </div>
@@ -670,7 +684,12 @@ export default function WithdrawPage() {
                     Total Portfolio Value
                   </p>
                   <p className="text-2xl font-bold">
-                    ${walletData?.totalPortfolioValue.toFixed(2) || "0.00"} USDT
+                    $
+                    {walletData &&
+                    typeof walletData.totalPortfolioValue === "number"
+                      ? walletData.totalPortfolioValue.toFixed(2)
+                      : "0.00"}{" "}
+                    USDT
                   </p>
                 </div>
                 <div className="text-center p-4 bg-muted rounded-lg">
@@ -762,8 +781,16 @@ export default function WithdrawPage() {
                         </td>
                         <td className="py-3 px-4 font-medium">
                           {withdrawal.type === "PIX"
-                            ? `R$ ${withdrawal.amount.toFixed(2)}`
-                            : `${withdrawal.amount.toFixed(2)} USDT`}
+                            ? `R$ ${
+                                typeof withdrawal.amount === "number"
+                                  ? withdrawal.amount.toFixed(2)
+                                  : "0.00"
+                              }`
+                            : `${
+                                typeof withdrawal.amount === "number"
+                                  ? withdrawal.amount.toFixed(2)
+                                  : "0.00"
+                              } USDT`}
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
