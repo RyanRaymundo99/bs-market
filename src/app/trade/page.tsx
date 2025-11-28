@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import React, { useState, useCallback, useEffect } from 'react';
-import NavbarNew from '@/components/ui/navbar-new';
-import Breadcrumb from '@/components/ui/breadcrumb';
+import React, { useState, useCallback, useEffect } from "react";
+import NavbarNew from "@/components/ui/navbar-new";
+import Breadcrumb from "@/components/ui/breadcrumb";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { useToast } from '@/hooks/use-toast';
+} from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 
 const TradePage = () => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -24,12 +24,12 @@ const TradePage = () => {
         method: "POST",
         credentials: "include",
       });
-      
+
       // Clear local storage
       localStorage.removeItem("auth-session");
       localStorage.removeItem("user");
       sessionStorage.clear();
-      
+
       // Force redirect to home page using window.location for reliability
       window.location.href = "/";
     } catch (error) {
@@ -46,7 +46,7 @@ const TradePage = () => {
   }, []);
 
   // Estados para compra
-  const [buyBRL, setBuyBRL] = useState<string>('');
+  const [buyBRL, setBuyBRL] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [showPixModal, setShowPixModal] = useState(false);
   const [pixData, setPixData] = useState<{
@@ -56,29 +56,91 @@ const TradePage = () => {
     usdtAmount: number;
     transactionId: string;
   } | null>(null);
-  const [usdtPrice, setUsdtPrice] = useState<number>(5.50); // Default fallback price
+  const [usdtPrice, setUsdtPrice] = useState<number>(5.5); // Default fallback price
   const [priceLoading, setPriceLoading] = useState(true);
 
   // Estado para o histórico de transações
-  const [transactionHistory, setTransactionHistory] = useState<Array<{
-    id: string;
-    date: Date;
-    type: 'buy';
-    amount: number;
-    received: number;
-    fee: number;
-    rate: number;
-    status: string;
-  }>>([]);
+  const [transactionHistory, setTransactionHistory] = useState<
+    Array<{
+      id: string;
+      date: Date;
+      type: "buy";
+      amount: number;
+      received: number;
+      fee: number;
+      rate: number;
+      status: string;
+    }>
+  >([]);
 
   // Constantes
   const FEE_RATE = 0.03; // 3% de taxa
 
+  // Currency formatting functions
+  const formatBRL = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  };
+
+  const formatUSDT = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 4,
+    }).format(value);
+  };
+
+  // Format BRL input value (for display in input field)
+  const formatBRLInput = (value: string): string => {
+    // Remove all non-digit characters except comma
+    const cleaned = value.replace(/[^\d,]/g, "");
+
+    // Handle empty or just comma
+    if (!cleaned || cleaned === ",") return "";
+
+    // Split by comma to handle decimals
+    const parts = cleaned.split(",");
+    const integerPart = parts[0].replace(/\D/g, "");
+    const decimalPart = parts[1]?.replace(/\D/g, "").slice(0, 2) || "";
+
+    // Format integer part with thousand separators
+    const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+
+    // Combine parts
+    if (decimalPart) {
+      return `${formattedInteger},${decimalPart}`;
+    } else if (cleaned.includes(",")) {
+      return `${formattedInteger},`;
+    } else {
+      return formattedInteger;
+    }
+  };
+
+  // Parse BRL input value (convert formatted string to number)
+  const parseBRLInput = (value: string): number => {
+    if (!value) return 0;
+    // Replace Brazilian format (dots as thousand separators, comma as decimal)
+    const normalized = value.replace(/\./g, "").replace(",", ".");
+    const parsed = parseFloat(normalized);
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
+  // Handle BRL input change
+  const handleBRLInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    const formatted = formatBRLInput(inputValue);
+    setBuyBRL(formatted);
+  };
+
   // Cálculos para compra (BRL → USDT)
-  const buyAmountBRL = parseFloat(buyBRL) || 0;
-  const buyFeeBRL = buyAmountBRL * FEE_RATE;
-  const buyAmountAfterFee = buyAmountBRL - buyFeeBRL;
-  const buyUSDTReceived = buyAmountAfterFee / usdtPrice;
+  // Fee is ADDED on top of the purchase amount
+  const buyAmountBRL = parseBRLInput(buyBRL); // Parse formatted input to number
+  const buyFeeBRL = buyAmountBRL * FEE_RATE; // 3% fee on top
+  const buyTotalBRL = buyAmountBRL + buyFeeBRL; // Total to charge (base + fee)
+  const buyUSDTReceived = buyAmountBRL / usdtPrice; // USDT received based on base amount (not including fee)
 
   // Fetch USDT rate and transaction history on mount
   useEffect(() => {
@@ -106,7 +168,7 @@ const TradePage = () => {
   const fetchTransactionHistory = async () => {
     try {
       // Fetch orders from API
-      const response = await fetch('/api/crypto/orders');
+      const response = await fetch("/api/crypto/orders");
       if (response.ok) {
         const data = await response.json();
         if (data.orders) {
@@ -121,40 +183,48 @@ const TradePage = () => {
             status: string;
           }
           const buyOrders = (data.orders as OrderResponse[])
-            .filter((order) => order.type === 'BUY' && order.baseCurrency === 'USDT')
-            .map((order) => ({
-              id: order.id,
-              date: new Date(order.createdAt),
-              type: 'buy' as const,
-              amount: parseFloat(order.total.toString()),
-              received: parseFloat(order.amount.toString()),
-              fee: parseFloat(order.total.toString()) * FEE_RATE,
-              rate: parseFloat(order.price.toString()),
-              status: order.status,
-            }));
+            .filter(
+              (order) => order.type === "BUY" && order.baseCurrency === "USDT"
+            )
+            .map((order) => {
+              const total = parseFloat(order.total.toString());
+              // Total includes fee, so calculate base and fee
+              const baseAmount = total / 1.03;
+              const fee = total - baseAmount;
+              return {
+                id: order.id,
+                date: new Date(order.createdAt),
+                type: "buy" as const,
+                amount: total, // Total paid
+                received: parseFloat(order.amount.toString()),
+                fee: fee,
+                rate: parseFloat(order.price.toString()),
+                status: order.status,
+              };
+            });
           setTransactionHistory(buyOrders);
         }
       }
     } catch (error) {
-      console.error('Error fetching transaction history:', error);
+      console.error("Error fetching transaction history:", error);
     }
   };
 
   const handleBuyConfirm = async () => {
     if (buyAmountBRL <= 0) {
       toast({
-        title: 'Erro',
-        description: 'O valor deve ser maior que zero',
-        variant: 'destructive',
+        title: "Erro",
+        description: "O valor deve ser maior que zero",
+        variant: "destructive",
       });
       return;
     }
 
     if (buyAmountBRL < 10) {
       toast({
-        title: 'Erro',
-        description: 'O valor mínimo é R$ 10,00',
-        variant: 'destructive',
+        title: "Erro",
+        description: "O valor mínimo é R$ 10,00",
+        variant: "destructive",
       });
       return;
     }
@@ -162,60 +232,67 @@ const TradePage = () => {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/crypto/buy-usdt-pix', {
-        method: 'POST',
+      const response = await fetch("/api/crypto/buy-usdt-pix", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          amount: buyAmountBRL,
-          usdt_amount: buyUSDTReceived,
+          amount: buyTotalBRL, // Total amount to charge (base + 3% fee)
+          usdt_amount: buyUSDTReceived, // USDT based on base amount
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Erro ao processar compra');
+        throw new Error(data.error || "Erro ao processar compra");
       }
 
       if (data.success && data.data) {
         // Show PIX QR code modal
         setPixData({
-          qrCode: data.data.pix_data?.qr_code || '',
+          qrCode: data.data.pix_data?.qr_code || "",
           qrCodeBase64: data.data.pix_data?.qr_code_base64 || null,
           amount: data.data.amount_brl,
           usdtAmount: data.data.amount_usdt,
           transactionId: data.data.transaction_id,
         });
         setShowPixModal(true);
-        setBuyBRL(''); // Clear the field
+        setBuyBRL(""); // Clear the field
 
         // Add to transaction history
+        // Total amount includes fee, so calculate base and fee
+        const totalBRL = data.data.amount_brl; // Total paid (base + fee)
+        const baseAmount = totalBRL / 1.03; // Base amount
+        const fee = totalBRL - baseAmount; // Fee amount
         const newTransaction = {
           id: data.data.transaction_id,
           date: new Date(),
-          type: 'buy' as const,
-          amount: data.data.amount_brl,
+          type: "buy" as const,
+          amount: totalBRL, // Total paid
           received: data.data.amount_usdt,
-          fee: data.data.amount_brl * FEE_RATE,
+          fee: fee,
           rate: data.data.exchange_rate,
           status: data.data.status,
         };
-        setTransactionHistory(prev => [newTransaction, ...prev]);
+        setTransactionHistory((prev) => [newTransaction, ...prev]);
 
         toast({
-          title: 'Compra iniciada!',
-          description: 'Escaneie o QR Code PIX para finalizar o pagamento',
+          title: "Compra iniciada!",
+          description: "Escaneie o QR Code PIX para finalizar o pagamento",
         });
       }
     } catch (error: unknown) {
-      console.error('Purchase error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Erro ao processar compra de USDT';
+      console.error("Purchase error:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Erro ao processar compra de USDT";
       toast({
-        title: 'Erro',
+        title: "Erro",
         description: errorMessage,
-        variant: 'destructive',
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -226,8 +303,8 @@ const TradePage = () => {
     if (pixData?.qrCode) {
       navigator.clipboard.writeText(pixData.qrCode);
       toast({
-        title: 'Copiado!',
-        description: 'Código PIX copiado para a área de transferência',
+        title: "Copiado!",
+        description: "Código PIX copiado para a área de transferência",
       });
     }
   };
@@ -247,15 +324,21 @@ const TradePage = () => {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-white mb-2">Comprar USDT</h1>
-          <p className="text-[#A1A1AA]">Compre USDT via PIX • Taxa de 3%</p>
+          <p className="text-[#A1A1AA]">
+            Compre USDT via PIX • Taxa de 3% sobre o valor
+          </p>
         </div>
 
         {/* Boleta de Compra */}
         <div className="bg-[#1E1E1E] rounded-xl p-6 border border-gray-800 mb-8">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-white">Comprar USDT via PIX</h2>
+            <h2 className="text-xl font-semibold text-white">
+              Comprar USDT via PIX
+            </h2>
             <span className="text-sm text-[#A1A1AA]">
-              {priceLoading ? "Carregando..." : `1 USDT = R$ ${usdtPrice.toFixed(2)}`}
+              {priceLoading
+                ? "Carregando..."
+                : `1 USDT = ${formatBRL(usdtPrice)}`}
             </span>
           </div>
 
@@ -265,31 +348,36 @@ const TradePage = () => {
                 Valor em BRL
               </label>
               <input
-                type="number"
+                type="text"
                 value={buyBRL}
-                onChange={(e) => setBuyBRL(e.target.value)}
+                onChange={handleBRLInputChange}
                 placeholder="0,00"
-                min="10"
-                step="0.01"
+                inputMode="decimal"
                 className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#10B981] focus:ring-1 focus:ring-[#10B981] transition-colors"
               />
             </div>
 
             <div className="text-sm text-[#A1A1AA] space-y-1">
               <div className="flex justify-between">
-                <span>Taxa (3%):</span>
-                <span>R$ {buyFeeBRL.toFixed(2)}</span>
+                <span>Valor base:</span>
+                <span>{formatBRL(buyAmountBRL)}</span>
               </div>
               <div className="flex justify-between">
-                <span>Valor após taxa:</span>
-                <span>R$ {buyAmountAfterFee.toFixed(2)}</span>
+                <span>Taxa (3%):</span>
+                <span className="text-red-400">{formatBRL(buyFeeBRL)}</span>
+              </div>
+              <div className="flex justify-between pt-1 border-t border-gray-700">
+                <span className="font-medium">Total a pagar:</span>
+                <span className="font-semibold text-white">
+                  {formatBRL(buyTotalBRL)}
+                </span>
               </div>
             </div>
 
             <div className="bg-gray-900 rounded-lg p-4">
               <div className="text-sm text-[#A1A1AA] mb-1">Você receberá:</div>
               <div className="text-2xl font-bold text-[#10B981]">
-                {buyUSDTReceived.toFixed(4)} USDT
+                {formatUSDT(buyUSDTReceived)} USDT
               </div>
             </div>
 
@@ -298,24 +386,38 @@ const TradePage = () => {
               disabled={buyAmountBRL <= 0 || loading}
               className="w-full py-3 bg-[#10B981] hover:bg-[#059669] disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors"
             >
-              {loading ? 'Processando...' : 'Comprar USDT via PIX'}
+              {loading ? "Processando..." : "Comprar USDT via PIX"}
             </button>
           </div>
         </div>
 
         {/* Histórico de Transações */}
         <div className="mt-12">
-          <h2 className="text-2xl font-bold text-white mb-6">Histórico de Compras</h2>
+          <h2 className="text-2xl font-bold text-white mb-6">
+            Histórico de Compras
+          </h2>
 
           {transactionHistory.length === 0 ? (
             <div className="bg-[#1E1E1E] rounded-xl p-8 border border-gray-800 text-center">
               <div className="text-[#A1A1AA] mb-2">
-                <svg className="w-12 h-12 mx-auto mb-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                <svg
+                  className="w-12 h-12 mx-auto mb-4 text-gray-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                  />
                 </svg>
               </div>
               <p className="text-[#A1A1AA]">Nenhuma compra realizada ainda</p>
-              <p className="text-sm text-gray-600 mt-1">Suas compras aparecerão aqui</p>
+              <p className="text-sm text-gray-600 mt-1">
+                Suas compras aparecerão aqui
+              </p>
             </div>
           ) : (
             <div className="bg-[#1E1E1E] rounded-xl border border-gray-800 overflow-hidden">
@@ -338,50 +440,55 @@ const TradePage = () => {
                     {/* Data/Hora */}
                     <div className="text-sm">
                       <div className="text-white">
-                        {transaction.date.toLocaleDateString('pt-BR')}
+                        {transaction.date.toLocaleDateString("pt-BR")}
                       </div>
                       <div className="text-[#A1A1AA] text-xs">
-                        {transaction.date.toLocaleTimeString('pt-BR', {
-                          hour: '2-digit',
-                          minute: '2-digit'
+                        {transaction.date.toLocaleTimeString("pt-BR", {
+                          hour: "2-digit",
+                          minute: "2-digit",
                         })}
                       </div>
                     </div>
 
                     {/* Status */}
                     <div>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        transaction.status === 'COMPLETED'
-                          ? 'bg-green-900/30 text-green-400 border border-green-800'
-                          : transaction.status === 'PENDING'
-                          ? 'bg-yellow-900/30 text-yellow-400 border border-yellow-800'
-                          : 'bg-red-900/30 text-red-400 border border-red-800'
-                      }`}>
-                        {transaction.status === 'COMPLETED' ? 'Concluída' :
-                         transaction.status === 'PENDING' ? 'Pendente' : 'Falhou'}
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          transaction.status === "COMPLETED"
+                            ? "bg-green-900/30 text-green-400 border border-green-800"
+                            : transaction.status === "PENDING"
+                            ? "bg-yellow-900/30 text-yellow-400 border border-yellow-800"
+                            : "bg-red-900/30 text-red-400 border border-red-800"
+                        }`}
+                      >
+                        {transaction.status === "COMPLETED"
+                          ? "Concluída"
+                          : transaction.status === "PENDING"
+                          ? "Pendente"
+                          : "Falhou"}
                       </span>
                     </div>
 
                     {/* Valor */}
                     <div className="text-sm">
                       <div className="text-white">
-                        R$ {transaction.amount.toFixed(2)}
+                        {formatBRL(transaction.amount)}
                       </div>
                       <div className="text-[#A1A1AA] text-xs">
-                        @ R$ {transaction.rate.toFixed(2)}
+                        @ {formatBRL(transaction.rate)}
                       </div>
                     </div>
 
                     {/* Recebido */}
                     <div className="text-sm">
                       <div className="font-medium text-green-400">
-                        {transaction.received.toFixed(4)} USDT
+                        {formatUSDT(transaction.received)} USDT
                       </div>
                     </div>
 
                     {/* Taxa */}
                     <div className="text-sm text-[#A1A1AA]">
-                      R$ {transaction.fee.toFixed(2)}
+                      {formatBRL(transaction.fee)}
                     </div>
                   </div>
                 ))}
@@ -393,9 +500,10 @@ const TradePage = () => {
         {/* Informações adicionais */}
         <div className="mt-8 text-center">
           <p className="text-sm text-[#A1A1AA]">
-            • As cotações são atualizadas em tempo real<br />
-            • Taxa de 3% aplicada em todas as operações<br />
-            • Pagamento via PIX com confirmação automática
+            • As cotações são atualizadas em tempo real
+            <br />
+            • Taxa de 3% aplicada em todas as operações
+            <br />• Pagamento via PIX com confirmação automática
           </p>
         </div>
       </div>
@@ -404,9 +512,12 @@ const TradePage = () => {
       <Dialog open={showPixModal} onOpenChange={setShowPixModal}>
         <DialogContent className="bg-[#1E1E1E] border-gray-800 text-white max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-white">Escaneie o QR Code PIX</DialogTitle>
+            <DialogTitle className="text-white">
+              Escaneie o QR Code PIX
+            </DialogTitle>
             <DialogDescription className="text-[#A1A1AA]">
-              Escaneie o código abaixo com o app do seu banco para finalizar o pagamento
+              Escaneie o código abaixo com o app do seu banco para finalizar o
+              pagamento
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -421,16 +532,18 @@ const TradePage = () => {
                     />
                   ) : (
                     <div className="w-64 h-64 bg-gray-900 border border-gray-700 rounded-lg flex items-center justify-center">
-                      <p className="text-[#A1A1AA] text-sm">QR Code não disponível</p>
+                      <p className="text-[#A1A1AA] text-sm">
+                        QR Code não disponível
+                      </p>
                     </div>
                   )}
                   <div className="text-center space-y-2">
                     <p className="text-sm text-[#A1A1AA]">Valor:</p>
                     <p className="text-2xl font-bold text-[#10B981]">
-                      R$ {pixData.amount.toFixed(2)}
+                      {formatBRL(pixData.amount)}
                     </p>
                     <p className="text-sm text-[#A1A1AA]">
-                      Você receberá: {pixData.usdtAmount.toFixed(4)} USDT
+                      Você receberá: {formatUSDT(pixData.usdtAmount)} USDT
                     </p>
                   </div>
                 </div>

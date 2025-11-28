@@ -82,7 +82,9 @@ export async function POST(request: NextRequest) {
 
     try {
       // Call NutzPay API to create USDT purchase
-      const callbackUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"}/api/webhooks/nutzpay`;
+      const callbackUrl = `${
+        process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"
+      }/api/webhooks/nutzpay`;
 
       const nutzPayResponse = await nutzPayService.createUSDTPurchase({
         amount: amount,
@@ -153,7 +155,9 @@ export async function POST(request: NextRequest) {
           },
         });
 
-        console.log(`User ${user.id} balance credited with ${usdt_amount} USDT`);
+        console.log(
+          `User ${user.id} balance credited with ${usdt_amount} USDT`
+        );
       }
 
       return NextResponse.json({
@@ -189,12 +193,10 @@ export async function POST(request: NextRequest) {
 
       if (error instanceof Error) {
         errorMessage = error.message;
-      } else if (
-        error &&
-        typeof error === "object" &&
-        "response" in error
-      ) {
-        const axiosError = error as { response?: { data?: unknown; status?: number } };
+      } else if (error && typeof error === "object" && "response" in error) {
+        const axiosError = error as {
+          response?: { data?: unknown; status?: number };
+        };
         if (axiosError.response?.data) {
           errorDetails = axiosError.response.data;
           if (
@@ -230,4 +232,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

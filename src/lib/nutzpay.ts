@@ -26,7 +26,9 @@ export class NutzPayService {
       headers["Authorization"] = `Bearer ${this.secretKey}`;
       headers["X-Public-Key"] = this.publicKey;
     } else if (process.env.NUTZPAY_AUTH_METHOD === "basic") {
-      const credentials = Buffer.from(`${this.publicKey}:${this.secretKey}`).toString("base64");
+      const credentials = Buffer.from(
+        `${this.publicKey}:${this.secretKey}`
+      ).toString("base64");
       headers["Authorization"] = `Basic ${credentials}`;
     } else {
       // Default: use custom headers (most common for payment APIs)
@@ -45,7 +47,6 @@ export class NutzPayService {
     callback_url?: string;
   }) {
     try {
-
       // Validate amount
       const amount = Number(data.amount);
       if (isNaN(amount) || amount <= 0) {
@@ -61,9 +62,10 @@ export class NutzPayService {
         external_id: data.external_id || `withdrawal_${Date.now()}`,
         callback_url:
           data.callback_url ||
-          `${process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"}/api/webhooks/nutzpay`,
+          `${
+            process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"
+          }/api/webhooks/nutzpay`,
       };
-
 
       const headers = this.getAuthHeaders();
 
@@ -73,7 +75,6 @@ export class NutzPayService {
         { headers }
       );
 
-
       return response.data;
     } catch (error) {
       console.error("NutzPay withdrawal creation error:", error);
@@ -81,13 +82,13 @@ export class NutzPayService {
       // Provide more helpful error information
       if (axios.isAxiosError(error)) {
         // Handle DNS/network errors
-        if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+        if (error.code === "ENOTFOUND" || error.code === "ECONNREFUSED") {
           const errorMessage = `Cannot connect to NutzPay API at ${this.baseUrl}. Please verify:
 1. The NUTZPAY_API_URL environment variable is set correctly
 2. The API URL is correct (check NutzPay documentation)
 3. Your network connection is active
 4. The API domain exists and is accessible`;
-          
+
           console.error(errorMessage);
           throw new Error(errorMessage);
         }
@@ -116,7 +117,12 @@ export class NutzPayService {
       // Validate amounts
       const amount = Number(data.amount);
       const usdtAmount = Number(data.usdt_amount);
-      if (isNaN(amount) || amount <= 0 || isNaN(usdtAmount) || usdtAmount <= 0) {
+      if (
+        isNaN(amount) ||
+        amount <= 0 ||
+        isNaN(usdtAmount) ||
+        usdtAmount <= 0
+      ) {
         throw new Error("Invalid amounts: must be positive numbers");
       }
 
@@ -132,9 +138,10 @@ export class NutzPayService {
         external_id: data.external_id || `purchase_${Date.now()}`,
         callback_url:
           data.callback_url ||
-          `${process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"}/api/webhooks/nutzpay`,
+          `${
+            process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"
+          }/api/webhooks/nutzpay`,
       };
-
 
       const headers = this.getAuthHeaders();
 
@@ -144,20 +151,19 @@ export class NutzPayService {
         { headers }
       );
 
-
       return response.data;
     } catch (error) {
       console.error("NutzPay purchase creation error:", error);
 
       if (axios.isAxiosError(error)) {
         // Handle DNS/network errors
-        if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+        if (error.code === "ENOTFOUND" || error.code === "ECONNREFUSED") {
           const errorMessage = `Cannot connect to NutzPay API at ${this.baseUrl}. Please verify:
 1. The NUTZPAY_API_URL environment variable is set correctly
 2. The API URL is correct (check NutzPay documentation)
 3. Your network connection is active
 4. The API domain exists and is accessible`;
-          
+
           console.error(errorMessage);
           throw new Error(errorMessage);
         }
@@ -190,7 +196,7 @@ export class NutzPayService {
   /**
    * Get USDT balance from NutzPay account
    * Returns the available USDT balance
-   * 
+   *
    * Note: The balance endpoint may need to be verified with NutzPay documentation.
    * If you get a 405 error, the endpoint path or method may be incorrect.
    */
@@ -207,10 +213,9 @@ export class NutzPayService {
         { headers }
       );
 
-
       // Handle different response formats
       const balanceData = response.data?.data || response.data;
-      
+
       return {
         balance: balanceData?.balance || balanceData?.amount || 0,
         currency: balanceData?.currency || "USDT",
@@ -223,13 +228,13 @@ export class NutzPayService {
 
       if (axios.isAxiosError(error)) {
         // Handle DNS/network errors
-        if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+        if (error.code === "ENOTFOUND" || error.code === "ECONNREFUSED") {
           const errorMessage = `Cannot connect to NutzPay API at ${this.baseUrl}. Please verify:
 1. The NUTZPAY_API_URL environment variable is set correctly
 2. The API URL is correct (check NutzPay documentation)
 3. Your network connection is active
 4. The API domain exists and is accessible`;
-          
+
           console.error(errorMessage);
           throw new Error(errorMessage);
         }
@@ -237,8 +242,10 @@ export class NutzPayService {
         // Handle permission errors
         if (error.response?.status === 403) {
           const errorData = error.response.data;
-          if (errorData?.code === 'INSUFFICIENT_SCOPE') {
-            const errorMessage = `Insufficient API key permissions: ${errorData.error || 'Required scope: usdt:read'}. Please check your NutzPay API key permissions.`;
+          if (errorData?.code === "INSUFFICIENT_SCOPE") {
+            const errorMessage = `Insufficient API key permissions: ${
+              errorData.error || "Required scope: usdt:read"
+            }. Please check your NutzPay API key permissions.`;
             console.error(errorMessage);
             throw new Error(errorMessage);
           }
@@ -278,4 +285,3 @@ export class NutzPayService {
 }
 
 export const nutzPayService = new NutzPayService();
-
