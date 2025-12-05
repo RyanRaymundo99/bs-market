@@ -61,6 +61,13 @@ const TradePage = () => {
   const [copied, setCopied] = useState(false);
   const [usdtPrice, setUsdtPrice] = useState<number>(5.5); // Default fallback price
   const [priceLoading, setPriceLoading] = useState(true);
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [receiptData, setReceiptData] = useState<{
+    transactionId: string;
+    amount: number;
+    usdtAmount: number;
+    date: Date;
+  } | null>(null);
 
   // Estado para o histórico de transações
   const [transactionHistory, setTransactionHistory] = useState<
@@ -292,6 +299,9 @@ const TradePage = () => {
         setShowPixModal(true);
         setBuyBRL(""); // Clear the field
 
+        // Start polling for payment confirmation
+        startPaymentPolling(data.data.transaction_id);
+
         // Add to transaction history
         // Total amount includes fee, so calculate base and fee
         const totalBRL = data.data.amount_brl; // Total paid (base + fee)
@@ -351,6 +361,111 @@ const TradePage = () => {
       }
     }
   };
+
+  // Poll for payment confirmation (checks webhook-updated order status)
+  // The webhook from NutzPay updates the order status when payment is confirmed
+  const startPaymentPolling = useCallback(
+    (transactionId: string) => {
+      let pollCount = 0;
+      const maxPolls = 60; // Poll for 5 minutes (60 * 5 seconds)
+      const pollInterval = 5000; // Check every 5 seconds
+      let intervalId: NodeJS.Timeout | null = null;
+
+      const pollStatus = async () => {
+        try {
+          // Poll the specific order by transaction ID
+          // The webhook will update this order when payment is confirmed
+          const response = await fetch(`/api/crypto/orders/${transactionId}`);
+          if (response.ok) {
+            const data = await response.json();
+            const order = data.order;
+
+            if (order) {
+              if (order.status === "COMPLETED") {
+                // Payment confirmed!
+                if (intervalId) {
+                  clearInterval(intervalId);
+                  intervalId = null;
+                }
+
+                // Show success notification
+                toast({
+                  title: "Pagamento confirmado! 🎉",
+                  description: `Você recebeu ${formatUSDT(
+                    pixData?.usdtAmount || Number(order.amount)
+                  )} USDT`,
+                  duration: 5000,
+                });
+
+                // Show receipt
+                setReceiptData({
+                  transactionId: transactionId,
+                  amount: pixData?.amount || Number(order.total),
+                  usdtAmount: pixData?.usdtAmount || Number(order.amount),
+                  date: new Date(),
+                });
+
+                // Close PIX modal
+                setShowPixModal(false);
+
+                // Show receipt modal
+                setShowReceipt(true);
+
+                // Update transaction history
+                setTransactionHistory((prev) =>
+                  prev.map((t) =>
+                    t.id === transactionId ? { ...t, status: "COMPLETED" } : t
+                  )
+                );
+
+                // Refresh transaction history
+                fetchTransactionHistory();
+                return;
+              } else if (order.status === "FAILED") {
+                // Payment failed
+                if (intervalId) {
+                  clearInterval(intervalId);
+                  intervalId = null;
+                }
+                toast({
+                  title: "Pagamento falhou",
+                  description:
+                    "O pagamento não foi confirmado. Tente novamente.",
+                  variant: "destructive",
+                });
+                return;
+              }
+            }
+          }
+
+          pollCount++;
+          if (pollCount >= maxPolls) {
+            // Stop polling after max attempts
+            if (intervalId) {
+              clearInterval(intervalId);
+              intervalId = null;
+            }
+            console.log("Polling stopped after max attempts");
+          }
+        } catch (error) {
+          console.error("Error polling payment status:", error);
+        }
+      };
+
+      // Start polling immediately, then every 5 seconds
+      intervalId = setInterval(pollStatus, pollInterval);
+      pollStatus(); // First check immediately
+
+      // Return cleanup function
+      return () => {
+        if (intervalId) {
+          clearInterval(intervalId);
+          intervalId = null;
+        }
+      };
+    },
+    [pixData, toast, formatUSDT, fetchTransactionHistory]
+  );
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -642,6 +757,64 @@ const TradePage = () => {
               </>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Receipt Modal */}
+      <Dialog open={showReceipt} onOpenChange={setShowReceipt}>
+        <DialogContent className="bg-[#1E1E1E] border-gray-800 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <Check className="w-6 h-6 text-green-400" />
+              Pagamento Confirmado!
+            </DialogTitle>
+            <DialogDescription className="text-[#A1A1AA]">
+              Seu pagamento foi processado com sucesso
+            </DialogDescription>
+          </DialogHeader>
+          {receiptData && (
+            <div className="space-y-4">
+              <div className="bg-gray-900 rounded-lg p-6 space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-[#A1A1AA]">Valor pago:</span>
+                  <span className="text-xl font-bold text-white">
+                    {formatBRL(receiptData.amount)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-[#A1A1AA]">USDT recebido:</span>
+                  <span className="text-xl font-bold text-[#10B981]">
+                    {formatUSDT(receiptData.usdtAmount)} USDT
+                  </span>
+                </div>
+                <div className="border-t border-gray-700 pt-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm text-[#A1A1AA]">
+                      ID da transação:
+                    </span>
+                    <span className="text-xs font-mono text-white">
+                      {receiptData.transactionId.substring(0, 20)}...
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-[#A1A1AA]">Data:</span>
+                    <span className="text-sm text-white">
+                      {receiptData.date.toLocaleString("pt-BR")}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowReceipt(false);
+                  setReceiptData(null);
+                }}
+                className="w-full py-3 bg-[#10B981] hover:bg-[#059669] text-white font-semibold rounded-lg transition-colors"
+              >
+                Fechar
+              </button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
