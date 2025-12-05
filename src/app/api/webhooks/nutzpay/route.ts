@@ -6,22 +6,56 @@ import { Decimal } from "@prisma/client/runtime/library";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // Get raw body for signature verification
+    const rawBody = await request.text();
+    const body = JSON.parse(rawBody);
+
     console.log("=== NUTZPAY WEBHOOK RECEIVED ===");
     console.log("Webhook body:", JSON.stringify(body, null, 2));
-    console.log("Webhook timestamp:", new Date().toISOString());
+    console.log(
+      "Webhook timestamp:",
+      body.timestamp || new Date().toISOString()
+    );
 
-    // Verify webhook signature if configured
-    if (!nutzPayService.verifyWebhookSignature(request)) {
-      console.warn("Webhook signature verification failed");
+    // Verify webhook signature (required by NutzPay)
+    // Always validate HMAC-SHA256 signature in X-Webhook-Signature header
+    const isValidSignature = await nutzPayService.verifyWebhookSignature(
+      request,
+      rawBody
+    );
+
+    if (!isValidSignature) {
+      console.error(
+        "❌ Webhook signature verification failed - rejecting webhook"
+      );
       return NextResponse.json(
-        { error: "Invalid signature" },
+        { error: "Invalid webhook signature" },
         { status: 401 }
       );
     }
 
-    // Extract data from webhook
-    const { transaction_id, external_id, status, amount, usdt_amount } = body.data || body;
+    // Extract event type and data from webhook
+    // NutzPay format: { event: "transaction.completed", data: {...}, timestamp: "..." }
+    const eventType = body.event || "transaction.unknown";
+    const webhookData = body.data || body;
+
+    // Extract fields from NutzPay payload structure
+    const transaction_id = webhookData.transaction_id;
+    const external_id = webhookData.external_id;
+    // Status can be "COMPLETED", "PENDING", "FAILED" (uppercase) or "completed", "pending", "failed" (lowercase)
+    const status = webhookData.status?.toLowerCase() || "pending";
+    const amount = webhookData.amount;
+    const currency = webhookData.currency || "BRL";
+    const user_id = webhookData.user_id;
+    const type = webhookData.type; // "PIX", etc.
+    const created_at = webhookData.created_at;
+    const completed_at = webhookData.completed_at;
+
+    // For USDT purchases, we might need to calculate usdt_amount from the order
+    // or it might be in the webhook data
+    const usdt_amount = webhookData.usdt_amount;
+
+    console.log("Webhook event type:", eventType);
 
     if (!transaction_id && !external_id) {
       console.error("Missing transaction_id or external_id in webhook");
@@ -32,11 +66,17 @@ export async function POST(request: NextRequest) {
     }
 
     console.log("Processing webhook for:", {
+      event: eventType,
       transaction_id,
       external_id,
       status,
       amount,
+      currency,
+      type,
+      user_id,
       usdt_amount,
+      created_at,
+      completed_at,
     });
 
     // Find the order by external_id
@@ -51,18 +91,25 @@ export async function POST(request: NextRequest) {
     });
 
     if (!order) {
-      console.error("Order not found for transaction:", transaction_id || external_id);
-      return NextResponse.json(
-        { error: "Order not found" },
-        { status: 404 }
+      console.error(
+        "Order not found for transaction:",
+        transaction_id || external_id
       );
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
-    // Update order status
-    const orderStatus =
-      status === "completed" ? "COMPLETED" :
-      status === "failed" ? "FAILED" :
-      status === "pending" ? "PENDING" : "PENDING";
+    // Update order status based on event type and status
+    // Handle both event type and status field
+    let orderStatus = "PENDING";
+    if (eventType === "transaction.completed" || status === "completed") {
+      orderStatus = "COMPLETED";
+    } else if (eventType === "transaction.failed" || status === "failed") {
+      orderStatus = "FAILED";
+    } else if (eventType === "transaction.refunded" || status === "refunded") {
+      orderStatus = "CANCELLED";
+    } else if (status === "pending") {
+      orderStatus = "PENDING";
+    }
 
     await prisma.order.update({
       where: { id: order.id },
@@ -81,9 +128,11 @@ export async function POST(request: NextRequest) {
 
     if (deposit) {
       const depositStatus =
-        status === "completed" ? "CONFIRMED" :
-        status === "failed" ? "REJECTED" :
-        "PENDING";
+        status === "completed"
+          ? "CONFIRMED"
+          : status === "failed"
+          ? "REJECTED"
+          : "PENDING";
 
       await prisma.deposit.update({
         where: { id: deposit.id },
@@ -95,7 +144,11 @@ export async function POST(request: NextRequest) {
     }
 
     // If payment is completed, update user balance
-    if (status === "completed") {
+    if (
+      eventType === "transaction.completed" ||
+      status === "completed" ||
+      orderStatus === "COMPLETED"
+    ) {
       const usdtAmount = usdt_amount || Number(order.amount);
 
       // Check if balance was already updated (prevent double credit)
@@ -137,7 +190,9 @@ export async function POST(request: NextRequest) {
           },
         });
 
-        console.log(`User ${order.userId} balance credited with ${usdtAmount} USDT via webhook`);
+        console.log(
+          `User ${order.userId} balance credited with ${usdtAmount} USDT via webhook`
+        );
       } else {
         console.log("Balance already updated for transaction:", transaction_id);
       }
@@ -158,4 +213,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

@@ -1,4 +1,5 @@
 import axios from "axios";
+import crypto from "crypto";
 
 export class NutzPayService {
   private publicKey: string;
@@ -22,10 +23,12 @@ export class NutzPayService {
       "Content-Type": "application/json",
     };
 
-    if (process.env.NUTZPAY_AUTH_METHOD === "bearer") {
+    const authMethod = process.env.NUTZPAY_AUTH_METHOD || "headers";
+
+    if (authMethod === "bearer") {
       headers["Authorization"] = `Bearer ${this.secretKey}`;
       headers["X-Public-Key"] = this.publicKey;
-    } else if (process.env.NUTZPAY_AUTH_METHOD === "basic") {
+    } else if (authMethod === "basic") {
       const credentials = Buffer.from(
         `${this.publicKey}:${this.secretKey}`
       ).toString("base64");
@@ -35,6 +38,7 @@ export class NutzPayService {
       headers["X-Public-Key"] = this.publicKey;
       headers["X-Secret-Key"] = this.secretKey;
     }
+
     return headers;
   }
 
@@ -145,6 +149,21 @@ export class NutzPayService {
 
       const headers = this.getAuthHeaders();
 
+      // Log request details for debugging (without exposing full secrets)
+      console.log("NutzPay Purchase Request Details:");
+      console.log("- URL:", `${this.baseUrl}/usdt/purchase`);
+      console.log(
+        "- Auth Method:",
+        process.env.NUTZPAY_AUTH_METHOD || "headers (default)"
+      );
+      console.log("- Headers (keys only):", Object.keys(headers).join(", "));
+      console.log(
+        "- Public Key (first 10 chars):",
+        this.publicKey?.substring(0, 10) + "..."
+      );
+      console.log("- Secret Key exists:", !!this.secretKey);
+      console.log("- Payload:", JSON.stringify(purchasePayload, null, 2));
+
       const response = await axios.post(
         `${this.baseUrl}/usdt/purchase`,
         purchasePayload,
@@ -156,6 +175,37 @@ export class NutzPayService {
       console.error("NutzPay purchase creation error:", error);
 
       if (axios.isAxiosError(error)) {
+        // Handle 401 authentication errors specifically
+        if (error.response?.status === 401) {
+          const errorData = error.response.data;
+          console.error("=== NUTZPAY 401 AUTHENTICATION ERROR ===");
+          console.error("Status:", error.response.status);
+          console.error("Response Data:", JSON.stringify(errorData, null, 2));
+          console.error(
+            "Request Headers Sent:",
+            JSON.stringify(error.config?.headers, null, 2)
+          );
+          console.error(
+            "Auth Method Used:",
+            process.env.NUTZPAY_AUTH_METHOD || "headers (default)"
+          );
+          console.error("Base URL:", this.baseUrl);
+          console.error(
+            "Public Key (first 10 chars):",
+            this.publicKey?.substring(0, 10) + "..."
+          );
+          console.error("Secret Key exists:", !!this.secretKey);
+          console.error("=========================================");
+
+          const errorMessage =
+            errorData?.error?.message ||
+            errorData?.message ||
+            errorData?.error ||
+            "NutzPay API authentication failed. Please check your PUBLIC_KEY and SECRET_KEY environment variables.";
+
+          throw new Error(errorMessage);
+        }
+
         // Handle DNS/network errors
         if (error.code === "ENOTFOUND" || error.code === "ECONNREFUSED") {
           const errorMessage = `Cannot connect to NutzPay API at ${this.baseUrl}. Please verify:
@@ -168,8 +218,12 @@ export class NutzPayService {
           throw new Error(errorMessage);
         }
 
-        if (error.response?.data?.error) {
-          console.error("NutzPay API error:", error.response.data.error);
+        // Log other API errors
+        if (error.response?.data) {
+          console.error(
+            "NutzPay API error response:",
+            JSON.stringify(error.response.data, null, 2)
+          );
         }
       }
 
@@ -260,26 +314,71 @@ export class NutzPayService {
     }
   }
 
-  verifyWebhookSignature(request: Request): boolean {
+  /**
+   * Verify webhook signature using HMAC-SHA256
+   * Follows NutzPay documentation: https://docs.nutzpay.com/webhooks
+   *
+   * Always validates the HMAC-SHA256 signature in the X-Webhook-Signature header
+   * Uses WEBHOOK_SECRET from environment variables (or SECRET_KEY as fallback)
+   */
+  async verifyWebhookSignature(
+    request: Request,
+    body: string
+  ): Promise<boolean> {
     try {
-      // Get the signature from headers
-      const signature =
-        request.headers.get("x-signature") ||
-        request.headers.get("x-webhook-signature") ||
-        request.headers.get("x-nutzpay-signature");
+      // Get webhook secret - required for signature validation
+      // Check NUTZPAY_WEBHOOK_SECRET first, then fall back to SECRET_KEY
+      const webhookSecret =
+        process.env.NUTZPAY_WEBHOOK_SECRET || this.secretKey;
+
+      if (!webhookSecret) {
+        console.error(
+          "No webhook secret configured. Set NUTZPAY_WEBHOOK_SECRET or SECRET_KEY."
+        );
+        return false; // Fail closed - require secret for security
+      }
+
+      // Get signature from X-Webhook-Signature header (as per NutzPay docs)
+      const signature = request.headers.get("x-webhook-signature");
 
       if (!signature) {
-        console.warn("No webhook signature found in headers");
+        console.error(
+          "Missing X-Webhook-Signature header. NutzPay requires signature validation."
+        );
+        return false; // Fail closed - require signature
+      }
+
+      // Calculate expected signature using HMAC-SHA256
+      // The body is already a JSON string (from request.text())
+      const expectedSignature = crypto
+        .createHmac("sha256", webhookSecret)
+        .update(body)
+        .digest("hex");
+
+      // Use constant-time comparison to prevent timing attacks
+      const isValid = crypto.timingSafeEqual(
+        Buffer.from(signature),
+        Buffer.from(expectedSignature)
+      );
+
+      if (!isValid) {
+        console.error("Webhook signature verification failed");
+        console.error(
+          "Expected (first 20 chars):",
+          expectedSignature.substring(0, 20) + "..."
+        );
+        console.error(
+          "Received (first 20 chars):",
+          signature.substring(0, 20) + "..."
+        );
         return false;
       }
 
-      // For now, return true to allow webhooks through
-      // TODO: Implement proper HMAC verification
-      console.log("Webhook signature found:", signature);
+      console.log("✅ Webhook signature verified successfully");
       return true;
     } catch (error) {
       console.error("Error verifying webhook signature:", error);
-      return false;
+      return false; // Fail closed on errors
     }
   }
 }

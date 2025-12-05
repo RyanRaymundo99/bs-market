@@ -98,11 +98,53 @@ export async function POST(request: NextRequest) {
         callback_url: callbackUrl,
       });
 
-      // Extract response data
+      // Extract response data - NutzPay returns the data directly or nested
+      // Response structure: { success: true, transactionId, qrCode, pixKey, qrCodeUrl, ... }
       const responseData = nutzPayResponse.data || nutzPayResponse;
-      const transactionId = responseData.transaction_id;
+
+      console.log(
+        "NutzPay Full Response:",
+        JSON.stringify(nutzPayResponse, null, 2)
+      );
+      console.log(
+        "NutzPay Response Data:",
+        JSON.stringify(responseData, null, 2)
+      );
+
+      // Extract transaction ID (can be transactionId or transaction_id)
+      const transactionId =
+        responseData.transactionId ||
+        responseData.transaction_id ||
+        responseData.providerTransactionId ||
+        null;
+
       const responseStatus = responseData.status || "pending";
-      const isCompleted = responseStatus === "completed";
+      const isCompleted =
+        responseStatus === "completed" || responseStatus === "COMPLETED";
+
+      // Extract PIX code - according to NutzPay docs, it's in qrCode or pixKey field
+      // Both fields contain the same PIX "Copia e Cola" string
+      const pixCode =
+        responseData.qrCode ||
+        responseData.pixKey ||
+        responseData.pix_data?.qr_code ||
+        responseData.pix_data?.qrCode ||
+        responseData.qr_code ||
+        null;
+
+      // Extract QR code URL if available
+      const qrCodeUrl =
+        responseData.qrCodeUrl || responseData.qr_code_url || null;
+
+      console.log("=== PIX CODE EXTRACTION ===");
+      console.log("Transaction ID:", transactionId);
+      console.log("Status:", responseStatus);
+      console.log(
+        "PIX Code (first 50 chars):",
+        pixCode ? pixCode.substring(0, 50) + "..." : "NOT FOUND"
+      );
+      console.log("QR Code URL:", qrCodeUrl || "NOT FOUND");
+      console.log("===========================");
 
       // Update order with NutzPay transaction ID
       await prisma.order.update({
@@ -123,7 +165,7 @@ export async function POST(request: NextRequest) {
           status: isCompleted ? "CONFIRMED" : "PENDING",
           paymentMethod: "PIX",
           externalId: transactionId || externalId,
-          pixQrCode: responseData.pix_data?.qr_code || null,
+          pixQrCode: pixCode,
           pixQrCodeBase64: responseData.pix_data?.qr_code_base64 || null,
         },
       });
@@ -160,17 +202,32 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // Return response matching NutzPay structure + our additional fields
       return NextResponse.json({
         success: true,
         message: "USDT purchase request created successfully",
         data: {
-          transaction_id: nutzPayResponse.data?.transaction_id,
+          // NutzPay response fields (direct mapping)
+          transaction_id: transactionId,
+          transactionId: transactionId, // Also include camelCase for compatibility
           external_id: externalId,
-          status: nutzPayResponse.data?.status || "pending",
+          status: responseStatus,
           amount_brl: amount,
           amount_usdt: usdt_amount,
           exchange_rate: amount / usdt_amount,
-          pix_data: nutzPayResponse.data?.pix_data || null,
+          // PIX code fields - match NutzPay API structure
+          qrCode: pixCode, // Direct field from NutzPay
+          pixKey: pixCode, // Also include as pixKey (same value)
+          qrCodeUrl: qrCodeUrl, // QR code image URL
+          // Nested structure for backward compatibility
+          pix_data: {
+            qr_code: pixCode,
+            qrCode: pixCode,
+            qr_code_base64: responseData.pix_data?.qr_code_base64 || null,
+            qr_code_url: qrCodeUrl,
+            qrCodeUrl: qrCodeUrl,
+          },
+          // Our internal fields
           order_id: order.id,
           deposit_id: deposit.id,
         },

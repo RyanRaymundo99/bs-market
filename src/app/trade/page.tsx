@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { Copy, Check } from "lucide-react";
 
 const TradePage = () => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -52,10 +53,12 @@ const TradePage = () => {
   const [pixData, setPixData] = useState<{
     qrCode: string;
     qrCodeBase64: string | null;
+    qrCodeUrl: string | null;
     amount: number;
     usdtAmount: number;
     transactionId: string;
   } | null>(null);
+  const [copied, setCopied] = useState(false);
   const [usdtPrice, setUsdtPrice] = useState<number>(5.5); // Default fallback price
   const [priceLoading, setPriceLoading] = useState(true);
 
@@ -250,10 +253,38 @@ const TradePage = () => {
       }
 
       if (data.success && data.data) {
+        // Extract PIX code from various possible structures
+        // NutzPay API returns: qrCode, pixKey, or pix_data.qr_code
+        const pixCode =
+          data.data.pix_data?.qr_code ||
+          data.data.pix_data?.qrCode ||
+          data.data.qrCode ||
+          data.data.pixKey ||
+          "";
+
+        // Extract QR code image (base64 or URL)
+        const qrCodeBase64 = data.data.pix_data?.qr_code_base64 || null;
+        const qrCodeUrl =
+          data.data.pix_data?.qr_code_url || data.data.qrCodeUrl || null;
+
+        console.log("=== FRONTEND PIX DATA ===");
+        console.log("Full response data:", JSON.stringify(data.data, null, 2));
+        console.log(
+          "PIX Code extracted:",
+          pixCode ? pixCode.substring(0, 50) + "..." : "EMPTY"
+        );
+        console.log(
+          "QR Code Base64:",
+          qrCodeBase64 ? "Present" : "Not present"
+        );
+        console.log("QR Code URL:", qrCodeUrl || "Not present");
+        console.log("=========================");
+
         // Show PIX QR code modal
         setPixData({
-          qrCode: data.data.pix_data?.qr_code || "",
-          qrCodeBase64: data.data.pix_data?.qr_code_base64 || null,
+          qrCode: pixCode,
+          qrCodeBase64: qrCodeBase64,
+          qrCodeUrl: qrCodeUrl,
           amount: data.data.amount_brl,
           usdtAmount: data.data.amount_usdt,
           transactionId: data.data.transaction_id,
@@ -299,13 +330,25 @@ const TradePage = () => {
     }
   };
 
-  const copyPixCode = () => {
+  const copyPixCode = async () => {
     if (pixData?.qrCode) {
-      navigator.clipboard.writeText(pixData.qrCode);
-      toast({
-        title: "Copiado!",
-        description: "Código PIX copiado para a área de transferência",
-      });
+      try {
+        await navigator.clipboard.writeText(pixData.qrCode);
+        setCopied(true);
+        toast({
+          title: "Copiado!",
+          description: "Código PIX copiado para a área de transferência",
+        });
+        // Reset copied state after 2 seconds
+        setTimeout(() => setCopied(false), 2000);
+      } catch (error) {
+        console.error("Failed to copy:", error);
+        toast({
+          title: "Erro",
+          description: "Não foi possível copiar o código PIX",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -547,12 +590,50 @@ const TradePage = () => {
                     </p>
                   </div>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-4">
+                  {/* PIX Code Display */}
+                  {pixData.qrCode && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-[#A1A1AA]">
+                        Código PIX (Copia e Cola):
+                      </label>
+                      <div className="relative">
+                        <div className="flex items-center gap-2 p-3 bg-gray-900 border border-gray-700 rounded-lg">
+                          <code className="flex-1 text-xs text-white break-all font-mono pr-2">
+                            {pixData.qrCode}
+                          </code>
+                          <button
+                            onClick={copyPixCode}
+                            className="flex-shrink-0 p-2 bg-gray-800 hover:bg-gray-700 text-white rounded transition-colors"
+                            title="Copiar código PIX"
+                          >
+                            {copied ? (
+                              <Check className="w-4 h-4 text-green-400" />
+                            ) : (
+                              <Copy className="w-4 h-4" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Copy Button */}
                   <button
                     onClick={copyPixCode}
-                    className="w-full py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors"
+                    className="w-full py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2 font-medium"
                   >
-                    Copiar código PIX
+                    {copied ? (
+                      <>
+                        <Check className="w-5 h-5 text-green-400" />
+                        Código copiado!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-5 h-5" />
+                        Copiar código PIX
+                      </>
+                    )}
                   </button>
                   <p className="text-xs text-[#A1A1AA] text-center">
                     Após o pagamento, seus USDT serão creditados automaticamente
