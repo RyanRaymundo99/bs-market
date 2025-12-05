@@ -100,7 +100,13 @@ export async function POST(request: NextRequest) {
 
     // Update order status based on event type and status
     // Handle both event type and status field
-    let orderStatus = "PENDING";
+    // OrderStatus enum: PENDING, EXECUTING, COMPLETED, FAILED, CANCELLED
+    let orderStatus:
+      | "PENDING"
+      | "EXECUTING"
+      | "COMPLETED"
+      | "FAILED"
+      | "CANCELLED" = "PENDING";
     if (eventType === "transaction.completed" || status === "completed") {
       orderStatus = "COMPLETED";
     } else if (eventType === "transaction.failed" || status === "failed") {
