@@ -50,12 +50,12 @@ export async function GET(request: NextRequest) {
         },
         transaction: {
           include: {
-            deposit: {
-              select: {
-                id: true,
-                externalId: true,
-                status: true,
-                confirmedAt: true,
+        deposit: {
+          select: {
+            id: true,
+            externalId: true,
+            status: true,
+            confirmedAt: true,
               },
             },
           },

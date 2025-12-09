@@ -111,6 +111,10 @@ export async function POST(request: NextRequest) {
       isDevelopment,
       isTestWebhook,
       willProcess: isValidSignature || isTestWebhook,
+      hasSignatureHeader: !!request.headers.get("x-webhook-signature"),
+      signatureHeaderName: request.headers.get("x-webhook-signature") ? "x-webhook-signature" : 
+                          request.headers.get("X-Webhook-Signature") ? "X-Webhook-Signature" :
+                          request.headers.get("X-WEBHOOK-SIGNATURE") ? "X-WEBHOOK-SIGNATURE" : "none",
       note: isTestWebhook
         ? "Test webhook mode: Signature verification skipped"
         : isDevelopment

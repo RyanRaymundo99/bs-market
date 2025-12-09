@@ -455,12 +455,19 @@ export class NutzPayService {
       }
 
       // Get signature from X-Webhook-Signature header (as per NutzPay docs)
-      const signature = request.headers.get("x-webhook-signature");
+      // Try different case variations as some servers may send headers with different casing
+      const signature = 
+        request.headers.get("x-webhook-signature") ||
+        request.headers.get("X-Webhook-Signature") ||
+        request.headers.get("X-WEBHOOK-SIGNATURE");
 
       if (!signature) {
         console.error(
           "Missing X-Webhook-Signature header. NutzPay requires signature validation."
         );
+        console.error("Available headers:", Array.from(request.headers.keys()).filter(h => 
+          h.toLowerCase().includes("signature") || h.toLowerCase().includes("webhook")
+        ));
         return false; // Fail closed - require signature
       }
 
