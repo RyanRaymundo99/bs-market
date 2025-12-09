@@ -67,6 +67,9 @@ export async function POST(request: NextRequest) {
     const externalId = `purchase_${user.id}_${Date.now()}`;
 
     // Create order record first
+    // IMPORTANT: Set externalOrderId to externalId immediately to prevent race condition
+    // If webhook arrives before NutzPay response, it can still match by external_id
+    // We'll update it with the real transactionId after NutzPay responds
     const order = await prisma.order.create({
       data: {
         userId: user.id,
@@ -77,6 +80,7 @@ export async function POST(request: NextRequest) {
         price: new Decimal(amount / usdt_amount),
         total: new Decimal(amount),
         status: "PENDING",
+        externalOrderId: externalId, // Set immediately to prevent webhook race condition
       },
     });
 
@@ -195,10 +199,13 @@ export async function POST(request: NextRequest) {
       console.log("===========================");
 
       // Update order with NutzPay transaction ID (or externalId as fallback)
+      // Note: externalOrderId was already set to externalId when order was created
+      // If webhook arrived before this point, it may have already updated externalOrderId with transaction_id
+      // This update ensures we have the correct transaction_id from NutzPay response
       await prisma.order.update({
         where: { id: order.id },
         data: {
-          externalOrderId: finalTransactionId,
+          externalOrderId: finalTransactionId, // Update with real transactionId from NutzPay (or keep externalId if not available)
           status: isCompleted ? "COMPLETED" : "PENDING",
           executedAt: isCompleted ? new Date() : null,
         },

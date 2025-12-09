@@ -221,25 +221,41 @@ export async function POST(request: NextRequest) {
     // 3. FALLBACK: If external_id exists, match via deposit.externalId with webhook external_id
     // 4. FALLBACK: Match via deposit.externalId with webhook transaction_id
 
-    // PRIMARY MATCH: transaction_id is always present in webhook
+    // PRIMARY MATCH: Try matching by transaction_id first (from NutzPay)
+    // This is the transaction_id that NutzPay returns after payment is processed
     let order = await prisma.order.findFirst({
       where: {
-        externalOrderId: transaction_id, // PRIMARY: Match PIX transaction ID (always present)
+        externalOrderId: transaction_id, // PRIMARY: Match NutzPay transaction ID
       },
       include: { user: true },
     });
 
-    // If not found and external_id exists, try matching by external_id
+    // SECONDARY MATCH: If not found, try matching by external_id
+    // This is our original externalId that we send to NutzPay
+    // It's set immediately when order is created, so webhook can match even if NutzPay hasn't responded yet
     if (!order && external_id) {
       const orderByExternalId = await prisma.order.findFirst({
         where: {
-          externalOrderId: external_id, // Fallback: Match our original ID
+          externalOrderId: external_id, // Match our original externalId (set immediately on order creation)
         },
         include: { user: true },
       });
       if (orderByExternalId) {
         order = orderByExternalId;
-        console.log("✅ Found order by external_id:", order.id);
+        console.log("✅ Found order by external_id (our original ID):", order.id);
+        
+        // If we matched by external_id but webhook has transaction_id, update the order
+        // This handles the case where webhook arrives before NutzPay API response updates externalOrderId
+        if (transaction_id && transaction_id !== external_id) {
+          console.log("🔄 Updating order.externalOrderId with transaction_id from webhook:", transaction_id);
+          await prisma.order.update({
+            where: { id: order.id },
+            data: {
+              externalOrderId: transaction_id, // Update with real transaction_id from webhook
+            },
+          });
+          order.externalOrderId = transaction_id; // Update local object for logging
+        }
       }
     }
 
