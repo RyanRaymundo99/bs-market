@@ -154,11 +154,13 @@ export default function WebhookConfigCheckPage() {
               {config.reception?.success ? (
                 <>
                   <div className="flex items-center gap-2">
-                    {config.reception.webhookReception.totalWebhooks > 0 ? (
+                    {(config.reception.webhookReception?.totalWebhooks ?? 0) >
+                    0 ? (
                       <>
                         <CheckCircle className="w-5 h-5 text-green-500" />
                         <span className="text-green-500">
-                          {config.reception.webhookReception.totalWebhooks}{" "}
+                          {config.reception.webhookReception?.totalWebhooks ??
+                            0}{" "}
                           webhook(s) recebido(s)
                         </span>
                       </>
@@ -171,7 +173,7 @@ export default function WebhookConfigCheckPage() {
                       </>
                     )}
                   </div>
-                  {config.reception.webhookReception.latestWebhook && (
+                  {config.reception.webhookReception?.latestWebhook && (
                     <div>
                       <p className="text-sm text-gray-400 mb-1">
                         Último Webhook Recebido:
