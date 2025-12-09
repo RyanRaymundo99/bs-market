@@ -35,14 +35,16 @@ interface WebhookEvent {
   ipAddress: string | null;
   userAgent: string | null;
   createdAt: string;
-  payload: any;
+  payload: Record<string, unknown>;
 }
 
 export default function WebhookLogsPage() {
   const { toast } = useToast();
   const [webhooks, setWebhooks] = useState<WebhookEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedWebhook, setSelectedWebhook] = useState<WebhookEvent | null>(null);
+  const [selectedWebhook, setSelectedWebhook] = useState<WebhookEvent | null>(
+    null
+  );
   const [showPayload, setShowPayload] = useState(false);
 
   const fetchWebhooks = async () => {
@@ -84,7 +86,11 @@ export default function WebhookLogsPage() {
       return <Badge variant="destructive">Erro</Badge>;
     }
     if (webhook.processed) {
-      return <Badge variant="default" className="bg-green-600">Processado</Badge>;
+      return (
+        <Badge variant="default" className="bg-green-600">
+          Processado
+        </Badge>
+      );
     }
     return <Badge variant="secondary">Pendente</Badge>;
   };
@@ -127,9 +133,7 @@ export default function WebhookLogsPage() {
     <div className="container mx-auto p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">
-            Webhook Logs
-          </h1>
+          <h1 className="text-3xl font-bold text-white mb-2">Webhook Logs</h1>
           <p className="text-gray-400">
             Monitoramento de webhooks recebidos do NutzPay
           </p>
@@ -149,7 +153,8 @@ export default function WebhookLogsPage() {
         <div className="bg-gray-900 rounded-lg p-8 text-center">
           <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-400">
-            Nenhum webhook recebido ainda. Os webhooks aparecerão aqui quando forem recebidos.
+            Nenhum webhook recebido ainda. Os webhooks aparecerão aqui quando
+            forem recebidos.
           </p>
         </div>
       ) : (
@@ -172,9 +177,7 @@ export default function WebhookLogsPage() {
                   <TableCell className="text-gray-300 text-sm">
                     {formatDate(webhook.createdAt)}
                   </TableCell>
-                  <TableCell>
-                    {getEventTypeBadge(webhook.eventType)}
-                  </TableCell>
+                  <TableCell>{getEventTypeBadge(webhook.eventType)}</TableCell>
                   <TableCell className="text-gray-300 text-sm font-mono">
                     {webhook.transactionId || webhook.externalId || "-"}
                   </TableCell>
@@ -220,9 +223,7 @@ export default function WebhookLogsPage() {
       <Dialog open={showPayload} onOpenChange={setShowPayload}>
         <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-white">
-              Webhook Payload
-            </DialogTitle>
+            <DialogTitle className="text-white">Webhook Payload</DialogTitle>
             <DialogDescription className="text-gray-400">
               Detalhes completos do webhook recebido
             </DialogDescription>
@@ -232,7 +233,9 @@ export default function WebhookLogsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-gray-400 mb-1">ID do Evento</p>
-                  <p className="text-white font-mono text-sm">{selectedWebhook.id}</p>
+                  <p className="text-white font-mono text-sm">
+                    {selectedWebhook.id}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-400 mb-1">Tipo de Evento</p>
@@ -258,12 +261,16 @@ export default function WebhookLogsPage() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-400 mb-1">IP Address</p>
-                  <p className="text-white text-sm">{selectedWebhook.ipAddress || "-"}</p>
+                  <p className="text-white text-sm">
+                    {selectedWebhook.ipAddress || "-"}
+                  </p>
                 </div>
                 {selectedWebhook.error && (
                   <div className="col-span-2">
                     <p className="text-sm text-gray-400 mb-1">Erro</p>
-                    <p className="text-red-400 text-sm">{selectedWebhook.error}</p>
+                    <p className="text-red-400 text-sm">
+                      {selectedWebhook.error}
+                    </p>
                   </div>
                 )}
               </div>
@@ -280,6 +287,3 @@ export default function WebhookLogsPage() {
     </div>
   );
 }
-
-
-

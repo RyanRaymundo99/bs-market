@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { RefreshCw, Eye, AlertCircle, CheckCircle, Search } from "lucide-react";
+import { RefreshCw, Eye, AlertCircle, CheckCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -30,9 +30,16 @@ interface WebhookAnalysis {
   error: string | null;
   transactionId: string | null;
   externalId: string | null;
-  payload: any;
-  matchingOrder: any;
-  matchingDeposit: any;
+  payload: Record<string, unknown>;
+  matchingOrder: {
+    id: string;
+    externalOrderId: string | null;
+    status: string;
+  } | null;
+  matchingDeposit: {
+    id: string;
+    externalId: string;
+  } | null;
 }
 
 interface OrderAnalysis {
@@ -42,17 +49,36 @@ interface OrderAnalysis {
   userId: string;
   amount: string;
   createdAt: string;
-  relatedDeposit: any;
-  matchingWebhooks: any[];
+  relatedDeposit: {
+    externalId: string;
+    status: string;
+  } | null;
+  matchingWebhooks: Array<{
+    id: string;
+    eventType: string;
+  }>;
+}
+
+interface AnalysisSummary {
+  totalWebhooks: number;
+  processedWebhooks: number;
+  failedWebhooks: number;
+  unmatchedWebhooks: number;
+  pendingOrders: number;
+  unmatchedOrders: number;
+  completedOrders: number;
 }
 
 export default function WebhookIdsDebugPage() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [summary, setSummary] = useState<any>(null);
+  const [summary, setSummary] = useState<AnalysisSummary | null>(null);
   const [webhookAnalysis, setWebhookAnalysis] = useState<WebhookAnalysis[]>([]);
   const [orderAnalysis, setOrderAnalysis] = useState<OrderAnalysis[]>([]);
-  const [selectedPayload, setSelectedPayload] = useState<any>(null);
+  const [selectedPayload, setSelectedPayload] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
   const [showPayload, setShowPayload] = useState(false);
   const [filter, setFilter] = useState<"all" | "unmatched" | "matched">("all");
 
@@ -126,7 +152,7 @@ export default function WebhookIdsDebugPage() {
                     : data.error,
                   variant: data.success ? "default" : "destructive",
                 });
-              } catch (error) {
+              } catch {
                 toast({
                   title: "Erro",
                   description: "Falha ao verificar recepção de webhooks",

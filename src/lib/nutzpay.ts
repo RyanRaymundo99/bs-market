@@ -270,7 +270,7 @@ export class NutzPayService {
         `${this.baseUrl}/purchase/${transactionId}`,
       ];
 
-      let lastError: any = null;
+      let lastError: Error | null = null;
 
       for (const endpoint of endpoints) {
         try {

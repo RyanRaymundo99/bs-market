@@ -7,21 +7,53 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, XCircle, AlertCircle, RefreshCw } from "lucide-react";
 
+interface WebhookConfig {
+  webhookEndpoint: string;
+  webhookAccessible: boolean;
+  webhookResponse: unknown;
+  reception: {
+    success?: boolean;
+    error?: string;
+    webhookReception?: {
+      totalWebhooks: number;
+      latestWebhook?: {
+        eventType: string;
+        transactionId: string | null;
+        externalId: string | null;
+        status: string;
+        processed: boolean;
+        createdAt: string;
+      };
+    };
+    recentOrders?: Array<{
+      id: string;
+      status: string;
+      externalOrderId: string | null;
+      createdAt: string;
+    }>;
+  };
+  expectedUrl: string;
+}
+
 export default function WebhookConfigCheckPage() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [config, setConfig] = useState<any>(null);
+  const [config, setConfig] = useState<WebhookConfig | null>(null);
 
   const checkConfig = async () => {
     setLoading(true);
     try {
       // Check webhook endpoint accessibility
-      const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/api/webhooks/nutzpay`;
+      const webhookUrl = `${
+        process.env.NEXT_PUBLIC_APP_URL || window.location.origin
+      }/api/webhooks/nutzpay`;
       const webhookResponse = await fetch(webhookUrl, { method: "GET" });
       const webhookData = await webhookResponse.json();
 
       // Check webhook reception
-      const receptionResponse = await fetch("/api/debug/check-webhook-reception");
+      const receptionResponse = await fetch(
+        "/api/debug/check-webhook-reception"
+      );
       const receptionData = await receptionResponse.json();
 
       setConfig({
@@ -29,7 +61,9 @@ export default function WebhookConfigCheckPage() {
         webhookAccessible: webhookResponse.ok,
         webhookResponse: webhookData,
         reception: receptionData,
-        expectedUrl: `${process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"}/api/webhooks/nutzpay`,
+        expectedUrl: `${
+          process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"
+        }/api/webhooks/nutzpay`,
       });
     } catch (error) {
       console.error("Config check error:", error);
@@ -54,7 +88,9 @@ export default function WebhookConfigCheckPage() {
           🔧 Verificação de Configuração de Webhook
         </h1>
         <Button onClick={checkConfig} disabled={loading}>
-          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+          <RefreshCw
+            className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`}
+          />
           Verificar
         </Button>
       </div>
@@ -89,14 +125,18 @@ export default function WebhookConfigCheckPage() {
                 </code>
               </div>
               <div>
-                <p className="text-sm text-gray-400 mb-1">URL Esperada (para configurar no NutzPay):</p>
+                <p className="text-sm text-gray-400 mb-1">
+                  URL Esperada (para configurar no NutzPay):
+                </p>
                 <code className="bg-gray-800 p-2 rounded text-sm text-white block">
                   {config.expectedUrl}
                 </code>
               </div>
               {config.webhookResponse && (
                 <div>
-                  <p className="text-sm text-gray-400 mb-1">Resposta do Endpoint:</p>
+                  <p className="text-sm text-gray-400 mb-1">
+                    Resposta do Endpoint:
+                  </p>
                   <pre className="bg-gray-800 p-2 rounded text-xs text-white overflow-x-auto">
                     {JSON.stringify(config.webhookResponse, null, 2)}
                   </pre>
@@ -118,7 +158,8 @@ export default function WebhookConfigCheckPage() {
                       <>
                         <CheckCircle className="w-5 h-5 text-green-500" />
                         <span className="text-green-500">
-                          {config.reception.webhookReception.totalWebhooks} webhook(s) recebido(s)
+                          {config.reception.webhookReception.totalWebhooks}{" "}
+                          webhook(s) recebido(s)
                         </span>
                       </>
                     ) : (
@@ -132,33 +173,46 @@ export default function WebhookConfigCheckPage() {
                   </div>
                   {config.reception.webhookReception.latestWebhook && (
                     <div>
-                      <p className="text-sm text-gray-400 mb-1">Último Webhook Recebido:</p>
+                      <p className="text-sm text-gray-400 mb-1">
+                        Último Webhook Recebido:
+                      </p>
                       <div className="bg-gray-800 p-3 rounded space-y-1 text-sm">
                         <div>
                           <span className="text-gray-400">Evento:</span>{" "}
-                          <span className="text-white">{config.reception.webhookReception.latestWebhook.eventType}</span>
+                          <span className="text-white">
+                            {
+                              config.reception.webhookReception.latestWebhook
+                                .eventType
+                            }
+                          </span>
                         </div>
                         <div>
                           <span className="text-gray-400">Transaction ID:</span>{" "}
                           <span className="text-white font-mono">
-                            {config.reception.webhookReception.latestWebhook.transactionId || "N/A"}
+                            {config.reception.webhookReception.latestWebhook
+                              .transactionId || "N/A"}
                           </span>
                         </div>
                         <div>
                           <span className="text-gray-400">External ID:</span>{" "}
                           <span className="text-white font-mono">
-                            {config.reception.webhookReception.latestWebhook.externalId || "N/A"}
+                            {config.reception.webhookReception.latestWebhook
+                              .externalId || "N/A"}
                           </span>
                         </div>
                         <div>
                           <span className="text-gray-400">Status:</span>{" "}
                           <Badge variant="outline">
-                            {config.reception.webhookReception.latestWebhook.status}
+                            {
+                              config.reception.webhookReception.latestWebhook
+                                .status
+                            }
                           </Badge>
                         </div>
                         <div>
                           <span className="text-gray-400">Processado:</span>{" "}
-                          {config.reception.webhookReception.latestWebhook.processed ? (
+                          {config.reception.webhookReception.latestWebhook
+                            .processed ? (
                             <Badge className="bg-green-600">Sim</Badge>
                           ) : (
                             <Badge variant="destructive">Não</Badge>
@@ -167,7 +221,9 @@ export default function WebhookConfigCheckPage() {
                         <div>
                           <span className="text-gray-400">Data:</span>{" "}
                           <span className="text-white">
-                            {new Date(config.reception.webhookReception.latestWebhook.createdAt).toLocaleString("pt-BR")}
+                            {new Date(
+                              config.reception.webhookReception.latestWebhook.createdAt
+                            ).toLocaleString("pt-BR")}
                           </span>
                         </div>
                       </div>
@@ -221,8 +277,11 @@ export default function WebhookConfigCheckPage() {
                   3. Verifique o Webhook Secret:
                 </p>
                 <p className="text-sm text-gray-300">
-                  O webhook secret deve estar configurado na variável de ambiente{" "}
-                  <code className="bg-gray-800 px-1 rounded">NUTZPAY_WEBHOOK_SECRET</code>
+                  O webhook secret deve estar configurado na variável de
+                  ambiente{" "}
+                  <code className="bg-gray-800 px-1 rounded">
+                    NUTZPAY_WEBHOOK_SECRET
+                  </code>
                 </p>
               </div>
               <div>
@@ -230,46 +289,61 @@ export default function WebhookConfigCheckPage() {
                   4. Teste o Webhook:
                 </p>
                 <p className="text-sm text-gray-300">
-                  Use a página de teste de webhook ou faça um pagamento de teste para verificar se os webhooks estão sendo recebidos.
+                  Use a página de teste de webhook ou faça um pagamento de teste
+                  para verificar se os webhooks estão sendo recebidos.
                 </p>
               </div>
             </CardContent>
           </Card>
 
           {/* Recent Orders for Reference */}
-          {config.reception?.recentOrders && config.reception.recentOrders.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Ordens Recentes (para referência)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {config.reception.recentOrders.slice(0, 5).map((order: any) => (
-                    <div key={order.id} className="bg-gray-800 p-3 rounded text-sm">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <span className="text-gray-400">Order ID:</span>{" "}
-                          <span className="text-white font-mono">{order.id.slice(-12)}</span>
+          {config.reception?.recentOrders &&
+            config.reception.recentOrders.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Ordens Recentes (para referência)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {config.reception.recentOrders.slice(0, 5).map((order) => (
+                      <div
+                        key={order.id}
+                        className="bg-gray-800 p-3 rounded text-sm"
+                      >
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <span className="text-gray-400">Order ID:</span>{" "}
+                            <span className="text-white font-mono">
+                              {order.id.slice(-12)}
+                            </span>
+                          </div>
+                          <Badge
+                            variant={
+                              order.status === "COMPLETED"
+                                ? "default"
+                                : "secondary"
+                            }
+                          >
+                            {order.status}
+                          </Badge>
                         </div>
-                        <Badge variant={order.status === "COMPLETED" ? "default" : "secondary"}>
-                          {order.status}
-                        </Badge>
+                        <div className="mt-1">
+                          <span className="text-gray-400">
+                            External Order ID:
+                          </span>{" "}
+                          <span className="text-white font-mono">
+                            {order.externalOrderId || "NÃO DEFINIDO"}
+                          </span>
+                        </div>
+                        <div className="mt-1 text-xs text-gray-500">
+                          {new Date(order.createdAt).toLocaleString("pt-BR")}
+                        </div>
                       </div>
-                      <div className="mt-1">
-                        <span className="text-gray-400">External Order ID:</span>{" "}
-                        <span className="text-white font-mono">
-                          {order.externalOrderId || "NÃO DEFINIDO"}
-                        </span>
-                      </div>
-                      <div className="mt-1 text-xs text-gray-500">
-                        {new Date(order.createdAt).toLocaleString("pt-BR")}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
         </div>
       ) : (
         <div className="text-center py-8 text-gray-400">
@@ -279,9 +353,3 @@ export default function WebhookConfigCheckPage() {
     </div>
   );
 }
-
-
-
-
-
-

@@ -7,12 +7,36 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RefreshCw, Search, AlertCircle, CheckCircle } from "lucide-react";
 
+interface MatchResult {
+  method: string;
+  order: {
+    id: string;
+    externalOrderId: string | null;
+    status: string;
+    total: number;
+  };
+}
+
+interface DebugResults {
+  matches: MatchResult[];
+  deposit?: {
+    id: string;
+    externalId: string;
+    amount: number;
+  };
+  recentOrders?: Array<{
+    id: string;
+    externalOrderId: string | null;
+    status: string;
+  }>;
+}
+
 export default function WebhookDebugPage() {
   const { toast } = useToast();
   const [transactionId, setTransactionId] = useState("");
   const [externalId, setExternalId] = useState("");
   const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState<any>(null);
+  const [results, setResults] = useState<DebugResults | null>(null);
 
   const checkMatching = async () => {
     if (!transactionId && !externalId) {
@@ -135,7 +159,7 @@ export default function WebhookDebugPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {results.matches.map((match: any, index: number) => (
+                {results.matches.map((match, index) => (
                   <div key={index} className="mb-4 p-4 bg-gray-800 rounded-lg">
                     <p className="text-sm text-gray-400 mb-2">
                       Método: {match.method}
@@ -148,7 +172,9 @@ export default function WebhookDebugPage() {
                         </span>
                       </div>
                       <div>
-                        <span className="text-gray-400">External Order ID:</span>{" "}
+                        <span className="text-gray-400">
+                          External Order ID:
+                        </span>{" "}
                         <span className="text-white font-mono">
                           {match.order.externalOrderId || "N/A"}
                         </span>
@@ -221,7 +247,7 @@ export default function WebhookDebugPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {results.recentOrders.map((order: any) => (
+                  {results.recentOrders.map((order) => (
                     <div
                       key={order.id}
                       className="p-3 bg-gray-800 rounded text-sm"
@@ -251,6 +277,3 @@ export default function WebhookDebugPage() {
     </div>
   );
 }
-
-
-

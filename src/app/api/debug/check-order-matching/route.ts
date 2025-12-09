@@ -12,12 +12,45 @@ export async function GET(request: NextRequest) {
     const externalId = searchParams.get("externalId");
 
     if (!transactionId && !externalId) {
-      return NextResponse.json({
-        error: "Please provide transactionId or externalId",
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: "Please provide transactionId or externalId",
+        },
+        { status: 400 }
+      );
     }
 
-    const results: any = {
+    interface MatchResult {
+      method: string;
+      order: {
+        id: string;
+        externalOrderId: string | null;
+        status: string;
+        total: number;
+        userId: string;
+      };
+    }
+
+    interface CheckOrderMatchingResult {
+      transactionId: string | null;
+      externalId: string | null;
+      matches: MatchResult[];
+      deposit?: {
+        id: string;
+        externalId: string;
+        amount: number;
+        userId: string;
+        createdAt: string;
+      };
+      depositByTransactionId?: {
+        id: string;
+        externalId: string;
+        amount: number;
+        userId: string;
+      };
+    }
+
+    const results: CheckOrderMatchingResult = {
       transactionId,
       externalId,
       matches: [],
@@ -145,12 +178,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       ...results,
-      recentOrders: recentOrders.map(o => ({
+      recentOrders: recentOrders.map((o) => ({
         ...o,
         total: Number(o.total),
         createdAt: o.createdAt.toISOString(),
       })),
-      recentDeposits: recentDeposits.map(d => ({
+      recentDeposits: recentDeposits.map((d) => ({
         ...d,
         amount: Number(d.amount),
         createdAt: d.createdAt.toISOString(),
@@ -167,6 +200,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-
-
-

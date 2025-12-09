@@ -51,8 +51,8 @@ export async function GET(request: NextRequest) {
 
     // Analyze webhook IDs
     const webhookAnalysis = webhooks.map((webhook) => {
-      const payload = webhook.payload as any;
-      const webhookData = payload?.data || payload;
+      const payload = webhook.payload as Record<string, unknown>;
+      const webhookData = (payload?.data as Record<string, unknown>) || payload;
 
       return {
         webhookId: webhook.id,
@@ -106,8 +106,9 @@ export async function GET(request: NextRequest) {
         }),
         // Find matching webhooks - check multiple ID fields
         matchingWebhooks: webhooks.filter((webhook) => {
-          const payload = webhook.payload as any;
-          const webhookData = payload?.data || payload;
+          const payload = webhook.payload as Record<string, unknown>;
+          const webhookData =
+            (payload?.data as Record<string, unknown>) || payload;
 
           // Get all possible IDs from webhook
           const webhookTransactionId =

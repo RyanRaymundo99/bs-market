@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
     // Include webhook information for each order
     const formattedOrders = orders.map((order) => {
       // Find matching webhook by orderId, transactionId, or externalId
-      let matchingWebhook =
+      const matchingWebhook =
         webhookMap.get(order.id) ||
         (order.externalOrderId
           ? webhookByTransactionId.get(order.externalOrderId) ||
