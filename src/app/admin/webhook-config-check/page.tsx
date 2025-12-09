@@ -132,7 +132,7 @@ export default function WebhookConfigCheckPage() {
                   {config.expectedUrl}
                 </code>
               </div>
-              {config.webhookResponse && (
+              {config.webhookResponse != null ? (
                 <div>
                   <p className="text-sm text-gray-400 mb-1">
                     Resposta do Endpoint:
@@ -141,7 +141,7 @@ export default function WebhookConfigCheckPage() {
                     {JSON.stringify(config.webhookResponse, null, 2)}
                   </pre>
                 </div>
-              )}
+              ) : null}
             </CardContent>
           </Card>
 
