@@ -48,12 +48,16 @@ export async function GET(request: NextRequest) {
             name: true,
           },
         },
-        deposit: {
-          select: {
-            id: true,
-            externalId: true,
-            status: true,
-            confirmedAt: true,
+        transaction: {
+          include: {
+            deposit: {
+              select: {
+                id: true,
+                externalId: true,
+                status: true,
+                confirmedAt: true,
+              },
+            },
           },
         },
       },
@@ -72,12 +76,12 @@ export async function GET(request: NextRequest) {
       createdAt: order.createdAt.toISOString(),
       executedAt: order.executedAt?.toISOString() || null,
       updatedAt: order.updatedAt.toISOString(),
-      deposit: order.deposit
+      deposit: order.transaction?.deposit
         ? {
-            id: order.deposit.id,
-            externalId: order.deposit.externalId,
-            status: order.deposit.status,
-            confirmedAt: order.deposit.confirmedAt?.toISOString() || null,
+            id: order.transaction.deposit.id,
+            externalId: order.transaction.deposit.externalId,
+            status: order.transaction.deposit.status,
+            confirmedAt: order.transaction.deposit.confirmedAt?.toISOString() || null,
           }
         : null,
     }));

@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
         data: {
           eventType: eventType,
           source: "nutzpay",
-          payload: body as Record<string, unknown>,
+          payload: JSON.parse(JSON.stringify(body)),
           transactionId: transaction_id,
           externalId: external_id,
           status: status.toUpperCase(),

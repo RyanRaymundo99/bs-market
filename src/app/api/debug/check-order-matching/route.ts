@@ -37,14 +37,14 @@ export async function GET(request: NextRequest) {
       matches: MatchResult[];
       deposit?: {
         id: string;
-        externalId: string;
+        externalId: string | null;
         amount: number;
         userId: string;
         createdAt: string;
       };
       depositByTransactionId?: {
         id: string;
-        externalId: string;
+        externalId: string | null;
         amount: number;
         userId: string;
       };

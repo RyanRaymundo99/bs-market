@@ -88,6 +88,16 @@ export async function GET(request: NextRequest) {
 
     // Analyze orders and their IDs
     const orderAnalysis = orders.map((order) => {
+      // Find related deposit
+      const relatedDeposit = deposits.find((deposit) => {
+        return (
+          deposit.userId === order.userId &&
+          deposit.amount.equals(order.total) &&
+          Math.abs(deposit.createdAt.getTime() - order.createdAt.getTime()) <
+            60000
+        );
+      });
+
       return {
         orderId: order.id,
         externalOrderId: order.externalOrderId,
@@ -96,14 +106,7 @@ export async function GET(request: NextRequest) {
         amount: order.total.toString(),
         createdAt: order.createdAt.toISOString(),
         // Find related deposit
-        relatedDeposit: deposits.find((deposit) => {
-          return (
-            deposit.userId === order.userId &&
-            deposit.amount.equals(order.total) &&
-            Math.abs(deposit.createdAt.getTime() - order.createdAt.getTime()) <
-              60000
-          );
-        }),
+        relatedDeposit: relatedDeposit,
         // Find matching webhooks - check multiple ID fields
         matchingWebhooks: webhooks.filter((webhook) => {
           const payload = webhook.payload as Record<string, unknown>;
@@ -123,9 +126,9 @@ export async function GET(request: NextRequest) {
 
           // Also check if deposit's externalId matches (deposit stores our original externalId)
           const depositMatches =
-            order.relatedDeposit &&
-            (webhookTransactionId === order.relatedDeposit.externalId ||
-              webhookExternalId === order.relatedDeposit.externalId);
+            relatedDeposit &&
+            (webhookTransactionId === relatedDeposit.externalId ||
+              webhookExternalId === relatedDeposit.externalId);
 
           return matchesOrderId || depositMatches;
         }),

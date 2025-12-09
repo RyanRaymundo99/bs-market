@@ -305,7 +305,7 @@ export class NutzPayService {
           );
           return responseData;
         } catch (error) {
-          lastError = error;
+          lastError = error instanceof Error ? error : new Error(String(error));
           if (axios.isAxiosError(error)) {
             if (error.response?.status === 404) {
               console.log(`❌ 404 at ${endpoint}, trying next endpoint...`);
@@ -333,39 +333,6 @@ export class NutzPayService {
       }
 
       throw new Error("All endpoints failed");
-
-      console.log("📡 NutzPay API Response Status:", response.status);
-      console.log("📡 NutzPay API Response Headers:", response.headers);
-      console.log(
-        "📡 NutzPay API Full Response:",
-        JSON.stringify(response.data, null, 2)
-      );
-
-      if (response.status === 404) {
-        console.error("❌ Transaction not found in NutzPay:", transactionId);
-        // Try alternative endpoint or return null
-        throw new Error(`Transaction not found: ${transactionId}`);
-      }
-
-      if (response.status === 401) {
-        console.error("❌ Authentication failed with NutzPay");
-        throw new Error("Authentication failed");
-      }
-
-      if (response.status >= 400) {
-        console.error("❌ NutzPay API error:", response.status, response.data);
-        throw new Error(
-          `API error: ${response.status} - ${JSON.stringify(response.data)}`
-        );
-      }
-
-      const responseData = response.data?.data || response.data;
-      console.log(
-        "✅ NutzPay transaction status response:",
-        JSON.stringify(responseData, null, 2)
-      );
-
-      return responseData;
     } catch (error) {
       console.error("❌ NutzPay transaction status fetch error:", error);
 
