@@ -309,6 +309,23 @@ exports.Prisma.TransactionScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.WebhookEventScalarFieldEnum = {
+  id: 'id',
+  eventType: 'eventType',
+  source: 'source',
+  payload: 'payload',
+  transactionId: 'transactionId',
+  externalId: 'externalId',
+  status: 'status',
+  orderId: 'orderId',
+  processed: 'processed',
+  error: 'error',
+  ipAddress: 'ipAddress',
+  userAgent: 'userAgent',
+  signatureValid: 'signatureValid',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -434,7 +451,8 @@ exports.Prisma.ModelName = {
   Order: 'Order',
   P2POffer: 'P2POffer',
   P2PTrade: 'P2PTrade',
-  Transaction: 'Transaction'
+  Transaction: 'Transaction',
+  WebhookEvent: 'WebhookEvent'
 };
 
 /**

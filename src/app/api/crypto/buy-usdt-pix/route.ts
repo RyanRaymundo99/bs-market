@@ -82,9 +82,18 @@ export async function POST(request: NextRequest) {
 
     try {
       // Call NutzPay API to create USDT purchase
-      const callbackUrl = `${
-        process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"
-      }/api/webhooks/nutzpay`;
+      // In development, use localhost or tunnel URL if available
+      // For local testing, use ngrok or similar: https://your-ngrok-url.ngrok.io/api/webhooks/nutzpay
+      const isDevelopment = process.env.NODE_ENV === "development";
+      const devWebhookUrl = process.env.DEV_WEBHOOK_URL; // e.g., ngrok URL
+      
+      const callbackUrl = isDevelopment && devWebhookUrl
+        ? `${devWebhookUrl}/api/webhooks/nutzpay`
+        : isDevelopment
+        ? `http://localhost:3000/api/webhooks/nutzpay` // Won't work unless using tunnel
+        : `${process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"}/api/webhooks/nutzpay`;
+      
+      console.log("🔗 Webhook callback URL:", callbackUrl);
 
       const nutzPayResponse = await nutzPayService.createUSDTPurchase({
         amount: amount,
@@ -111,33 +120,81 @@ export async function POST(request: NextRequest) {
         JSON.stringify(responseData, null, 2)
       );
 
-      // Extract transaction ID (can be transactionId or transaction_id)
+      // Extract transaction ID from NutzPay response
+      // According to NutzPay API docs:
+      // - Response: { success: true, data: { transaction_id: "txn_usdt_123", pix_data: { transaction_id: "135724065011" } } }
+      // - Webhook sends: { event: "transaction.completed", data: { transaction_id: "txn_usdt_123" } }
+      // - The webhook sends data.transaction_id (internal ID like "txn_usdt_123"), NOT pix_data.transaction_id
+      // - We MUST store data.transaction_id to match webhook
       const transactionId =
-        responseData.transactionId ||
-        responseData.transaction_id ||
-        responseData.providerTransactionId ||
+        responseData.transaction_id || // PRIMARY: Internal transaction ID (matches webhook data.transaction_id)
+        responseData.transactionId || // Alternative field name
+        responseData.pix_data?.transaction_id || // Fallback: PIX transaction ID (if internal ID not available)
+        responseData.providerTransactionId || // Fallback: Provider transaction ID
         null;
+
+      console.log("🔑 Transaction ID Extraction:", {
+        "data.transaction_id (PRIMARY - matches webhook)":
+          responseData.transaction_id,
+        "data.transactionId": responseData.transactionId,
+        "data.pix_data.transaction_id (fallback)":
+          responseData.pix_data?.transaction_id,
+        providerTransactionId: responseData.providerTransactionId,
+        "finalTransactionId (stored in order.externalOrderId)": transactionId,
+        "externalId (our original ID)": externalId,
+        note: "Webhook sends data.transaction_id, so we store data.transaction_id in order.externalOrderId",
+      });
 
       const responseStatus = responseData.status || "pending";
       const isCompleted =
         responseStatus === "completed" || responseStatus === "COMPLETED";
 
-      // Extract PIX code - according to NutzPay docs, it's in qrCode or pixKey field
-      // Both fields contain the same PIX "Copia e Cola" string
+      // Extract PIX code - according to NutzPay API docs:
+      // - Response has: data.pix_data.qr_code (the PIX "Copia e Cola" string)
+      // - Also check top-level qrCode/qr_code for backwards compatibility
       const pixCode =
-        responseData.qrCode ||
-        responseData.pixKey ||
-        responseData.pix_data?.qr_code ||
-        responseData.pix_data?.qrCode ||
-        responseData.qr_code ||
+        responseData.pix_data?.qr_code || // PRIMARY: From pix_data object (per API docs)
+        responseData.pix_data?.qrCode || // Alternative field name
+        responseData.qrCode || // Fallback: Top-level qrCode
+        responseData.pixKey || // Fallback: Top-level pixKey
+        responseData.qr_code || // Fallback: Top-level qr_code
         null;
 
       // Extract QR code URL if available
       const qrCodeUrl =
         responseData.qrCodeUrl || responseData.qr_code_url || null;
 
-      console.log("=== PIX CODE EXTRACTION ===");
-      console.log("Transaction ID:", transactionId);
+      // Use transactionId from NutzPay, or fallback to externalId
+      // IMPORTANT: We should always have a transactionId from NutzPay
+      const finalTransactionId = transactionId || externalId;
+
+      if (!transactionId) {
+        console.warn(
+          "⚠️ WARNING: NutzPay did not return a transactionId. Using externalId as fallback:",
+          externalId
+        );
+      }
+
+      console.log("=== TRANSACTION ID SUMMARY ===");
+      console.log(
+        "✅ Storing in order.externalOrderId:",
+        finalTransactionId,
+        "(This MUST match webhook data.transaction_id)"
+      );
+      console.log(
+        "📋 Internal Transaction ID (from data.transaction_id):",
+        responseData.transaction_id || responseData.transactionId || "null"
+      );
+      console.log(
+        "📋 PIX Transaction ID (from data.pix_data.transaction_id):",
+        responseData.pix_data?.transaction_id || "null"
+      );
+      console.log(
+        "🔑 Our External ID (stored in deposit.externalId):",
+        externalId
+      );
+      console.log("Order ID (internal):", order.id);
+      console.log("External ID (fallback):", externalId);
       console.log("Status:", responseStatus);
       console.log(
         "PIX Code (first 50 chars):",
@@ -146,17 +203,19 @@ export async function POST(request: NextRequest) {
       console.log("QR Code URL:", qrCodeUrl || "NOT FOUND");
       console.log("===========================");
 
-      // Update order with NutzPay transaction ID
+      // Update order with NutzPay transaction ID (or externalId as fallback)
       await prisma.order.update({
         where: { id: order.id },
         data: {
-          externalOrderId: transactionId || externalId,
+          externalOrderId: finalTransactionId,
           status: isCompleted ? "COMPLETED" : "PENDING",
           executedAt: isCompleted ? new Date() : null,
         },
       });
 
       // Create deposit record for tracking
+      // Store our original externalId in deposit.externalId for webhook matching
+      // Store transaction ID in order.externalOrderId for status checking
       const deposit = await prisma.deposit.create({
         data: {
           userId: user.id,
@@ -164,7 +223,7 @@ export async function POST(request: NextRequest) {
           fee: new Decimal(0), // Fee is already included in the amount
           status: isCompleted ? "CONFIRMED" : "PENDING",
           paymentMethod: "PIX",
-          externalId: transactionId || externalId,
+          externalId: externalId, // Store our original externalId for webhook matching
           pixQrCode: pixCode,
           pixQrCodeBase64: responseData.pix_data?.qr_code_base64 || null,
         },
@@ -208,8 +267,8 @@ export async function POST(request: NextRequest) {
         message: "USDT purchase request created successfully",
         data: {
           // NutzPay response fields (direct mapping)
-          transaction_id: transactionId,
-          transactionId: transactionId, // Also include camelCase for compatibility
+          transaction_id: finalTransactionId,
+          transactionId: finalTransactionId, // Also include camelCase for compatibility
           external_id: externalId,
           status: responseStatus,
           amount_brl: amount,
@@ -226,6 +285,8 @@ export async function POST(request: NextRequest) {
             qr_code_base64: responseData.pix_data?.qr_code_base64 || null,
             qr_code_url: qrCodeUrl,
             qrCodeUrl: qrCodeUrl,
+            transaction_id:
+              responseData.pix_data?.transaction_id || finalTransactionId, // External PIX transaction ID
           },
           // Our internal fields
           order_id: order.id,

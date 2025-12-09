@@ -68,6 +68,13 @@ const TradePage = () => {
     usdtAmount: number;
     date: Date;
   } | null>(null);
+  const [checkingStatus, setCheckingStatus] = useState(false);
+  const [webhookTestPayload, setWebhookTestPayload] = useState<string>("");
+  const [webhookTestLoading, setWebhookTestLoading] = useState(false);
+  const [webhookTestResult, setWebhookTestResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
 
   // Estado para o histórico de transações
   const [transactionHistory, setTransactionHistory] = useState<
@@ -158,18 +165,37 @@ const TradePage = () => {
     fetchTransactionHistory();
   }, []);
 
+  // Auto-refresh transaction history every 10 seconds if there are pending orders
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const hasPending = transactionHistory.some((t) => t.status === "PENDING");
+      if (hasPending) {
+        fetchTransactionHistory();
+      }
+    }, 10000); // Refresh every 10 seconds if there are pending orders
+
+    return () => clearInterval(interval);
+  }, [transactionHistory]);
+
   const fetchUSDTRate = async () => {
     try {
       setPriceLoading(true);
       const response = await fetch("/api/crypto/usdt-rate");
-      if (response.ok) {
-        const data = await response.json();
-        if (data.rate) {
-          setUsdtPrice(data.rate);
-        }
+
+      if (!response.ok) {
+        console.warn("Failed to fetch USDT rate, using fallback");
+        return; // Keep current price or use fallback
+      }
+
+      const data = await response.json();
+      if (data.rate && typeof data.rate === "number" && data.rate > 0) {
+        setUsdtPrice(data.rate);
+      } else {
+        console.warn("Invalid rate data received, using fallback");
       }
     } catch (error) {
       console.error("Error fetching USDT rate:", error);
+      // Keep current price or use fallback - don't break the UI
     } finally {
       setPriceLoading(false);
     }
@@ -191,25 +217,62 @@ const TradePage = () => {
             price: number | string;
             createdAt: string;
             status: string;
+            externalOrderId?: string | null;
+            webhookStatus?: string | null;
+            webhookProcessed?: boolean;
+            webhookError?: string | null;
+            webhookReceivedAt?: string | null;
           }
           const buyOrders = (data.orders as OrderResponse[])
             .filter(
               (order) => order.type === "BUY" && order.baseCurrency === "USDT"
             )
             .map((order) => {
-              const total = parseFloat(order.total.toString());
-              // Total includes fee, so calculate base and fee
-              const baseAmount = total / 1.03;
-              const fee = total - baseAmount;
+              // Use actual order data from database - these are the source of truth
+              const total = parseFloat(order.total.toString()); // Total BRL paid (includes fee)
+              const received = parseFloat(order.amount.toString()); // USDT received
+              const rate = parseFloat(order.price.toString()); // Exchange rate
+
+              // Calculate fee: total - (received * rate)
+              // The fee is the difference between what was paid and what should have been paid at the rate
+              const expectedTotal = received * rate;
+              const fee = Math.max(0, total - expectedTotal);
+
+              // Use externalOrderId (transaction_id) as id if available, otherwise use order.id
+              // This ensures consistency with how new transactions are added
+              const transactionId = order.externalOrderId || order.id;
+
+              // Use order status as primary source of truth
+              // Order status is already updated by webhook handler when webhooks are processed
+              // Only override if order is PENDING and webhook says otherwise (webhook might be newer)
+              let finalStatus = order.status;
+              if (
+                order.status === "PENDING" &&
+                order.webhookProcessed &&
+                order.webhookStatus
+              ) {
+                // If order is still pending but webhook was processed, use webhook status
+                const webhookStatus = order.webhookStatus.toUpperCase();
+                if (
+                  webhookStatus === "COMPLETED" ||
+                  webhookStatus === "FAILED"
+                ) {
+                  finalStatus = webhookStatus;
+                }
+              }
+
               return {
-                id: order.id,
+                id: transactionId,
                 date: new Date(order.createdAt),
                 type: "buy" as const,
-                amount: total, // Total paid
-                received: parseFloat(order.amount.toString()),
-                fee: fee,
-                rate: parseFloat(order.price.toString()),
-                status: order.status,
+                amount: total, // Total BRL paid (includes fee)
+                received: received, // USDT received
+                fee: fee, // Calculated fee
+                rate: rate, // Exchange rate
+                status: finalStatus, // Use order status (updated by webhook handler)
+                webhookReceivedAt: order.webhookReceivedAt
+                  ? new Date(order.webhookReceivedAt)
+                  : null,
               };
             });
           setTransactionHistory(buyOrders);
@@ -225,15 +288,6 @@ const TradePage = () => {
       toast({
         title: "Erro",
         description: "O valor deve ser maior que zero",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (buyAmountBRL < 10) {
-      toast({
-        title: "Erro",
-        description: "O valor mínimo é R$ 10,00",
         variant: "destructive",
       });
       return;
@@ -299,8 +353,9 @@ const TradePage = () => {
         setShowPixModal(true);
         setBuyBRL(""); // Clear the field
 
-        // Start polling for payment confirmation
-        startPaymentPolling(data.data.transaction_id);
+        // Payment confirmation will be handled by NutzPay webhook
+        // The webhook will update the order status in the database
+        // User will see confirmation when they refresh or return to the page
 
         // Add to transaction history
         // Total amount includes fee, so calculate base and fee
@@ -362,110 +417,123 @@ const TradePage = () => {
     }
   };
 
-  // Poll for payment confirmation (checks webhook-updated order status)
-  // The webhook from NutzPay updates the order status when payment is confirmed
-  const startPaymentPolling = useCallback(
-    (transactionId: string) => {
-      let pollCount = 0;
-      const maxPolls = 60; // Poll for 5 minutes (60 * 5 seconds)
-      const pollInterval = 5000; // Check every 5 seconds
-      let intervalId: NodeJS.Timeout | null = null;
+  // Check payment status manually (webhook updates the database)
+  // This is called when user clicks "Check Status" button or when page becomes visible
+  const checkPaymentStatus = useCallback(
+    async (transactionId: string) => {
+      setCheckingStatus(true);
+      try {
+        console.log("🔍 Checking payment status for:", transactionId);
+        const response = await fetch(`/api/crypto/orders/${transactionId}`);
 
-      const pollStatus = async () => {
-        try {
-          // Poll the specific order by transaction ID
-          // The webhook will update this order when payment is confirmed
-          const response = await fetch(`/api/crypto/orders/${transactionId}`);
-          if (response.ok) {
-            const data = await response.json();
-            const order = data.order;
-
-            if (order) {
-              if (order.status === "COMPLETED") {
-                // Payment confirmed!
-                if (intervalId) {
-                  clearInterval(intervalId);
-                  intervalId = null;
-                }
-
-                // Show success notification
-                toast({
-                  title: "Pagamento confirmado! 🎉",
-                  description: `Você recebeu ${formatUSDT(
-                    pixData?.usdtAmount || Number(order.amount)
-                  )} USDT`,
-                  duration: 5000,
-                });
-
-                // Show receipt
-                setReceiptData({
-                  transactionId: transactionId,
-                  amount: pixData?.amount || Number(order.total),
-                  usdtAmount: pixData?.usdtAmount || Number(order.amount),
-                  date: new Date(),
-                });
-
-                // Close PIX modal
-                setShowPixModal(false);
-
-                // Show receipt modal
-                setShowReceipt(true);
-
-                // Update transaction history
-                setTransactionHistory((prev) =>
-                  prev.map((t) =>
-                    t.id === transactionId ? { ...t, status: "COMPLETED" } : t
-                  )
-                );
-
-                // Refresh transaction history
-                fetchTransactionHistory();
-                return;
-              } else if (order.status === "FAILED") {
-                // Payment failed
-                if (intervalId) {
-                  clearInterval(intervalId);
-                  intervalId = null;
-                }
-                toast({
-                  title: "Pagamento falhou",
-                  description:
-                    "O pagamento não foi confirmado. Tente novamente.",
-                  variant: "destructive",
-                });
-                return;
-              }
-            }
-          }
-
-          pollCount++;
-          if (pollCount >= maxPolls) {
-            // Stop polling after max attempts
-            if (intervalId) {
-              clearInterval(intervalId);
-              intervalId = null;
-            }
-            console.log("Polling stopped after max attempts");
-          }
-        } catch (error) {
-          console.error("Error polling payment status:", error);
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error("❌ API error:", response.status, errorData);
+          toast({
+            title: "Erro ao verificar status",
+            description:
+              errorData.error ||
+              `Erro ${response.status}: Não foi possível verificar o status do pagamento`,
+            variant: "destructive",
+          });
+          return false;
         }
-      };
 
-      // Start polling immediately, then every 5 seconds
-      intervalId = setInterval(pollStatus, pollInterval);
-      pollStatus(); // First check immediately
+        const data = await response.json();
+        console.log("📊 Order data:", data);
+        const order = data.order;
 
-      // Return cleanup function
-      return () => {
-        if (intervalId) {
-          clearInterval(intervalId);
-          intervalId = null;
+        if (!order) {
+          console.error("❌ No order found in response");
+          toast({
+            title: "Pedido não encontrado",
+            description:
+              "Não foi possível encontrar o pedido. Tente novamente.",
+            variant: "destructive",
+          });
+          return false;
         }
-      };
+
+        console.log("📊 Order status:", order.status);
+
+        if (order.status === "COMPLETED") {
+          // Payment confirmed by webhook!
+          toast({
+            title: "Pagamento confirmado! 🎉",
+            description: `Você recebeu ${formatUSDT(
+              pixData?.usdtAmount || Number(order.amount)
+            )} USDT`,
+            duration: 5000,
+          });
+
+          // Show receipt
+          setReceiptData({
+            transactionId: transactionId,
+            amount: pixData?.amount || Number(order.total),
+            usdtAmount: pixData?.usdtAmount || Number(order.amount),
+            date: new Date(),
+          });
+
+          // Close PIX modal
+          setShowPixModal(false);
+
+          // Show receipt modal
+          setShowReceipt(true);
+
+          // Refresh transaction history to get updated status from database
+          // This ensures we have the latest status from the webhook-updated order
+          await fetchTransactionHistory();
+          return true; // Payment confirmed
+        } else if (order.status === "FAILED") {
+          toast({
+            title: "Pagamento falhou",
+            description: "O pagamento não foi confirmado. Tente novamente.",
+            variant: "destructive",
+          });
+          return true; // Payment failed
+        } else {
+          // Still pending
+          toast({
+            title: "Pagamento pendente",
+            description: `Status atual: ${order.status}. O pagamento ainda está sendo processado.`,
+            duration: 3000,
+          });
+          return false;
+        }
+      } catch (error) {
+        console.error("❌ Error checking payment status:", error);
+        toast({
+          title: "Erro ao verificar status",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Não foi possível verificar o status do pagamento",
+          variant: "destructive",
+        });
+        return false;
+      } finally {
+        setCheckingStatus(false);
+      }
     },
     [pixData, toast, formatUSDT, fetchTransactionHistory]
   );
+
+  // Check payment status when page becomes visible (user returns to tab)
+  useEffect(() => {
+    if (!pixData?.transactionId) return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        // User returned to the page, check if payment was confirmed
+        checkPaymentStatus(pixData.transactionId);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [pixData?.transactionId, checkPaymentStatus]);
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -579,6 +647,56 @@ const TradePage = () => {
             </div>
           ) : (
             <div className="bg-[#1E1E1E] rounded-xl border border-gray-800 overflow-hidden">
+              {/* Sync All Button */}
+              {transactionHistory.some((t) => t.status === "PENDING") && (
+                <div className="p-4 bg-gray-900 border-b border-gray-800">
+                  <button
+                    onClick={async () => {
+                      setLoading(true);
+                      try {
+                        const response = await fetch(
+                          "/api/crypto/sync-all-pending",
+                          {
+                            method: "POST",
+                          }
+                        );
+                        const data = await response.json();
+
+                        if (response.ok) {
+                          toast({
+                            title: "✅ Sincronização Concluída",
+                            description: `${data.results.synced} pedido(s) atualizado(s)`,
+                            duration: 5000,
+                          });
+                          // Refresh transaction history
+                          await fetchTransactionHistory();
+                        } else {
+                          toast({
+                            title: "Erro",
+                            description: data.error || "Falha ao sincronizar",
+                            variant: "destructive",
+                          });
+                        }
+                      } catch (error) {
+                        toast({
+                          title: "Erro",
+                          description: "Não foi possível sincronizar",
+                          variant: "destructive",
+                        });
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                    disabled={loading}
+                    className="w-full py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 text-white text-sm rounded font-medium"
+                  >
+                    {loading
+                      ? "Sincronizando..."
+                      : "🔄 Sincronizar Todos os Pendentes"}
+                  </button>
+                </div>
+              )}
+
               {/* Header da tabela */}
               <div className="grid grid-cols-5 gap-4 p-4 bg-gray-900 border-b border-gray-800 text-sm font-medium text-[#A1A1AA]">
                 <div>Data/Hora</div>
@@ -609,7 +727,7 @@ const TradePage = () => {
                     </div>
 
                     {/* Status */}
-                    <div>
+                    <div className="flex items-center gap-2">
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           transaction.status === "COMPLETED"
@@ -625,6 +743,20 @@ const TradePage = () => {
                           ? "Pendente"
                           : "Falhou"}
                       </span>
+                      {transaction.status === "PENDING" && (
+                        <button
+                          onClick={async () => {
+                            if (transaction.id) {
+                              await checkPaymentStatus(transaction.id);
+                            }
+                          }}
+                          disabled={checkingStatus}
+                          className="text-xs text-blue-400 hover:text-blue-300 disabled:opacity-50"
+                          title="Sincronizar este pedido"
+                        >
+                          🔄
+                        </button>
+                      )}
                     </div>
 
                     {/* Valor */}
@@ -668,7 +800,7 @@ const TradePage = () => {
 
       {/* PIX QR Code Modal */}
       <Dialog open={showPixModal} onOpenChange={setShowPixModal}>
-        <DialogContent className="bg-[#1E1E1E] border-gray-800 text-white max-w-md">
+        <DialogContent className="bg-[#1E1E1E] border-gray-800 text-white max-w-6xl w-full">
           <DialogHeader>
             <DialogTitle className="text-white">
               Escaneie o QR Code PIX
@@ -678,9 +810,10 @@ const TradePage = () => {
               pagamento
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            {pixData && (
-              <>
+          {pixData && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left Column - PIX Payment Info */}
+              <div className="space-y-4">
                 <div className="flex flex-col items-center space-y-4">
                   {pixData.qrCodeBase64 ? (
                     <img
@@ -705,58 +838,367 @@ const TradePage = () => {
                     </p>
                   </div>
                 </div>
-                <div className="space-y-4">
-                  {/* PIX Code Display */}
-                  {pixData.qrCode && (
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-[#A1A1AA]">
-                        Código PIX (Copia e Cola):
-                      </label>
-                      <div className="relative">
-                        <div className="flex items-center gap-2 p-3 bg-gray-900 border border-gray-700 rounded-lg">
-                          <code className="flex-1 text-xs text-white break-all font-mono pr-2">
-                            {pixData.qrCode}
-                          </code>
-                          <button
-                            onClick={copyPixCode}
-                            className="flex-shrink-0 p-2 bg-gray-800 hover:bg-gray-700 text-white rounded transition-colors"
-                            title="Copiar código PIX"
-                          >
-                            {copied ? (
-                              <Check className="w-4 h-4 text-green-400" />
-                            ) : (
-                              <Copy className="w-4 h-4" />
-                            )}
-                          </button>
-                        </div>
+
+                {/* PIX Code Display */}
+                {pixData.qrCode && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-[#A1A1AA]">
+                      Código PIX (Copia e Cola):
+                    </label>
+                    <div className="relative">
+                      <div className="flex items-center gap-2 p-3 bg-gray-900 border border-gray-700 rounded-lg">
+                        <code className="flex-1 text-xs text-white break-all font-mono pr-2">
+                          {pixData.qrCode}
+                        </code>
+                        <button
+                          onClick={copyPixCode}
+                          className="flex-shrink-0 p-2 bg-gray-800 hover:bg-gray-700 text-white rounded transition-colors"
+                          title="Copiar código PIX"
+                        >
+                          {copied ? (
+                            <Check className="w-4 h-4 text-green-400" />
+                          ) : (
+                            <Copy className="w-4 h-4" />
+                          )}
+                        </button>
                       </div>
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {/* Copy Button */}
-                  <button
-                    onClick={copyPixCode}
-                    className="w-full py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2 font-medium"
-                  >
-                    {copied ? (
-                      <>
-                        <Check className="w-5 h-5 text-green-400" />
-                        Código copiado!
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-5 h-5" />
-                        Copiar código PIX
-                      </>
-                    )}
-                  </button>
-                  <p className="text-xs text-[#A1A1AA] text-center">
-                    Após o pagamento, seus USDT serão creditados automaticamente
+                {/* Copy Button */}
+                <button
+                  onClick={copyPixCode}
+                  className="w-full py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2 font-medium"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="w-5 h-5 text-green-400" />
+                      Código copiado!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-5 h-5" />
+                      Copiar código PIX
+                    </>
+                  )}
+                </button>
+
+                {/* Check Status Button */}
+                <button
+                  onClick={async () => {
+                    if (pixData?.transactionId) {
+                      await checkPaymentStatus(pixData.transactionId);
+                    } else {
+                      toast({
+                        title: "Erro",
+                        description: "ID da transação não encontrado",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  disabled={checkingStatus}
+                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center justify-center gap-2 font-medium"
+                >
+                  {checkingStatus ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Verificando...
+                    </>
+                  ) : (
+                    "Verificar Status do Pagamento"
+                  )}
+                </button>
+
+                {/* Manual Sync Button - Shows if API check fails */}
+                <button
+                  onClick={async () => {
+                    if (!pixData?.transactionId) {
+                      toast({
+                        title: "Erro",
+                        description: "ID da transação não encontrado",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+
+                    setCheckingStatus(true);
+                    try {
+                      // Manually trigger a webhook with completed status
+                      const payload = {
+                        event: "transaction.completed",
+                        data: {
+                          transaction_id: pixData.transactionId,
+                          external_id: pixData.transactionId,
+                          status: "COMPLETED",
+                          amount: pixData.amount,
+                          currency: "BRL",
+                          type: "PIX",
+                          usdt_amount: pixData.usdtAmount,
+                          created_at: new Date().toISOString(),
+                          completed_at: new Date().toISOString(),
+                        },
+                        timestamp: new Date().toISOString(),
+                      };
+
+                      const response = await fetch("/api/webhooks/nutzpay", {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                          "x-test-webhook": "true",
+                        },
+                        body: JSON.stringify(payload),
+                      });
+
+                      const result = await response.json();
+
+                      if (response.ok) {
+                        toast({
+                          title: "✅ Status Atualizado",
+                          description:
+                            "O pagamento foi marcado como confirmado manualmente.",
+                          duration: 5000,
+                        });
+
+                        // Refresh payment status
+                        setTimeout(() => {
+                          checkPaymentStatus(pixData.transactionId);
+                        }, 1000);
+                      } else {
+                        toast({
+                          title: "Erro",
+                          description:
+                            result.error || "Falha ao atualizar status",
+                          variant: "destructive",
+                        });
+                      }
+                    } catch (error) {
+                      console.error("Error syncing status:", error);
+                      toast({
+                        title: "Erro",
+                        description: "Não foi possível sincronizar o status",
+                        variant: "destructive",
+                      });
+                    } finally {
+                      setCheckingStatus(false);
+                    }
+                  }}
+                  disabled={checkingStatus}
+                  className="w-full py-2 bg-yellow-600 hover:bg-yellow-700 disabled:bg-yellow-800 disabled:opacity-50 text-white text-sm rounded font-medium"
+                >
+                  🔄 Sincronizar Manualmente (se API falhar)
+                </button>
+
+                <p className="text-xs text-[#A1A1AA] text-center">
+                  Após o pagamento, seus USDT serão creditados automaticamente
+                  via webhook. Você pode verificar o status a qualquer momento.
+                </p>
+              </div>
+
+              {/* Right Column - Webhook Test Section */}
+              <div className="space-y-4 border-l border-gray-700 pl-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-2">
+                    🧪 Testar Webhook (Desenvolvimento)
+                  </h3>
+                  <p className="text-xs text-gray-400 mb-4">
+                    Teste o webhook manualmente para verificar se o pagamento
+                    será confirmado
                   </p>
+
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        onClick={() => {
+                          if (pixData) {
+                            const payload = {
+                              event: "transaction.completed",
+                              data: {
+                                transaction_id: pixData.transactionId,
+                                external_id: pixData.transactionId,
+                                status: "COMPLETED",
+                                amount: pixData.amount,
+                                currency: "BRL",
+                                type: "PIX",
+                                usdt_amount: pixData.usdtAmount,
+                                created_at: new Date().toISOString(),
+                                completed_at: new Date().toISOString(),
+                              },
+                              timestamp: new Date().toISOString(),
+                            };
+                            setWebhookTestPayload(
+                              JSON.stringify(payload, null, 2)
+                            );
+                          }
+                        }}
+                        className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded font-medium"
+                      >
+                        ✅ Completed
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (pixData) {
+                            const payload = {
+                              event: "transaction.created",
+                              data: {
+                                transaction_id: pixData.transactionId,
+                                external_id: pixData.transactionId,
+                                status: "PENDING",
+                                amount: pixData.amount,
+                                currency: "BRL",
+                                type: "PIX",
+                                usdt_amount: pixData.usdtAmount,
+                                created_at: new Date().toISOString(),
+                              },
+                              timestamp: new Date().toISOString(),
+                            };
+                            setWebhookTestPayload(
+                              JSON.stringify(payload, null, 2)
+                            );
+                          }
+                        }}
+                        className="px-3 py-2 bg-yellow-600 hover:bg-yellow-700 text-white text-sm rounded font-medium"
+                      >
+                        ⏳ Pending
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (pixData) {
+                            const payload = {
+                              event: "transaction.failed",
+                              data: {
+                                transaction_id: pixData.transactionId,
+                                external_id: pixData.transactionId,
+                                status: "FAILED",
+                                amount: pixData.amount,
+                                currency: "BRL",
+                                type: "PIX",
+                                usdt_amount: pixData.usdtAmount,
+                                created_at: new Date().toISOString(),
+                              },
+                              timestamp: new Date().toISOString(),
+                            };
+                            setWebhookTestPayload(
+                              JSON.stringify(payload, null, 2)
+                            );
+                          }
+                        }}
+                        className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded font-medium"
+                      >
+                        ❌ Failed
+                      </button>
+                    </div>
+
+                    <textarea
+                      value={webhookTestPayload}
+                      onChange={(e) => setWebhookTestPayload(e.target.value)}
+                      className="w-full h-64 p-3 bg-gray-900 border border-gray-700 rounded text-white font-mono text-xs resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder='{"event": "transaction.completed", "data": {...}}'
+                    />
+
+                    <button
+                      onClick={async () => {
+                        if (!webhookTestPayload) {
+                          toast({
+                            title: "Erro",
+                            description: "Payload vazio",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+
+                        setWebhookTestLoading(true);
+                        setWebhookTestResult(null);
+
+                        try {
+                          const payload = JSON.parse(webhookTestPayload);
+                          const response = await fetch(
+                            "/api/webhooks/nutzpay",
+                            {
+                              method: "POST",
+                              headers: {
+                                "Content-Type": "application/json",
+                                "x-test-webhook": "true",
+                              },
+                              body: JSON.stringify(payload),
+                            }
+                          );
+
+                          const result = await response.json();
+
+                          if (response.ok) {
+                            setWebhookTestResult({
+                              success: true,
+                              message:
+                                result.message ||
+                                "Webhook processado com sucesso",
+                            });
+                            toast({
+                              title: "✅ Webhook Testado",
+                              description:
+                                "Webhook foi processado. Verifique o status do pedido.",
+                            });
+                            // Refresh payment status
+                            if (pixData?.transactionId) {
+                              setTimeout(() => {
+                                checkPaymentStatus(pixData.transactionId);
+                              }, 1000);
+                            }
+                          } else {
+                            setWebhookTestResult({
+                              success: false,
+                              message:
+                                result.error || "Erro ao processar webhook",
+                            });
+                            toast({
+                              title: "❌ Erro",
+                              description:
+                                result.error || "Falha ao testar webhook",
+                              variant: "destructive",
+                            });
+                          }
+                        } catch (error) {
+                          setWebhookTestResult({
+                            success: false,
+                            message:
+                              error instanceof Error
+                                ? error.message
+                                : "Erro desconhecido",
+                          });
+                          toast({
+                            title: "❌ Erro",
+                            description: "Payload inválido",
+                            variant: "destructive",
+                          });
+                        } finally {
+                          setWebhookTestLoading(false);
+                        }
+                      }}
+                      disabled={webhookTestLoading || !webhookTestPayload}
+                      className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 text-white text-sm rounded font-medium"
+                    >
+                      {webhookTestLoading
+                        ? "Testando..."
+                        : "Enviar Teste de Webhook"}
+                    </button>
+
+                    {webhookTestResult && (
+                      <div
+                        className={`p-3 rounded text-sm ${
+                          webhookTestResult.success
+                            ? "bg-green-900/30 text-green-400 border border-green-800"
+                            : "bg-red-900/30 text-red-400 border border-red-800"
+                        }`}
+                      >
+                        {webhookTestResult.success ? "✅" : "❌"}{" "}
+                        {webhookTestResult.message}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </>
-            )}
-          </div>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

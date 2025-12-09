@@ -91,7 +91,17 @@ export async function POST(request: NextRequest) {
 
     try {
       // Call NutzPay API to create withdrawal
-      const callbackUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"}/api/webhooks/nutzpay`;
+      // In development, use localhost or tunnel URL if available
+      const isDevelopment = process.env.NODE_ENV === "development";
+      const devWebhookUrl = process.env.DEV_WEBHOOK_URL; // e.g., ngrok URL
+      
+      const callbackUrl = isDevelopment && devWebhookUrl
+        ? `${devWebhookUrl}/api/webhooks/nutzpay`
+        : isDevelopment
+        ? `http://localhost:3000/api/webhooks/nutzpay` // Won't work unless using tunnel
+        : `${process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"}/api/webhooks/nutzpay`;
+      
+      console.log("🔗 Webhook callback URL:", callbackUrl);
       
       const nutzPayResponse = await nutzPayService.createUSDTWithdrawal({
         amount: amount, // Send the full amount, NutzPay will calculate fee

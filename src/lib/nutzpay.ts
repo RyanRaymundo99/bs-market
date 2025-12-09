@@ -58,17 +58,23 @@ export class NutzPayService {
       }
 
       // Prepare the withdrawal payload according to NutzPay API
+      // In development, use localhost or tunnel URL if available
+      const isDevelopment = process.env.NODE_ENV === "development";
+      const devWebhookUrl = process.env.DEV_WEBHOOK_URL; // e.g., ngrok URL
+      
+      const defaultCallbackUrl = isDevelopment && devWebhookUrl
+        ? `${devWebhookUrl}/api/webhooks/nutzpay`
+        : isDevelopment
+        ? `http://localhost:3000/api/webhooks/nutzpay` // Won't work unless using tunnel
+        : `${process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"}/api/webhooks/nutzpay`;
+      
       const withdrawalPayload = {
         amount: amount,
         recipient_address: data.recipient_address,
         recipient_network: data.recipient_network,
         description: data.description || "USDT withdrawal",
         external_id: data.external_id || `withdrawal_${Date.now()}`,
-        callback_url:
-          data.callback_url ||
-          `${
-            process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"
-          }/api/webhooks/nutzpay`,
+        callback_url: data.callback_url || defaultCallbackUrl,
       };
 
       const headers = this.getAuthHeaders();
@@ -248,6 +254,155 @@ export class NutzPayService {
   }
 
   /**
+   * Get transaction status from NutzPay API
+   * @param transactionId - The transaction ID from NutzPay
+   * @returns Transaction status and details
+   */
+  async getTransactionStatus(transactionId: string) {
+    try {
+      const headers = this.getAuthHeaders();
+
+      console.log(
+        "🔍 Fetching transaction status from NutzPay:",
+        transactionId
+      );
+      console.log("Base URL:", this.baseUrl);
+
+      // Try multiple possible endpoints
+      const endpoints = [
+        `${this.baseUrl}/usdt/purchase/${transactionId}`,
+        `${this.baseUrl}/usdt/transaction/${transactionId}`,
+        `${this.baseUrl}/transaction/${transactionId}`,
+        `${this.baseUrl}/purchase/${transactionId}`,
+      ];
+
+      let lastError: any = null;
+
+      for (const endpoint of endpoints) {
+        try {
+          console.log(`Trying endpoint: ${endpoint}`);
+          const response = await axios.get(endpoint, {
+            headers,
+            validateStatus: (status) => status < 500, // Don't throw on 4xx errors
+          });
+
+          console.log("📡 NutzPay API Response Status:", response.status);
+
+          if (response.status === 200 || response.status === 201) {
+            const responseData = response.data?.data || response.data;
+            console.log(
+              "✅ NutzPay transaction status response:",
+              JSON.stringify(responseData, null, 2)
+            );
+            return responseData;
+          }
+
+          if (response.status === 404) {
+            console.log(
+              `❌ Transaction not found at ${endpoint}, trying next...`
+            );
+            continue; // Try next endpoint
+          }
+
+          // If we get here, we got a response but not 200/201/404
+          const responseData = response.data?.data || response.data;
+          console.log(
+            `⚠️ Got status ${response.status} from ${endpoint}, but continuing...`
+          );
+          return responseData;
+        } catch (error) {
+          lastError = error;
+          if (axios.isAxiosError(error)) {
+            if (error.response?.status === 404) {
+              console.log(`❌ 404 at ${endpoint}, trying next endpoint...`);
+              continue; // Try next endpoint
+            }
+            if (error.response?.status === 500) {
+              console.log(
+                `❌ 500 error at ${endpoint}, trying next endpoint...`
+              );
+              continue; // Try next endpoint
+            }
+          }
+          // For other errors, continue to next endpoint
+          console.log(
+            `❌ Error at ${endpoint}:`,
+            error instanceof Error ? error.message : error
+          );
+          continue;
+        }
+      }
+
+      // If all endpoints failed, throw the last error
+      if (lastError) {
+        throw lastError;
+      }
+
+      throw new Error("All endpoints failed");
+
+      console.log("📡 NutzPay API Response Status:", response.status);
+      console.log("📡 NutzPay API Response Headers:", response.headers);
+      console.log(
+        "📡 NutzPay API Full Response:",
+        JSON.stringify(response.data, null, 2)
+      );
+
+      if (response.status === 404) {
+        console.error("❌ Transaction not found in NutzPay:", transactionId);
+        // Try alternative endpoint or return null
+        throw new Error(`Transaction not found: ${transactionId}`);
+      }
+
+      if (response.status === 401) {
+        console.error("❌ Authentication failed with NutzPay");
+        throw new Error("Authentication failed");
+      }
+
+      if (response.status >= 400) {
+        console.error("❌ NutzPay API error:", response.status, response.data);
+        throw new Error(
+          `API error: ${response.status} - ${JSON.stringify(response.data)}`
+        );
+      }
+
+      const responseData = response.data?.data || response.data;
+      console.log(
+        "✅ NutzPay transaction status response:",
+        JSON.stringify(responseData, null, 2)
+      );
+
+      return responseData;
+    } catch (error) {
+      console.error("❌ NutzPay transaction status fetch error:", error);
+
+      if (axios.isAxiosError(error)) {
+        console.error("Axios error details:", {
+          message: error.message,
+          code: error.code,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          url: error.config?.url,
+        });
+
+        if (error.response?.status === 404) {
+          console.error("Transaction not found in NutzPay:", transactionId);
+          throw new Error(`Transaction not found: ${transactionId}`);
+        }
+        if (error.response?.status === 401) {
+          console.error("Authentication failed with NutzPay");
+          throw new Error("Authentication failed");
+        }
+        if (error.response?.data) {
+          console.error("NutzPay API error response:", error.response.data);
+        }
+      }
+
+      throw error;
+    }
+  }
+
+  /**
    * Get USDT balance from NutzPay account
    * Returns the available USDT balance
    *
@@ -349,10 +504,11 @@ export class NutzPayService {
       }
 
       // Calculate expected signature using HMAC-SHA256
-      // The body is already a JSON string (from request.text())
+      // IMPORTANT: Use the raw body string (not parsed JSON) for signature verification
+      // The body parameter should be the raw JSON string from request.text()
       const expectedSignature = crypto
         .createHmac("sha256", webhookSecret)
-        .update(body)
+        .update(body) // This should be the raw JSON string
         .digest("hex");
 
       // Use constant-time comparison to prevent timing attacks

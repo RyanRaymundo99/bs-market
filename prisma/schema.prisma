@@ -347,3 +347,26 @@ enum TransactionType {
   FEE
   REFUND
 }
+
+model WebhookEvent {
+  id            String   @id @default(cuid())
+  eventType     String   // e.g., "transaction.completed"
+  source        String   @default("nutzpay") // "nutzpay", "test", etc.
+  payload       Json     // Full webhook payload
+  transactionId String?  // NutzPay transaction ID
+  externalId    String?  // External ID from webhook
+  status        String?  // Status from webhook (COMPLETED, PENDING, FAILED)
+  orderId       String?  // Related order ID if found
+  processed     Boolean  @default(false) // Whether webhook was successfully processed
+  error         String?  // Error message if processing failed
+  ipAddress     String?  // IP address of webhook sender
+  userAgent     String?  // User agent of webhook sender
+  signatureValid Boolean? // Whether signature was valid
+  createdAt     DateTime @default(now())
+
+  @@index([transactionId])
+  @@index([externalId])
+  @@index([orderId])
+  @@index([createdAt])
+  @@map("webhook_event")
+}

@@ -3,10 +3,16 @@ import prisma from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
   try {
-    const sessionToken = request.cookies.get("better-auth.session")?.value;
+    // Check for admin session cookie (separate from regular user sessions)
+    const sessionToken = request.cookies.get(
+      "better-auth.admin-session"
+    )?.value;
 
     if (!sessionToken) {
-      return NextResponse.json({ valid: false, error: "No session token" });
+      return NextResponse.json({
+        valid: false,
+        error: "No admin session token",
+      });
     }
 
     // Verify session and check if user is admin

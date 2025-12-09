@@ -4,12 +4,12 @@ import type { NextRequest } from "next/server";
 export async function middleware(request: NextRequest) {
   // Add security headers for all requests
   const response = NextResponse.next();
-  
+
   // Security headers
-  response.headers.set('X-Frame-Options', 'DENY');
-  response.headers.set('X-Content-Type-Options', 'nosniff');
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  
+  response.headers.set("X-Frame-Options", "DENY");
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+
   // Check if the request is for admin routes
   if (request.nextUrl.pathname.startsWith("/admin")) {
     // Skip middleware for admin login page and API routes
@@ -21,8 +21,10 @@ export async function middleware(request: NextRequest) {
     }
 
     try {
-      // Get session token from cookies
-      const sessionToken = request.cookies.get("better-auth.session")?.value;
+      // Get admin session token from cookies (separate from regular user sessions)
+      const sessionToken = request.cookies.get(
+        "better-auth.admin-session"
+      )?.value;
 
       if (!sessionToken) {
         return NextResponse.redirect(new URL("/admin/login", request.url));
@@ -34,7 +36,7 @@ export async function middleware(request: NextRequest) {
         `${baseUrl}/api/auth/verify-admin-session`,
         {
           headers: {
-            cookie: `better-auth.session=${sessionToken}`,
+            cookie: `better-auth.admin-session=${sessionToken}`,
           },
         }
       );

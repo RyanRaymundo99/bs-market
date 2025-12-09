@@ -72,8 +72,9 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log("Setting session cookie:", sessionId);
-    response.cookies.set("better-auth.session", sessionId, {
+    console.log("Setting admin session cookie:", sessionId);
+    // Use separate cookie for admin so it doesn't conflict with regular user sessions
+    response.cookies.set("better-auth.admin-session", sessionId, {
       httpOnly: false, // Changed to false for debugging
       secure: false, // Changed to false for local development
       sameSite: "lax",
