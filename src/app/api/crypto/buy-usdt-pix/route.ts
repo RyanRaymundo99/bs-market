@@ -82,18 +82,9 @@ export async function POST(request: NextRequest) {
 
     try {
       // Call NutzPay API to create USDT purchase
-      // In development, use localhost or tunnel URL if available
-      // For local testing, use ngrok or similar: https://your-ngrok-url.ngrok.io/api/webhooks/nutzpay
-      const isDevelopment = process.env.NODE_ENV === "development";
-      const devWebhookUrl = process.env.DEV_WEBHOOK_URL; // e.g., ngrok URL
-      
-      const callbackUrl = isDevelopment && devWebhookUrl
-        ? `${devWebhookUrl}/api/webhooks/nutzpay`
-        : isDevelopment
-        ? `http://localhost:3000/api/webhooks/nutzpay` // Won't work unless using tunnel
-        : `${process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"}/api/webhooks/nutzpay`;
-      
-      console.log("🔗 Webhook callback URL:", callbackUrl);
+      const callbackUrl = `${
+        process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"
+      }/api/webhooks/nutzpay`;
 
       const nutzPayResponse = await nutzPayService.createUSDTPurchase({
         amount: amount,

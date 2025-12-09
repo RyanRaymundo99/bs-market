@@ -58,23 +58,17 @@ export class NutzPayService {
       }
 
       // Prepare the withdrawal payload according to NutzPay API
-      // In development, use localhost or tunnel URL if available
-      const isDevelopment = process.env.NODE_ENV === "development";
-      const devWebhookUrl = process.env.DEV_WEBHOOK_URL; // e.g., ngrok URL
-      
-      const defaultCallbackUrl = isDevelopment && devWebhookUrl
-        ? `${devWebhookUrl}/api/webhooks/nutzpay`
-        : isDevelopment
-        ? `http://localhost:3000/api/webhooks/nutzpay` // Won't work unless using tunnel
-        : `${process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"}/api/webhooks/nutzpay`;
-      
       const withdrawalPayload = {
         amount: amount,
         recipient_address: data.recipient_address,
         recipient_network: data.recipient_network,
         description: data.description || "USDT withdrawal",
         external_id: data.external_id || `withdrawal_${Date.now()}`,
-        callback_url: data.callback_url || defaultCallbackUrl,
+        callback_url:
+          data.callback_url ||
+          `${
+            process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"
+          }/api/webhooks/nutzpay`,
       };
 
       const headers = this.getAuthHeaders();

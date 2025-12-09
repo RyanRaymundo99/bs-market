@@ -68,7 +68,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-
     // Generate external ID for NutzPay
     const externalId = `withdrawal_${user.id}_${Date.now()}`;
 
@@ -91,18 +90,10 @@ export async function POST(request: NextRequest) {
 
     try {
       // Call NutzPay API to create withdrawal
-      // In development, use localhost or tunnel URL if available
-      const isDevelopment = process.env.NODE_ENV === "development";
-      const devWebhookUrl = process.env.DEV_WEBHOOK_URL; // e.g., ngrok URL
-      
-      const callbackUrl = isDevelopment && devWebhookUrl
-        ? `${devWebhookUrl}/api/webhooks/nutzpay`
-        : isDevelopment
-        ? `http://localhost:3000/api/webhooks/nutzpay` // Won't work unless using tunnel
-        : `${process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"}/api/webhooks/nutzpay`;
-      
-      console.log("🔗 Webhook callback URL:", callbackUrl);
-      
+      const callbackUrl = `${
+        process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"
+      }/api/webhooks/nutzpay`;
+
       const nutzPayResponse = await nutzPayService.createUSDTWithdrawal({
         amount: amount, // Send the full amount, NutzPay will calculate fee
         recipient_address: walletAddress,
@@ -117,9 +108,9 @@ export async function POST(request: NextRequest) {
       const transactionId = responseData.transaction_id;
       const responseFee = responseData.fee || 0;
       const responseAmount = responseData.amount || amount;
-      const totalDeducted = responseData.total_deducted || (responseAmount + responseFee);
+      const totalDeducted =
+        responseData.total_deducted || responseAmount + responseFee;
       const responseStatus = responseData.status || "pending";
-
 
       // Update withdrawal with NutzPay response data
       await prisma.withdrawal.update({
@@ -128,9 +119,14 @@ export async function POST(request: NextRequest) {
           hash: transactionId || null,
           fee: responseFee,
           netAmount: responseAmount,
-          status: responseStatus === "completed" ? "COMPLETED" : 
-                  responseStatus === "pending" ? "PENDING" : 
-                  responseStatus === "failed" ? "FAILED" : "PENDING",
+          status:
+            responseStatus === "completed"
+              ? "COMPLETED"
+              : responseStatus === "pending"
+              ? "PENDING"
+              : responseStatus === "failed"
+              ? "FAILED"
+              : "PENDING",
         },
       });
 
@@ -170,7 +166,9 @@ export async function POST(request: NextRequest) {
           recipient_address: responseData.recipient_address || walletAddress,
           recipient_network: responseData.recipient_network || network,
           created_at: responseData.created_at || new Date().toISOString(),
-          message: responseData.message || "Withdrawal request submitted for processing. You will receive a webhook notification when completed",
+          message:
+            responseData.message ||
+            "Withdrawal request submitted for processing. You will receive a webhook notification when completed",
         },
       });
     } catch (error: unknown) {
@@ -183,7 +181,7 @@ export async function POST(request: NextRequest) {
       });
 
       console.error("NutzPay withdrawal error:", error);
-      
+
       // Return user-friendly error message
       let errorMessage = "Failed to process USDT withdrawal with NutzPay";
       let errorDetails: unknown = undefined;
@@ -191,12 +189,10 @@ export async function POST(request: NextRequest) {
 
       if (error instanceof Error) {
         errorMessage = error.message;
-      } else if (
-        error &&
-        typeof error === "object" &&
-        "response" in error
-      ) {
-        const axiosError = error as { response?: { data?: unknown; status?: number } };
+      } else if (error && typeof error === "object" && "response" in error) {
+        const axiosError = error as {
+          response?: { data?: unknown; status?: number };
+        };
         if (axiosError.response?.data) {
           errorDetails = axiosError.response.data;
           if (
@@ -217,7 +213,7 @@ export async function POST(request: NextRequest) {
       }
 
       return NextResponse.json(
-        { 
+        {
           error: errorMessage,
           ...(errorDetails ? { details: errorDetails } : {}),
         },
