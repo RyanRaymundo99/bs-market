@@ -445,11 +445,21 @@ const TradePage = () => {
           });
           return true; // Payment failed
         } else {
-          // Still pending
+          // Still pending - show more helpful message
+          let description = `Status atual: ${order.status}. `;
+          
+          if (data.synced) {
+            description += "Tentamos sincronizar com NutzPay, mas o pagamento ainda está pendente. ";
+          } else {
+            description += "O pagamento ainda está sendo processado. ";
+          }
+          
+          description += "Se você já fez o pagamento PIX, aguarde alguns minutos ou tente verificar novamente.";
+          
           toast({
             title: "Pagamento pendente",
-            description: `Status atual: ${order.status}. O pagamento ainda está sendo processado.`,
-            duration: 3000,
+            description,
+            duration: 5000,
           });
           return false;
         }

@@ -257,20 +257,31 @@ export async function GET(
       }
     }
 
+    // Re-fetch order to get latest status (might have been updated by sync above)
+    const latestOrder = await prisma.order.findUnique({
+      where: { id: order.id },
+    });
+    
+    const finalOrder = latestOrder || order;
+    const wasSynced = latestOrder?.status !== order.status;
+
     console.log("✅ Order found for polling:", {
-      orderId: order.id,
-      externalOrderId: order.externalOrderId,
-      status: order.status,
+      orderId: finalOrder.id,
+      externalOrderId: finalOrder.externalOrderId,
+      status: finalOrder.status,
+      wasSynced,
+      oldStatus: order.status,
+      newStatus: finalOrder.status,
     });
 
     // Find deposit separately - match by userId, amount, and creation time
     const deposit = await prisma.deposit.findFirst({
       where: {
-        userId: order.userId,
-        amount: order.total,
+        userId: finalOrder.userId,
+        amount: finalOrder.total,
         createdAt: {
-          gte: new Date(order.createdAt.getTime() - 60000),
-          lte: new Date(order.createdAt.getTime() + 60000),
+          gte: new Date(finalOrder.createdAt.getTime() - 60000),
+          lte: new Date(finalOrder.createdAt.getTime() + 60000),
         },
       },
     });
@@ -278,12 +289,12 @@ export async function GET(
     // Convert Decimal amounts to numbers for frontend compatibility
     try {
       const formattedOrder = {
-        ...order,
-        amount: Number(order.amount),
-        price: Number(order.price),
-        total: Number(order.total),
-        createdAt: order.createdAt.toISOString(),
-        executedAt: order.executedAt?.toISOString() || null,
+        ...finalOrder,
+        amount: Number(finalOrder.amount),
+        price: Number(finalOrder.price),
+        total: Number(finalOrder.total),
+        createdAt: finalOrder.createdAt.toISOString(),
+        executedAt: finalOrder.executedAt?.toISOString() || null,
         deposit: deposit
           ? {
               ...deposit,
@@ -297,6 +308,7 @@ export async function GET(
       return NextResponse.json({
         success: true,
         order: formattedOrder,
+        synced: wasSynced, // Indicates if status was updated during this call
       });
     } catch (formatError) {
       console.error("Error formatting order:", formatError);
