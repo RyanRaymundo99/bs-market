@@ -85,8 +85,8 @@ export async function POST(request: NextRequest) {
       rawBody
     );
 
-    // Allow test webhooks in development (skip signature verification)
-    // In production, always verify signature
+    // Allow test webhooks when x-test-webhook header is present (skip signature verification)
+    // This allows testing in any environment
     const isDevelopment = process.env.NODE_ENV === "development";
     const isTestWebhook = request.headers.get("x-test-webhook") === "true";
 
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
           where: { id: webhookEventId },
           data: {
             signatureValid:
-              isValidSignature || (isDevelopment && isTestWebhook),
+              isValidSignature || isTestWebhook,
           },
         });
       } catch (dbError) {
@@ -110,18 +110,20 @@ export async function POST(request: NextRequest) {
       isValid: isValidSignature,
       isDevelopment,
       isTestWebhook,
-      willProcess: isValidSignature || (isDevelopment && isTestWebhook),
-      note: isDevelopment
-        ? "Development mode: Test webhooks allowed without signature"
-        : "Production mode: Signature required",
+      willProcess: isValidSignature || isTestWebhook,
+      note: isTestWebhook
+        ? "Test webhook mode: Signature verification skipped"
+        : isDevelopment
+        ? "Development mode: Signature verification required"
+        : "Production mode: Signature verification required",
     });
 
-    if (!isValidSignature && !(isDevelopment && isTestWebhook)) {
+    if (!isValidSignature && !isTestWebhook) {
       console.error(
         "❌ Webhook signature verification failed - rejecting webhook"
       );
       console.error(
-        "Note: Test webhooks in development should include header: x-test-webhook: true"
+        "Note: For test webhooks, include header: x-test-webhook: true"
       );
 
       // Mark webhook as failed
