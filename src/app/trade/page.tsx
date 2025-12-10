@@ -773,34 +773,34 @@ const TradePage = () => {
                     </>
                   )}
                 </button>
-                
-                  {/* Check Status Button */}
-                  <button
-                    onClick={async () => {
-                      if (pixData?.transactionId) {
-                        await checkPaymentStatus(pixData.transactionId);
-                      } else {
-                        toast({
-                          title: "Erro",
-                          description: "ID da transação não encontrado",
-                          variant: "destructive",
-                        });
-                      }
-                    }}
-                    disabled={checkingStatus}
-                    className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center justify-center gap-2 font-medium"
-                  >
-                    {checkingStatus ? (
-                      <>
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        Verificando...
-                      </>
-                    ) : (
-                      "Verificar Status do Pagamento"
-                    )}
-                  </button>
 
-                <p className="text-xs text-[#A1A1AA] text-center">
+                {/* Check Status Button */}
+                <button
+                  onClick={async () => {
+                    if (pixData?.transactionId) {
+                      await checkPaymentStatus(pixData.transactionId);
+                    } else {
+                      toast({
+                        title: "Erro",
+                        description: "ID da transação não encontrado",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  disabled={checkingStatus}
+                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center justify-center gap-2 font-medium"
+                >
+                  {checkingStatus ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Verificando...
+                    </>
+                  ) : (
+                    "Verificar Status do Pagamento"
+                  )}
+                </button>
+
+                <p className="text-xs text-[#A1A1AA] text-center mt-4">
                   Após o pagamento, seus USDT serão creditados automaticamente via webhook.
                   Você pode verificar o status a qualquer momento.
                 </p>
