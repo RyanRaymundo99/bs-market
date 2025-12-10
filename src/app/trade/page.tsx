@@ -69,12 +69,6 @@ const TradePage = () => {
     date: Date;
   } | null>(null);
   const [checkingStatus, setCheckingStatus] = useState(false);
-  const [webhookTestPayload, setWebhookTestPayload] = useState<string>("");
-  const [webhookTestLoading, setWebhookTestLoading] = useState(false);
-  const [webhookTestResult, setWebhookTestResult] = useState<{
-    success: boolean;
-    message: string;
-  } | null>(null);
 
   // Estado para o histórico de transações
   const [transactionHistory, setTransactionHistory] = useState<
@@ -900,7 +894,7 @@ const TradePage = () => {
                           method: "POST",
                           headers: {
                             "Content-Type": "application/json",
-                            "x-test-webhook": "true",
+                            ...(process.env.NODE_ENV === "development" && { "x-test-webhook": "true" }),
                           },
                           body: JSON.stringify(payload),
                         });
@@ -948,181 +942,6 @@ const TradePage = () => {
                 </p>
               </div>
 
-              {/* Right Column - Webhook Test Section */}
-              <div className="space-y-4 border-l border-gray-700 pl-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-2">
-                    🧪 Testar Webhook (Desenvolvimento)
-                  </h3>
-                  <p className="text-xs text-gray-400 mb-4">
-                    Teste o webhook manualmente para verificar se o pagamento será confirmado
-                  </p>
-                  
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-3 gap-2">
-                      <button
-                        onClick={() => {
-                          if (pixData) {
-                            // Use the flat format that NutzPay actually sends (matches webhook.site format)
-                            const payload = {
-                              event: "payment.confirmed",
-                              transaction_id: pixData.transactionId,
-                              status: "COMPLETED",
-                              amount: pixData.usdtAmount, // USDT amount
-                              currency: "USDT",
-                              amount_paid_brl: pixData.amount, // BRL amount paid
-                              payment_method: "PIX_TO_USDT",
-                              acquirer: "MERCADOPAGO",
-                              created_at: new Date().toISOString(),
-                              completed_at: new Date().toISOString(),
-                              metadata: {},
-                            };
-                            setWebhookTestPayload(JSON.stringify(payload, null, 2));
-                          }
-                        }}
-                        className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded font-medium"
-                      >
-                        ✅ Completed
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (pixData) {
-                            // Use the flat format that NutzPay actually sends
-                            const payload = {
-                              event: "payment.received",
-                              transaction_id: pixData.transactionId,
-                              external_id: `purchase_${pixData.transactionId}`, // Our external_id format
-                              status: "pending",
-                              amount: pixData.usdtAmount,
-                              amount_brl: pixData.amount,
-                              created_at: new Date().toISOString(),
-                            };
-                            setWebhookTestPayload(JSON.stringify(payload, null, 2));
-                          }
-                        }}
-                        className="px-3 py-2 bg-yellow-600 hover:bg-yellow-700 text-white text-sm rounded font-medium"
-                      >
-                        ⏳ Pending
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (pixData) {
-                            // Use the flat format that NutzPay actually sends
-                            const payload = {
-                              event: "payment.failed",
-                              transaction_id: pixData.transactionId,
-                              status: "FAILED",
-                              amount: pixData.usdtAmount,
-                              currency: "USDT",
-                              amount_paid_brl: pixData.amount,
-                              payment_method: "PIX_TO_USDT",
-                              created_at: new Date().toISOString(),
-                              metadata: {},
-                            };
-                            setWebhookTestPayload(JSON.stringify(payload, null, 2));
-                          }
-                        }}
-                        className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded font-medium"
-                      >
-                        ❌ Failed
-                      </button>
-                    </div>
-
-                    <textarea
-                      value={webhookTestPayload}
-                      onChange={(e) => setWebhookTestPayload(e.target.value)}
-                      className="w-full h-64 p-3 bg-gray-900 border border-gray-700 rounded text-white font-mono text-xs resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder='{"event": "payment.confirmed", "transaction_id": "...", "status": "COMPLETED", ...}'
-                    />
-
-                    <button
-                      onClick={async () => {
-                        if (!webhookTestPayload) {
-                          toast({
-                            title: "Erro",
-                            description: "Payload vazio",
-                            variant: "destructive",
-                          });
-                          return;
-                        }
-
-                        setWebhookTestLoading(true);
-                        setWebhookTestResult(null);
-
-                        try {
-                          const payload = JSON.parse(webhookTestPayload);
-                          const response = await fetch("/api/webhooks/nutzpay", {
-                            method: "POST",
-                            headers: {
-                              "Content-Type": "application/json",
-                              "x-test-webhook": "true",
-                            },
-                            body: JSON.stringify(payload),
-                          });
-
-                          const result = await response.json();
-
-                          if (response.ok) {
-                            setWebhookTestResult({
-                              success: true,
-                              message: result.message || "Webhook processado com sucesso",
-                            });
-                            toast({
-                              title: "✅ Webhook Testado",
-                              description: "Webhook foi processado. Verifique o status do pedido.",
-                            });
-                            // Refresh payment status
-                            if (pixData?.transactionId) {
-                              setTimeout(() => {
-                                checkPaymentStatus(pixData.transactionId);
-                              }, 1000);
-                            }
-                          } else {
-                            setWebhookTestResult({
-                              success: false,
-                              message: result.error || "Erro ao processar webhook",
-                            });
-                            toast({
-                              title: "❌ Erro",
-                              description: result.error || "Falha ao testar webhook",
-                              variant: "destructive",
-                            });
-                          }
-                        } catch (error) {
-                          setWebhookTestResult({
-                            success: false,
-                            message: error instanceof Error ? error.message : "Erro desconhecido",
-                          });
-                          toast({
-                            title: "❌ Erro",
-                            description: "Payload inválido",
-                            variant: "destructive",
-                          });
-                        } finally {
-                          setWebhookTestLoading(false);
-                        }
-                      }}
-                      disabled={webhookTestLoading || !webhookTestPayload}
-                      className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 text-white text-sm rounded font-medium"
-                    >
-                      {webhookTestLoading ? "Testando..." : "Enviar Teste de Webhook"}
-                    </button>
-
-                    {webhookTestResult && (
-                      <div
-                        className={`p-3 rounded text-sm ${
-                          webhookTestResult.success
-                            ? "bg-green-900/30 text-green-400 border border-green-800"
-                            : "bg-red-900/30 text-red-400 border border-red-800"
-                        }`}
-                      >
-                        {webhookTestResult.success ? "✅" : "❌"}{" "}
-                        {webhookTestResult.message}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
             </div>
           )}
         </DialogContent>

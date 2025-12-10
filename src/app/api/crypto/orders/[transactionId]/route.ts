@@ -31,11 +31,6 @@ export async function GET(
 
     const { transactionId } = await params;
 
-    console.log("🔍 Polling order status:", {
-      transactionId,
-      userId: session.user.id,
-    });
-
     // Find order by externalOrderId (transactionId from NutzPay) or by order ID
     const order = await prisma.order.findFirst({
       where: {
@@ -48,25 +43,6 @@ export async function GET(
     });
 
     if (!order) {
-      console.error("❌ Order not found for polling:", {
-        transactionId,
-        userId: session.user.id,
-      });
-      
-      // Log recent orders for this user for debugging
-      const recentOrders = await prisma.order.findMany({
-        where: { userId: session.user.id },
-        take: 5,
-        orderBy: { createdAt: "desc" },
-        select: {
-          id: true,
-          externalOrderId: true,
-          status: true,
-          createdAt: true,
-        },
-      });
-      console.error("Recent orders for user:", JSON.stringify(recentOrders, null, 2));
-      
       return NextResponse.json(
         { error: "Order not found" },
         { status: 404 }
@@ -76,10 +52,6 @@ export async function GET(
     // If order is still pending, check status from NutzPay API
     if (order.status === "PENDING" && order.externalOrderId) {
       try {
-        console.log("🔄 Order is pending, checking status from NutzPay API...");
-        console.log("Using transaction ID:", order.externalOrderId);
-        
-        // Find deposit to get external_id as fallback
         const deposit = await prisma.deposit.findFirst({
           where: {
             userId: order.userId,
@@ -92,7 +64,6 @@ export async function GET(
         });
         
         const externalId = deposit?.externalId;
-        console.log("Deposit external_id (fallback):", externalId);
         
         let nutzPayStatus;
         let usedId = order.externalOrderId;
@@ -104,7 +75,6 @@ export async function GET(
           // If transaction_id fails and we have external_id, try that
           if (externalId && apiError instanceof Error && apiError.message.includes("not found")) {
             try {
-              console.log("🔄 Trying with external_id:", externalId);
               nutzPayStatus = await nutzPayService.getTransactionStatus(externalId);
               usedId = externalId;
             } catch (fallbackError) {
@@ -122,8 +92,6 @@ export async function GET(
         
         // Handle case where NutzPay API returns null (server errors)
         if (nutzPayStatus === null) {
-          console.log("⚠️ NutzPay API returned null (server error) - order will remain PENDING");
-          console.log("Webhook will update order status when payment is confirmed");
         } else if (nutzPayStatus) {
           // Try multiple possible status field names
           const nutzPayStatusValue = 
@@ -143,17 +111,7 @@ export async function GET(
             statusLower === "success" ||
             statusLower === "successful";
 
-          console.log("📊 NutzPay API status response:", {
-            transactionId: order.externalOrderId,
-            rawResponse: JSON.stringify(nutzPayStatus, null, 2),
-            statusValue: nutzPayStatusValue,
-            statusLower: statusLower,
-            isCompleted,
-          });
-
-          // If NutzPay says it's completed but our DB says pending, update it
           if (isCompleted && order.status === "PENDING") {
-          console.log("✅ Payment completed on NutzPay! Updating order status...");
 
           // Update order status
           await prisma.order.update({
@@ -225,9 +183,6 @@ export async function GET(
               },
             });
 
-            console.log(`✅ User ${order.userId} balance credited with ${Number(order.amount)} USDT via API poll`);
-          } else {
-            console.log("⚠️ Balance already updated for this order");
           }
 
           // Fetch updated order
@@ -248,15 +203,9 @@ export async function GET(
           });
             order.status = "FAILED";
           }
-        } else {
-          console.log("⚠️ Could not fetch status from NutzPay API, using current order status");
         }
       } catch (apiError) {
-        console.error("❌ Error checking NutzPay API status:", apiError);
-        console.error("Error details:", {
-          message: apiError instanceof Error ? apiError.message : "Unknown error",
-          stack: apiError instanceof Error ? apiError.stack : undefined,
-        });
+        console.error("Error checking NutzPay API status:", apiError);
         // Don't fail the request, just log the error and return current order status
       }
     }
@@ -268,15 +217,6 @@ export async function GET(
     
     const finalOrder = latestOrder || order;
     const wasSynced = latestOrder?.status !== order.status;
-
-    console.log("✅ Order found for polling:", {
-      orderId: finalOrder.id,
-      externalOrderId: finalOrder.externalOrderId,
-      status: finalOrder.status,
-      wasSynced,
-      oldStatus: order.status,
-      newStatus: finalOrder.status,
-    });
 
     // Find deposit separately - match by userId, amount, and creation time
     const deposit = await prisma.deposit.findFirst({

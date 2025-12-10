@@ -150,21 +150,6 @@ export class NutzPayService {
 
       const headers = this.getAuthHeaders();
 
-      // Log request details for debugging (without exposing full secrets)
-      console.log("NutzPay Purchase Request Details:");
-      console.log("- URL:", `${this.baseUrl}/usdt/purchase`);
-      console.log(
-        "- Auth Method:",
-        process.env.NUTZPAY_AUTH_METHOD || "headers (default)"
-      );
-      console.log("- Headers (keys only):", Object.keys(headers).join(", "));
-      console.log(
-        "- Public Key (first 10 chars):",
-        this.publicKey?.substring(0, 10) + "..."
-      );
-      console.log("- Secret Key exists:", !!this.secretKey);
-      console.log("- Payload:", JSON.stringify(purchasePayload, null, 2));
-
       const response = await axios.post(
         `${this.baseUrl}/usdt/purchase`,
         purchasePayload,

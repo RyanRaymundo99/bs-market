@@ -31,6 +31,14 @@ NEXT_PUBLIC_BASE_URL=https://your-domain.vercel.app
 NODE_ENV=production
 ```
 
+#### NutzPay (Required for PIX payments)
+```env
+PUBLIC_KEY=ntz_live_your-public-key
+SECRET_KEY=ntz_secret_your-secret-key
+NUTZPAY_WEBHOOK_SECRET=your-webhook-secret-from-nutzpay-dashboard
+# DO NOT set NUTZPAY_WEBHOOK_URL in production - it will use NEXT_PUBLIC_APP_URL automatically
+```
+
 #### Optional but Recommended
 ```env
 RESEND_API_KEY=re_your-resend-key
@@ -63,10 +71,22 @@ After deployment:
 ### 5. Domain Configuration
 
 1. Go to Vercel Dashboard > Settings > Domains
-2. Add your custom domain
+2. Add your custom domain (e.g., `bsmarket.com.br`)
 3. Update environment variables:
-   - `BETTER_AUTH_URL=https://your-domain.com`
-   - `NEXT_PUBLIC_BASE_URL=https://your-domain.com`
+   - `BETTER_AUTH_URL=https://bsmarket.com.br`
+   - `NEXT_PUBLIC_APP_URL=https://bsmarket.com.br`
+   - `NEXT_PUBLIC_BASE_URL=https://bsmarket.com.br` (if used)
+
+### 6. Webhook Configuration
+
+**IMPORTANT:** After deploying, configure NutzPay webhooks:
+
+1. Go to NutzPay Dashboard → Webhooks
+2. Set webhook URL to: `https://bsmarket.com.br/api/webhooks/nutzpay`
+3. Set webhook secret to match your `NUTZPAY_WEBHOOK_SECRET` environment variable
+4. Test the webhook endpoint: Visit `https://bsmarket.com.br/api/webhooks/nutzpay` (should return status ok)
+
+See `PRODUCTION_WEBHOOK_SETUP.md` for detailed instructions.
 
 ### 6. Performance Optimizations
 

@@ -39,25 +39,6 @@ export async function POST(request: NextRequest) {
       "unknown";
     const userAgent = request.headers.get("user-agent") || "unknown";
 
-    console.log("=== NUTZPAY WEBHOOK RECEIVED ===");
-    console.log("Webhook body:", JSON.stringify(body, null, 2));
-    console.log(
-      "Webhook timestamp:",
-      body.timestamp || new Date().toISOString()
-    );
-    console.log("Webhook IP:", ipAddress);
-    console.log("Webhook User-Agent:", userAgent);
-
-    // Log all possible ID fields for debugging
-    console.log("🔍 ID ANALYSIS:");
-    console.log("  - transaction_id (from webhookData):", transaction_id);
-    console.log("  - external_id (from webhookData):", external_id);
-    console.log("  - body.data.transaction_id:", webhookData?.transaction_id);
-    console.log("  - body.data.external_id:", webhookData?.external_id);
-    console.log("  - body.transaction_id:", body.transaction_id);
-    console.log("  - body.external_id:", body.external_id);
-    console.log("  - Full webhookData keys:", Object.keys(webhookData || {}));
-
     // Store webhook event in database for tracking
     try {
       const webhookEvent = await prisma.webhookEvent.create({
@@ -74,26 +55,19 @@ export async function POST(request: NextRequest) {
         },
       });
       webhookEventId = webhookEvent.id;
-      console.log("📝 Webhook event stored:", webhookEvent.id);
     } catch (dbError) {
-      // If WebhookEvent model doesn't exist yet (migration not run), log and continue
-      console.warn(
-        "⚠️ Could not store webhook event (model may not exist yet):",
-        dbError
-      );
+      // If WebhookEvent model doesn't exist yet (migration not run), continue silently
     }
 
     // Verify webhook signature (required by NutzPay)
-    // Always validate HMAC-SHA256 signature in X-Webhook-Signature header
     const isValidSignature = await nutzPayService.verifyWebhookSignature(
       request,
       rawBody
     );
 
-    // Allow test webhooks when x-test-webhook header is present (skip signature verification)
-    // This allows testing in any environment
+    // Allow test webhooks only in development
     const isDevelopment = process.env.NODE_ENV === "development";
-    const isTestWebhook = request.headers.get("x-test-webhook") === "true";
+    const isTestWebhook = isDevelopment && request.headers.get("x-test-webhook") === "true";
 
     // Update webhook event with signature validation result
     if (webhookEventId) {
@@ -101,8 +75,7 @@ export async function POST(request: NextRequest) {
         await prisma.webhookEvent.update({
           where: { id: webhookEventId },
           data: {
-            signatureValid:
-              isValidSignature || isTestWebhook,
+            signatureValid: isValidSignature || isTestWebhook,
           },
         });
       } catch (dbError) {
@@ -110,37 +83,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Log signature validation result for debugging
-    const signatureHeader = 
-      request.headers.get("x-signature") ||
-      request.headers.get("x-webhook-signature") ||
-      request.headers.get("X-Signature") ||
-      request.headers.get("X-Webhook-Signature");
-    
-    console.log("🔐 Signature Validation:", {
-      isValid: isValidSignature,
-      isDevelopment,
-      isTestWebhook,
-      willProcess: isValidSignature || isTestWebhook,
-      hasSignatureHeader: !!signatureHeader,
-      signatureHeaderName: signatureHeader ? 
-        (request.headers.get("x-signature") ? "x-signature" :
-         request.headers.get("x-webhook-signature") ? "x-webhook-signature" :
-         request.headers.get("X-Signature") ? "X-Signature" : "X-Webhook-Signature") : "none",
-      note: isTestWebhook
-        ? "Test webhook mode: Signature verification skipped"
-        : isDevelopment
-        ? "Development mode: Signature verification required"
-        : "Production mode: Signature verification required",
-    });
-
     if (!isValidSignature && !isTestWebhook) {
-      console.error(
-        "❌ Webhook signature verification failed - rejecting webhook"
-      );
-      console.error(
-        "Note: For test webhooks, include header: x-test-webhook: true"
-      );
+      console.error("Webhook signature verification failed");
 
       // Mark webhook as failed
       if (webhookEventId) {
@@ -179,10 +123,8 @@ export async function POST(request: NextRequest) {
       webhookData.executed_at ||
       body.executed_at;
 
-    // According to NutzPay docs, webhook always has transaction_id
-    // external_id might not be present (it's optional)
     if (!transaction_id) {
-      console.error("❌ Webhook missing transaction_id (required)");
+      console.error("Webhook missing transaction_id");
       if (webhookEventId) {
         try {
           await prisma.webhookEvent.update({
@@ -205,26 +147,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Log if external_id is missing (it's optional but helpful for matching)
-    if (!external_id) {
-      console.warn(
-        "⚠️ Webhook missing external_id (optional). Will match by transaction_id only."
-      );
-    }
-
-    console.log("Processing webhook for:", {
-      event: eventType,
-      transaction_id,
-      external_id,
-      status,
-      amount,
-      currency,
-      type,
-      user_id,
-      usdt_amount,
-      created_at,
-      completed_at,
-    });
 
     // Find the order by matching webhook data
     // According to NutzPay webhook documentation:
@@ -262,53 +184,18 @@ export async function POST(request: NextRequest) {
       });
       if (orderByExternalId) {
         order = orderByExternalId;
-        console.log("✅ Found order by external_id (our original ID):", order.id);
         
         // If we matched by external_id but webhook has transaction_id, update the order
-        // This handles the case where webhook arrives before NutzPay API response updates externalOrderId
         if (transaction_id && transaction_id !== external_id) {
-          console.log("🔄 Updating order.externalOrderId with transaction_id from webhook:", transaction_id);
           await prisma.order.update({
             where: { id: order.id },
             data: {
-              externalOrderId: transaction_id, // Update with real transaction_id from webhook
+              externalOrderId: transaction_id,
             },
           });
-          order.externalOrderId = transaction_id; // Update local object for logging
+          order.externalOrderId = transaction_id;
         }
       }
-    }
-
-    console.log("🔍 Order lookup attempt:", {
-      transaction_id,
-      external_id: external_id || "NOT PROVIDED (optional)",
-      found: !!order,
-      orderId: order?.id,
-      orderExternalOrderId: order?.externalOrderId,
-      matchingStrategy: order
-        ? "matched by externalOrderId"
-        : "not found, trying deposit lookup",
-    });
-    
-    // Log all orders with similar transaction IDs for debugging
-    if (!order && transaction_id) {
-      console.log("🔍 DEBUG: Searching for orders with similar transaction_id...");
-      const similarOrders = await prisma.order.findMany({
-        where: {
-          OR: [
-            { externalOrderId: { contains: transaction_id.substring(0, 10) } },
-            { id: { contains: transaction_id.substring(0, 10) } },
-          ],
-        },
-        take: 5,
-        select: {
-          id: true,
-          externalOrderId: true,
-          status: true,
-          createdAt: true,
-        },
-      });
-      console.log("🔍 Similar orders found:", JSON.stringify(similarOrders, null, 2));
     }
 
     // If not found, try finding by deposit externalId
@@ -324,53 +211,6 @@ export async function POST(request: NextRequest) {
         });
 
         if (deposit) {
-          console.log(
-            "📦 Found deposit with external_id:",
-            deposit.id,
-            deposit.externalId
-          );
-          // Find order by matching userId and amount (since they're created together)
-          const matchingOrder = await prisma.order.findFirst({
-            where: {
-              userId: deposit.userId,
-              total: deposit.amount, // Match by total amount
-              createdAt: {
-                // Order should be created around the same time as deposit
-                gte: new Date(deposit.createdAt.getTime() - 60000), // 1 minute before
-                lte: new Date(deposit.createdAt.getTime() + 60000), // 1 minute after
-              },
-            },
-            include: { user: true },
-          });
-
-          if (matchingOrder) {
-            order = matchingOrder;
-            console.log(
-              "✅ Found order via deposit lookup (external_id match):",
-              order.id,
-              "order.externalOrderId:",
-              order.externalOrderId
-            );
-          } else {
-            console.log("⚠️ Deposit found but no matching order");
-          }
-        }
-      }
-
-      // Also try matching deposit by transaction_id (PIX transaction ID)
-      if (!order && transaction_id) {
-        const deposit = await prisma.deposit.findFirst({
-          where: {
-            externalId: transaction_id, // Some deposits might have PIX transaction ID
-          },
-        });
-
-        if (deposit) {
-          console.log(
-            "📦 Found deposit with transaction_id:",
-            deposit.id,
-            deposit.externalId
-          );
           const matchingOrder = await prisma.order.findFirst({
             where: {
               userId: deposit.userId,
@@ -385,21 +225,39 @@ export async function POST(request: NextRequest) {
 
           if (matchingOrder) {
             order = matchingOrder;
-            console.log(
-              "✅ Found order via deposit lookup (transaction_id match):",
-              order.id
-            );
+          }
+        }
+      }
+
+      // Also try matching deposit by transaction_id
+      if (!order && transaction_id) {
+        const deposit = await prisma.deposit.findFirst({
+          where: {
+            externalId: transaction_id,
+          },
+        });
+
+        if (deposit) {
+          const matchingOrder = await prisma.order.findFirst({
+            where: {
+              userId: deposit.userId,
+              total: deposit.amount,
+              createdAt: {
+                gte: new Date(deposit.createdAt.getTime() - 60000),
+                lte: new Date(deposit.createdAt.getTime() + 60000),
+              },
+            },
+            include: { user: true },
+          });
+
+          if (matchingOrder) {
+            order = matchingOrder;
           }
         }
       }
     }
 
     if (!order) {
-      console.error("❌ Order not found for transaction");
-      console.error("Searched for transaction_id:", transaction_id);
-      console.error("Searched for external_id:", external_id);
-
-      // Log recent orders for debugging
       const recentOrders = await prisma.order.findMany({
         take: 10,
         orderBy: { createdAt: "desc" },
@@ -412,12 +270,7 @@ export async function POST(request: NextRequest) {
           createdAt: true,
         },
       });
-      console.error(
-        "Recent orders (last 10):",
-        JSON.stringify(recentOrders, null, 2)
-      );
 
-      // Log recent deposits for debugging
       const recentDeposits = await prisma.deposit.findMany({
         take: 10,
         orderBy: { createdAt: "desc" },
@@ -430,19 +283,21 @@ export async function POST(request: NextRequest) {
           createdAt: true,
         },
       });
-      console.error(
-        "Recent deposits (last 10):",
-        JSON.stringify(recentDeposits, null, 2)
-      );
 
-      // Mark webhook as failed with detailed error
+      console.error("Order not found", {
+        transaction_id,
+        external_id,
+        recentOrdersCount: recentOrders.length,
+        recentDepositsCount: recentDeposits.length,
+      });
+
       if (webhookEventId) {
         try {
           await prisma.webhookEvent.update({
             where: { id: webhookEventId },
             data: {
               processed: false,
-              error: `Order not found. transaction_id: ${transaction_id}, external_id: ${external_id}. Recent orders: ${recentOrders.length}, Recent deposits: ${recentDeposits.length}`,
+              error: `Order not found. transaction_id: ${transaction_id}, external_id: ${external_id}`,
             },
           });
         } catch (dbError) {
@@ -456,20 +311,11 @@ export async function POST(request: NextRequest) {
           details: {
             transaction_id,
             external_id,
-            recentOrdersCount: recentOrders.length,
-            recentDepositsCount: recentDeposits.length,
           },
         },
         { status: 404 }
       );
     }
-
-    console.log("✅ Order found:", {
-      orderId: order.id,
-      externalOrderId: order.externalOrderId,
-      currentStatus: order.status,
-      userId: order.userId,
-    });
 
     // Update webhook event with matched order ID
     if (webhookEventId) {
@@ -502,22 +348,14 @@ export async function POST(request: NextRequest) {
       status === "COMPLETED"
     ) {
       orderStatus = "COMPLETED";
-      console.log("✅ Webhook confirms payment COMPLETED");
-    }
-    // PRIORITY 2: Handle failed status from webhook (FAILED - will trigger rollback)
-    else if (
+    } else if (
       eventType === "transaction.failed" ||
       eventType === "payment.failed" ||
       status === "failed" ||
       status === "FAILED"
     ) {
       orderStatus = "FAILED";
-      console.log(
-        "❌ Webhook confirms payment FAILED - will rollback user data"
-      );
-    }
-    // PRIORITY 3: Handle pending status from webhook (PENDING)
-    else if (
+    } else if (
       eventType === "transaction.created" ||
       eventType === "transaction.pending" ||
       eventType === "payment.created" ||
@@ -526,26 +364,19 @@ export async function POST(request: NextRequest) {
       status === "PENDING"
     ) {
       orderStatus = "PENDING";
-      console.log("📋 Webhook confirms payment PENDING");
-    }
-    // PRIORITY 4: Handle refunded status
-    else if (
+    } else if (
       eventType === "transaction.refunded" ||
       eventType === "payment.refunded" ||
       status === "refunded" ||
       status === "REFUNDED"
     ) {
       orderStatus = "CANCELLED";
-      console.log("🔄 Webhook confirms payment REFUNDED");
-    }
-    // PRIORITY 5: Handle executing status (if payment is being processed)
-    else if (
+    } else if (
       status === "executing" ||
       status === "EXECUTING" ||
       eventType === "transaction.executing"
     ) {
       orderStatus = "EXECUTING";
-      console.log("⏳ Webhook confirms payment EXECUTING");
     }
 
     const updatedOrder = await prisma.order.update({
@@ -560,25 +391,6 @@ export async function POST(request: NextRequest) {
             : order.executedAt, // Keep existing executedAt if not completed/failed
       },
     });
-
-    console.log("✅ Order status updated:", {
-      orderId: updatedOrder.id,
-      oldStatus: order.status,
-      newStatus: orderStatus,
-      eventType: eventType,
-      webhookStatus: status,
-      executedAt: updatedOrder.executedAt,
-    });
-
-    // Log pending payment updates for visibility
-    if (orderStatus === "PENDING") {
-      console.log("📋 Pending payment detected:", {
-        orderId: updatedOrder.id,
-        transactionId: transaction_id || external_id,
-        amount: amount,
-        currency: currency,
-      });
-    }
 
     // Update deposit status - find by matching userId, amount, and creation time
     // Since deposit doesn't have direct relation to order, we match by these criteria
@@ -619,12 +431,6 @@ export async function POST(request: NextRequest) {
               ? new Date()
               : null,
         },
-      });
-
-      console.log("✅ Deposit status updated:", {
-        depositId: deposit.id,
-        status: depositStatus,
-        transactionId: transaction_id || external_id,
       });
     }
 
@@ -674,15 +480,6 @@ export async function POST(request: NextRequest) {
             source: "nutzpay_webhook",
           },
         });
-
-        console.log(
-          `✅ User ${order.userId} balance credited with ${usdtAmount} USDT via webhook`
-        );
-      } else {
-        console.log(
-          "⚠️ Balance already updated for transaction:",
-          transaction_id
-        );
       }
     }
 
@@ -693,12 +490,6 @@ export async function POST(request: NextRequest) {
       status === "FAILED" ||
       orderStatus === "FAILED"
     ) {
-      console.log("❌ Payment failed - rolling back user data:", {
-        orderId: order.id,
-        userId: order.userId,
-        transactionId: transaction_id,
-      });
-
       const usdtAmount = usdt_amount || Number(order.amount);
 
       // Find all transactions related to this order
@@ -736,11 +527,6 @@ export async function POST(request: NextRequest) {
           "SUBTRACT"
         );
 
-        console.log(
-          `🔄 Rolled back ${transactionAmount} USDT from user ${order.userId} balance`
-        );
-
-        // Mark transaction as failed/refunded
         await prisma.transaction.update({
           where: { id: transaction.id },
           data: {
@@ -754,27 +540,16 @@ export async function POST(request: NextRequest) {
             },
           },
         });
-
-        console.log(`🔄 Marked transaction ${transaction.id} as REFUND`);
       }
 
-      // If no transactions found but order was completed, still try to rollback
       if (relatedTransactions.length === 0 && order.status === "COMPLETED") {
-        // Order was marked as completed but no transaction found - still rollback balance
         await ledgerService.updateBalance(
           order.userId,
           "USDT",
           new Decimal(usdtAmount),
           "SUBTRACT"
         );
-        console.log(
-          `🔄 Rolled back ${usdtAmount} USDT from user ${order.userId} (no transaction found)`
-        );
       }
-
-      console.log(
-        `✅ Payment failure rollback completed for order ${order.id}`
-      );
     }
 
     // Mark webhook as successfully processed
@@ -792,8 +567,6 @@ export async function POST(request: NextRequest) {
         // Ignore if model doesn't exist
       }
     }
-
-    console.log("✅ Webhook processed successfully");
 
     return NextResponse.json({
       success: true,

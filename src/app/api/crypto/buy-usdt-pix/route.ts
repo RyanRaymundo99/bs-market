@@ -104,43 +104,14 @@ export async function POST(request: NextRequest) {
         callback_url: callbackUrl,
       });
 
-      // Extract response data - NutzPay returns the data directly or nested
-      // Response structure: { success: true, transactionId, qrCode, pixKey, qrCodeUrl, ... }
       const responseData = nutzPayResponse.data || nutzPayResponse;
 
-      console.log(
-        "NutzPay Full Response:",
-        JSON.stringify(nutzPayResponse, null, 2)
-      );
-      console.log(
-        "NutzPay Response Data:",
-        JSON.stringify(responseData, null, 2)
-      );
-
-      // Extract transaction ID from NutzPay response
-      // According to NutzPay API docs:
-      // - Response: { success: true, data: { transaction_id: "txn_usdt_123", pix_data: { transaction_id: "135724065011" } } }
-      // - Webhook sends: { event: "transaction.completed", data: { transaction_id: "txn_usdt_123" } }
-      // - The webhook sends data.transaction_id (internal ID like "txn_usdt_123"), NOT pix_data.transaction_id
-      // - We MUST store data.transaction_id to match webhook
       const transactionId =
-        responseData.transaction_id || // PRIMARY: Internal transaction ID (matches webhook data.transaction_id)
-        responseData.transactionId || // Alternative field name
-        responseData.pix_data?.transaction_id || // Fallback: PIX transaction ID (if internal ID not available)
-        responseData.providerTransactionId || // Fallback: Provider transaction ID
+        responseData.transaction_id ||
+        responseData.transactionId ||
+        responseData.pix_data?.transaction_id ||
+        responseData.providerTransactionId ||
         null;
-
-      console.log("🔑 Transaction ID Extraction:", {
-        "data.transaction_id (PRIMARY - matches webhook)":
-          responseData.transaction_id,
-        "data.transactionId": responseData.transactionId,
-        "data.pix_data.transaction_id (fallback)":
-          responseData.pix_data?.transaction_id,
-        providerTransactionId: responseData.providerTransactionId,
-        "finalTransactionId (stored in order.externalOrderId)": transactionId,
-        "externalId (our original ID)": externalId,
-        note: "Webhook sends data.transaction_id, so we store data.transaction_id in order.externalOrderId",
-      });
 
       const responseStatus = responseData.status || "pending";
       const isCompleted =
@@ -161,44 +132,7 @@ export async function POST(request: NextRequest) {
       const qrCodeUrl =
         responseData.qrCodeUrl || responseData.qr_code_url || null;
 
-      // Use transactionId from NutzPay, or fallback to externalId
-      // IMPORTANT: We should always have a transactionId from NutzPay
       const finalTransactionId = transactionId || externalId;
-
-      if (!transactionId) {
-        console.warn(
-          "⚠️ WARNING: NutzPay did not return a transactionId. Using externalId as fallback:",
-          externalId
-        );
-      }
-
-      console.log("=== TRANSACTION ID SUMMARY ===");
-      console.log(
-        "✅ Storing in order.externalOrderId:",
-        finalTransactionId,
-        "(This MUST match webhook data.transaction_id)"
-      );
-      console.log(
-        "📋 Internal Transaction ID (from data.transaction_id):",
-        responseData.transaction_id || responseData.transactionId || "null"
-      );
-      console.log(
-        "📋 PIX Transaction ID (from data.pix_data.transaction_id):",
-        responseData.pix_data?.transaction_id || "null"
-      );
-      console.log(
-        "🔑 Our External ID (stored in deposit.externalId):",
-        externalId
-      );
-      console.log("Order ID (internal):", order.id);
-      console.log("External ID (fallback):", externalId);
-      console.log("Status:", responseStatus);
-      console.log(
-        "PIX Code (first 50 chars):",
-        pixCode ? pixCode.substring(0, 50) + "..." : "NOT FOUND"
-      );
-      console.log("QR Code URL:", qrCodeUrl || "NOT FOUND");
-      console.log("===========================");
 
       // Update order with NutzPay transaction ID (or externalId as fallback)
       // Note: externalOrderId was already set to externalId when order was created
@@ -294,7 +228,7 @@ export async function POST(request: NextRequest) {
         },
       });
     } catch (error: unknown) {
-      console.error("❌ NutzPay purchase error:", error);
+        console.error("NutzPay purchase error:", error);
       
       // Only mark as FAILED if it's a real error (not just a network timeout or temporary issue)
       // For temporary issues, keep it as PENDING so it can be retried
@@ -314,7 +248,6 @@ export async function POST(request: NextRequest) {
           error.message.includes("network")
         ) {
           shouldMarkAsFailed = false;
-          console.log("⚠️ Network/timeout error - keeping order as PENDING for retry");
         }
       } else if (error && typeof error === "object" && "response" in error) {
         const axiosError = error as {
@@ -325,13 +258,11 @@ export async function POST(request: NextRequest) {
         // Don't mark as failed for 5xx errors (server issues) - keep as PENDING
         if (axiosError.response?.status && axiosError.response.status >= 500) {
           shouldMarkAsFailed = false;
-          console.log("⚠️ Server error (5xx) - keeping order as PENDING for retry");
         }
         
         // Don't mark as failed for network errors
         if (axiosError.code === "ECONNREFUSED" || axiosError.code === "ENOTFOUND" || axiosError.code === "ETIMEDOUT") {
           shouldMarkAsFailed = false;
-          console.log("⚠️ Network error - keeping order as PENDING for retry");
         }
         
         if (axiosError.response?.data) {
@@ -355,7 +286,7 @@ export async function POST(request: NextRequest) {
 
       // Only update status to FAILED if it's a real error (not temporary)
       if (shouldMarkAsFailed) {
-        console.error("❌ Marking order as FAILED due to real error");
+          console.error("Marking order as FAILED due to error");
         await prisma.order.update({
           where: { id: order.id },
           data: {
@@ -363,7 +294,6 @@ export async function POST(request: NextRequest) {
           },
         });
       } else {
-        console.log("✅ Keeping order as PENDING - error appears to be temporary");
         // Order remains PENDING, can be retried later
       }
 
