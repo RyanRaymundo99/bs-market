@@ -601,51 +601,6 @@ const TradePage = () => {
             </div>
           ) : (
             <div className="bg-[#1E1E1E] rounded-xl border border-gray-800 overflow-hidden">
-              {/* Sync All Button */}
-              {transactionHistory.some((t) => t.status === "PENDING") && (
-                <div className="p-4 bg-gray-900 border-b border-gray-800">
-                  <button
-                    onClick={async () => {
-                      setLoading(true);
-                      try {
-                        const response = await fetch("/api/crypto/sync-all-pending", {
-                          method: "POST",
-                        });
-                        const data = await response.json();
-                        
-                        if (response.ok) {
-                          toast({
-                            title: "✅ Sincronização Concluída",
-                            description: `${data.results.synced} pedido(s) atualizado(s)`,
-                            duration: 5000,
-                          });
-                          // Refresh transaction history
-                          await fetchTransactionHistory();
-                        } else {
-                          toast({
-                            title: "Erro",
-                            description: data.error || "Falha ao sincronizar",
-                            variant: "destructive",
-                          });
-                        }
-                      } catch (error) {
-                        toast({
-                          title: "Erro",
-                          description: "Não foi possível sincronizar",
-                          variant: "destructive",
-                        });
-                      } finally {
-                        setLoading(false);
-                      }
-                    }}
-                    disabled={loading}
-                    className="w-full py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 text-white text-sm rounded font-medium"
-                  >
-                    {loading ? "Sincronizando..." : "🔄 Sincronizar Todos os Pendentes"}
-                  </button>
-                </div>
-              )}
-              
               {/* Header da tabela */}
               <div className="grid grid-cols-5 gap-4 p-4 bg-gray-900 border-b border-gray-800 text-sm font-medium text-[#A1A1AA]">
                 <div>Data/Hora</div>
@@ -692,20 +647,6 @@ const TradePage = () => {
                           ? "Pendente"
                           : "Falhou"}
                       </span>
-                      {transaction.status === "PENDING" && (
-                        <button
-                          onClick={async () => {
-                            if (transaction.id) {
-                              await checkPaymentStatus(transaction.id);
-                            }
-                          }}
-                          disabled={checkingStatus}
-                          className="text-xs text-blue-400 hover:text-blue-300 disabled:opacity-50"
-                          title="Sincronizar este pedido"
-                        >
-                          🔄
-                        </button>
-                      )}
                     </div>
 
                     {/* Valor */}
@@ -859,83 +800,6 @@ const TradePage = () => {
                     )}
                   </button>
 
-                  {/* Manual Sync Button - Shows if API check fails */}
-                  <button
-                    onClick={async () => {
-                      if (!pixData?.transactionId) {
-                        toast({
-                          title: "Erro",
-                          description: "ID da transação não encontrado",
-                          variant: "destructive",
-                        });
-                        return;
-                      }
-
-                      setCheckingStatus(true);
-                      try {
-                        // Manually trigger a webhook with completed status
-                        const payload = {
-                          event: "transaction.completed",
-                          data: {
-                            transaction_id: pixData.transactionId,
-                            external_id: pixData.transactionId,
-                            status: "COMPLETED",
-                            amount: pixData.amount,
-                            currency: "BRL",
-                            type: "PIX",
-                            usdt_amount: pixData.usdtAmount,
-                            created_at: new Date().toISOString(),
-                            completed_at: new Date().toISOString(),
-                          },
-                          timestamp: new Date().toISOString(),
-                        };
-
-                        const response = await fetch("/api/webhooks/nutzpay", {
-                          method: "POST",
-                          headers: {
-                            "Content-Type": "application/json",
-                            ...(process.env.NODE_ENV === "development" && { "x-test-webhook": "true" }),
-                          },
-                          body: JSON.stringify(payload),
-                        });
-
-                        const result = await response.json();
-
-                        if (response.ok) {
-                          toast({
-                            title: "✅ Status Atualizado",
-                            description: "O pagamento foi marcado como confirmado manualmente.",
-                            duration: 5000,
-                          });
-
-                          // Refresh payment status
-                          setTimeout(() => {
-                            checkPaymentStatus(pixData.transactionId);
-                          }, 1000);
-                        } else {
-                          toast({
-                            title: "Erro",
-                            description: result.error || "Falha ao atualizar status",
-                            variant: "destructive",
-                          });
-                        }
-                      } catch (error) {
-                        console.error("Error syncing status:", error);
-                        toast({
-                          title: "Erro",
-                          description: "Não foi possível sincronizar o status",
-                          variant: "destructive",
-                        });
-                      } finally {
-                        setCheckingStatus(false);
-                      }
-                    }}
-                    disabled={checkingStatus}
-                    className="w-full py-2 bg-yellow-600 hover:bg-yellow-700 disabled:bg-yellow-800 disabled:opacity-50 text-white text-sm rounded font-medium"
-                  >
-                    🔄 Sincronizar Manualmente (se API falhar)
-                  </button>
-                
                 <p className="text-xs text-[#A1A1AA] text-center">
                   Após o pagamento, seus USDT serão creditados automaticamente via webhook.
                   Você pode verificar o status a qualquer momento.
