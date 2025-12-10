@@ -86,9 +86,11 @@ export async function POST(request: NextRequest) {
 
     try {
       // Call NutzPay API to create USDT purchase
-      const callbackUrl = `${
-        process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"
-      }/api/webhooks/nutzpay`;
+      // Use NUTZPAY_WEBHOOK_URL if set (for testing with webhook.site), otherwise use default
+      const callbackUrl = process.env.NUTZPAY_WEBHOOK_URL || 
+        `${
+          process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"
+        }/api/webhooks/nutzpay`;
 
       const nutzPayResponse = await nutzPayService.createUSDTPurchase({
         amount: amount,
@@ -292,27 +294,46 @@ export async function POST(request: NextRequest) {
         },
       });
     } catch (error: unknown) {
-      // If NutzPay API call fails, update order status to failed
-      await prisma.order.update({
-        where: { id: order.id },
-        data: {
-          status: "FAILED",
-        },
-      });
-
-      console.error("NutzPay purchase error:", error);
-
-      // Return user-friendly error message
+      console.error("❌ NutzPay purchase error:", error);
+      
+      // Only mark as FAILED if it's a real error (not just a network timeout or temporary issue)
+      // For temporary issues, keep it as PENDING so it can be retried
+      let shouldMarkAsFailed = true;
       let errorMessage = "Failed to process USDT purchase with NutzPay";
       let errorDetails: unknown = undefined;
       let statusCode = 500;
 
       if (error instanceof Error) {
         errorMessage = error.message;
+        
+        // Don't mark as failed for network/timeout errors - keep as PENDING
+        if (
+          error.message.includes("timeout") ||
+          error.message.includes("ECONNREFUSED") ||
+          error.message.includes("ENOTFOUND") ||
+          error.message.includes("network")
+        ) {
+          shouldMarkAsFailed = false;
+          console.log("⚠️ Network/timeout error - keeping order as PENDING for retry");
+        }
       } else if (error && typeof error === "object" && "response" in error) {
         const axiosError = error as {
           response?: { data?: unknown; status?: number };
+          code?: string;
         };
+        
+        // Don't mark as failed for 5xx errors (server issues) - keep as PENDING
+        if (axiosError.response?.status && axiosError.response.status >= 500) {
+          shouldMarkAsFailed = false;
+          console.log("⚠️ Server error (5xx) - keeping order as PENDING for retry");
+        }
+        
+        // Don't mark as failed for network errors
+        if (axiosError.code === "ECONNREFUSED" || axiosError.code === "ENOTFOUND" || axiosError.code === "ETIMEDOUT") {
+          shouldMarkAsFailed = false;
+          console.log("⚠️ Network error - keeping order as PENDING for retry");
+        }
+        
         if (axiosError.response?.data) {
           errorDetails = axiosError.response.data;
           if (
@@ -332,10 +353,26 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // Only update status to FAILED if it's a real error (not temporary)
+      if (shouldMarkAsFailed) {
+        console.error("❌ Marking order as FAILED due to real error");
+        await prisma.order.update({
+          where: { id: order.id },
+          data: {
+            status: "FAILED",
+          },
+        });
+      } else {
+        console.log("✅ Keeping order as PENDING - error appears to be temporary");
+        // Order remains PENDING, can be retried later
+      }
+
       return NextResponse.json(
         {
           error: errorMessage,
           ...(errorDetails ? { details: errorDetails } : {}),
+          orderId: order.id,
+          orderStatus: shouldMarkAsFailed ? "FAILED" : "PENDING",
         },
         { status: statusCode }
       );

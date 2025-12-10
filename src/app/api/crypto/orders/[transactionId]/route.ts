@@ -120,7 +120,11 @@ export async function GET(
           }
         }
         
-        if (nutzPayStatus) {
+        // Handle case where NutzPay API returns null (server errors)
+        if (nutzPayStatus === null) {
+          console.log("⚠️ NutzPay API returned null (server error) - order will remain PENDING");
+          console.log("Webhook will update order status when payment is confirmed");
+        } else if (nutzPayStatus) {
           // Try multiple possible status field names
           const nutzPayStatusValue = 
             nutzPayStatus.status || 

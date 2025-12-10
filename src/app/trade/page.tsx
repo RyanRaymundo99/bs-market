@@ -963,20 +963,19 @@ const TradePage = () => {
                       <button
                         onClick={() => {
                           if (pixData) {
+                            // Use the flat format that NutzPay actually sends (matches webhook.site format)
                             const payload = {
-                              event: "transaction.completed",
-                              data: {
-                                transaction_id: pixData.transactionId,
-                                external_id: pixData.transactionId,
-                                status: "COMPLETED",
-                                amount: pixData.amount,
-                                currency: "BRL",
-                                type: "PIX",
-                                usdt_amount: pixData.usdtAmount,
-                                created_at: new Date().toISOString(),
-                                completed_at: new Date().toISOString(),
-                              },
-                              timestamp: new Date().toISOString(),
+                              event: "payment.confirmed",
+                              transaction_id: pixData.transactionId,
+                              status: "COMPLETED",
+                              amount: pixData.usdtAmount, // USDT amount
+                              currency: "USDT",
+                              amount_paid_brl: pixData.amount, // BRL amount paid
+                              payment_method: "PIX_TO_USDT",
+                              acquirer: "MERCADOPAGO",
+                              created_at: new Date().toISOString(),
+                              completed_at: new Date().toISOString(),
+                              metadata: {},
                             };
                             setWebhookTestPayload(JSON.stringify(payload, null, 2));
                           }
@@ -988,19 +987,15 @@ const TradePage = () => {
                       <button
                         onClick={() => {
                           if (pixData) {
+                            // Use the flat format that NutzPay actually sends
                             const payload = {
-                              event: "transaction.created",
-                              data: {
-                                transaction_id: pixData.transactionId,
-                                external_id: pixData.transactionId,
-                                status: "PENDING",
-                                amount: pixData.amount,
-                                currency: "BRL",
-                                type: "PIX",
-                                usdt_amount: pixData.usdtAmount,
-                                created_at: new Date().toISOString(),
-                              },
-                              timestamp: new Date().toISOString(),
+                              event: "payment.received",
+                              transaction_id: pixData.transactionId,
+                              external_id: `purchase_${pixData.transactionId}`, // Our external_id format
+                              status: "pending",
+                              amount: pixData.usdtAmount,
+                              amount_brl: pixData.amount,
+                              created_at: new Date().toISOString(),
                             };
                             setWebhookTestPayload(JSON.stringify(payload, null, 2));
                           }
@@ -1012,19 +1007,17 @@ const TradePage = () => {
                       <button
                         onClick={() => {
                           if (pixData) {
+                            // Use the flat format that NutzPay actually sends
                             const payload = {
-                              event: "transaction.failed",
-                              data: {
-                                transaction_id: pixData.transactionId,
-                                external_id: pixData.transactionId,
-                                status: "FAILED",
-                                amount: pixData.amount,
-                                currency: "BRL",
-                                type: "PIX",
-                                usdt_amount: pixData.usdtAmount,
-                                created_at: new Date().toISOString(),
-                              },
-                              timestamp: new Date().toISOString(),
+                              event: "payment.failed",
+                              transaction_id: pixData.transactionId,
+                              status: "FAILED",
+                              amount: pixData.usdtAmount,
+                              currency: "USDT",
+                              amount_paid_brl: pixData.amount,
+                              payment_method: "PIX_TO_USDT",
+                              created_at: new Date().toISOString(),
+                              metadata: {},
                             };
                             setWebhookTestPayload(JSON.stringify(payload, null, 2));
                           }
@@ -1039,7 +1032,7 @@ const TradePage = () => {
                       value={webhookTestPayload}
                       onChange={(e) => setWebhookTestPayload(e.target.value)}
                       className="w-full h-64 p-3 bg-gray-900 border border-gray-700 rounded text-white font-mono text-xs resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder='{"event": "transaction.completed", "data": {...}}'
+                      placeholder='{"event": "payment.confirmed", "transaction_id": "...", "status": "COMPLETED", ...}'
                     />
 
                     <button

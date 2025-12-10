@@ -23,11 +23,16 @@ export async function POST(request: NextRequest) {
     const body = JSON.parse(rawBody);
 
     // Extract webhook metadata
+    // NutzPay can send webhooks in two formats:
+    // 1. Nested: { event: "...", data: { transaction_id: "...", status: "..." } }
+    // 2. Flat: { event: "...", transaction_id: "...", status: "..." }
     const eventType = body.event || "transaction.unknown";
-    const webhookData = body.data || body;
-    const transaction_id = webhookData.transaction_id;
-    const external_id = webhookData.external_id;
-    const status = webhookData.status?.toLowerCase() || "pending";
+    const webhookData = body.data || body; // Use nested data if present, otherwise use body itself
+    
+    // Extract transaction_id from either nested data or top-level
+    const transaction_id = webhookData.transaction_id || body.transaction_id;
+    const external_id = webhookData.external_id || body.external_id;
+    const status = (webhookData.status || body.status || "pending")?.toLowerCase();
     const ipAddress =
       request.headers.get("x-forwarded-for") ||
       request.headers.get("x-real-ip") ||
@@ -106,15 +111,22 @@ export async function POST(request: NextRequest) {
     }
 
     // Log signature validation result for debugging
+    const signatureHeader = 
+      request.headers.get("x-signature") ||
+      request.headers.get("x-webhook-signature") ||
+      request.headers.get("X-Signature") ||
+      request.headers.get("X-Webhook-Signature");
+    
     console.log("🔐 Signature Validation:", {
       isValid: isValidSignature,
       isDevelopment,
       isTestWebhook,
       willProcess: isValidSignature || isTestWebhook,
-      hasSignatureHeader: !!request.headers.get("x-webhook-signature"),
-      signatureHeaderName: request.headers.get("x-webhook-signature") ? "x-webhook-signature" : 
-                          request.headers.get("X-Webhook-Signature") ? "X-Webhook-Signature" :
-                          request.headers.get("X-WEBHOOK-SIGNATURE") ? "X-WEBHOOK-SIGNATURE" : "none",
+      hasSignatureHeader: !!signatureHeader,
+      signatureHeaderName: signatureHeader ? 
+        (request.headers.get("x-signature") ? "x-signature" :
+         request.headers.get("x-webhook-signature") ? "x-webhook-signature" :
+         request.headers.get("X-Signature") ? "X-Signature" : "X-Webhook-Signature") : "none",
       note: isTestWebhook
         ? "Test webhook mode: Signature verification skipped"
         : isDevelopment
@@ -151,17 +163,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Extract fields from NutzPay payload structure using the webhookData from above
-    const amount = webhookData.amount || webhookData.value;
-    const currency = webhookData.currency || "BRL";
-    const type = webhookData.type || webhookData.payment_method || "PIX";
-    const user_id = webhookData.user_id || webhookData.customer_id;
-    const usdt_amount = webhookData.usdt_amount || webhookData.crypto_amount;
-    const created_at = webhookData.created_at || webhookData.createdAt;
+    // Extract fields from NutzPay payload structure
+    // Handle both nested (body.data) and flat (body) payload formats
+    const amount = webhookData.amount || body.amount || webhookData.value || body.value || webhookData.amount_paid_brl || body.amount_paid_brl;
+    const currency = webhookData.currency || body.currency || "BRL";
+    const type = webhookData.type || body.type || webhookData.payment_method || body.payment_method || "PIX";
+    const user_id = webhookData.user_id || body.user_id || webhookData.customer_id || body.customer_id;
+    const usdt_amount = webhookData.usdt_amount || body.usdt_amount || webhookData.crypto_amount || body.crypto_amount || webhookData.amount || body.amount;
+    const created_at = webhookData.created_at || body.created_at || webhookData.createdAt || body.createdAt;
     const completed_at =
       webhookData.completed_at ||
+      body.completed_at ||
       webhookData.completedAt ||
-      webhookData.executed_at;
+      body.completedAt ||
+      webhookData.executed_at ||
+      body.executed_at;
 
     // According to NutzPay docs, webhook always has transaction_id
     // external_id might not be present (it's optional)
@@ -273,6 +289,27 @@ export async function POST(request: NextRequest) {
         ? "matched by externalOrderId"
         : "not found, trying deposit lookup",
     });
+    
+    // Log all orders with similar transaction IDs for debugging
+    if (!order && transaction_id) {
+      console.log("🔍 DEBUG: Searching for orders with similar transaction_id...");
+      const similarOrders = await prisma.order.findMany({
+        where: {
+          OR: [
+            { externalOrderId: { contains: transaction_id.substring(0, 10) } },
+            { id: { contains: transaction_id.substring(0, 10) } },
+          ],
+        },
+        take: 5,
+        select: {
+          id: true,
+          externalOrderId: true,
+          status: true,
+          createdAt: true,
+        },
+      });
+      console.log("🔍 Similar orders found:", JSON.stringify(similarOrders, null, 2));
+    }
 
     // If not found, try finding by deposit externalId
     // The deposit stores our original externalId, which matches webhook's external_id
@@ -460,6 +497,7 @@ export async function POST(request: NextRequest) {
     if (
       eventType === "transaction.completed" ||
       eventType === "payment.completed" ||
+      eventType === "payment.confirmed" || // NutzPay also sends this event type
       status === "completed" ||
       status === "COMPLETED"
     ) {

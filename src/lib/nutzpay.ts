@@ -142,6 +142,7 @@ export class NutzPayService {
         external_id: data.external_id || `purchase_${Date.now()}`,
         callback_url:
           data.callback_url ||
+          process.env.NUTZPAY_WEBHOOK_URL ||
           `${
             process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"
           }/api/webhooks/nutzpay`,
@@ -277,7 +278,7 @@ export class NutzPayService {
           console.log(`Trying endpoint: ${endpoint}`);
           const response = await axios.get(endpoint, {
             headers,
-            validateStatus: (status) => status < 500, // Don't throw on 4xx errors
+            validateStatus: () => true, // Don't throw on any status - handle all manually
           });
 
           console.log("📡 NutzPay API Response Status:", response.status);
@@ -298,13 +299,35 @@ export class NutzPayService {
             continue; // Try next endpoint
           }
 
-          // If we get here, we got a response but not 200/201/404
+          // Handle 500 errors gracefully - don't throw, just log and try next endpoint
+          if (response.status >= 500) {
+            console.log(
+              `⚠️ NutzPay API server error (${response.status}) at ${endpoint}, trying next endpoint...`
+            );
+            console.log("Response data:", response.data);
+            lastError = new Error(`NutzPay API server error: ${response.status}`);
+            continue; // Try next endpoint
+          }
+
+          // If we get here, we got a response but not 200/201/404/5xx
           const responseData = response.data?.data || response.data;
           console.log(
             `⚠️ Got status ${response.status} from ${endpoint}, but continuing...`
           );
           return responseData;
         } catch (error) {
+          // Only catch non-HTTP errors (network errors, etc.)
+          if (axios.isAxiosError(error) && error.response) {
+            // This is an HTTP error - we should have caught it above
+            // But if we get here, it means validateStatus didn't work as expected
+            if (error.response.status >= 500) {
+              console.log(
+                `⚠️ NutzPay API server error (${error.response.status}), trying next endpoint...`
+              );
+              lastError = error instanceof Error ? error : new Error(String(error));
+              continue;
+            }
+          }
           lastError = error instanceof Error ? error : new Error(String(error));
           if (axios.isAxiosError(error)) {
             if (error.response?.status === 404) {
@@ -327,8 +350,22 @@ export class NutzPayService {
         }
       }
 
-      // If all endpoints failed, throw the last error
+      // If all endpoints failed, check if it was a server error (5xx)
+      // For server errors, don't throw - just return null so order stays PENDING
       if (lastError) {
+        const isServerError = lastError.message.includes("500") || 
+                             lastError.message.includes("server error") ||
+                             lastError.message.includes("502") ||
+                             lastError.message.includes("503") ||
+                             lastError.message.includes("504");
+        
+        if (isServerError) {
+          console.log("⚠️ NutzPay API server errors on all endpoints - order will remain PENDING");
+          console.log("This is likely a temporary NutzPay issue. Webhook will update order when payment is confirmed.");
+          return null; // Return null instead of throwing - order stays PENDING
+        }
+        
+        // For other errors (4xx, network, etc.), throw
         throw lastError;
       }
 
@@ -454,22 +491,29 @@ export class NutzPayService {
         return false; // Fail closed - require secret for security
       }
 
-      // Get signature from X-Webhook-Signature header (as per NutzPay docs)
-      // Try different case variations as some servers may send headers with different casing
+      // Get signature from header - NutzPay may send it as x-signature or x-webhook-signature
+      // Try different header names and case variations
       const signature = 
+        request.headers.get("x-signature") ||
+        request.headers.get("X-Signature") ||
+        request.headers.get("X-SIGNATURE") ||
         request.headers.get("x-webhook-signature") ||
         request.headers.get("X-Webhook-Signature") ||
         request.headers.get("X-WEBHOOK-SIGNATURE");
 
       if (!signature) {
         console.error(
-          "Missing X-Webhook-Signature header. NutzPay requires signature validation."
+          "Missing signature header. NutzPay requires signature validation."
         );
-        console.error("Available headers:", Array.from(request.headers.keys()).filter(h => 
-          h.toLowerCase().includes("signature") || h.toLowerCase().includes("webhook")
-        ));
+        const relevantHeaders = Array.from(request.headers.keys()).filter(h => 
+          h.toLowerCase().includes("signature") || h.toLowerCase().includes("webhook") || h.toLowerCase().includes("x-")
+        );
+        console.error("Available headers:", relevantHeaders);
+        console.error("All headers:", Array.from(request.headers.keys()));
         return false; // Fail closed - require signature
       }
+      
+      console.log("✅ Found signature header:", signature.substring(0, 20) + "...");
 
       // Calculate expected signature using HMAC-SHA256
       // IMPORTANT: Use the raw body string (not parsed JSON) for signature verification
