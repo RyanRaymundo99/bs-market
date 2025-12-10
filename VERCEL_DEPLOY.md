@@ -5,6 +5,7 @@
 ### 1. Connect to Vercel
 
 **Via GitHub (Recommended):**
+
 1. Push your code to GitHub
 2. Go to [vercel.com](https://vercel.com)
 3. Click "New Project"
@@ -12,6 +13,7 @@
 5. Vercel will auto-detect Next.js settings
 
 **Via Vercel CLI:**
+
 ```bash
 npm i -g vercel
 vercel login
@@ -23,6 +25,7 @@ vercel --prod
 Set these in Vercel Dashboard > Settings > Environment Variables:
 
 #### Required
+
 ```env
 DATABASE_URL=postgresql://user:pass@host:port/db
 BETTER_AUTH_SECRET=your-secret-minimum-32-characters
@@ -32,6 +35,7 @@ NODE_ENV=production
 ```
 
 #### NutzPay (Required for PIX payments)
+
 ```env
 PUBLIC_KEY=ntz_live_your-public-key
 SECRET_KEY=ntz_secret_your-secret-key
@@ -40,6 +44,7 @@ NUTZPAY_WEBHOOK_SECRET=your-webhook-secret-from-nutzpay-dashboard
 ```
 
 #### Optional but Recommended
+
 ```env
 RESEND_API_KEY=re_your-resend-key
 FROM_EMAIL=noreply@your-domain.com
@@ -56,6 +61,7 @@ TEXTBELT_API_KEY=textbelt
 ### 3. Build Settings
 
 Vercel will auto-detect these settings:
+
 - **Framework Preset:** Next.js
 - **Build Command:** `npm run build`
 - **Output Directory:** `.next`
@@ -64,6 +70,7 @@ Vercel will auto-detect these settings:
 ### 4. Database Setup
 
 After deployment:
+
 1. Go to Vercel Dashboard > Functions
 2. Open terminal
 3. Run: `npx prisma db push`
@@ -91,6 +98,7 @@ See `PRODUCTION_WEBHOOK_SETUP.md` for detailed instructions.
 ### 6. Performance Optimizations
 
 The project is already optimized for Vercel:
+
 - ✅ Next.js 15 with App Router
 - ✅ Server-side rendering
 - ✅ Image optimization
@@ -108,16 +116,19 @@ The project is already optimized for Vercel:
 ### 8. Troubleshooting
 
 **Build Fails:**
+
 - Check environment variables
 - Verify database connection
 - Run `npm run build` locally first
 
 **Database Issues:**
+
 - Verify `DATABASE_URL` format
 - Check database permissions
 - Run `npx prisma db push`
 
 **Auth Issues:**
+
 - Verify `BETTER_AUTH_SECRET` (32+ chars)
 - Check `BETTER_AUTH_URL` matches domain
 - Clear browser cookies
