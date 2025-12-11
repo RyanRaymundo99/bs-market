@@ -25,12 +25,12 @@ const TradePage = () => {
         method: "POST",
         credentials: "include",
       });
-      
+
       // Clear local storage
       localStorage.removeItem("auth-session");
       localStorage.removeItem("user");
       sessionStorage.clear();
-      
+
       // Force redirect to home page using window.location for reliability
       window.location.href = "/";
     } catch (error) {
@@ -73,14 +73,14 @@ const TradePage = () => {
   // Estado para o histórico de transações
   const [transactionHistory, setTransactionHistory] = useState<
     Array<{
-    id: string;
-    date: Date;
+      id: string;
+      date: Date;
       type: "buy";
-    amount: number;
-    received: number;
-    fee: number;
-    rate: number;
-    status: string;
+      amount: number;
+      received: number;
+      fee: number;
+      rate: number;
+      status: string;
     }>
   >([]);
 
@@ -163,7 +163,7 @@ const TradePage = () => {
     try {
       setPriceLoading(true);
       const response = await fetch("/api/crypto/usdt-rate");
-      
+
       if (!response.ok) {
         console.warn("Failed to fetch USDT rate, using fallback");
         return; // Keep current price or use fallback
@@ -357,7 +357,7 @@ const TradePage = () => {
         setTimeout(() => setCopied(false), 2000);
       } catch (error) {
         console.error("Failed to copy:", error);
-      toast({
+        toast({
           title: "Erro",
           description: "Não foi possível copiar o código PIX",
           variant: "destructive",
@@ -374,7 +374,7 @@ const TradePage = () => {
       try {
         console.log("🔍 Checking payment status for:", transactionId);
         const response = await fetch(`/api/crypto/orders/${transactionId}`);
-        
+
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
           console.error("❌ API error:", response.status, errorData);
@@ -728,7 +728,7 @@ const TradePage = () => {
                     </p>
                   </div>
                 </div>
-                
+
                 {/* PIX Code Display */}
                 {pixData.qrCode && (
                   <div className="space-y-2">

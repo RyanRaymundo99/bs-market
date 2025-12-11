@@ -85,8 +85,8 @@ const AdminKYCPage = () => {
       console.error("Error fetching users:", error);
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Failed to fetch users",
+        title: "Erro",
+        description: "Falha ao buscar usuários",
       });
     } finally {
       setLoading(false);
@@ -137,8 +137,8 @@ const AdminKYCPage = () => {
 
       if (response.ok) {
         toast({
-          title: "Success",
-          description: "User KYC approved successfully",
+        title: "Sucesso",
+        description: "KYC do usuário aprovado com sucesso",
         });
         fetchUsers();
         setSelectedUser(null);
@@ -149,8 +149,8 @@ const AdminKYCPage = () => {
       console.error("Error approving KYC:", error);
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Failed to approve KYC",
+        title: "Erro",
+        description: "Falha ao aprovar KYC",
       });
     } finally {
       setActionLoading(null);
@@ -161,8 +161,8 @@ const AdminKYCPage = () => {
     if (!rejectionReason.trim()) {
       toast({
         variant: "destructive",
-        title: "Rejection reason required",
-        description: "Please provide a reason for rejection",
+        title: "Motivo da rejeição obrigatório",
+        description: "Por favor, forneça um motivo para a rejeição",
       });
       return;
     }
@@ -181,8 +181,8 @@ const AdminKYCPage = () => {
 
       if (response.ok) {
         toast({
-          title: "Success",
-          description: "User KYC rejected successfully",
+        title: "Sucesso",
+        description: "KYC do usuário rejeitado com sucesso",
         });
         fetchUsers();
         setSelectedUser(null);
@@ -194,8 +194,8 @@ const AdminKYCPage = () => {
       console.error("Error rejecting KYC:", error);
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Failed to reject KYC",
+        title: "Erro",
+        description: "Falha ao rejeitar KYC",
       });
     } finally {
       setActionLoading(null);
@@ -213,8 +213,8 @@ const AdminKYCPage = () => {
 
       if (response.ok) {
         toast({
-          title: "Success",
-          description: "KYC status reset to pending for re-review",
+        title: "Sucesso",
+        description: "Status KYC redefinido para pendente para nova revisão",
         });
         fetchUsers();
         setSelectedUser(null);
@@ -225,8 +225,8 @@ const AdminKYCPage = () => {
       console.error("Error resetting KYC:", error);
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Failed to reset KYC status",
+        title: "Erro",
+        description: "Falha ao redefinir status KYC",
       });
     } finally {
       setActionLoading(null);
@@ -238,25 +238,25 @@ const AdminKYCPage = () => {
       case "PENDING":
         return (
           <Badge variant="secondary" className="bg-yellow-600 text-white">
-            Pending
+            Pendente
           </Badge>
         );
       case "APPROVED":
         return (
           <Badge variant="secondary" className="bg-green-600 text-white">
-            Approved
+            Aprovado
           </Badge>
         );
       case "REJECTED":
         return (
           <Badge variant="secondary" className="bg-red-600 text-white">
-            Rejected
+            Rejeitado
           </Badge>
         );
       default:
         return (
           <Badge variant="secondary" className="bg-gray-600 text-white">
-            Unknown
+            Desconhecido
           </Badge>
         );
     }
@@ -282,7 +282,7 @@ const AdminKYCPage = () => {
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-white">Loading users...</p>
+          <p className="text-white">Carregando usuários...</p>
         </div>
       </div>
     );
@@ -298,10 +298,10 @@ const AdminKYCPage = () => {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-white mb-2">
-                KYC Verification
+                Verificação KYC
               </h1>
               <p className="text-gray-300">
-                Review and verify user identity documents
+                Revise e verifique documentos de identidade dos usuários
               </p>
             </div>
             <div className="flex items-center space-x-2">
@@ -318,7 +318,7 @@ const AdminKYCPage = () => {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <Input
-                    placeholder="Search by name, email, or CPF..."
+                    placeholder="Buscar por nome, email ou CPF..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10 bg-gray-700 border-gray-600 text-white placeholder:text-gray-400"
@@ -329,13 +329,13 @@ const AdminKYCPage = () => {
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
                     <Filter className="w-4 h-4 mr-2" />
-                    <SelectValue placeholder="Filter by status" />
+                    <SelectValue placeholder="Filtrar por status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="ALL">All Status</SelectItem>
-                    <SelectItem value="PENDING">Pending</SelectItem>
-                    <SelectItem value="APPROVED">Approved</SelectItem>
-                    <SelectItem value="REJECTED">Rejected</SelectItem>
+                    <SelectItem value="ALL">Todos os Status</SelectItem>
+                    <SelectItem value="PENDING">Pendente</SelectItem>
+                    <SelectItem value="APPROVED">Aprovado</SelectItem>
+                    <SelectItem value="REJECTED">Rejeitado</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -351,7 +351,7 @@ const AdminKYCPage = () => {
             size="sm"
             className="bg-gray-600 hover:bg-gray-700 text-white"
           >
-            All Status ({users.length})
+            Todos os Status ({users.length})
           </Button>
           <Button
             variant={statusFilter === "PENDING" ? "default" : "outline"}
@@ -359,7 +359,7 @@ const AdminKYCPage = () => {
             size="sm"
             className="bg-yellow-600 hover:bg-yellow-700 text-white"
           >
-            Pending ({users.filter((u) => u.kycStatus === "PENDING").length})
+            Pendente ({users.filter((u) => u.kycStatus === "PENDING").length})
           </Button>
           <Button
             variant={statusFilter === "APPROVED" ? "default" : "outline"}
@@ -367,7 +367,7 @@ const AdminKYCPage = () => {
             size="sm"
             className="bg-green-600 hover:bg-green-700 text-white"
           >
-            Approved ({users.filter((u) => u.kycStatus === "APPROVED").length})
+            Aprovado ({users.filter((u) => u.kycStatus === "APPROVED").length})
           </Button>
           <Button
             variant={statusFilter === "REJECTED" ? "default" : "outline"}
@@ -375,7 +375,7 @@ const AdminKYCPage = () => {
             size="sm"
             className="bg-red-600 hover:bg-red-700 text-white"
           >
-            Rejected ({users.filter((u) => u.kycStatus === "REJECTED").length})
+            Rejeitado ({users.filter((u) => u.kycStatus === "REJECTED").length})
           </Button>
         </div>
 
@@ -386,12 +386,12 @@ const AdminKYCPage = () => {
               <CardContent className="p-8 text-center">
                 <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-white mb-2">
-                  No users found
+                  Nenhum usuário encontrado
                 </h3>
                 <p className="text-gray-300">
                   {searchTerm || statusFilter !== "ALL"
-                    ? "Try adjusting your search or filter criteria"
-                    : "No users have submitted KYC documents yet"}
+                    ? "Tente ajustar sua busca ou critérios de filtro"
+                    : "Nenhum usuário enviou documentos KYC ainda"}
                 </p>
               </CardContent>
             </Card>
@@ -420,11 +420,11 @@ const AdminKYCPage = () => {
                           {getStatusBadge(user.kycStatus)}
                         </div>
                         <p className="text-xs text-gray-400">
-                          Submitted: {user.kycSubmittedAt ? formatDate(user.kycSubmittedAt) : 'N/A'}
+                          Enviado: {user.kycSubmittedAt ? formatDate(user.kycSubmittedAt) : 'N/A'}
                         </p>
                         {user.kycReviewedAt && (
                           <p className="text-xs text-gray-400">
-                            Reviewed: {formatDate(user.kycReviewedAt)}
+                            Revisado: {formatDate(user.kycReviewedAt)}
                           </p>
                         )}
                       </div>
@@ -439,13 +439,13 @@ const AdminKYCPage = () => {
                               className="border-gray-600 text-white hover:bg-gray-700"
                             >
                               <Eye className="w-4 h-4 mr-1" />
-                              Review
+                              Revisar
                             </Button>
                           </DialogTrigger>
                           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-gray-800 border-gray-700">
                             <DialogHeader>
                               <DialogTitle className="text-white">
-                                KYC Document Review - {user.name}
+                                Revisão de Documentos KYC - {user.name}
                               </DialogTitle>
                             </DialogHeader>
 
@@ -454,7 +454,7 @@ const AdminKYCPage = () => {
                               <div className="grid grid-cols-2 gap-4 p-4 bg-gray-700 rounded-lg">
                                 <div>
                                   <label className="text-sm font-medium text-gray-300">
-                                    Name
+                                    Nome
                                   </label>
                                   <p className="text-sm text-white">
                                     {user.name}
@@ -478,7 +478,7 @@ const AdminKYCPage = () => {
                                 </div>
                                 <div>
                                   <label className="text-sm font-medium text-gray-300">
-                                    Document Type
+                                    Tipo de Documento
                                   </label>
                                   <p className="text-sm text-white">
                                     {user.documentType || 'N/A'}
@@ -486,7 +486,7 @@ const AdminKYCPage = () => {
                                 </div>
                                 <div>
                                   <label className="text-sm font-medium text-gray-300">
-                                    Document Number
+                                    Número do Documento
                                   </label>
                                   <p className="text-sm text-white">
                                     {user.documentNumber || 'N/A'}
@@ -506,7 +506,7 @@ const AdminKYCPage = () => {
                               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
                                   <h4 className="font-medium text-white mb-2 flex items-center gap-2">
-                                    Document Front
+                                    Frente do Documento
                                     <ZoomIn className="w-4 h-4 text-gray-400" />
                                   </h4>
                                   {user.documentFront ? (
@@ -515,14 +515,14 @@ const AdminKYCPage = () => {
                                       onClick={() =>
                                         handleImageClick(
                                           user.documentFront!,
-                                          "Document Front",
-                                          "Document Front"
+                                          "Frente do Documento",
+                                          "Frente do Documento"
                                         )
                                       }
                                     >
                                       <img
                                         src={user.documentFront}
-                                        alt="Document Front"
+                                        alt="Frente do Documento"
                                         className="w-full h-48 object-cover rounded-lg border border-gray-600 group-hover:border-blue-500 transition-colors"
                                       />
                                       <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-lg flex items-center justify-center">
@@ -531,13 +531,13 @@ const AdminKYCPage = () => {
                                     </div>
                                   ) : (
                                     <div className="w-full h-48 bg-gray-700 rounded-lg border border-gray-600 flex items-center justify-center">
-                                      <p className="text-gray-400">No document uploaded</p>
+                                      <p className="text-gray-400">Nenhum documento enviado</p>
                                     </div>
                                   )}
                                 </div>
                                 <div>
                                   <h4 className="font-medium text-white mb-2 flex items-center gap-2">
-                                    Document Back
+                                    Verso do Documento
                                     <ZoomIn className="w-4 h-4 text-gray-400" />
                                   </h4>
                                   {user.documentBack ? (
@@ -546,14 +546,14 @@ const AdminKYCPage = () => {
                                       onClick={() =>
                                         handleImageClick(
                                           user.documentBack!,
-                                          "Document Back",
-                                          "Document Back"
+                                          "Verso do Documento",
+                                          "Verso do Documento"
                                         )
                                       }
                                     >
                                       <img
                                         src={user.documentBack}
-                                        alt="Document Back"
+                                        alt="Verso do Documento"
                                         className="w-full h-48 object-cover rounded-lg border border-gray-600 group-hover:border-blue-500 transition-colors"
                                     />
                                     <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-lg flex items-center justify-center">
@@ -562,13 +562,13 @@ const AdminKYCPage = () => {
                                   </div>
                                   ) : (
                                     <div className="w-full h-48 bg-gray-700 rounded-lg border border-gray-600 flex items-center justify-center">
-                                      <p className="text-gray-400">No document uploaded</p>
+                                      <p className="text-gray-400">Nenhum documento enviado</p>
                                     </div>
                                   )}
                                 </div>
                                 <div>
                                   <h4 className="font-medium text-white mb-2 flex items-center gap-2">
-                                    Selfie with Document
+                                    Selfie com Documento
                                     <ZoomIn className="w-4 h-4 text-gray-400" />
                                   </h4>
                                   {user.documentSelfie ? (
@@ -577,14 +577,14 @@ const AdminKYCPage = () => {
                                       onClick={() =>
                                         handleImageClick(
                                           user.documentSelfie!,
-                                          "Selfie with Document",
-                                          "Selfie with Document"
+                                          "Selfie com Documento",
+                                          "Selfie com Documento"
                                         )
                                       }
                                     >
                                       <img
                                         src={user.documentSelfie}
-                                      alt="Selfie with Document"
+                                      alt="Selfie com Documento"
                                       className="w-full h-48 object-cover rounded-lg border border-gray-600 group-hover:border-blue-500 transition-colors"
                                     />
                                     <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-lg flex items-center justify-center">
@@ -593,7 +593,7 @@ const AdminKYCPage = () => {
                                   </div>
                                   ) : (
                                     <div className="w-full h-48 bg-gray-700 rounded-lg border border-gray-600 flex items-center justify-center">
-                                      <p className="text-gray-400">No document uploaded</p>
+                                      <p className="text-gray-400">Nenhum documento enviado</p>
                                     </div>
                                   )}
                                 </div>
@@ -603,7 +603,7 @@ const AdminKYCPage = () => {
                               <div className="mt-6">
                                 <h4 className="font-medium text-white mb-4 flex items-center gap-2">
                                   <Shield className="w-5 h-5" />
-                                  Fraud Detection Analysis
+                                  Análise de Detecção de Fraude
                                 </h4>
                                 <ImageAnalysisPanel
                                   documentFront={user.documentFront || ''}
@@ -625,7 +625,7 @@ const AdminKYCPage = () => {
                                       className="bg-green-600 hover:bg-green-700"
                                     >
                                       <CheckCircle className="w-4 h-4 mr-2" />
-                                      Approve
+                                      Aprovar
                                     </Button>
                                     <Dialog>
                                       <DialogTrigger asChild>
@@ -637,13 +637,13 @@ const AdminKYCPage = () => {
                                       <DialogContent className="bg-gray-800 border-gray-700">
                                         <DialogHeader>
                                           <DialogTitle className="text-white">
-                                            Reject KYC Verification
+                                            Rejeitar Verificação KYC
                                           </DialogTitle>
                                         </DialogHeader>
                                         <div className="space-y-4">
                                           <div>
                                             <label className="text-sm font-medium text-gray-300">
-                                              Rejection Reason
+                                              Motivo da Rejeição
                                             </label>
                                             <textarea
                                               value={rejectionReason}
@@ -652,7 +652,7 @@ const AdminKYCPage = () => {
                                                   e.target.value
                                                 )
                                               }
-                                              placeholder="Please provide a reason for rejection..."
+                                              placeholder="Por favor, forneça um motivo para a rejeição..."
                                               className="w-full mt-1 p-3 border border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-700 text-white placeholder:text-gray-400"
                                               rows={4}
                                             />
@@ -698,7 +698,7 @@ const AdminKYCPage = () => {
                                       className="bg-orange-600 hover:bg-orange-700"
                                     >
                                       <Clock className="w-4 h-4 mr-2" />
-                                      Reset to Pending
+                                      Redefinir para Pendente
                                     </Button>
                                     <Button
                                       onClick={() => handleApprove(user.id)}
@@ -706,7 +706,7 @@ const AdminKYCPage = () => {
                                       className="bg-blue-600 hover:bg-blue-700"
                                     >
                                       <CheckCircle className="w-4 h-4 mr-2" />
-                                      Re-approve
+                                      Reaprovar
                                     </Button>
                                     <Dialog>
                                       <DialogTrigger asChild>
@@ -718,13 +718,13 @@ const AdminKYCPage = () => {
                                       <DialogContent className="bg-gray-800 border-gray-700">
                                         <DialogHeader>
                                           <DialogTitle className="text-white">
-                                            Reject KYC Verification
+                                            Rejeitar Verificação KYC
                                           </DialogTitle>
                                         </DialogHeader>
                                         <div className="space-y-4">
                                           <div>
                                             <label className="text-sm font-medium text-gray-300">
-                                              Rejection Reason
+                                              Motivo da Rejeição
                                             </label>
                                             <textarea
                                               value={rejectionReason}
@@ -733,7 +733,7 @@ const AdminKYCPage = () => {
                                                   e.target.value
                                                 )
                                               }
-                                              placeholder="Please provide a reason for rejection..."
+                                              placeholder="Por favor, forneça um motivo para a rejeição..."
                                               className="w-full mt-1 p-3 border border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-700 text-white placeholder:text-gray-400"
                                               rows={4}
                                             />
@@ -772,7 +772,7 @@ const AdminKYCPage = () => {
                                 user.kycRejectionReason && (
                                   <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
                                     <h4 className="font-medium text-red-900 mb-2">
-                                      Rejection Reason
+                                      Motivo da Rejeição
                                     </h4>
                                     <p className="text-sm text-red-700">
                                       {user.kycRejectionReason}

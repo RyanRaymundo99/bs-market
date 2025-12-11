@@ -89,8 +89,8 @@ export async function POST(request: NextRequest) {
       // Use NUTZPAY_WEBHOOK_URL if set (for testing with webhook.site), otherwise use default
       const callbackUrl = process.env.NUTZPAY_WEBHOOK_URL || 
         `${
-          process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"
-        }/api/webhooks/nutzpay`;
+        process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"
+      }/api/webhooks/nutzpay`;
 
       const nutzPayResponse = await nutzPayService.createUSDTPurchase({
         amount: amount,
@@ -228,8 +228,8 @@ export async function POST(request: NextRequest) {
         },
       });
     } catch (error: unknown) {
-        console.error("NutzPay purchase error:", error);
-      
+      console.error("NutzPay purchase error:", error);
+
       // Only mark as FAILED if it's a real error (not just a network timeout or temporary issue)
       // For temporary issues, keep it as PENDING so it can be retried
       let shouldMarkAsFailed = true;

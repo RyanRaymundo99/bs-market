@@ -93,8 +93,8 @@ export async function POST(request: NextRequest) {
       // Use NUTZPAY_WEBHOOK_URL if set (for testing with webhook.site), otherwise use default
       const callbackUrl = process.env.NUTZPAY_WEBHOOK_URL || 
         `${
-          process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"
-        }/api/webhooks/nutzpay`;
+        process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"
+      }/api/webhooks/nutzpay`;
 
       const nutzPayResponse = await nutzPayService.createUSDTWithdrawal({
         amount: amount, // Send the full amount, NutzPay will calculate fee

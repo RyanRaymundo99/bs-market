@@ -87,23 +87,23 @@ const SignupWithMandatoryKYC = () => {
           setUserData(data);
           setCurrentStep("kyc");
           toast({
-            title: "Account created!",
-            description: "Now please complete your identity verification",
+            title: "Conta criada!",
+            description: "Agora complete sua verificação de identidade",
           });
         } else {
           toast({
             variant: "destructive",
-            title: "Error creating account",
+            title: "Erro ao criar conta",
             description:
-              result.error || "An error occurred while creating your account.",
+              result.error || "Ocorreu um erro ao criar sua conta.",
           });
         }
       } catch (error) {
         console.error("Signup error:", error);
         toast({
           variant: "destructive",
-          title: "Error creating account",
-          description: "An unexpected error occurred",
+          title: "Erro ao criar conta",
+          description: "Ocorreu um erro inesperado",
         });
       } finally {
         setLoading(false);
@@ -132,8 +132,8 @@ const SignupWithMandatoryKYC = () => {
       if (response.ok) {
         setCurrentStep("success");
         toast({
-          title: "KYC Submitted!",
-          description: "Your documents have been submitted for review",
+          title: "KYC Enviado!",
+          description: "Seus documentos foram enviados para revisão",
         });
       } else {
         const errorData = await response.json();
@@ -143,9 +143,9 @@ const SignupWithMandatoryKYC = () => {
       console.error("KYC submission error:", error);
       toast({
         variant: "destructive",
-        title: "KYC Submission Failed",
+        title: "Falha no Envio do KYC",
         description:
-          error instanceof Error ? error.message : "Failed to submit documents",
+          error instanceof Error ? error.message : "Falha ao enviar documentos",
       });
     } finally {
       setUploading(false);
@@ -183,7 +183,7 @@ const SignupWithMandatoryKYC = () => {
           >
             1
           </div>
-          <span className="text-sm font-medium">Account Info</span>
+          <span className="text-sm font-medium">Informações da Conta</span>
         </div>
         <div className="w-8 h-px bg-border"></div>
         <div
@@ -200,7 +200,7 @@ const SignupWithMandatoryKYC = () => {
           >
             2
           </div>
-          <span className="text-sm font-medium">KYC Documents</span>
+          <span className="text-sm font-medium">Documentos KYC</span>
         </div>
         <div className="w-8 h-px bg-border"></div>
         <div
@@ -217,7 +217,7 @@ const SignupWithMandatoryKYC = () => {
           >
             3
           </div>
-          <span className="text-sm font-medium">Complete</span>
+          <span className="text-sm font-medium">Concluir</span>
         </div>
       </div>
     </div>
@@ -230,11 +230,10 @@ const SignupWithMandatoryKYC = () => {
           <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
             <CheckCircle className="w-8 h-8 text-green-600" />
           </div>
-          <CardTitle className="text-2xl">Account Created!</CardTitle>
+          <CardTitle className="text-2xl">Conta Criada!</CardTitle>
           <p className="text-muted-foreground">
-            Your account has been created and your KYC documents have been
-            submitted for review. You will be notified once your account is
-            approved.
+            Sua conta foi criada e seus documentos KYC foram enviados para
+            revisão. Você será notificado assim que sua conta for aprovada.
           </p>
         </CardHeader>
         <CardContent>
@@ -242,7 +241,7 @@ const SignupWithMandatoryKYC = () => {
             onClick={() => router.push("/dashboard?kyc=pending")}
             className="w-full"
           >
-            Go to Dashboard
+            Ir para o Dashboard
           </Button>
         </CardContent>
       </Card>
@@ -252,9 +251,9 @@ const SignupWithMandatoryKYC = () => {
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
-        <CardTitle className="text-2xl text-center">Create Account</CardTitle>
+        <CardTitle className="text-2xl text-center">Criar Conta</CardTitle>
         <p className="text-muted-foreground text-center">
-          Complete your registration with KYC verification
+          Complete seu cadastro com verificação KYC
         </p>
         {renderStepIndicator()}
       </CardHeader>
@@ -263,7 +262,7 @@ const SignupWithMandatoryKYC = () => {
           <FormProvider {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <div>
-                <Label htmlFor="name">Full Name</Label>
+                <Label htmlFor="name">Nome Completo</Label>
                 <Input id="name" {...form.register("name")} className="mt-1" />
                 {form.formState.errors.name && (
                   <p className="text-sm text-red-600 mt-1">
@@ -288,7 +287,7 @@ const SignupWithMandatoryKYC = () => {
               </div>
 
               <div>
-                <Label htmlFor="phone">Phone</Label>
+                <Label htmlFor="phone">Telefone</Label>
                 <Input
                   id="phone"
                   {...form.register("phone")}
@@ -408,11 +407,11 @@ const SignupWithMandatoryKYC = () => {
                 {loading ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Creating Account...
+                    Criando Conta...
                   </>
                 ) : (
                   <>
-                    Create Account
+                    Criar Conta
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </>
                 )}
@@ -425,18 +424,18 @@ const SignupWithMandatoryKYC = () => {
           <div className="space-y-6">
             <div className="text-center">
               <h3 className="text-lg font-semibold mb-2">
-                Identity Verification Required
+                Verificação de Identidade Obrigatória
               </h3>
               <p className="text-sm text-muted-foreground">
-                Please upload your identity documents to complete your account
-                setup.
+                Por favor, envie seus documentos de identidade para completar
+                a configuração da sua conta.
               </p>
             </div>
 
             <div className="space-y-4">
               {/* Document Front */}
               <div>
-                <Label>Document Front (ID Card/Passport)</Label>
+                <Label>Frente do Documento (RG/Passaporte)</Label>
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
                   {kycData?.documentFront ? (
                     <div className="space-y-2">
@@ -449,7 +448,7 @@ const SignupWithMandatoryKYC = () => {
                     <div className="space-y-2">
                       <Upload className="w-8 h-8 mx-auto text-gray-400" />
                       <p className="text-sm text-gray-500">
-                        Click to upload document front
+                        Clique para enviar a frente do documento
                       </p>
                     </div>
                   )}
@@ -473,13 +472,13 @@ const SignupWithMandatoryKYC = () => {
                   className="w-full mt-2"
                 >
                   <Upload className="w-4 h-4 mr-2" />
-                  Upload Document Front
+                  Enviar Frente do Documento
                 </Button>
               </div>
 
               {/* Document Back */}
               <div>
-                <Label>Document Back (ID Card/Passport)</Label>
+                <Label>Verso do Documento (RG/Passaporte)</Label>
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
                   {kycData?.documentBack ? (
                     <div className="space-y-2">
@@ -492,7 +491,7 @@ const SignupWithMandatoryKYC = () => {
                     <div className="space-y-2">
                       <Upload className="w-8 h-8 mx-auto text-gray-400" />
                       <p className="text-sm text-gray-500">
-                        Click to upload document back
+                        Clique para enviar o verso do documento
                       </p>
                     </div>
                   )}
@@ -516,13 +515,13 @@ const SignupWithMandatoryKYC = () => {
                   className="w-full mt-2"
                 >
                   <Upload className="w-4 h-4 mr-2" />
-                  Upload Document Back
+                  Enviar Verso do Documento
                 </Button>
               </div>
 
               {/* Selfie */}
               <div>
-                <Label>Selfie with Document</Label>
+                <Label>Selfie com Documento</Label>
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
                   {kycData?.documentSelfie ? (
                     <div className="space-y-2">
@@ -535,7 +534,7 @@ const SignupWithMandatoryKYC = () => {
                     <div className="space-y-2">
                       <Upload className="w-8 h-8 mx-auto text-gray-400" />
                       <p className="text-sm text-gray-500">
-                        Click to upload selfie with document
+                        Clique para enviar selfie com documento
                       </p>
                     </div>
                   )}
@@ -559,7 +558,7 @@ const SignupWithMandatoryKYC = () => {
                   className="w-full mt-2"
                 >
                   <Camera className="w-4 h-4 mr-2" />
-                  Upload Selfie
+                  Enviar Selfie
                 </Button>
               </div>
             </div>
@@ -571,7 +570,7 @@ const SignupWithMandatoryKYC = () => {
                 className="flex-1"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
+                Voltar
               </Button>
               <Button
                 onClick={handleKYCSubmit}
@@ -586,11 +585,11 @@ const SignupWithMandatoryKYC = () => {
                 {uploading ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Submitting...
+                    Enviando...
                   </>
                 ) : (
                   <>
-                    Submit KYC
+                    Enviar KYC
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </>
                 )}

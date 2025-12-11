@@ -401,33 +401,17 @@ export default function WithdrawPage() {
         />
 
         {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
-          <Link href="/wallet">
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Wallet
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold">
-              Withdraw Funds — Saque de Fundos
-            </h1>
-            <p className="text-muted-foreground">
-              Escolha o método de saque e retire seus fundos
-            </p>
-          </div>
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold">
+            Withdraw Funds
+          </h1>
+          <p className="text-muted-foreground">
+            Escolha o método de saque e retire seus fundos
+          </p>
         </div>
 
         {/* Withdrawal Type Selection */}
         <div className="flex gap-4 mb-8">
-          <Button
-            variant={withdrawalType === "PIX" ? "default" : "outline"}
-            onClick={() => setWithdrawalType("PIX")}
-            className="flex items-center gap-2 px-6 py-3"
-          >
-            <CreditCard className="h-5 w-5" />
-            💵 Saque via PIX (BRL)
-          </Button>
           <Button
             variant={withdrawalType === "USDT" ? "default" : "outline"}
             onClick={() => setWithdrawalType("USDT")}

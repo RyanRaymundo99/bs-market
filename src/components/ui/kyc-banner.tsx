@@ -22,16 +22,16 @@ export const KYCBanner: React.FC<KYCBannerProps> = ({
       case "PENDING":
         return {
           icon: <Clock className="w-5 h-5" />,
-          title: "Account Under Review",
+          title: "Conta em Revisão",
           message:
-            "Your account is being processed. You will be notified soon as your documentation has been approved or disapproved.",
+            "Sua conta está sendo processada. Você será notificado assim que sua documentação for aprovada ou reprovada.",
           badge: (
             <Badge
               variant="secondary"
               className="bg-yellow-100 text-yellow-800 border-yellow-200"
             >
               <Clock className="w-3 h-3 mr-1" />
-              Under Review
+              Em Revisão
             </Badge>
           ),
           bgColor: "bg-yellow-50 border-yellow-200",
@@ -40,16 +40,16 @@ export const KYCBanner: React.FC<KYCBannerProps> = ({
       case "APPROVED":
         return {
           icon: <CheckCircle className="w-5 h-5" />,
-          title: "Account Approved",
+          title: "Conta Aprovada",
           message:
-            "Congratulations! Your account has been approved and you can now access all features.",
+            "Parabéns! Sua conta foi aprovada e agora você pode acessar todos os recursos.",
           badge: (
             <Badge
               variant="secondary"
               className="bg-green-100 text-green-800 border-green-200"
             >
               <CheckCircle className="w-3 h-3 mr-1" />
-              Approved
+              Aprovado
             </Badge>
           ),
           bgColor: "bg-green-50 border-green-200",
@@ -58,16 +58,16 @@ export const KYCBanner: React.FC<KYCBannerProps> = ({
       case "REJECTED":
         return {
           icon: <XCircle className="w-5 h-5" />,
-          title: "Account Rejected",
+          title: "Conta Rejeitada",
           message:
-            "Your account verification was rejected. Please contact support for more information.",
+            "A verificação da sua conta foi rejeitada. Por favor, entre em contato com o suporte para mais informações.",
           badge: (
             <Badge
               variant="secondary"
               className="bg-red-100 text-red-800 border-red-200"
             >
               <XCircle className="w-3 h-3 mr-1" />
-              Rejected
+              Rejeitado
             </Badge>
           ),
           bgColor: "bg-red-50 border-red-200",
@@ -76,15 +76,15 @@ export const KYCBanner: React.FC<KYCBannerProps> = ({
       default:
         return {
           icon: <AlertCircle className="w-5 h-5" />,
-          title: "Unknown Status",
-          message: "Your account status is unknown. Please contact support.",
+          title: "Status Desconhecido",
+          message: "O status da sua conta é desconhecido. Por favor, entre em contato com o suporte.",
           badge: (
             <Badge
               variant="secondary"
               className="bg-gray-100 text-gray-800 border-gray-200"
             >
               <AlertCircle className="w-3 h-3 mr-1" />
-              Unknown
+              Desconhecido
             </Badge>
           ),
           bgColor: "bg-gray-50 border-gray-200",
