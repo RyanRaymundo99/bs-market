@@ -2,7 +2,6 @@
 
 import React, { useState, useCallback, useEffect } from "react";
 import NavbarNew from "@/components/ui/navbar-new";
-import Breadcrumb from "@/components/ui/breadcrumb";
 import {
   Dialog,
   DialogContent,
@@ -10,8 +9,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, TrendingUp, Clock } from "lucide-react";
 
 const TradePage = () => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -490,41 +492,37 @@ const TradePage = () => {
   }, [pixData?.transactionId, checkPaymentStatus]);
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
-      <div className="container mx-auto px-4 py-8">
-        <Breadcrumb
-          items={[
-            { label: "Dashboard", href: "/dashboard" },
-            { label: "Trade" },
-          ]}
-        />
-      </div>
-      <div className="max-w-4xl mx-auto px-4 pb-8">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Comprar USDT</h1>
-          <p className="text-[#A1A1AA]">
+        <div className="text-center mb-6 sm:mb-8">
+          <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-brand-500 via-purple-600 to-brand-600 bg-clip-text text-transparent mb-2">
+            Comprar USDT
+          </h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
             Compre USDT via PIX • Taxa de 3% sobre o valor
           </p>
         </div>
 
-        {/* Boleta de Compra */}
-        <div className="bg-[#1E1E1E] rounded-xl p-6 border border-gray-800 mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-white">
-              Comprar USDT via PIX
-            </h2>
-            <span className="text-sm text-[#A1A1AA]">
-              {priceLoading
-                ? "Carregando..."
-                : `1 USDT = ${formatBRL(usdtPrice)}`}
-            </span>
-          </div>
+        {/* Purchase Card */}
+        <Card className="rounded-xl sm:rounded-2xl border-gray-800 bg-gray-900/50 backdrop-blur-sm mb-6 sm:mb-8">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <CardTitle className="text-lg sm:text-xl text-white">
+                Comprar USDT via PIX
+              </CardTitle>
+              <Badge variant="secondary" className="bg-brand-500/20 text-brand-400 border-brand-500/30">
+                {priceLoading
+                  ? "Carregando..."
+                  : `1 USDT = ${formatBRL(usdtPrice)}`}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4 sm:space-y-6">
 
-          <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-[#A1A1AA] mb-2">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
                 Valor em BRL
               </label>
               <input
@@ -533,153 +531,139 @@ const TradePage = () => {
                 onChange={handleBRLInputChange}
                 placeholder="0,00"
                 inputMode="decimal"
-                className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[#10B981] focus:ring-1 focus:ring-[#10B981] transition-colors"
+                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition-all"
               />
             </div>
 
-            <div className="text-sm text-[#A1A1AA] space-y-1">
-              <div className="flex justify-between">
+            <div className="bg-gray-800/30 rounded-xl p-4 space-y-2 border border-gray-700/50">
+              <div className="flex justify-between text-sm text-gray-400">
                 <span>Valor base:</span>
-                <span>{formatBRL(buyAmountBRL)}</span>
+                <span className="text-white">{formatBRL(buyAmountBRL)}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between text-sm text-gray-400">
                 <span>Taxa (3%):</span>
                 <span className="text-red-400">{formatBRL(buyFeeBRL)}</span>
               </div>
-              <div className="flex justify-between pt-1 border-t border-gray-700">
-                <span className="font-medium">Total a pagar:</span>
-                <span className="font-semibold text-white">
+              <div className="flex justify-between pt-2 border-t border-gray-700">
+                <span className="font-medium text-gray-300">Total a pagar:</span>
+                <span className="font-semibold text-white text-lg">
                   {formatBRL(buyTotalBRL)}
                 </span>
               </div>
             </div>
 
-            <div className="bg-gray-900 rounded-lg p-4">
-              <div className="text-sm text-[#A1A1AA] mb-1">Você receberá:</div>
-              <div className="text-2xl font-bold text-[#10B981]">
+            <div className="bg-gradient-to-br from-brand-500/20 to-green-500/20 rounded-xl p-4 sm:p-6 border border-brand-500/30">
+              <div className="text-sm text-gray-300 mb-2">Você receberá:</div>
+              <div className="text-2xl sm:text-3xl font-bold text-brand-400">
                 {formatUSDT(buyUSDTReceived)} USDT
               </div>
             </div>
 
-            <button
+            <Button
               onClick={handleBuyConfirm}
               disabled={buyAmountBRL <= 0 || loading}
-              className="w-full py-3 bg-[#10B981] hover:bg-[#059669] disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors"
+              className="w-full h-12 sm:h-14 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors text-base sm:text-lg"
             >
-              {loading ? "Processando..." : "Comprar USDT via PIX"}
-            </button>
-          </div>
-        </div>
+              {loading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  Processando...
+                </>
+              ) : (
+                "Comprar USDT via PIX"
+              )}
+            </Button>
+          </CardContent>
+        </Card>
 
-        {/* Histórico de Transações */}
-        <div className="mt-12">
-          <h2 className="text-2xl font-bold text-white mb-6">
-            Histórico de Compras
-          </h2>
-
-          {transactionHistory.length === 0 ? (
-            <div className="bg-[#1E1E1E] rounded-xl p-8 border border-gray-800 text-center">
-              <div className="text-[#A1A1AA] mb-2">
-                <svg
-                  className="w-12 h-12 mx-auto mb-4 text-gray-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                  />
-                </svg>
+        {/* Transaction History */}
+        <Card className="rounded-xl sm:rounded-2xl border-gray-800 bg-gray-900/50 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="text-lg sm:text-xl text-white flex items-center gap-2">
+              <Clock className="w-5 h-5" />
+              Histórico de Compras
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {transactionHistory.length === 0 ? (
+              <div className="text-center py-12">
+                <TrendingUp className="w-12 h-12 mx-auto mb-3 text-gray-600" />
+                <p className="text-gray-400 mb-1">Nenhuma compra realizada ainda</p>
+                <p className="text-sm text-gray-500">
+                  Suas compras aparecerão aqui
+                </p>
               </div>
-              <p className="text-[#A1A1AA]">Nenhuma compra realizada ainda</p>
-              <p className="text-sm text-gray-600 mt-1">
-                Suas compras aparecerão aqui
-              </p>
-            </div>
-          ) : (
-            <div className="bg-[#1E1E1E] rounded-xl border border-gray-800 overflow-hidden">
-              {/* Header da tabela */}
-              <div className="grid grid-cols-5 gap-4 p-4 bg-gray-900 border-b border-gray-800 text-sm font-medium text-[#A1A1AA]">
-                <div>Data/Hora</div>
-                <div>Status</div>
-                <div>Valor</div>
-                <div>Recebido</div>
-                <div>Taxa</div>
-              </div>
-
-              {/* Lista de transações */}
-              <div className="max-h-96 overflow-y-auto">
+            ) : (
+              <div className="space-y-2">
                 {transactionHistory.map((transaction) => (
                   <div
                     key={transaction.id}
-                    className="grid grid-cols-5 gap-4 p-4 border-b border-gray-800 hover:bg-gray-900/50 transition-colors last:border-b-0"
+                    className="p-4 rounded-xl bg-gray-800/30 border border-gray-700/50 hover:bg-gray-800/50 transition-colors"
                   >
-                    {/* Data/Hora */}
-                    <div className="text-sm">
-                      <div className="text-white">
-                        {transaction.date.toLocaleDateString("pt-BR")}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <Badge
+                            className={
+                              transaction.status === "COMPLETED"
+                                ? "bg-green-500/20 text-green-400 border-green-500/30"
+                                : transaction.status === "PENDING"
+                                ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
+                                : "bg-red-500/20 text-red-400 border-red-500/30"
+                            }
+                          >
+                            {transaction.status === "COMPLETED"
+                              ? "Concluída"
+                              : transaction.status === "PENDING"
+                              ? "Pendente"
+                              : "Falhou"}
+                          </Badge>
+                          <span className="text-xs text-gray-400">
+                            {transaction.date.toLocaleDateString("pt-BR")} às{" "}
+                            {transaction.date.toLocaleTimeString("pt-BR", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
+                          <div>
+                            <p className="text-gray-400 text-xs">Valor pago</p>
+                            <p className="text-white font-medium">
+                              {formatBRL(transaction.amount)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-gray-400 text-xs">Recebido</p>
+                            <p className="text-brand-400 font-semibold">
+                              {formatUSDT(transaction.received)} USDT
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-gray-400 text-xs">Taxa</p>
+                            <p className="text-gray-300">
+                              {formatBRL(transaction.fee)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-gray-400 text-xs">Taxa</p>
+                            <p className="text-gray-300">
+                              @ {formatBRL(transaction.rate)}
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-[#A1A1AA] text-xs">
-                        {transaction.date.toLocaleTimeString("pt-BR", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Status */}
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          transaction.status === "COMPLETED"
-                            ? "bg-green-900/30 text-green-400 border border-green-800"
-                            : transaction.status === "PENDING"
-                            ? "bg-yellow-900/30 text-yellow-400 border border-yellow-800"
-                            : "bg-red-900/30 text-red-400 border border-red-800"
-                        }`}
-                      >
-                        {transaction.status === "COMPLETED"
-                          ? "Concluída"
-                          : transaction.status === "PENDING"
-                          ? "Pendente"
-                          : "Falhou"}
-                      </span>
-                    </div>
-
-                    {/* Valor */}
-                    <div className="text-sm">
-                      <div className="text-white">
-                        {formatBRL(transaction.amount)}
-                      </div>
-                      <div className="text-[#A1A1AA] text-xs">
-                        @ {formatBRL(transaction.rate)}
-                      </div>
-                    </div>
-
-                    {/* Recebido */}
-                    <div className="text-sm">
-                      <div className="font-medium text-green-400">
-                        {formatUSDT(transaction.received)} USDT
-                      </div>
-                    </div>
-
-                    {/* Taxa */}
-                    <div className="text-sm text-[#A1A1AA]">
-                      {formatBRL(transaction.fee)}
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </CardContent>
+        </Card>
 
-        {/* Informações adicionais */}
-        <div className="mt-8 text-center">
-          <p className="text-sm text-[#A1A1AA]">
+        {/* Additional Info */}
+        <div className="mt-6 text-center">
+          <p className="text-xs sm:text-sm text-gray-400">
             • As cotações são atualizadas em tempo real
             <br />
             • Taxa de 3% aplicada em todas as operações

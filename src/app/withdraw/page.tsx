@@ -33,7 +33,6 @@ import {
   Wallet,
   Coins,
   History,
-  CreditCard,
   CheckCircle,
   Clock,
   XCircle,
@@ -59,35 +58,26 @@ interface WalletData {
 
 interface WithdrawalHistory {
   id: string;
-  type: "PIX" | "USDT";
+  type: "USDT";
   amount: number;
   status: "PENDING" | "PROCESSING" | "COMPLETED" | "REJECTED";
   createdAt: string;
-  hash?: string; // Para USDT
-  protocol?: string; // Para PIX
-  pixKey?: string; // Para PIX
-  walletAddress?: string; // Para USDT
-  network?: string; // Para USDT
+  hash?: string;
+  walletAddress?: string;
+  network?: string;
 }
 
-type WithdrawalType = "PIX" | "USDT";
 
 export default function WithdrawPage() {
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [withdrawalType, setWithdrawalType] = useState<WithdrawalType>("PIX");
   const [processing, setProcessing] = useState(false);
   const [withdrawalHistory, setWithdrawalHistory] = useState<
     WithdrawalHistory[]
   >([]);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
-
-  // PIX Form States
-  const [pixAmount, setPixAmount] = useState("");
-  const [pixKey, setPixKey] = useState("");
-  const [pixPassword, setPixPassword] = useState("");
 
   // USDT Form States
   const [usdtAmount, setUsdtAmount] = useState("");
@@ -158,85 +148,6 @@ export default function WithdrawPage() {
     }
   };
 
-  // Handle PIX withdrawal
-  const handlePIXWithdrawal = async () => {
-    if (!pixAmount || parseFloat(pixAmount) <= 0) {
-      toast({
-        title: "Valor Inválido",
-        description: "Por favor, insira um valor válido",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!pixKey.trim()) {
-      toast({
-        title: "Chave PIX Obrigatória",
-        description: "Por favor, insira sua chave PIX",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!pixPassword.trim()) {
-      toast({
-        title: "Senha Obrigatória",
-        description: "Por favor, insira sua senha de confirmação",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const brlBalance = walletData?.balances.find((b) => b.currency === "BRL");
-    if (!brlBalance || parseFloat(pixAmount) > brlBalance.amount) {
-      toast({
-        title: "Saldo Insuficiente",
-        description: "Você não possui saldo suficiente em BRL",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      setProcessing(true);
-      const response = await fetch("/api/withdraw/pix", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: parseFloat(pixAmount),
-          pixKey: pixKey.trim(),
-          password: pixPassword,
-        }),
-      });
-
-      if (response.ok) {
-        setSuccessMessage(
-          "Saque solicitado com sucesso. O valor será transferido em até 1 hora útil."
-        );
-        setShowSuccessModal(true);
-        setPixAmount("");
-        setPixKey("");
-        setPixPassword("");
-        fetchWalletData();
-        fetchWithdrawalHistory();
-      } else {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to process PIX withdrawal");
-      }
-    } catch (error) {
-      toast({
-        title: "Erro no Saque",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Falha ao processar saque PIX",
-        variant: "destructive",
-      });
-    } finally {
-      setProcessing(false);
-    }
-  };
-
   // Handle USDT withdrawal
   const handleUSDTWithdrawal = async () => {
     if (!usdtAmount || parseFloat(usdtAmount) <= 0) {
@@ -294,16 +205,6 @@ export default function WithdrawPage() {
     } finally {
       setProcessing(false);
     }
-  };
-
-  // Calculate PIX net amount (3% fee)
-  const calculatePIXNetAmount = () => {
-    if (!pixAmount || parseFloat(pixAmount) <= 0) return 0;
-    const amount = parseFloat(pixAmount);
-    if (isNaN(amount)) return 0;
-    const fee = amount * 0.03; // 3% fee
-    const netAmount = amount - fee;
-    return isNaN(netAmount) ? 0 : netAmount;
   };
 
   // Calculate USDT net amount (1 USDT fee)
@@ -387,177 +288,44 @@ export default function WithdrawPage() {
   }
 
   const usdtBalance = walletData?.balances.find((b) => b.currency === "USDT");
-  const brlBalance = walletData?.balances.find((b) => b.currency === "BRL");
 
   return (
     <div className="min-h-screen bg-background">
       <NavbarNew isLoggingOut={false} handleLogout={() => {}} />
-      <div className="container mx-auto px-4 py-8">
-        <Breadcrumb
-          items={[
-            { label: "Dashboard", href: "/dashboard" },
-            { label: "Withdraw" },
-          ]}
-        />
-
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold">
+        <div className="text-center mb-6 sm:mb-8">
+          <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-brand-500 via-purple-600 to-brand-600 bg-clip-text text-transparent mb-2">
             Withdraw Funds
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm sm:text-base">
             Escolha o método de saque e retire seus fundos
           </p>
-        </div>
-
-        {/* Withdrawal Type Selection */}
-        <div className="flex gap-4 mb-8">
-          <Button
-            variant={withdrawalType === "USDT" ? "default" : "outline"}
-            onClick={() => setWithdrawalType("USDT")}
-            className="flex items-center gap-2 px-6 py-3"
-          >
-            <Coins className="h-5 w-5" />
-            🪙 Saque via USDT
-          </Button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Withdrawal Form */}
           <div className="lg:col-span-2">
-            {withdrawalType === "PIX" ? (
-              <Card>
+            <Card className="rounded-xl sm:rounded-2xl border-gray-800 bg-gray-900/50 backdrop-blur-sm">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-green-600">
-                    <CreditCard className="h-5 w-5" />
-                    Saque via PIX (BRL)
-                  </CardTitle>
-                  <CardDescription>
-                    Transfira seus fundos em BRL para sua conta via PIX
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* BRL Balance */}
-                  <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Wallet className="h-5 w-5 text-green-600" />
-                      <span className="text-sm font-medium text-green-800">
-                        Saldo disponível:
-                      </span>
-                    </div>
-                    <p className="text-2xl font-bold text-green-700">
-                      R${" "}
-                      {brlBalance && typeof brlBalance.amount === "number"
-                        ? brlBalance.amount.toFixed(2)
-                        : "0.00"}
-                    </p>
-                  </div>
-
-                  {/* PIX Form */}
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="pix-amount">Valor a sacar (BRL)</Label>
-                      <Input
-                        id="pix-amount"
-                        type="number"
-                        placeholder="0.00"
-                        value={pixAmount}
-                        onChange={(e) => setPixAmount(e.target.value)}
-                        min="0"
-                        step="0.01"
-                        max={brlBalance ? brlBalance.amount : undefined}
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="pix-key">Chave PIX</Label>
-                      <Input
-                        id="pix-key"
-                        type="text"
-                        placeholder="E-mail, CPF ou telefone"
-                        value={pixKey}
-                        onChange={(e) => setPixKey(e.target.value)}
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="pix-password">Senha de confirmação</Label>
-                      <Input
-                        id="pix-password"
-                        type="password"
-                        placeholder="Digite sua senha"
-                        value={pixPassword}
-                        onChange={(e) => setPixPassword(e.target.value)}
-                      />
-                    </div>
-
-                    {/* Fee Calculation */}
-                    <div className="p-4 bg-muted rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-muted-foreground">
-                          Taxa (3%):
-                        </span>
-                        <span className="text-sm font-medium text-red-600">
-                          -R${" "}
-                          {pixAmount
-                            ? (() => {
-                                const amount = parseFloat(pixAmount);
-                                return isNaN(amount)
-                                  ? "0.00"
-                                  : (amount * 0.03).toFixed(2);
-                              })()
-                            : "0.00"}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">
-                          Você receberá:
-                        </span>
-                        <span className="text-lg font-bold text-green-600">
-                          R$ {(calculatePIXNetAmount() || 0).toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-
-                    <Button
-                      onClick={handlePIXWithdrawal}
-                      disabled={
-                        processing ||
-                        !pixAmount ||
-                        !pixKey ||
-                        !pixPassword ||
-                        parseFloat(pixAmount) <= 0
-                      }
-                      className="w-full bg-green-600 hover:bg-green-700"
-                    >
-                      {processing
-                        ? "Processando..."
-                        : "Confirmar Saque via PIX"}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-blue-600">
+                  <CardTitle className="flex items-center gap-2 text-white">
                     <Coins className="h-5 w-5" />
                     Saque via USDT
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-gray-400">
                     Envie USDT para sua carteira externa
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-4 sm:space-y-6">
                   {/* USDT Balance */}
-                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="p-4 sm:p-6 bg-gradient-to-br from-brand-500/20 to-blue-500/20 rounded-xl border border-brand-500/30">
                     <div className="flex items-center gap-2 mb-2">
-                      <Coins className="h-5 w-5 text-blue-600" />
-                      <span className="text-sm font-medium text-blue-800">
+                      <Coins className="h-5 w-5 text-brand-400" />
+                      <span className="text-sm font-medium text-gray-300">
                         Saldo disponível:
                       </span>
                     </div>
-                    <p className="text-2xl font-bold text-blue-700">
+                    <p className="text-2xl sm:text-3xl font-bold text-brand-400">
                       {usdtBalance && typeof usdtBalance.amount === "number"
                         ? usdtBalance.amount.toFixed(2)
                         : "0.00"}{" "}
@@ -568,7 +336,7 @@ export default function WithdrawPage() {
                   {/* USDT Form */}
                   <div className="space-y-4">
                     <div>
-                      <Label htmlFor="usdt-amount">Valor a sacar (USDT)</Label>
+                      <Label htmlFor="usdt-amount" className="text-gray-300">Valor a sacar (USDT)</Label>
                       <Input
                         id="usdt-amount"
                         type="number"
@@ -578,11 +346,12 @@ export default function WithdrawPage() {
                         min="0"
                         step="0.01"
                         max={usdtBalance ? usdtBalance.amount : undefined}
+                        className="bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 rounded-xl"
                       />
                     </div>
 
                     <div>
-                      <Label htmlFor="wallet-address">
+                      <Label htmlFor="wallet-address" className="text-gray-300">
                         Endereço da carteira
                       </Label>
                       <Input
@@ -591,23 +360,24 @@ export default function WithdrawPage() {
                         placeholder="Digite o endereço da carteira"
                         value={walletAddress}
                         onChange={(e) => setWalletAddress(e.target.value)}
+                        className="bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 rounded-xl"
                       />
                     </div>
 
                     <div>
-                      <Label htmlFor="network">Rede</Label>
+                      <Label htmlFor="network" className="text-gray-300">Rede</Label>
                       <Select
                         value={selectedNetwork}
                         onValueChange={setSelectedNetwork}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="bg-gray-800/50 border-gray-700 text-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 rounded-xl">
                           <SelectValue placeholder="Selecione a rede" />
                         </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="TRC20">
+                        <SelectContent className="bg-gray-800 border-gray-700">
+                          <SelectItem value="TRC20" className="text-white hover:bg-gray-700">
                             TRC20 (Tron) - Taxa menor
                           </SelectItem>
-                          <SelectItem value="ERC20">
+                          <SelectItem value="ERC20" className="text-white hover:bg-gray-700">
                             ERC20 (Ethereum) - Taxa maior
                           </SelectItem>
                         </SelectContent>
@@ -615,20 +385,20 @@ export default function WithdrawPage() {
                     </div>
 
                     {/* Fee Calculation */}
-                    <div className="p-4 bg-muted rounded-lg">
+                    <div className="p-4 sm:p-6 bg-gray-800/30 rounded-xl border border-gray-700/50">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-muted-foreground">
+                        <span className="text-sm text-gray-400">
                           Taxa de rede:
                         </span>
-                        <span className="text-sm font-medium text-red-600">
+                        <span className="text-sm font-medium text-red-400">
                           -1 USDT
                         </span>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">
+                      <div className="flex items-center justify-between pt-2 border-t border-gray-700">
+                        <span className="text-sm font-medium text-gray-300">
                           Total líquido:
                         </span>
-                        <span className="text-lg font-bold text-blue-600">
+                        <span className="text-lg sm:text-xl font-bold text-brand-400">
                           {(calculateUSDTNetAmount() || 0).toFixed(2)} USDT
                         </span>
                       </div>
@@ -642,33 +412,38 @@ export default function WithdrawPage() {
                         !walletAddress ||
                         parseFloat(usdtAmount) <= 0
                       }
-                      className="w-full bg-blue-600 hover:bg-blue-700"
+                      className="w-full h-12 sm:h-14 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors text-base sm:text-lg"
                     >
-                      {processing ? "Processando..." : "Enviar USDT"}
+                      {processing ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                          Processando...
+                        </>
+                      ) : (
+                        "Enviar USDT"
+                      )}
                     </Button>
                   </div>
                 </CardContent>
               </Card>
-            )}
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {/* Portfolio Summary */}
-            <Card>
+            <Card className="rounded-xl sm:rounded-2xl border-gray-800 bg-gray-900/50 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-white">
                   <Wallet className="h-5 w-5" />
                   Portfolio Summary
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="text-center p-4 bg-muted rounded-lg">
-                  <p className="text-sm text-muted-foreground">
+                <div className="text-center p-4 bg-gray-800/30 rounded-xl border border-gray-700/50">
+                  <p className="text-sm text-gray-400 mb-1">
                     Total Portfolio Value
                   </p>
-                  <p className="text-2xl font-bold">
-                    $
+                  <p className="text-2xl font-bold text-white">
                     {walletData &&
                     typeof walletData.totalPortfolioValue === "number"
                       ? walletData.totalPortfolioValue.toFixed(2)
@@ -676,9 +451,9 @@ export default function WithdrawPage() {
                     USDT
                   </p>
                 </div>
-                <div className="text-center p-4 bg-muted rounded-lg">
-                  <p className="text-sm text-muted-foreground">Last Updated</p>
-                  <p className="text-lg font-semibold">
+                <div className="text-center p-4 bg-gray-800/30 rounded-xl border border-gray-700/50">
+                  <p className="text-sm text-gray-400 mb-1">Last Updated</p>
+                  <p className="text-lg font-semibold text-gray-300">
                     {walletData
                       ? new Date(walletData.lastUpdated).toLocaleTimeString()
                       : "N/A"}
@@ -686,38 +461,17 @@ export default function WithdrawPage() {
                 </div>
               </CardContent>
             </Card>
-
-            {/* Quick Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Link href="/wallet">
-                  <Button variant="outline" className="w-full justify-start">
-                    <Coins className="h-4 w-4 mr-2" />
-                    View Wallet
-                  </Button>
-                </Link>
-                <Link href="/trade">
-                  <Button variant="outline" className="w-full justify-start">
-                    <TrendingDown className="h-4 w-4 mr-2" />
-                    Trade Crypto
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
           </div>
         </div>
 
         {/* Withdrawal History */}
-        <Card className="mt-8">
+        <Card className="mt-6 sm:mt-8 rounded-xl sm:rounded-2xl border-gray-800 bg-gray-900/50 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-white">
               <History className="h-5 w-5" />
               Histórico de Saques
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-gray-400">
               Histórico completo de saques realizados
             </CardDescription>
           </CardHeader>
@@ -753,28 +507,15 @@ export default function WithdrawPage() {
                           )}
                         </td>
                         <td className="py-3 px-4">
-                          <Badge
-                            variant={
-                              withdrawal.type === "PIX"
-                                ? "default"
-                                : "secondary"
-                            }
-                          >
-                            {withdrawal.type === "PIX" ? "PIX" : "USDT"}
+                          <Badge variant="secondary" className="bg-brand-500/20 text-brand-400 border-brand-500/30">
+                            USDT
                           </Badge>
                         </td>
-                        <td className="py-3 px-4 font-medium">
-                          {withdrawal.type === "PIX"
-                            ? `R$ ${
-                                typeof withdrawal.amount === "number"
-                                  ? withdrawal.amount.toFixed(2)
-                                  : "0.00"
-                              }`
-                            : `${
-                                typeof withdrawal.amount === "number"
-                                  ? withdrawal.amount.toFixed(2)
-                                  : "0.00"
-                              } USDT`}
+                        <td className="py-3 px-4 font-medium text-white">
+                          {typeof withdrawal.amount === "number"
+                            ? withdrawal.amount.toFixed(2)
+                            : "0.00"}{" "}
+                          USDT
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
@@ -785,17 +526,13 @@ export default function WithdrawPage() {
                         <td className="py-3 px-4">
                           {withdrawal.hash ? (
                             <div className="flex items-center gap-2">
-                              <code className="text-xs bg-muted px-2 py-1 rounded">
+                              <code className="text-xs bg-gray-800 px-2 py-1 rounded text-gray-300">
                                 {withdrawal.hash.slice(0, 8)}...
                               </code>
-                              <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                              <ExternalLink className="h-3 w-3 text-gray-400" />
                             </div>
-                          ) : withdrawal.protocol ? (
-                            <code className="text-xs bg-muted px-2 py-1 rounded">
-                              {withdrawal.protocol}
-                            </code>
                           ) : (
-                            <span className="text-muted-foreground">-</span>
+                            <span className="text-gray-400">-</span>
                           )}
                         </td>
                       </tr>

@@ -662,7 +662,131 @@
 			"response": []
 		},
 		{
-			"name": "9. GET - Webhook Endpoint Status",
+			"name": "9. Direct NutzPay API - Create USDT Purchase",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Validate required environment variables",
+							"const publicKey = pm.environment.get('nutzpay_public_key') || pm.environment.get('public_key');",
+							"const secretKey = pm.environment.get('nutzpay_secret_key') || pm.environment.get('secret_key');",
+							"",
+							"if (!publicKey || !secretKey) {",
+							"    console.error('❌ ERROR: nutzpay_public_key and nutzpay_secret_key must be set in environment!');",
+							"    console.error('Set these in your Postman environment variables.');",
+							"    throw new Error('Missing NutzPay credentials. Set nutzpay_public_key and nutzpay_secret_key in environment.');",
+							"}",
+							"",
+							"console.log('✅ Using Public Key:', publicKey.substring(0, 10) + '...');",
+							"console.log('✅ Secret Key configured (hidden for security)');"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200 or 201\", function () {",
+							"    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+							"});",
+							"",
+							"if (pm.response.code === 200 || pm.response.code === 201) {",
+							"    var jsonData = pm.response.json();",
+							"    ",
+							"    console.log('========================================');",
+							"    console.log('=== FULL NUTZPAY API RESPONSE ===');",
+							"    console.log('Status:', pm.response.code);",
+							"    console.log('Full Response:', JSON.stringify(jsonData, null, 2));",
+							"    ",
+							"    // Check for PIX data",
+							"    if (jsonData.pix_data) {",
+							"        console.log('--- PIX Data Found ---');",
+							"        console.log('pix_data:', JSON.stringify(jsonData.pix_data, null, 2));",
+							"        console.log('pix_data.qr_code:', jsonData.pix_data.qr_code);",
+							"        console.log('pix_data.qrCode:', jsonData.pix_data.qrCode);",
+							"        console.log('pix_data.pix_key:', jsonData.pix_data.pix_key);",
+							"        console.log('pix_data.pixKey:', jsonData.pix_data.pixKey);",
+							"        console.log('pix_data.qr_code_base64 exists:', !!jsonData.pix_data.qr_code_base64);",
+							"        if (jsonData.pix_data.qr_code_base64) {",
+							"            console.log('QR Code Base64 length:', jsonData.pix_data.qr_code_base64.length);",
+							"        }",
+							"    } else {",
+							"        console.log('⚠️ No pix_data found in response');",
+							"    }",
+							"    ",
+							"    // Check top-level fields",
+							"    console.log('--- Top Level Fields ---');",
+							"    console.log('qrCode:', jsonData.qrCode);",
+							"    console.log('qr_code:', jsonData.qr_code);",
+							"    console.log('pixKey:', jsonData.pixKey);",
+							"    console.log('pix_key:', jsonData.pix_key);",
+							"    console.log('transaction_id:', jsonData.transaction_id);",
+							"    console.log('transactionId:', jsonData.transactionId);",
+							"    ",
+							"    // Save transaction ID for later use",
+							"    if (jsonData.transaction_id || jsonData.transactionId) {",
+							"        pm.environment.set('nutzpay_transaction_id', jsonData.transaction_id || jsonData.transactionId);",
+							"        console.log('✅ Saved transaction_id:', jsonData.transaction_id || jsonData.transactionId);",
+							"    }",
+							"    ",
+							"    console.log('========================================');",
+							"} else {",
+							"    console.log('❌ Error Response:', pm.response.text());",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "X-Public-Key",
+						"value": "{{nutzpay_public_key}}",
+						"type": "text"
+					},
+					{
+						"key": "X-Secret-Key",
+						"value": "{{nutzpay_secret_key}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"amount\": 10.0,\n  \"usdt_amount\": 1.79,\n  \"customer\": {\n    \"name\": \"Test User\",\n    \"document\": \"12345678900\",\n    \"email\": \"test@example.com\"\n  },\n  \"external_id\": \"test_purchase_{{$timestamp}}\",\n  \"callback_url\": \"{{base_url}}/api/webhooks/nutzpay\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://nutzpay.com/api/v1/usdt/purchase",
+					"protocol": "https",
+					"host": [
+						"nutzpay.com"
+					],
+					"path": [
+						"api",
+						"v1",
+						"usdt",
+						"purchase"
+					]
+				},
+				"description": "**Direct call to NutzPay API** to create a USDT purchase. This will show the FULL response from NutzPay including all PIX data fields. \n\n**Setup:**\n1. Set `nutzpay_public_key` and `nutzpay_secret_key` in your environment\n2. The pre-request script will generate timestamp, nonce, and signature automatically\n3. Check the Test tab output to see the full response structure\n\n**This will help debug why PIX code isn't being extracted!**"
+			},
+			"response": []
+		},
+		{
+			"name": "10. GET - Webhook Endpoint Status",
 			"event": [
 				{
 					"listen": "test",

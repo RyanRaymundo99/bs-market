@@ -13,6 +13,12 @@ import {
   Clock,
   Plus,
   Wallet,
+  TrendingUp,
+  ArrowDownRight,
+  Activity,
+  DollarSign,
+  ArrowRight,
+  CheckCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +26,18 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import NavbarNew from "@/components/ui/navbar-new";
 import KYCBanner from "@/components/ui/kyc-banner";
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
 
 interface CryptoPrice {
   symbol: string;
@@ -88,14 +106,7 @@ export default function Dashboard() {
   const [userStatus, setUserStatus] = useState<UserStatus | null>(null);
   const [latestDeposit, setLatestDeposit] = useState<Deposit | null>(null);
   const [latestWithdrawal, setLatestWithdrawal] = useState<Withdrawal | null>(null);
-  const [showKYCBanner, setShowKYCBanner] = useState(() => {
-    // Check localStorage to see if banner was dismissed
-    if (typeof window !== "undefined") {
-      const dismissed = localStorage.getItem("kyc-banner-dismissed");
-      return dismissed !== "true";
-    }
-    return true;
-  });
+  const [showKYCBanner, setShowKYCBanner] = useState(true);
   const [chartData, setChartData] = useState<
     Array<{ date: string; BRL: number; USDT: number }>
   >([]);
@@ -133,16 +144,38 @@ export default function Dashboard() {
   useEffect(() => {
     const kycParam = searchParams.get("kyc");
     if (kycParam === "pending") {
-      // Show banner if redirected from KYC submission, even if previously dismissed
+      // Show banner if redirected from KYC submission
       setShowKYCBanner(true);
-      localStorage.removeItem("kyc-banner-dismissed");
     }
   }, [searchParams]);
 
-  // Handler to dismiss banner and save to localStorage
+  // Check if APPROVED banner was already dismissed for this user
+  useEffect(() => {
+    if (userStatus?.id && userStatus?.kycStatus === "APPROVED") {
+      const dismissedKey = `kyc-approved-banner-dismissed-${userStatus.id}`;
+      const wasDismissed = localStorage.getItem(dismissedKey) === "true";
+      if (wasDismissed) {
+        setShowKYCBanner(false);
+      } else {
+        setShowKYCBanner(true);
+      }
+    } else if (userStatus?.kycStatus && userStatus.kycStatus !== "APPROVED") {
+      // For PENDING and REJECTED, show banner normally
+      setShowKYCBanner(true);
+    }
+  }, [userStatus]);
+
+  // Handler to dismiss banner and save to localStorage with user ID
   const handleDismissKYCBanner = () => {
-    setShowKYCBanner(false);
-    localStorage.setItem("kyc-banner-dismissed", "true");
+    if (userStatus?.id && userStatus?.kycStatus === "APPROVED") {
+      // For APPROVED status, mark as dismissed permanently for this user
+      const dismissedKey = `kyc-approved-banner-dismissed-${userStatus.id}`;
+      localStorage.setItem(dismissedKey, "true");
+      setShowKYCBanner(false);
+    } else {
+      // For other statuses, just hide temporarily
+      setShowKYCBanner(false);
+    }
   };
 
   // Format currency in Brazilian Real
@@ -372,7 +405,7 @@ export default function Dashboard() {
     return (
       <div className="min-h-screen bg-background text-foreground">
         <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
-        <div className="container mx-auto px-4 py-6 mobile-page-padding">
+        <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl">
           <div className="flex items-center justify-center h-64">
             <RefreshCw className="w-8 h-8 animate-spin text-brand-300" />
           </div>
@@ -385,7 +418,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-background text-foreground">
       <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
 
-      <div className="container mx-auto px-4 py-6 mobile-page-padding">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl">
         {/* KYC Status Banner */}
         {showKYCBanner && userStatus && (
           <KYCBanner
@@ -395,332 +428,284 @@ export default function Dashboard() {
           />
         )}
 
-        {/* Welcome Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-brand-500 via-purple-600 to-brand-600 bg-clip-text text-transparent mb-2">
-            Bem-vindo a Build Strategy
-          </h1>
-          <p className="text-xl text-muted-foreground">
-            Monitore seus investimentos e acompanhe o mercado crypto
-          </p>
-        </div>
-
-        {/* Main Dashboard Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* Saldo (Balance) */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span className="flex items-center gap-2 text-foreground">
-                  <Wallet className="w-5 h-5" />
-                  Saldo
-                </span>
+        {/* Main Balance Display - Hero Section */}
+        <div className="mb-4 sm:mb-6">
+          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-brand-500/20 via-purple-500/20 to-brand-600/20 backdrop-blur-xl border border-white/10 p-4 sm:p-6 md:p-8 shadow-2xl">
+            <div className="relative z-10">
+              <div className="flex items-start justify-between mb-4 sm:mb-6">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm text-gray-300 mb-1">Saldo Total</p>
+                  {(() => {
+                    const usdtBalance = balances.find((b) => b.currency === "USDT");
+                    const usdtAmount = usdtBalance?.amount || 0;
+                    return (
+                      <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-2 break-words">
+                        {showBalances
+                          ? `U$ ${usdtAmount.toFixed(2)}`
+                          : "U$ ••••••"}
+                        <span className="text-lg sm:text-xl md:text-2xl text-gray-300 ml-1 sm:ml-2 block sm:inline">USDT</span>
+                      </h2>
+                    );
+                  })()}
+                </div>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowBalances(!showBalances)}
-                  className="text-foreground hover:text-brand-300 hover:bg-muted"
+                  className="text-white hover:bg-white/10 rounded-full w-9 h-9 sm:w-10 sm:h-10 p-0 flex-shrink-0 ml-2"
                 >
                   {showBalances ? (
-                    <EyeOff className="w-4 h-4" />
+                    <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" />
                   ) : (
-                    <Eye className="w-4 h-4" />
+                    <Eye className="w-4 h-4 sm:w-5 sm:h-5" />
                   )}
                 </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-8">
-                {/* USDT Balance */}
-                {(() => {
-                  const usdtBalance = balances.find(
-                    (b) => b.currency === "USDT"
-                  );
-                  return (
-                    <div className="flex items-center gap-3">
-                      <span className="w-6 h-6 flex items-center justify-center text-brand-500 font-bold text-2xl">
-                        U$
-                      </span>
-                      <span className="text-2xl font-bold text-foreground">
-                        {showBalances
-                          ? usdtBalance
-                            ? `${usdtBalance.amount.toFixed(2)} USDT`
-                            : "0.00 USDT"
-                          : "••••••"}
-                      </span>
-                    </div>
-                  );
-                })()}
               </div>
 
-              {/* Latest Transaction */}
-              {(() => {
-                // Determine which is more recent: deposit or withdrawal
-                let latestItem = null;
-                let isDeposit = false;
+              {/* Quick Action Buttons */}
+              <div className="flex gap-2 sm:gap-3 mt-4 sm:mt-6">
+                <Button
+                  onClick={() => router.push("/trade")}
+                  className="flex-1 aspect-square sm:aspect-auto sm:h-16 bg-white text-brand-600 hover:bg-gray-100 font-semibold rounded-xl shadow-lg text-xs sm:text-sm md:text-base flex flex-col items-center justify-center gap-1 sm:gap-2 p-2 sm:p-4"
+                  size="lg"
+                >
+                  <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7" />
+                  <span className="text-center leading-tight">Comprar USDT</span>
+                </Button>
+                <Button
+                  onClick={() => router.push("/withdraw")}
+                  variant="outline"
+                  className="flex-1 aspect-square sm:aspect-auto sm:h-16 bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 font-semibold rounded-xl text-xs sm:text-sm md:text-base flex flex-col items-center justify-center gap-1 sm:gap-2 p-2 sm:p-4"
+                  size="lg"
+                >
+                  <ArrowDownRight className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7" />
+                  <span className="text-center leading-tight">Sacar</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
 
-                if (latestDeposit && latestWithdrawal) {
-                  const depositDate = new Date(latestDeposit.createdAt);
-                  const withdrawalDate = new Date(latestWithdrawal.createdAt);
-                  if (depositDate > withdrawalDate) {
-                    latestItem = latestDeposit;
-                    isDeposit = true;
-                  } else {
-                    latestItem = latestWithdrawal;
-                    isDeposit = false;
-                  }
-                } else if (latestDeposit) {
-                  latestItem = latestDeposit;
-                  isDeposit = true;
-                } else if (latestWithdrawal) {
-                  latestItem = latestWithdrawal;
-                  isDeposit = false;
-                }
-
-                if (latestItem) {
-                  return (
-                    <div className="mt-6 flex items-center gap-3 p-4 rounded-lg bg-muted/50">
-                      <div
-                        className={`flex items-center justify-center w-10 h-10 rounded-full ${
-                          isDeposit
-                            ? "bg-green-500/20 text-green-500"
-                            : "bg-red-500/20 text-red-500"
-                        }`}
-                      >
-                        {isDeposit ? (
-                          <ArrowUpRight className="w-5 h-5" />
-                        ) : (
-                          <TrendingDown className="w-5 h-5" />
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm text-muted-foreground">
-                          {isDeposit ? "Último Depósito" : "Último Saque"}
-                        </p>
-                        <p
-                          className={`text-lg font-semibold ${
-                            isDeposit ? "text-green-500" : "text-red-500"
-                          }`}
-                        >
-                          {isDeposit ? "+" : "-"}
-                          {latestItem.currency === "BRL" || (!latestItem.currency && isDeposit)
-                            ? formatCurrency(Number(latestItem.amount))
-                            : `${Number(latestItem.amount).toFixed(2)} ${latestItem.currency || "USDT"}`}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(latestItem.createdAt).toLocaleDateString(
-                            "pt-BR",
-                            {
-                              day: "2-digit",
-                              month: "2-digit",
-                              year: "numeric",
-                            }
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                }
-                return null;
-              })()}
-            </CardContent>
-          </Card>
-
-          {/* Timeline Widget */}
-          <Card className="h-fit">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-foreground text-sm">
-                <Clock className="w-3.5 h-3.5" />
-                Timeline
+        {/* Balance Chart Card */}
+        {chartData.length > 0 && (
+          <Card className="mb-4 sm:mb-6 rounded-xl sm:rounded-2xl border-gray-800 bg-gray-900/50 backdrop-blur-sm">
+            <CardHeader className="pb-2 sm:pb-3 px-4 sm:px-6 pt-4 sm:pt-6">
+              <CardTitle className="text-base sm:text-lg text-white flex items-center gap-2">
+                <Activity className="w-4 h-4 sm:w-5 sm:h-5" />
+                Evolução do Saldo
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-0 pb-2">
-              {transactions.length > 0 ? (
-                <div 
-                  className="relative max-h-[300px] overflow-y-auto pr-2 timeline-scrollbar"
-                >
-                  {/* Vertical Line */}
-                  <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-gray-300 dark:bg-gray-700"></div>
-
-                  <div className="space-y-4">
-                    {transactions.map((transaction, index) => {
-                      const date = new Date(transaction.createdAt);
-                      const time = date.toLocaleTimeString("pt-BR", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      });
-                      const dateStr = date.toLocaleDateString("pt-BR", {
-                        day: "2-digit",
-                        month: "2-digit",
-                      });
-
-                      // Determine color and title based on transaction type
-                      let color = "#10b981"; // default green
-                      let title = "";
-                      let description = "";
-
-                      // Format amount based on currency
-                      const formattedAmount =
-                        transaction.currency === "BRL"
-                          ? formatCurrency(transaction.amount)
-                          : `${transaction.amount.toFixed(8)} ${
-                              transaction.currency
-                            }`;
-
-                      if (transaction.type === "DEPOSIT") {
-                        color = "#10b981"; // green
-                        title = "DEPÓSITO";
-                        description = `Depósito de ${formattedAmount}`;
-                      } else if (
-                        transaction.type === "WITHDRAWAL" ||
-                        transaction.type === "WITHDRAW"
-                      ) {
-                        color = "#f59e0b"; // orange/yellow
-                        title = "SAQUE";
-                        description = `Saque de ${formattedAmount}`;
-                      } else if (
-                        transaction.type === "BUY" || transaction.type === "BUY_CRYPTO"
-                      ) {
-                        color = "#3b82f6"; // blue
-                        title = "BUY_CRYPTO";
-                        description = formattedAmount;
-                      } else if (transaction.type === "SELL") {
-                        color = "#ef4444"; // red
-                        title = "VENDA";
-                        description = `Venda de ${formattedAmount}`;
-                      } else {
-                        title = transaction.type.toUpperCase();
-                        description = formattedAmount;
-                      }
-
-                      // Status-based color override
-                      if (transaction.status === "PENDING") {
-                        color = "#f59e0b"; // orange for pending
-                      } else if (
-                        transaction.status === "FAILED" ||
-                        transaction.status === "REJECTED"
-                      ) {
-                        color = "#ef4444"; // red for failed
-                      }
-
-                      return (
-                        <div
-                          key={transaction.id || index}
-                          className="relative flex items-start py-1"
-                        >
-                          {/* Time */}
-                          <div className="text-[9px] text-muted-foreground w-10 text-right pr-1.5 pt-0.5">
-                            {time}
-                          </div>
-
-                          {/* Circle */}
-                          <div
-                            className="absolute left-[11px] top-1.5 w-1.5 h-1.5 rounded-full border border-white dark:border-gray-900 z-10"
-                            style={{ backgroundColor: color }}
-                          ></div>
-
-                          {/* Content */}
-                          <div className="flex-1 pl-4 min-w-0">
-                            <h4 className="font-semibold text-foreground text-[10px] mb-1 truncate">
-                              {title}
-                            </h4>
-                            <p className="text-[9px] text-muted-foreground truncate mb-0.5">
-                              {description}
-                            </p>
-                            <p className="text-[9px] text-muted-foreground">
-                              {dateStr}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-4 text-muted-foreground">
-                  <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-xs">Nenhuma transação recente</p>
-                </div>
-              )}
+            <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
+              <div className="h-40 sm:h-48 w-full -ml-2 sm:-ml-0">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
+                    <defs>
+                      <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#10b981" stopOpacity={0.8}/>
+                        <stop offset="100%" stopColor="#10b981" stopOpacity={0.2}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
+                    <XAxis 
+                      dataKey="date" 
+                      stroke="#6b7280"
+                      style={{ fontSize: '10px' }}
+                      tickLine={false}
+                      tick={{ fill: '#6b7280' }}
+                    />
+                    <YAxis 
+                      stroke="#6b7280"
+                      style={{ fontSize: '10px' }}
+                      tickFormatter={(value) => `U$ ${value.toFixed(0)}`}
+                      tickLine={false}
+                      tick={{ fill: '#6b7280' }}
+                      width={45}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#111827',
+                        border: '1px solid #374151',
+                        borderRadius: '12px',
+                        color: '#fff',
+                        padding: '8px 12px',
+                        fontSize: '12px'
+                      }}
+                      formatter={(value: number) => [`U$ ${value.toFixed(2)}`, "USDT"]}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="USDT"
+                      stroke="#10b981"
+                      strokeWidth={2.5}
+                      dot={false}
+                      activeDot={{ r: 5, fill: '#10b981' }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4 mb-4 sm:mb-6">
+          {(() => {
+            const totalTransactions = transactions.length;
+            const completedTransactions = transactions.filter(
+              (t) => t.status === "COMPLETED"
+            ).length;
+            const successRate = totalTransactions > 0
+              ? ((completedTransactions / totalTransactions) * 100).toFixed(0)
+              : "0";
+            
+            return (
+              <>
+                <Card className="rounded-xl sm:rounded-2xl border-gray-800 bg-gray-900/50 backdrop-blur-sm">
+                  <CardContent className="p-3 sm:p-4 text-center">
+                    <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-brand-400 mx-auto mb-1 sm:mb-2" />
+                    <p className="text-xl sm:text-2xl font-bold text-white">{totalTransactions}</p>
+                    <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5 sm:mt-1">Transações</p>
+                  </CardContent>
+                </Card>
+                <Card className="rounded-xl sm:rounded-2xl border-gray-800 bg-gray-900/50 backdrop-blur-sm">
+                  <CardContent className="p-3 sm:p-4 text-center">
+                    <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green-400 mx-auto mb-1 sm:mb-2" />
+                    <p className="text-xl sm:text-2xl font-bold text-white">{successRate}%</p>
+                    <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5 sm:mt-1">Taxa Sucesso</p>
+                  </CardContent>
+                </Card>
+                {latestDeposit && (
+                  <Card className="rounded-xl sm:rounded-2xl border-gray-800 bg-gray-900/50 backdrop-blur-sm">
+                    <CardContent className="p-3 sm:p-4 text-center">
+                      <ArrowUpRight className="w-5 h-5 sm:w-6 sm:h-6 text-green-400 mx-auto mb-1 sm:mb-2" />
+                      <p className="text-base sm:text-lg font-bold text-white break-words">
+                        +{latestDeposit.currency === "BRL"
+                          ? formatCurrency(Number(latestDeposit.amount))
+                          : `${Number(latestDeposit.amount).toFixed(2)}`}
+                      </p>
+                      <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5 sm:mt-1">Último Depósito</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
+            );
+          })()}
         </div>
 
         {/* Recent Activity */}
-        <div className="grid grid-cols-1 gap-6">
-          {/* Recent Transactions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-foreground">
-                <Clock className="w-5 h-5" />
+        <Card className="rounded-xl sm:rounded-2xl border-gray-800 bg-gray-900/50 backdrop-blur-sm">
+          <CardHeader className="pb-3 sm:pb-4 px-4 sm:px-6 pt-4 sm:pt-6">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base sm:text-lg text-white flex items-center gap-2">
+                <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
                 Atividade Recente
               </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {transactions.length > 0 ? (
-                  transactions.map((transaction, index) => (
+              {transactions.length > 5 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-400 hover:text-white text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3"
+                >
+                  Ver todas
+                  <ArrowRight className="w-3 h-3 ml-1" />
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
+            {transactions.length > 0 ? (
+              <div className="space-y-2">
+                {transactions.slice(0, 5).map((transaction, index) => {
+                  const date = new Date(transaction.createdAt);
+                  const time = date.toLocaleTimeString("pt-BR", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  });
+                  const dateStr = date.toLocaleDateString("pt-BR", {
+                    day: "2-digit",
+                    month: "2-digit",
+                  });
+
+                  let icon = <ArrowUpRight className="w-4 h-4" />;
+                  let bgColor = "bg-green-500/10";
+                  let iconColor = "text-green-400";
+                  let title = "";
+                  let amountColor = "text-green-400";
+                  let prefix = "+";
+
+                  const formattedAmount =
+                    transaction.currency === "BRL"
+                      ? formatCurrency(transaction.amount)
+                      : `${transaction.amount.toFixed(8)} ${transaction.currency || "USDT"}`;
+
+                  if (transaction.type === "DEPOSIT" || transaction.type === "BUY_CRYPTO") {
+                    icon = <ArrowUpRight className="w-4 h-4" />;
+                    bgColor = "bg-green-500/10";
+                    iconColor = "text-green-400";
+                    amountColor = "text-green-400";
+                    title = transaction.type === "BUY_CRYPTO" ? "Compra USDT" : "Depósito";
+                    prefix = "+";
+                  } else if (
+                    transaction.type === "WITHDRAWAL" ||
+                    transaction.type === "WITHDRAW"
+                  ) {
+                    icon = <ArrowDownRight className="w-4 h-4" />;
+                    bgColor = "bg-red-500/10";
+                    iconColor = "text-red-400";
+                    amountColor = "text-red-400";
+                    title = "Saque";
+                    prefix = "-";
+                  } else if (transaction.type === "SELL") {
+                    icon = <TrendingDown className="w-4 h-4" />;
+                    bgColor = "bg-orange-500/10";
+                    iconColor = "text-orange-400";
+                    amountColor = "text-orange-400";
+                    title = "Venda";
+                    prefix = "-";
+                  } else {
+                    title = transaction.type;
+                  }
+
+                  return (
                     <div
-                      key={index}
-                      className="flex items-center justify-between p-3 bg-gray-900 rounded-lg border border-gray-800 hover:border-gray-700 hover:bg-gray-800 transition-all"
+                      key={transaction.id || index}
+                      className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gray-800/30 hover:bg-gray-800/50 transition-colors active:bg-gray-800/60"
                     >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                            transaction.type === "DEPOSIT"
-                              ? "bg-green-900/30 border border-green-700/50"
-                              : "bg-red-900/30 border border-red-700/50"
-                          }`}
-                        >
-                          {transaction.type === "DEPOSIT" ? (
-                            <Plus className="w-4 h-4 text-green-400" />
-                          ) : (
-                            <ArrowUpRight className="w-4 h-4 text-red-400" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-medium text-white capitalize">
-                            {transaction.type.toLowerCase()}
-                          </p>
-                          <p className="text-sm text-gray-400">
-                            {new Date(transaction.createdAt).toLocaleDateString(
-                              "pt-BR"
-                            )}
-                          </p>
-                        </div>
+                      <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl ${bgColor} flex items-center justify-center flex-shrink-0`}>
+                        <div className={iconColor}>{icon}</div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-white">
-                          {transaction.type === "DEPOSIT" ? "+" : "-"}
-                          {transaction.currency === "BRL"
-                            ? formatCurrency(transaction.amount)
-                            : `${transaction.amount.toFixed(8)} USDT`}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 sm:gap-2 mb-0.5">
+                          <h4 className="font-medium text-white text-xs sm:text-sm truncate">
+                            {title}
+                          </h4>
+                          <p className={`font-semibold text-xs sm:text-sm ${amountColor} whitespace-nowrap`}>
+                            {prefix}{formattedAmount}
+                          </p>
+                        </div>
+                        <p className="text-[10px] sm:text-xs text-gray-500">
+                          {dateStr} às {time}
                         </p>
-                        <Badge
-                          variant="secondary"
-                          className={`text-xs mt-1 ${
-                            transaction.status === "COMPLETED"
-                              ? "bg-green-900/50 text-green-300 border border-green-700/50"
-                              : transaction.status === "PENDING"
-                              ? "bg-yellow-900/50 text-yellow-300 border border-yellow-700/50"
-                              : "bg-red-900/50 text-red-300 border border-red-700/50"
-                          }`}
-                        >
-                          {transaction.status}
-                        </Badge>
                       </div>
                     </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Clock className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p>Nenhuma transação recente</p>
-                  </div>
-                )}
+                  );
+                })}
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            ) : (
+              <div className="text-center py-8 sm:py-12">
+                <Wallet className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 text-gray-600" />
+                <p className="text-sm sm:text-base text-gray-400 mb-4">Nenhuma transação recente</p>
+                <Button
+                  onClick={() => router.push("/trade")}
+                  className="bg-brand-500 hover:bg-brand-600 h-10 sm:h-11 text-sm sm:text-base"
+                >
+                  Fazer primeira compra
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
       </div>
     </div>
   );

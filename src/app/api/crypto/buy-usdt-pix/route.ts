@@ -104,7 +104,22 @@ export async function POST(request: NextRequest) {
         callback_url: callbackUrl,
       });
 
+      // Log what we received from NutzPay service
+      console.log("========================================");
+      console.log("=== NUTZPAY SERVICE RESPONSE ===");
+      console.log("Full nutzPayResponse:", JSON.stringify(nutzPayResponse, null, 2));
+      console.log("nutzPayResponse.data:", nutzPayResponse?.data);
+      console.log("nutzPayResponse type:", typeof nutzPayResponse);
+      console.log("========================================");
+
       const responseData = nutzPayResponse.data || nutzPayResponse;
+
+      // Log extracted data
+      console.log("========================================");
+      console.log("=== EXTRACTED RESPONSE DATA ===");
+      console.log("responseData:", JSON.stringify(responseData, null, 2));
+      console.log("responseData.pix_data:", responseData.pix_data);
+      console.log("========================================");
 
       const transactionId =
         responseData.transaction_id ||
@@ -120,13 +135,32 @@ export async function POST(request: NextRequest) {
       // Extract PIX code - according to NutzPay API docs:
       // - Response has: data.pix_data.qr_code (the PIX "Copia e Cola" string)
       // - Also check top-level qrCode/qr_code for backwards compatibility
+      console.log("========================================");
+      console.log("=== PIX CODE EXTRACTION ===");
+      console.log("Checking responseData.pix_data?.qr_code:", responseData.pix_data?.qr_code);
+      console.log("Checking responseData.pix_data?.qrCode:", responseData.pix_data?.qrCode);
+      console.log("Checking responseData.qrCode:", responseData.qrCode);
+      console.log("Checking responseData.pixKey:", responseData.pixKey);
+      console.log("Checking responseData.qr_code:", responseData.qr_code);
+      console.log("Checking responseData.pix_data?.pix_key:", responseData.pix_data?.pix_key);
+      console.log("Checking responseData.pix_data?.pixKey:", responseData.pix_data?.pixKey);
+      console.log("Checking responseData.code:", responseData.code);
+      console.log("Full pix_data object:", JSON.stringify(responseData.pix_data, null, 2));
+      
       const pixCode =
         responseData.pix_data?.qr_code || // PRIMARY: From pix_data object (per API docs)
         responseData.pix_data?.qrCode || // Alternative field name
+        responseData.pix_data?.pix_key || // Alternative: pix_key in pix_data
+        responseData.pix_data?.pixKey || // Alternative: pixKey in pix_data
         responseData.qrCode || // Fallback: Top-level qrCode
         responseData.pixKey || // Fallback: Top-level pixKey
         responseData.qr_code || // Fallback: Top-level qr_code
+        responseData.pix_key || // Fallback: Top-level pix_key
+        responseData.code || // Fallback: Top-level code
         null;
+      
+      console.log("Extracted pixCode:", pixCode ? pixCode.substring(0, 50) + "..." : "NULL");
+      console.log("========================================");
 
       // Extract QR code URL if available
       const qrCodeUrl =
