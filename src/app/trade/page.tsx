@@ -729,110 +729,104 @@ const TradePage = () => {
 
       {/* PIX QR Code Modal */}
       <Dialog open={showPixModal} onOpenChange={setShowPixModal}>
-        <DialogContent className="bg-[#1E1E1E] border-gray-800 text-white max-w-6xl w-full">
-          <DialogHeader>
-            <DialogTitle className="text-white">
+        <DialogContent className="bg-[#1E1E1E] border-gray-800 text-white max-w-2xl w-full p-4 sm:p-6">
+          <DialogHeader className="pb-3">
+            <DialogTitle className="text-white text-lg sm:text-xl">
               Escaneie o QR Code PIX
             </DialogTitle>
-            <DialogDescription className="text-[#A1A1AA]">
-              Escaneie o código abaixo com o app do seu banco para finalizar o
-              pagamento
+            <DialogDescription className="text-[#A1A1AA] text-sm">
+              Escaneie o código abaixo com o app do seu banco para finalizar o pagamento
             </DialogDescription>
           </DialogHeader>
           {pixData && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Left Column - PIX Payment Info */}
-              <div className="space-y-4">
-                <div className="flex flex-col items-center space-y-4">
-                  {pixData.qrCodeBase64 ? (
-                    <img
-                      src={`data:image/png;base64,${pixData.qrCodeBase64}`}
-                      alt="QR Code PIX"
-                      className="w-64 h-64 border border-gray-700 rounded-lg"
-                    />
-                  ) : (
-                    <div className="w-64 h-64 bg-gray-900 border border-gray-700 rounded-lg flex items-center justify-center">
-                      <p className="text-[#A1A1AA] text-sm">
-                        QR Code não disponível
-                      </p>
-                    </div>
-                  )}
-                  <div className="text-center space-y-2">
-                    <p className="text-sm text-[#A1A1AA]">Valor:</p>
-                    <p className="text-2xl font-bold text-[#10B981]">
-                      {formatBRL(pixData.amount)}
-                    </p>
-                    <p className="text-sm text-[#A1A1AA]">
-                      Você receberá: {formatUSDT(pixData.usdtAmount)} USDT
-                    </p>
+            <div className="space-y-4 sm:space-y-5">
+              {/* QR Code and Amount - Centered */}
+              <div className="flex flex-col items-center space-y-3">
+                {pixData.qrCodeBase64 ? (
+                  <img
+                    src={`data:image/png;base64,${pixData.qrCodeBase64}`}
+                    alt="QR Code PIX"
+                    className="w-48 h-48 sm:w-56 sm:h-56 border-2 border-gray-700 rounded-xl"
+                  />
+                ) : (
+                  <div className="w-48 h-48 sm:w-56 sm:h-56 bg-gray-900 border-2 border-gray-700 rounded-xl flex items-center justify-center">
+                    <p className="text-[#A1A1AA] text-sm">QR Code não disponível</p>
                   </div>
+                )}
+                <div className="text-center space-y-1">
+                  <p className="text-xs text-[#A1A1AA]">Valor:</p>
+                  <p className="text-xl sm:text-2xl font-bold text-[#10B981]">
+                    {formatBRL(pixData.amount)}
+                  </p>
+                  <p className="text-xs sm:text-sm text-[#A1A1AA]">
+                    Você receberá: {formatUSDT(pixData.usdtAmount)} USDT
+                  </p>
                 </div>
-
-                {/* Copy Button with PIX Code */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-300">
-                    Código PIX (Copia e Cola):
-                  </label>
-                  <button
-                    onClick={copyPixCode}
-                    disabled={!pixData.qrCode}
-                    className="w-full py-3 px-4 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-800/50 disabled:cursor-not-allowed border-2 border-yellow-500/50 hover:border-yellow-500/70 text-white rounded-lg transition-colors flex items-center justify-between gap-2 font-medium min-h-[56px]"
-                  >
-                    {copied ? (
-                      <>
-                        <Check className="w-5 h-5 text-green-400 flex-shrink-0" />
-                        <span className="text-green-400 font-semibold">Código copiado!</span>
-                      </>
-                    ) : pixData.qrCode ? (
-                      <>
-                        <code className="flex-1 text-xs text-left font-mono break-all pr-2 text-gray-200">
-                          {pixData.qrCode}
-                        </code>
-                        <Copy className="w-5 h-5 flex-shrink-0 text-yellow-400" />
-                      </>
-                    ) : (
-                      <>
-                        <span className="flex-1 text-sm text-gray-400 text-left">
-                          Código PIX não disponível. Use o QR Code acima para escanear.
-                        </span>
-                        <Copy className="w-5 h-5 flex-shrink-0 text-gray-500" />
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                {/* Check Status Button */}
-                <button
-                  onClick={async () => {
-                    if (pixData?.transactionId) {
-                      await checkPaymentStatus(pixData.transactionId);
-                    } else {
-                      toast({
-                        title: "Erro",
-                        description: "ID da transação não encontrado",
-                        variant: "destructive",
-                      });
-                    }
-                  }}
-                  disabled={checkingStatus}
-                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center justify-center gap-2 font-medium"
-                >
-                  {checkingStatus ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Verificando...
-                    </>
-                  ) : (
-                    "Verificar Status do Pagamento"
-                  )}
-                </button>
-
-                <p className="text-xs text-[#A1A1AA] text-center mt-4">
-                  Após o pagamento, seus USDT serão creditados automaticamente via webhook.
-                  Você pode verificar o status a qualquer momento.
-                </p>
               </div>
 
+              {/* Copy Button with PIX Code */}
+              <div className="space-y-2">
+                <label className="text-xs sm:text-sm font-medium text-gray-300">
+                  Código PIX (Copia e Cola):
+                </label>
+                <button
+                  onClick={copyPixCode}
+                  disabled={!pixData.qrCode}
+                  className="w-full py-2.5 px-3 sm:py-3 sm:px-4 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-800/50 disabled:cursor-not-allowed border-2 border-yellow-500/50 hover:border-yellow-500/70 text-white rounded-lg transition-colors flex items-center justify-between gap-2 font-medium min-h-[52px]"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="w-4 h-4 sm:w-5 sm:h-5 text-green-400 flex-shrink-0" />
+                      <span className="text-sm sm:text-base text-green-400 font-semibold">Código copiado!</span>
+                    </>
+                  ) : pixData.qrCode ? (
+                    <>
+                      <code className="flex-1 text-[10px] sm:text-xs text-left font-mono break-all pr-2 text-gray-200">
+                        {pixData.qrCode}
+                      </code>
+                      <Copy className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 text-yellow-400" />
+                    </>
+                  ) : (
+                    <>
+                      <span className="flex-1 text-xs sm:text-sm text-gray-400 text-left">
+                        Código PIX não disponível. Use o QR Code acima para escanear.
+                      </span>
+                      <Copy className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 text-gray-500" />
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Check Status Button */}
+              <button
+                onClick={async () => {
+                  if (pixData?.transactionId) {
+                    await checkPaymentStatus(pixData.transactionId);
+                  } else {
+                    toast({
+                      title: "Erro",
+                      description: "ID da transação não encontrado",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+                disabled={checkingStatus}
+                className="w-full py-2.5 sm:py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center justify-center gap-2 font-medium text-sm sm:text-base"
+              >
+                {checkingStatus ? (
+                  <>
+                    <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Verificando...
+                  </>
+                ) : (
+                  "Verificar Status do Pagamento"
+                )}
+              </button>
+
+              <p className="text-[10px] sm:text-xs text-[#A1A1AA] text-center pt-2">
+                Após o pagamento, seus USDT serão creditados automaticamente via webhook.
+                Você pode verificar o status a qualquer momento.
+              </p>
             </div>
           )}
         </DialogContent>
