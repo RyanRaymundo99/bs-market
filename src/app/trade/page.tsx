@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, Check, TrendingUp, Clock } from "lucide-react";
+import { Copy, Check, TrendingUp, Clock, QrCode } from "lucide-react";
 
 const TradePage = () => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -85,6 +85,16 @@ const TradePage = () => {
       status: string;
     }>
   >([]);
+
+  // Store PIX data by transaction ID so we can reopen the modal for pending payments
+  const [storedPixData, setStoredPixData] = useState<Map<string, {
+    qrCode: string;
+    qrCodeBase64: string | null;
+    qrCodeUrl: string | null;
+    amount: number;
+    usdtAmount: number;
+    transactionId: string;
+  }>>(new Map());
 
   // Constantes
   const FEE_RATE = 0.03; // 3% de taxa
@@ -347,15 +357,25 @@ const TradePage = () => {
           }
         }
 
-        // Show PIX QR code modal
-        setPixData({
+        // Store PIX data for this transaction so we can reopen the modal later
+        const pixDataForTransaction = {
           qrCode: pixCode,
           qrCodeBase64: qrCodeBase64,
           qrCodeUrl: qrCodeUrl,
           amount: data.data.amount_brl,
           usdtAmount: data.data.amount_usdt,
           transactionId: data.data.transaction_id,
+        };
+
+        // Store PIX data by transaction ID
+        setStoredPixData((prev) => {
+          const newMap = new Map(prev);
+          newMap.set(data.data.transaction_id, pixDataForTransaction);
+          return newMap;
         });
+
+        // Show PIX QR code modal
+        setPixData(pixDataForTransaction);
         setShowPixModal(true);
         setBuyBRL(""); // Clear the field
 
@@ -708,6 +728,24 @@ const TradePage = () => {
                           </div>
                         </div>
                       </div>
+                      {/* Show button to reopen PIX modal for pending transactions */}
+                      {transaction.status === "PENDING" && storedPixData.has(transaction.id) && (
+                        <Button
+                          onClick={() => {
+                            const pixData = storedPixData.get(transaction.id);
+                            if (pixData) {
+                              setPixData(pixData);
+                              setShowPixModal(true);
+                            }
+                          }}
+                          className="flex items-center gap-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 border-yellow-500/30 mt-3 sm:mt-0"
+                          variant="outline"
+                          size="sm"
+                        >
+                          <QrCode className="w-4 h-4" />
+                          Ver QR Code
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}
