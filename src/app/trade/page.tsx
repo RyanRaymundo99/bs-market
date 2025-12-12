@@ -329,18 +329,7 @@ const TradePage = () => {
         const qrCodeUrl =
           data.data.pix_data?.qr_code_url || data.data.qrCodeUrl || null;
 
-        console.log("=== FRONTEND PIX DATA ===");
-        console.log("Full response data:", JSON.stringify(data.data, null, 2));
-        console.log(
-          "PIX Code extracted:",
-          pixCode ? pixCode.substring(0, 50) + "..." : "EMPTY"
-        );
-        console.log(
-          "QR Code Base64:",
-          qrCodeBase64 ? "Present" : "Not present"
-        );
-        console.log("QR Code URL:", qrCodeUrl || "Not present");
-        console.log("=========================");
+        // Debug logging removed for production
 
         // If PIX code is missing but QR code image is available, try to decode it
         if (!pixCode && qrCodeBase64) {

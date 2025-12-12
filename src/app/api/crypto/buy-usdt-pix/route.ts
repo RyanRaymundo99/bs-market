@@ -105,19 +105,12 @@ export async function POST(request: NextRequest) {
       });
 
       // Log what we received from NutzPay service
-      console.log("========================================");
-      console.log("=== NUTZPAY SERVICE RESPONSE ===");
-      console.log("Full nutzPayResponse:", JSON.stringify(nutzPayResponse, null, 2));
-      console.log("nutzPayResponse.data:", nutzPayResponse?.data);
-      console.log("nutzPayResponse type:", typeof nutzPayResponse);
-      console.log("========================================");
+      // Debug logging removed for production
 
       const responseData = nutzPayResponse.data || nutzPayResponse;
 
       // Log extracted data
-      console.log("========================================");
-      console.log("=== EXTRACTED RESPONSE DATA ===");
-      console.log("responseData:", JSON.stringify(responseData, null, 2));
+      // Debug logging removed for production
       console.log("responseData.pix_data:", responseData.pix_data);
       console.log("========================================");
 

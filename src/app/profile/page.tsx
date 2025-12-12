@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import NavbarNew from "@/components/ui/navbar-new";
 import Breadcrumb from "@/components/ui/breadcrumb";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   User,
   Mail,

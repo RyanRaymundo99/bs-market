@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { BalanceDisplay } from "./balance-display";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { FlagBR } from "@/components/icons/FlagBR";
+import { FlagUS } from "@/components/icons/FlagUS";
 
 const NAV_LINKS_KEYS = [
   { key: "dashboard", href: "/dashboard", icon: Home },
@@ -27,7 +29,13 @@ interface NavbarProps {
 
 export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const { language, setLanguage, t } = useLanguage();
+
+  // Prevent hydration mismatch by only rendering translated content after mount
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -98,7 +106,7 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
                   className="text-white/80 hover:text-brand-300 font-medium transition-colors flex items-center gap-2 group cursor-pointer"
                 >
                   <IconComponent className="w-4 h-4 group-hover:text-brand-300 transition-colors" />
-                  {t(link.key)}
+                  {mounted ? t(link.key) : (link.key === "trade" ? "Comprar" : link.key === "dashboard" ? "Dashboard" : link.key === "withdraw" ? "Sacar" : link.key === "profile" ? "Perfil" : link.key)}
                 </button>
               );
             })}
@@ -120,11 +128,7 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
               }`}
               title="Português"
             >
-              <img 
-                src="/flags/br.svg" 
-                alt="Brazil Flag" 
-                className="w-5 h-3.5 object-cover rounded-sm"
-              />
+              <FlagBR size={20} className="rounded-sm" />
             </button>
             <button
               onClick={() => setLanguage("en")}
@@ -135,11 +139,7 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
               }`}
               title="English"
             >
-              <img 
-                src="/flags/us.svg" 
-                alt="US Flag" 
-                className="w-5 h-3.5 object-cover rounded-sm"
-              />
+              <FlagUS size={20} className="rounded-sm" />
             </button>
           </div>
 
@@ -151,7 +151,7 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
             className="gap-2 text-white hover:text-brand-300 hover:bg-white/10"
           >
             <LogOut className="w-4 h-4" />
-            {isLoggingOut ? t("loggingOut") : t("logout")}
+            {mounted ? (isLoggingOut ? t("loggingOut") : t("logout")) : (isLoggingOut ? "Saindo..." : "Sair")}
           </Button>
         </div>
       </header>
@@ -177,7 +177,7 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
             onClick={handleLogout}
             disabled={isLoggingOut}
             className="text-white hover:text-blue-300 hover:bg-white/10 p-2"
-            title={t("logout")}
+            title={mounted ? t("logout") : "Sair"}
           >
             <LogOut className="w-5 h-5" />
           </Button>
@@ -211,7 +211,7 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
       >
         {/* Mobile Menu Header */}
         <div className="flex items-center justify-between p-6 border-b border-white/10">
-          <span className="text-lg font-bold text-white">{t("menu")}</span>
+          <span className="text-lg font-bold text-white">{mounted ? t("menu") : "Menu"}</span>
           <Button
             variant="ghost"
             size="sm"
@@ -236,7 +236,7 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
                     className="w-full flex items-center gap-3 p-3 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 group"
                   >
                     <IconComponent className="w-5 h-5 group-hover:text-brand-300 transition-colors" />
-                    <span className="font-medium">{t(link.key)}</span>
+                    <span className="font-medium">{mounted ? t(link.key) : (link.key === "trade" ? "Comprar" : link.key === "dashboard" ? "Dashboard" : link.key === "withdraw" ? "Sacar" : link.key === "profile" ? "Perfil" : link.key)}</span>
                   </button>
                 );
               })}
@@ -261,11 +261,7 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
                 }`}
                 title="Português"
               >
-                <img 
-                  src="/flags/br.svg" 
-                  alt="Brazil Flag" 
-                  className="w-6 h-4 object-cover rounded-sm"
-                />
+                <FlagBR size={24} className="rounded-sm" />
               </button>
               <button
                 onClick={() => setLanguage("en")}
@@ -276,11 +272,7 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
                 }`}
                 title="English"
               >
-                <img 
-                  src="/flags/us.svg" 
-                  alt="US Flag" 
-                  className="w-6 h-4 object-cover rounded-sm"
-                />
+                <FlagUS size={24} className="rounded-sm" />
               </button>
             </div>
 
@@ -292,7 +284,7 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
               >
                 <LogOut className="w-5 h-5" />
                 <span className="font-medium">
-                  {isLoggingOut ? t("loggingOut") : t("logout")}
+                  {mounted ? (isLoggingOut ? t("loggingOut") : t("logout")) : (isLoggingOut ? "Saindo..." : "Sair")}
                 </span>
               </button>
             </div>

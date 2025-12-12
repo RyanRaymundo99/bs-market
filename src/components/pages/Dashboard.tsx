@@ -11,7 +11,6 @@ import {
   RefreshCw,
   Globe,
   Clock,
-  Plus,
   Wallet,
   TrendingUp,
   ArrowDownRight,
@@ -22,7 +21,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import NavbarNew from "@/components/ui/navbar-new";
 import KYCBanner from "@/components/ui/kyc-banner";

@@ -28,8 +28,6 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import {
-  ArrowLeft,
-  TrendingDown,
   Wallet,
   Coins,
   History,
@@ -38,9 +36,7 @@ import {
   XCircle,
   ExternalLink,
 } from "lucide-react";
-import Link from "next/link";
 import NavbarNew from "@/components/ui/navbar-new";
-import Breadcrumb from "@/components/ui/breadcrumb";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface CryptoBalance {

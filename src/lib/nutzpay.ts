@@ -157,30 +157,7 @@ export class NutzPayService {
       );
 
       // Log full response for debugging
-      console.log("========================================");
-      console.log("=== FULL NUTZPAY API RESPONSE ===");
-      console.log("Status:", response.status);
-      console.log("Headers:", JSON.stringify(response.headers, null, 2));
-      console.log("Full Response Data:", JSON.stringify(response.data, null, 2));
-      console.log("Response Data Type:", typeof response.data);
-      console.log("Response Data Keys:", Object.keys(response.data || {}));
-      
-      // Check for PIX data specifically
-      if (response.data) {
-        console.log("--- PIX Data Analysis ---");
-        console.log("response.data.pix_data:", response.data.pix_data);
-        console.log("response.data.pix_data?.qr_code:", response.data.pix_data?.qr_code);
-        console.log("response.data.pix_data?.qrCode:", response.data.pix_data?.qrCode);
-        console.log("response.data.qrCode:", response.data.qrCode);
-        console.log("response.data.qr_code:", response.data.qr_code);
-        console.log("response.data.pixKey:", response.data.pixKey);
-        console.log("response.data.pix_key:", response.data.pix_key);
-        console.log("response.data.pix_data?.qr_code_base64 exists:", !!response.data.pix_data?.qr_code_base64);
-        if (response.data.pix_data?.qr_code_base64) {
-          console.log("QR Code Base64 length:", response.data.pix_data.qr_code_base64.length);
-        }
-      }
-      console.log("========================================");
+      // Debug logging removed for production
 
       return response.data;
     } catch (error) {
