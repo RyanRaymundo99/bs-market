@@ -267,7 +267,7 @@ const TradePage = () => {
       if (data.success && data.data) {
         // Extract PIX code from various possible structures
         // NutzPay API returns: qrCode, pixKey, or pix_data.qr_code
-        const pixCode =
+        let pixCode =
           data.data.pix_data?.qr_code ||
           data.data.pix_data?.qrCode ||
           data.data.qrCode ||
@@ -291,6 +291,61 @@ const TradePage = () => {
         );
         console.log("QR Code URL:", qrCodeUrl || "Not present");
         console.log("=========================");
+
+        // If PIX code is missing but QR code image is available, try to decode it
+        if (!pixCode && qrCodeBase64) {
+          try {
+            // Dynamically import jsQR for client-side QR code decoding
+            const jsQRModule = await import("jsqr");
+            const jsQR = jsQRModule.default || jsQRModule;
+            
+            // Create an image element to decode the QR code
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            
+            const decodedCode = await new Promise<string | null>((resolve) => {
+              img.onload = () => {
+                try {
+                  const canvas = document.createElement("canvas");
+                  canvas.width = img.width;
+                  canvas.height = img.height;
+                  const ctx = canvas.getContext("2d");
+                  if (ctx) {
+                    ctx.drawImage(img, 0, 0);
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const code = jsQR(imageData.data, imageData.width, imageData.height);
+                    resolve(code?.data || null);
+                  } else {
+                    resolve(null);
+                  }
+                } catch (error) {
+                  console.error("Error decoding QR code:", error);
+                  resolve(null);
+                }
+              };
+              img.onerror = () => {
+                console.error("Error loading QR code image");
+                resolve(null);
+              };
+              
+              // Set image source
+              const base64Data = qrCodeBase64.includes(',') 
+                ? qrCodeBase64 
+                : `data:image/png;base64,${qrCodeBase64}`;
+              img.src = base64Data;
+            });
+
+            if (decodedCode) {
+              console.log("✅ Successfully decoded PIX code from QR image!");
+              console.log("Decoded PIX code:", decodedCode.substring(0, 50) + "...");
+              pixCode = decodedCode;
+            } else {
+              console.log("⚠️ Could not decode PIX code from QR image");
+            }
+          } catch (error) {
+            console.error("Error importing or using jsQR:", error);
+          }
+        }
 
         // Show PIX QR code modal
         setPixData({
@@ -713,50 +768,38 @@ const TradePage = () => {
                   </div>
                 </div>
 
-                {/* PIX Code Display */}
-                {pixData.qrCode && (
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-[#A1A1AA]">
-                      Código PIX (Copia e Cola):
-                    </label>
-                    <div className="relative">
-                      <div className="flex items-center gap-2 p-3 bg-gray-900 border border-gray-700 rounded-lg">
-                        <code className="flex-1 text-xs text-white break-all font-mono pr-2">
+                {/* Copy Button with PIX Code */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-300">
+                    Código PIX (Copia e Cola):
+                  </label>
+                  <button
+                    onClick={copyPixCode}
+                    disabled={!pixData.qrCode}
+                    className="w-full py-3 px-4 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-800/50 disabled:cursor-not-allowed border-2 border-yellow-500/50 hover:border-yellow-500/70 text-white rounded-lg transition-colors flex items-center justify-between gap-2 font-medium min-h-[56px]"
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="w-5 h-5 text-green-400 flex-shrink-0" />
+                        <span className="text-green-400 font-semibold">Código copiado!</span>
+                      </>
+                    ) : pixData.qrCode ? (
+                      <>
+                        <code className="flex-1 text-xs text-left font-mono break-all pr-2 text-gray-200">
                           {pixData.qrCode}
                         </code>
-                        <button
-                          onClick={copyPixCode}
-                          className="flex-shrink-0 p-2 bg-gray-800 hover:bg-gray-700 text-white rounded transition-colors"
-                          title="Copiar código PIX"
-                        >
-                          {copied ? (
-                            <Check className="w-4 h-4 text-green-400" />
-                          ) : (
-                            <Copy className="w-4 h-4" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Copy Button */}
-                <button
-                  onClick={copyPixCode}
-                  className="w-full py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2 font-medium"
-                >
-                  {copied ? (
-                    <>
-                      <Check className="w-5 h-5 text-green-400" />
-                      Código copiado!
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-5 h-5" />
-                      Copiar código PIX
-                    </>
-                  )}
-                </button>
+                        <Copy className="w-5 h-5 flex-shrink-0 text-yellow-400" />
+                      </>
+                    ) : (
+                      <>
+                        <span className="flex-1 text-sm text-gray-400 text-left">
+                          Código PIX não disponível. Use o QR Code acima para escanear.
+                        </span>
+                        <Copy className="w-5 h-5 flex-shrink-0 text-gray-500" />
+                      </>
+                    )}
+                  </button>
+                </div>
 
                 {/* Check Status Button */}
                 <button
