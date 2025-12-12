@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import NavbarNew from "@/components/ui/navbar-new";
 import KYCBanner from "@/components/ui/kyc-banner";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   LineChart,
   Line,
@@ -96,6 +97,7 @@ export default function Dashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
+  const { t, language } = useLanguage();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [balances, setBalances] = useState<Balance[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -174,7 +176,7 @@ export default function Dashboard() {
       setShowKYCBanner(false);
     } else {
       // For other statuses, just hide temporarily
-      setShowKYCBanner(false);
+    setShowKYCBanner(false);
     }
   };
 
@@ -270,7 +272,7 @@ export default function Dashboard() {
           for (let i = 6; i >= 0; i--) {
             const date = new Date(today);
             date.setDate(date.getDate() - i);
-            const dateStr = date.toLocaleDateString("pt-BR", {
+            const dateStr = date.toLocaleDateString(language === "pt" ? "pt-BR" : "en-US", {
               day: "2-digit",
               month: "2-digit",
             });
@@ -434,7 +436,7 @@ export default function Dashboard() {
             <div className="relative z-10">
               <div className="flex items-start justify-between mb-4 sm:mb-6">
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm text-gray-300 mb-1">Saldo Total</p>
+                  <p className="text-xs sm:text-sm text-gray-300 mb-1">{t("totalBalance")}</p>
                   {(() => {
                     const usdtBalance = balances.find((b) => b.currency === "USDT");
                     const usdtAmount = usdtBalance?.amount || 0;
@@ -447,7 +449,7 @@ export default function Dashboard() {
                       </h2>
                     );
                   })()}
-                </div>
+        </div>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -470,7 +472,7 @@ export default function Dashboard() {
                   size="lg"
                 >
                   <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7" />
-                  <span className="text-center leading-tight">Comprar USDT</span>
+                  <span className="text-center leading-tight">{t("buyUSDT")}</span>
                 </Button>
                 <Button
                   onClick={() => router.push("/withdraw")}
@@ -479,7 +481,7 @@ export default function Dashboard() {
                   size="lg"
                 >
                   <ArrowDownRight className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7" />
-                  <span className="text-center leading-tight">Sacar</span>
+                  <span className="text-center leading-tight">{t("withdrawFunds")}</span>
                 </Button>
               </div>
             </div>
@@ -492,7 +494,7 @@ export default function Dashboard() {
             <CardHeader className="pb-2 sm:pb-3 px-4 sm:px-6 pt-4 sm:pt-6">
               <CardTitle className="text-base sm:text-lg text-white flex items-center gap-2">
                 <Activity className="w-4 h-4 sm:w-5 sm:h-5" />
-                Evolução do Saldo
+                {t("balanceEvolution")}
               </CardTitle>
             </CardHeader>
             <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
@@ -564,14 +566,14 @@ export default function Dashboard() {
                   <CardContent className="p-3 sm:p-4 text-center">
                     <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-brand-400 mx-auto mb-1 sm:mb-2" />
                     <p className="text-xl sm:text-2xl font-bold text-white">{totalTransactions}</p>
-                    <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5 sm:mt-1">Transações</p>
+                    <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5 sm:mt-1">{t("totalTransactions")}</p>
                   </CardContent>
                 </Card>
                 <Card className="rounded-xl sm:rounded-2xl border-gray-800 bg-gray-900/50 backdrop-blur-sm">
                   <CardContent className="p-3 sm:p-4 text-center">
                     <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green-400 mx-auto mb-1 sm:mb-2" />
                     <p className="text-xl sm:text-2xl font-bold text-white">{successRate}%</p>
-                    <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5 sm:mt-1">Taxa Sucesso</p>
+                    <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5 sm:mt-1">{t("successRate")}</p>
                   </CardContent>
                 </Card>
                 {latestDeposit && (
@@ -583,7 +585,7 @@ export default function Dashboard() {
                           ? formatCurrency(Number(latestDeposit.amount))
                           : `${Number(latestDeposit.amount).toFixed(2)}`}
                       </p>
-                      <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5 sm:mt-1">Último Depósito</p>
+                      <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5 sm:mt-1">{t("lastDeposit")}</p>
                     </CardContent>
                   </Card>
                 )}
@@ -598,7 +600,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between">
               <CardTitle className="text-base sm:text-lg text-white flex items-center gap-2">
                 <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
-                Atividade Recente
+                {t("recentActivity")}
               </CardTitle>
               {transactions.length > 5 && (
                 <Button
@@ -606,36 +608,36 @@ export default function Dashboard() {
                   size="sm"
                   className="text-gray-400 hover:text-white text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3"
                 >
-                  Ver todas
+                  {t("seeAll")} →
                   <ArrowRight className="w-3 h-3 ml-1" />
                 </Button>
               )}
             </div>
-          </CardHeader>
+            </CardHeader>
           <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
-            {transactions.length > 0 ? (
+              {transactions.length > 0 ? (
               <div className="space-y-2">
                 {transactions.slice(0, 5).map((transaction, index) => {
-                  const date = new Date(transaction.createdAt);
-                  const time = date.toLocaleTimeString("pt-BR", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  });
-                  const dateStr = date.toLocaleDateString("pt-BR", {
-                    day: "2-digit",
-                    month: "2-digit",
-                  });
+                      const date = new Date(transaction.createdAt);
+                      const time = date.toLocaleTimeString(language === "pt" ? "pt-BR" : "en-US", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      });
+                      const dateStr = date.toLocaleDateString(language === "pt" ? "pt-BR" : "en-US", {
+                        day: "2-digit",
+                        month: "2-digit",
+                      });
 
                   let icon = <ArrowUpRight className="w-4 h-4" />;
                   let bgColor = "bg-green-500/10";
                   let iconColor = "text-green-400";
-                  let title = "";
+                      let title = "";
                   let amountColor = "text-green-400";
                   let prefix = "+";
 
-                  const formattedAmount =
-                    transaction.currency === "BRL"
-                      ? formatCurrency(transaction.amount)
+                      const formattedAmount =
+                        transaction.currency === "BRL"
+                          ? formatCurrency(transaction.amount)
                       : `${transaction.amount.toFixed(8)} ${transaction.currency || "USDT"}`;
 
                   if (transaction.type === "DEPOSIT" || transaction.type === "BUY_CRYPTO") {
@@ -643,37 +645,37 @@ export default function Dashboard() {
                     bgColor = "bg-green-500/10";
                     iconColor = "text-green-400";
                     amountColor = "text-green-400";
-                    title = transaction.type === "BUY_CRYPTO" ? "Compra USDT" : "Depósito";
+                    title = transaction.type === "BUY_CRYPTO" ? t("buyUSDTTransaction") : t("deposit");
                     prefix = "+";
-                  } else if (
-                    transaction.type === "WITHDRAWAL" ||
-                    transaction.type === "WITHDRAW"
-                  ) {
+                      } else if (
+                        transaction.type === "WITHDRAWAL" ||
+                        transaction.type === "WITHDRAW"
+                      ) {
                     icon = <ArrowDownRight className="w-4 h-4" />;
                     bgColor = "bg-red-500/10";
                     iconColor = "text-red-400";
                     amountColor = "text-red-400";
-                    title = "Saque";
+                    title = t("withdrawal");
                     prefix = "-";
-                  } else if (transaction.type === "SELL") {
+                      } else if (transaction.type === "SELL") {
                     icon = <TrendingDown className="w-4 h-4" />;
                     bgColor = "bg-orange-500/10";
                     iconColor = "text-orange-400";
                     amountColor = "text-orange-400";
-                    title = "Venda";
+                    title = t("sell");
                     prefix = "-";
-                  } else {
+                      } else {
                     title = transaction.type;
-                  }
+                      }
 
-                  return (
-                    <div
-                      key={transaction.id || index}
+                      return (
+                        <div
+                          key={transaction.id || index}
                       className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gray-800/30 hover:bg-gray-800/50 transition-colors active:bg-gray-800/60"
                     >
                       <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl ${bgColor} flex items-center justify-center flex-shrink-0`}>
                         <div className={iconColor}>{icon}</div>
-                      </div>
+                        </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 sm:gap-2 mb-0.5">
                           <h4 className="font-medium text-white text-xs sm:text-sm truncate">
@@ -684,14 +686,14 @@ export default function Dashboard() {
                           </p>
                         </div>
                         <p className="text-[10px] sm:text-xs text-gray-500">
-                          {dateStr} às {time}
+                          {dateStr} {language === "pt" ? "às" : "at"} {time}
                         </p>
                       </div>
                     </div>
                   );
                 })}
               </div>
-            ) : (
+                ) : (
               <div className="text-center py-8 sm:py-12">
                 <Wallet className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 text-gray-600" />
                 <p className="text-sm sm:text-base text-gray-400 mb-4">Nenhuma transação recente</p>
@@ -699,12 +701,12 @@ export default function Dashboard() {
                   onClick={() => router.push("/trade")}
                   className="bg-brand-500 hover:bg-brand-600 h-10 sm:h-11 text-sm sm:text-base"
                 >
-                  Fazer primeira compra
+                  {t("makeFirstPurchase")}
                 </Button>
               </div>
             )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
       </div>
     </div>

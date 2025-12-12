@@ -41,6 +41,7 @@ import {
 import Link from "next/link";
 import NavbarNew from "@/components/ui/navbar-new";
 import Breadcrumb from "@/components/ui/breadcrumb";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface CryptoBalance {
   currency: string;
@@ -85,6 +86,7 @@ export default function WithdrawPage() {
   const [selectedNetwork, setSelectedNetwork] = useState("TRC20");
 
   const { toast } = useToast();
+  const { t, language } = useLanguage();
 
   const handleLogout = useCallback(async () => {
     setIsLoggingOut(true);
@@ -152,8 +154,8 @@ export default function WithdrawPage() {
   const handleUSDTWithdrawal = async () => {
     if (!usdtAmount || parseFloat(usdtAmount) <= 0) {
       toast({
-        title: "Valor Inválido",
-        description: "Por favor, insira um valor válido em USDT",
+        title: t("invalidAmount"),
+        description: t("enterValidUSDT"),
         variant: "destructive",
       });
       return;
@@ -161,8 +163,8 @@ export default function WithdrawPage() {
 
     if (!walletAddress.trim()) {
       toast({
-        title: "Endereço Obrigatório",
-        description: "Por favor, insira o endereço da carteira",
+        title: t("addressRequired"),
+        description: t("enterWalletAddress"),
         variant: "destructive",
       });
       return;
@@ -181,9 +183,7 @@ export default function WithdrawPage() {
       });
 
       if (response.ok) {
-        setSuccessMessage(
-          "Transação enviada para processamento. Aguarde a confirmação na blockchain."
-        );
+        setSuccessMessage(t("transactionSent"));
         setShowSuccessModal(true);
         setUsdtAmount("");
         setWalletAddress("");
@@ -195,11 +195,11 @@ export default function WithdrawPage() {
       }
     } catch (error) {
       toast({
-        title: "Erro no Saque",
+        title: t("withdrawalError"),
         description:
           error instanceof Error
             ? error.message
-            : "Falha ao processar saque USDT",
+            : t("failedToProcess"),
         variant: "destructive",
       });
     } finally {
@@ -221,29 +221,29 @@ export default function WithdrawPage() {
       case "PENDING":
         return (
           <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-            Pendente
+            {t("pending")}
           </Badge>
         );
       case "PROCESSING":
         return (
           <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-            Processando
+            {t("processingStatus")}
           </Badge>
         );
       case "COMPLETED":
         return (
           <Badge variant="secondary" className="bg-green-100 text-green-800">
-            Concluído
+            {t("completedStatus")}
           </Badge>
         );
       case "REJECTED":
         return (
           <Badge variant="secondary" className="bg-red-100 text-red-800">
-            Rejeitado
+            {t("rejectedStatus")}
           </Badge>
         );
       default:
-        return <Badge variant="secondary">Desconhecido</Badge>;
+        return <Badge variant="secondary">{t("unknown")}</Badge>;
     }
   };
 
@@ -279,7 +279,7 @@ export default function WithdrawPage() {
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-              <p>Carregando página de saque...</p>
+              <p>{language === "pt" ? "Carregando página de saque..." : "Loading withdrawal page..."}</p>
             </div>
           </div>
         </div>
@@ -296,11 +296,11 @@ export default function WithdrawPage() {
         {/* Header */}
         <div className="text-center mb-6 sm:mb-8">
           <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-brand-500 via-purple-600 to-brand-600 bg-clip-text text-transparent mb-2">
-            Withdraw Funds
-          </h1>
+            {t("withdrawUSDT")}
+            </h1>
           <p className="text-muted-foreground text-sm sm:text-base">
-            Escolha o método de saque e retire seus fundos
-          </p>
+              {t("chooseWithdrawalMethod")}
+            </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -310,10 +310,10 @@ export default function WithdrawPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-white">
                     <Coins className="h-5 w-5" />
-                    Saque via USDT
+                    {t("withdrawViaUSDT")}
                   </CardTitle>
                   <CardDescription className="text-gray-400">
-                    Envie USDT para sua carteira externa
+                    {t("sendUSDTToWallet")}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 sm:space-y-6">
@@ -322,7 +322,7 @@ export default function WithdrawPage() {
                     <div className="flex items-center gap-2 mb-2">
                       <Coins className="h-5 w-5 text-brand-400" />
                       <span className="text-sm font-medium text-gray-300">
-                        Saldo disponível:
+                        {t("availableBalance")}
                       </span>
                     </div>
                     <p className="text-2xl sm:text-3xl font-bold text-brand-400">
@@ -336,7 +336,7 @@ export default function WithdrawPage() {
                   {/* USDT Form */}
                   <div className="space-y-4">
                     <div>
-                      <Label htmlFor="usdt-amount" className="text-gray-300">Valor a sacar (USDT)</Label>
+                      <Label htmlFor="usdt-amount" className="text-gray-300">{t("amountToWithdraw")}</Label>
                       <Input
                         id="usdt-amount"
                         type="number"
@@ -352,12 +352,12 @@ export default function WithdrawPage() {
 
                     <div>
                       <Label htmlFor="wallet-address" className="text-gray-300">
-                        Endereço da carteira
+                        {t("walletAddress")}
                       </Label>
                       <Input
                         id="wallet-address"
                         type="text"
-                        placeholder="Digite o endereço da carteira"
+                        placeholder={t("enterWalletAddress")}
                         value={walletAddress}
                         onChange={(e) => setWalletAddress(e.target.value)}
                         className="bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 rounded-xl"
@@ -365,20 +365,20 @@ export default function WithdrawPage() {
                     </div>
 
                     <div>
-                      <Label htmlFor="network" className="text-gray-300">Rede</Label>
+                      <Label htmlFor="network" className="text-gray-300">{t("network")}</Label>
                       <Select
                         value={selectedNetwork}
                         onValueChange={setSelectedNetwork}
                       >
                         <SelectTrigger className="bg-gray-800/50 border-gray-700 text-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 rounded-xl">
-                          <SelectValue placeholder="Selecione a rede" />
+                          <SelectValue placeholder={t("selectNetwork")} />
                         </SelectTrigger>
                         <SelectContent className="bg-gray-800 border-gray-700">
                           <SelectItem value="TRC20" className="text-white hover:bg-gray-700">
-                            TRC20 (Tron) - Taxa menor
+                            {t("trc20Option")}
                           </SelectItem>
                           <SelectItem value="ERC20" className="text-white hover:bg-gray-700">
-                            ERC20 (Ethereum) - Taxa maior
+                            {t("erc20Option")}
                           </SelectItem>
                         </SelectContent>
                       </Select>
@@ -388,7 +388,7 @@ export default function WithdrawPage() {
                     <div className="p-4 sm:p-6 bg-gray-800/30 rounded-xl border border-gray-700/50">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm text-gray-400">
-                          Taxa de rede:
+                          {t("networkFee")}
                         </span>
                         <span className="text-sm font-medium text-red-400">
                           -1 USDT
@@ -396,7 +396,7 @@ export default function WithdrawPage() {
                       </div>
                       <div className="flex items-center justify-between pt-2 border-t border-gray-700">
                         <span className="text-sm font-medium text-gray-300">
-                          Total líquido:
+                          {t("netTotal")}
                         </span>
                         <span className="text-lg sm:text-xl font-bold text-brand-400">
                           {(calculateUSDTNetAmount() || 0).toFixed(2)} USDT
@@ -417,10 +417,10 @@ export default function WithdrawPage() {
                       {processing ? (
                         <>
                           <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                          Processando...
+                          {t("processing")}
                         </>
                       ) : (
-                        "Enviar USDT"
+                        t("sendUSDT")
                       )}
                     </Button>
                   </div>
@@ -435,13 +435,13 @@ export default function WithdrawPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-white">
                   <Wallet className="h-5 w-5" />
-                  Portfolio Summary
+                  {t("portfolioSummary")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="text-center p-4 bg-gray-800/30 rounded-xl border border-gray-700/50">
                   <p className="text-sm text-gray-400 mb-1">
-                    Total Portfolio Value
+                    {t("totalPortfolioValue")}
                   </p>
                   <p className="text-2xl font-bold text-white">
                     {walletData &&
@@ -452,7 +452,7 @@ export default function WithdrawPage() {
                   </p>
                 </div>
                 <div className="text-center p-4 bg-gray-800/30 rounded-xl border border-gray-700/50">
-                  <p className="text-sm text-gray-400 mb-1">Last Updated</p>
+                  <p className="text-sm text-gray-400 mb-1">{t("lastUpdated")}</p>
                   <p className="text-lg font-semibold text-gray-300">
                     {walletData
                       ? new Date(walletData.lastUpdated).toLocaleTimeString()
@@ -469,10 +469,10 @@ export default function WithdrawPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-white">
               <History className="h-5 w-5" />
-              Histórico de Saques
+              {t("withdrawalHistory")}
             </CardTitle>
             <CardDescription className="text-gray-400">
-              Histórico completo de saques realizados
+              {t("withdrawalHistoryDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -481,11 +481,11 @@ export default function WithdrawPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b">
-                      <th className="text-left py-3 px-4">Data</th>
-                      <th className="text-left py-3 px-4">Tipo</th>
-                      <th className="text-left py-3 px-4">Valor</th>
-                      <th className="text-left py-3 px-4">Status</th>
-                      <th className="text-left py-3 px-4">Hash/Protocolo</th>
+                      <th className="text-left py-3 px-4">{t("date")}</th>
+                      <th className="text-left py-3 px-4">{t("type")}</th>
+                      <th className="text-left py-3 px-4">{t("value")}</th>
+                      <th className="text-left py-3 px-4">{t("status")}</th>
+                      <th className="text-left py-3 px-4">{t("hashProtocol")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -496,7 +496,7 @@ export default function WithdrawPage() {
                       >
                         <td className="py-3 px-4">
                           {new Date(withdrawal.createdAt).toLocaleDateString(
-                            "pt-BR",
+                            language === "pt" ? "pt-BR" : "en-US",
                             {
                               day: "2-digit",
                               month: "2-digit",
@@ -513,7 +513,7 @@ export default function WithdrawPage() {
                         </td>
                         <td className="py-3 px-4 font-medium text-white">
                           {typeof withdrawal.amount === "number"
-                            ? withdrawal.amount.toFixed(2)
+                                  ? withdrawal.amount.toFixed(2)
                             : "0.00"}{" "}
                           USDT
                         </td>
@@ -542,8 +542,7 @@ export default function WithdrawPage() {
               </div>
             ) : (
               <p className="text-center text-muted-foreground py-8">
-                Nenhum histórico de saque encontrado. Realize seu primeiro saque
-                para ver o histórico aqui.
+                {t("noWithdrawalHistory")}
               </p>
             )}
           </CardContent>
@@ -556,12 +555,12 @@ export default function WithdrawPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CheckCircle className="h-5 w-5 text-green-600" />
-              Saque Processado
+              {t("withdrawalProcessed")}
             </DialogTitle>
             <DialogDescription>{successMessage}</DialogDescription>
           </DialogHeader>
           <div className="flex justify-end">
-            <Button onClick={() => setShowSuccessModal(false)}>Fechar</Button>
+            <Button onClick={() => setShowSuccessModal(false)}>{t("close")}</Button>
           </div>
         </DialogContent>
       </Dialog>

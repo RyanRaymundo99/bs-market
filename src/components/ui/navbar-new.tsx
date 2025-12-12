@@ -3,7 +3,6 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   LogOut,
-  Timer,
   Menu,
   X,
   Home,
@@ -11,14 +10,14 @@ import {
   BarChart3,
   User,
 } from "lucide-react";
-import CalculatorModal from "./calculator-modal";
 import { BalanceDisplay } from "./balance-display";
+import { useLanguage } from "@/contexts/LanguageContext";
 
-const NAV_LINKS = [
-  { label: "Dashboard", href: "/dashboard", icon: Home },
-  { label: "Trade", href: "/trade", icon: BarChart3 },
-  { label: "Withdraw", href: "/withdraw", icon: TrendingDown },
-  { label: "Profile", href: "/profile", icon: User },
+const NAV_LINKS_KEYS = [
+  { key: "dashboard", href: "/dashboard", icon: Home },
+  { key: "trade", href: "/trade", icon: BarChart3 },
+  { key: "withdraw", href: "/withdraw", icon: TrendingDown },
+  { key: "profile", href: "/profile", icon: User },
 ];
 
 interface NavbarProps {
@@ -27,8 +26,8 @@ interface NavbarProps {
 }
 
 export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
-  const [showCalculator, setShowCalculator] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { language, setLanguage, t } = useLanguage();
 
   useEffect(() => {
     const handleResize = () => {
@@ -61,14 +60,6 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
     }
   };
 
-  const handleCalculatorOpen = () => {
-    setShowCalculator(true);
-  };
-
-  const handleCalculatorClose = () => {
-    setShowCalculator(false);
-  };
-
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
@@ -98,16 +89,16 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
           </div>
           {/* Desktop Navigation */}
           <nav className="flex gap-6 relative">
-            {NAV_LINKS.map((link) => {
+            {NAV_LINKS_KEYS.map((link) => {
               const IconComponent = link.icon;
               return (
                 <button
-                  key={link.label}
+                  key={link.key}
                   onClick={() => handleNavigation(link.href)}
                   className="text-white/80 hover:text-brand-300 font-medium transition-colors flex items-center gap-2 group cursor-pointer"
                 >
                   <IconComponent className="w-4 h-4 group-hover:text-brand-300 transition-colors" />
-                  {link.label}
+                  {t(link.key)}
                 </button>
               );
             })}
@@ -118,6 +109,40 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
           {/* Balance Display */}
           <BalanceDisplay />
 
+          {/* Language Switcher */}
+          <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1 border border-white/10">
+            <button
+              onClick={() => setLanguage("pt")}
+              className={`px-2 py-1 rounded text-sm transition-all flex items-center justify-center ${
+                language === "pt"
+                  ? "bg-brand-500 text-white"
+                  : "text-white/60 hover:text-white hover:bg-white/10"
+              }`}
+              title="Português"
+            >
+              <img 
+                src="/flags/br.svg" 
+                alt="Brazil Flag" 
+                className="w-5 h-3.5 object-cover rounded-sm"
+              />
+            </button>
+            <button
+              onClick={() => setLanguage("en")}
+              className={`px-2 py-1 rounded text-sm transition-all flex items-center justify-center ${
+                language === "en"
+                  ? "bg-brand-500 text-white"
+                  : "text-white/60 hover:text-white hover:bg-white/10"
+              }`}
+              title="English"
+            >
+              <img 
+                src="/flags/us.svg" 
+                alt="US Flag" 
+                className="w-5 h-3.5 object-cover rounded-sm"
+              />
+            </button>
+          </div>
+
           <Button
             variant="ghost"
             size="sm"
@@ -126,16 +151,7 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
             className="gap-2 text-white hover:text-brand-300 hover:bg-white/10"
           >
             <LogOut className="w-4 h-4" />
-            {isLoggingOut ? "Saindo..." : "Sair"}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleCalculatorOpen}
-            title="Calculadora de Conversão"
-            className="text-white hover:text-brand-300 hover:bg-white/10"
-          >
-            <Timer className="w-4 h-4" />
+            {isLoggingOut ? t("loggingOut") : t("logout")}
           </Button>
         </div>
       </header>
@@ -161,7 +177,7 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
             onClick={handleLogout}
             disabled={isLoggingOut}
             className="text-white hover:text-blue-300 hover:bg-white/10 p-2"
-            title="Sair"
+            title={t("logout")}
           >
             <LogOut className="w-5 h-5" />
           </Button>
@@ -195,7 +211,7 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
       >
         {/* Mobile Menu Header */}
         <div className="flex items-center justify-between p-6 border-b border-white/10">
-          <span className="text-lg font-bold text-white">Menu</span>
+          <span className="text-lg font-bold text-white">{t("menu")}</span>
           <Button
             variant="ghost"
             size="sm"
@@ -211,37 +227,19 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
           <nav className="flex-1 p-6 space-y-2">
             {/* Main Navigation Items */}
             <div className="space-y-1">
-              <button
-                onClick={() => handleMobileNavigation("/dashboard")}
-                className="w-full flex items-center gap-3 p-3 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 group"
-              >
-                <Home className="w-5 h-5 group-hover:text-brand-300 transition-colors" />
-                <span className="font-medium">Dashboard</span>
-              </button>
-
-              <button
-                onClick={() => handleMobileNavigation("/trade")}
-                className="w-full flex items-center gap-3 p-3 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 group"
-              >
-                <BarChart3 className="w-5 h-5 group-hover:text-brand-300 transition-colors" />
-                <span className="font-medium">Trade</span>
-              </button>
-
-              <button
-                onClick={() => handleMobileNavigation("/withdraw")}
-                className="w-full flex items-center gap-3 p-3 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 group"
-              >
-                <TrendingDown className="w-5 h-5 group-hover:text-brand-300 transition-colors" />
-                <span className="font-medium">Withdraw</span>
-              </button>
-
-              <button
-                onClick={() => handleMobileNavigation("/profile")}
-                className="w-full flex items-center gap-3 p-3 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 group"
-              >
-                <User className="w-5 h-5 group-hover:text-brand-300 transition-colors" />
-                <span className="font-medium">Profile</span>
-              </button>
+              {NAV_LINKS_KEYS.map((link) => {
+                const IconComponent = link.icon;
+                return (
+                  <button
+                    key={link.key}
+                    onClick={() => handleMobileNavigation(link.href)}
+                    className="w-full flex items-center gap-3 p-3 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 group"
+                  >
+                    <IconComponent className="w-5 h-5 group-hover:text-brand-300 transition-colors" />
+                    <span className="font-medium">{t(link.key)}</span>
+                  </button>
+                );
+              })}
             </div>
           </nav>
 
@@ -252,35 +250,55 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
               <BalanceDisplay className="w-full justify-center" />
             </div>
 
-            <div className="flex gap-3">
+            {/* Language Switcher for Mobile */}
+            <div className="mb-4 flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 border border-white/10">
               <button
-                onClick={handleCalculatorOpen}
-                className="flex-1 flex items-center justify-center gap-2 p-3 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 group"
+                onClick={() => setLanguage("pt")}
+                className={`px-3 py-2 rounded text-sm transition-all flex items-center justify-center ${
+                  language === "pt"
+                    ? "bg-brand-500 text-white"
+                    : "text-white/60 hover:text-white hover:bg-white/10"
+                }`}
+                title="Português"
               >
-                <Timer className="w-5 h-5 group-hover:text-brand-300 transition-colors" />
-                <span className="font-medium">Calculadora</span>
+                <img 
+                  src="/flags/br.svg" 
+                  alt="Brazil Flag" 
+                  className="w-6 h-4 object-cover rounded-sm"
+                />
               </button>
+              <button
+                onClick={() => setLanguage("en")}
+                className={`px-3 py-2 rounded text-sm transition-all flex items-center justify-center ${
+                  language === "en"
+                    ? "bg-brand-500 text-white"
+                    : "text-white/60 hover:text-white hover:bg-white/10"
+                }`}
+                title="English"
+              >
+                <img 
+                  src="/flags/us.svg" 
+                  alt="US Flag" 
+                  className="w-6 h-4 object-cover rounded-sm"
+                />
+              </button>
+            </div>
 
+            <div className="flex gap-3">
               <button
                 onClick={handleLogout}
                 disabled={isLoggingOut}
-                className="flex-1 flex items-center justify-center gap-2 p-3 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-200 group"
+                className="w-full flex items-center justify-center gap-2 p-3 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-200 group"
               >
                 <LogOut className="w-5 h-5" />
                 <span className="font-medium">
-                  {isLoggingOut ? "Saindo..." : "Sair"}
+                  {isLoggingOut ? t("loggingOut") : t("logout")}
                 </span>
               </button>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Calculator Modal - Rendered outside navbar to avoid z-index conflicts */}
-      <CalculatorModal
-        isOpen={showCalculator}
-        onClose={handleCalculatorClose}
-      />
     </>
   );
 }

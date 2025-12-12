@@ -14,10 +14,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Copy, Check, TrendingUp, Clock, QrCode } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const TradePage = () => {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { toast } = useToast();
+  const { t, language } = useLanguage();
 
   const handleLogout = useCallback(async () => {
     setIsLoggingOut(true);
@@ -70,7 +72,6 @@ const TradePage = () => {
     usdtAmount: number;
     date: Date;
   } | null>(null);
-  const [checkingStatus, setCheckingStatus] = useState(false);
 
   // Estado para o histórico de transações
   const [transactionHistory, setTransactionHistory] = useState<
@@ -87,6 +88,7 @@ const TradePage = () => {
   >([]);
 
   // Store PIX data by transaction ID so we can reopen the modal for pending payments
+  // Load from localStorage on mount
   const [storedPixData, setStoredPixData] = useState<Map<string, {
     qrCode: string;
     qrCodeBase64: string | null;
@@ -94,7 +96,20 @@ const TradePage = () => {
     amount: number;
     usdtAmount: number;
     transactionId: string;
-  }>>(new Map());
+  }>>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("pixData");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          return new Map(Object.entries(parsed));
+        }
+      } catch (error) {
+        console.error("Error loading PIX data from localStorage:", error);
+      }
+    }
+    return new Map();
+  });
 
   // Constantes
   const FEE_RATE = 0.03; // 3% de taxa
@@ -237,6 +252,31 @@ const TradePage = () => {
               };
             });
           setTransactionHistory(buyOrders);
+          
+          // Clean up PIX data for completed transactions
+          setStoredPixData((prev) => {
+            const newMap = new Map(prev);
+            let hasChanges = false;
+            
+            buyOrders.forEach((order) => {
+              if (order.status === "COMPLETED" && newMap.has(order.id)) {
+                newMap.delete(order.id);
+                hasChanges = true;
+              }
+            });
+            
+            // Update localStorage if there were changes
+            if (hasChanges && typeof window !== "undefined") {
+              try {
+                const obj = Object.fromEntries(newMap);
+                localStorage.setItem("pixData", JSON.stringify(obj));
+              } catch (error) {
+                console.error("Error updating PIX data in localStorage:", error);
+              }
+            }
+            
+            return newMap;
+          });
         }
       }
     } catch (error) {
@@ -367,10 +407,21 @@ const TradePage = () => {
           transactionId: data.data.transaction_id,
         };
 
-        // Store PIX data by transaction ID
+        // Store PIX data by transaction ID (in memory and localStorage)
         setStoredPixData((prev) => {
           const newMap = new Map(prev);
           newMap.set(data.data.transaction_id, pixDataForTransaction);
+          
+          // Also save to localStorage for persistence
+          if (typeof window !== "undefined") {
+            try {
+              const obj = Object.fromEntries(newMap);
+              localStorage.setItem("pixData", JSON.stringify(obj));
+            } catch (error) {
+              console.error("Error saving PIX data to localStorage:", error);
+            }
+          }
+          
           return newMap;
         });
 
@@ -402,7 +453,7 @@ const TradePage = () => {
 
         toast({
           title: "Compra iniciada!",
-          description: "Escaneie o QR Code PIX para finalizar o pagamento",
+          description: language === "pt" ? "Escaneie o QR Code PIX para finalizar o pagamento" : "Scan the PIX QR Code to complete payment",
         });
       }
     } catch (error: unknown) {
@@ -428,7 +479,7 @@ const TradePage = () => {
         setCopied(true);
         toast({
           title: "Copiado!",
-          description: "Código PIX copiado para a área de transferência",
+          description: language === "pt" ? "Código PIX copiado para a área de transferência" : "PIX code copied to clipboard",
         });
         // Reset copied state after 2 seconds
         setTimeout(() => setCopied(false), 2000);
@@ -443,128 +494,6 @@ const TradePage = () => {
     }
   };
 
-  // Check payment status manually (webhook updates the database)
-  // This is called when user clicks "Check Status" button or when page becomes visible
-  const checkPaymentStatus = useCallback(
-    async (transactionId: string) => {
-      setCheckingStatus(true);
-      try {
-        console.log("🔍 Checking payment status for:", transactionId);
-        const response = await fetch(`/api/crypto/orders/${transactionId}`);
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          console.error("❌ API error:", response.status, errorData);
-          toast({
-            title: "Erro ao verificar status",
-            description: errorData.error || `Erro ${response.status}: Não foi possível verificar o status do pagamento`,
-            variant: "destructive",
-          });
-          return false;
-        }
-
-        const data = await response.json();
-        console.log("📊 Order data:", data);
-        const order = data.order;
-
-        if (!order) {
-          console.error("❌ No order found in response");
-          toast({
-            title: "Pedido não encontrado",
-            description: "Não foi possível encontrar o pedido. Tente novamente.",
-            variant: "destructive",
-          });
-          return false;
-        }
-
-        console.log("📊 Order status:", order.status);
-
-        if (order.status === "COMPLETED") {
-          // Payment confirmed by webhook!
-          toast({
-            title: "Pagamento confirmado! 🎉",
-            description: `Você recebeu ${formatUSDT(
-              pixData?.usdtAmount || Number(order.amount)
-            )} USDT`,
-            duration: 5000,
-          });
-
-          // Show receipt
-          setReceiptData({
-            transactionId: transactionId,
-            amount: pixData?.amount || Number(order.total),
-            usdtAmount: pixData?.usdtAmount || Number(order.amount),
-            date: new Date(),
-          });
-
-          // Close PIX modal
-          setShowPixModal(false);
-
-          // Show receipt modal
-          setShowReceipt(true);
-
-          // Refresh transaction history to get updated status from database
-          // This ensures we have the latest status from the webhook-updated order
-          await fetchTransactionHistory();
-          return true; // Payment confirmed
-        } else if (order.status === "FAILED") {
-          toast({
-            title: "Pagamento falhou",
-            description:
-              "O pagamento não foi confirmado. Tente novamente.",
-            variant: "destructive",
-          });
-          return true; // Payment failed
-        } else {
-          // Still pending - show more helpful message
-          let description = `Status atual: ${order.status}. `;
-          
-          if (data.synced) {
-            description += "Tentamos sincronizar com NutzPay, mas o pagamento ainda está pendente. ";
-          } else {
-            description += "O pagamento ainda está sendo processado. ";
-          }
-          
-          description += "Se você já fez o pagamento PIX, aguarde alguns minutos ou tente verificar novamente.";
-          
-          toast({
-            title: "Pagamento pendente",
-            description,
-            duration: 5000,
-          });
-          return false;
-        }
-      } catch (error) {
-        console.error("❌ Error checking payment status:", error);
-        toast({
-          title: "Erro ao verificar status",
-          description: error instanceof Error ? error.message : "Não foi possível verificar o status do pagamento",
-          variant: "destructive",
-        });
-        return false;
-      } finally {
-        setCheckingStatus(false);
-      }
-    },
-    [pixData, toast, formatUSDT, fetchTransactionHistory]
-  );
-
-  // Check payment status when page becomes visible (user returns to tab)
-  useEffect(() => {
-    if (!pixData?.transactionId) return;
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        // User returned to the page, check if payment was confirmed
-        checkPaymentStatus(pixData.transactionId);
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [pixData?.transactionId, checkPaymentStatus]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -573,10 +502,10 @@ const TradePage = () => {
         {/* Header */}
         <div className="text-center mb-6 sm:mb-8">
           <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-brand-500 via-purple-600 to-brand-600 bg-clip-text text-transparent mb-2">
-            Comprar USDT
+            {t("buyUSDT")}
           </h1>
           <p className="text-muted-foreground text-sm sm:text-base">
-            Compre USDT via PIX • Taxa de 3% sobre o valor
+            {t("buyUSDTViaPIX")} • {t("fee")}
           </p>
         </div>
 
@@ -585,11 +514,11 @@ const TradePage = () => {
           <CardHeader className="pb-4">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <CardTitle className="text-lg sm:text-xl text-white">
-                Comprar USDT via PIX
+                {t("buyUSDTViaPIX")}
               </CardTitle>
               <Badge variant="secondary" className="bg-brand-500/20 text-brand-400 border-brand-500/30">
                 {priceLoading
-                  ? "Carregando..."
+                  ? (language === "pt" ? "Carregando..." : "Loading...")
                   : `1 USDT = ${formatBRL(usdtPrice)}`}
               </Badge>
             </div>
@@ -598,7 +527,7 @@ const TradePage = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Valor em BRL
+                {t("enterAmount")}
               </label>
               <input
                 type="text"
@@ -628,7 +557,7 @@ const TradePage = () => {
             </div>
 
             <div className="bg-gradient-to-br from-brand-500/20 to-green-500/20 rounded-xl p-4 sm:p-6 border border-brand-500/30">
-              <div className="text-sm text-gray-300 mb-2">Você receberá:</div>
+              <div className="text-sm text-gray-300 mb-2">{language === "pt" ? "Você receberá:" : "You will receive:"}</div>
               <div className="text-2xl sm:text-3xl font-bold text-brand-400">
                 {formatUSDT(buyUSDTReceived)} USDT
               </div>
@@ -642,10 +571,10 @@ const TradePage = () => {
               {loading ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                  Processando...
+                  {language === "pt" ? "Processando..." : "Processing..."}
                 </>
               ) : (
-                "Comprar USDT via PIX"
+                t("confirmPurchase")
               )}
             </Button>
           </CardContent>
@@ -656,99 +585,106 @@ const TradePage = () => {
           <CardHeader>
             <CardTitle className="text-lg sm:text-xl text-white flex items-center gap-2">
               <Clock className="w-5 h-5" />
-              Histórico de Compras
+              {t("purchaseHistory")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {transactionHistory.length === 0 ? (
               <div className="text-center py-12">
                 <TrendingUp className="w-12 h-12 mx-auto mb-3 text-gray-600" />
-                <p className="text-gray-400 mb-1">Nenhuma compra realizada ainda</p>
+                <p className="text-gray-400 mb-1">{t("noPurchases")}</p>
                 <p className="text-sm text-gray-500">
-                  Suas compras aparecerão aqui
+                  {t("purchasesWillAppear")}
                 </p>
               </div>
             ) : (
               <div className="space-y-2">
-                {transactionHistory.map((transaction) => (
-                  <div
-                    key={transaction.id}
-                    className="p-4 rounded-xl bg-gray-800/30 border border-gray-700/50 hover:bg-gray-800/50 transition-colors"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <Badge
-                            className={
-                              transaction.status === "COMPLETED"
-                                ? "bg-green-500/20 text-green-400 border-green-500/30"
+                {transactionHistory.map((transaction) => {
+                  const hasPixData = storedPixData.has(transaction.id);
+                  const isPending = transaction.status === "PENDING";
+                  const isClickable = isPending && hasPixData;
+
+                  return (
+                    <div
+                      key={transaction.id}
+                      onClick={() => {
+                        if (isClickable) {
+                          const pixData = storedPixData.get(transaction.id);
+                          if (pixData) {
+                            setPixData(pixData);
+                            setShowPixModal(true);
+                          }
+                        }
+                      }}
+                      className={`p-4 rounded-xl bg-gray-800/30 border border-gray-700/50 transition-colors ${
+                        isClickable
+                          ? "hover:bg-gray-800/60 cursor-pointer hover:border-yellow-500/50"
+                          : "hover:bg-gray-800/50"
+                      }`}
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <Badge
+                              className={
+                                transaction.status === "COMPLETED"
+                                  ? "bg-green-500/20 text-green-400 border-green-500/30"
+                                  : transaction.status === "PENDING"
+                                  ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
+                                  : "bg-red-500/20 text-red-400 border-red-500/30"
+                              }
+                            >
+                              {transaction.status === "COMPLETED"
+                                ? t("completed")
                                 : transaction.status === "PENDING"
-                                ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
-                                : "bg-red-500/20 text-red-400 border-red-500/30"
-                            }
-                          >
-                            {transaction.status === "COMPLETED"
-                              ? "Concluída"
-                              : transaction.status === "PENDING"
-                              ? "Pendente"
-                              : "Falhou"}
-                          </Badge>
-                          <span className="text-xs text-gray-400">
-                            {transaction.date.toLocaleDateString("pt-BR")} às{" "}
-                            {transaction.date.toLocaleTimeString("pt-BR", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </span>
-                        </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
-                          <div>
-                            <p className="text-gray-400 text-xs">Valor pago</p>
-                            <p className="text-white font-medium">
-                              {formatBRL(transaction.amount)}
-                            </p>
+                                ? t("pending")
+                                : t("failed")}
+                            </Badge>
+                            <span className="text-xs text-gray-400">
+                              {transaction.date.toLocaleDateString(language === "pt" ? "pt-BR" : "en-US")} {language === "pt" ? "às" : "at"}{" "}
+                              {transaction.date.toLocaleTimeString(language === "pt" ? "pt-BR" : "en-US", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </span>
+                            {isPending && hasPixData && (
+                              <span className="text-xs text-yellow-400/70 flex items-center gap-1">
+                                <QrCode className="w-3 h-3" />
+                                {t("clickToSeeQRCode")}
+                              </span>
+                            )}
                           </div>
-                          <div>
-                            <p className="text-gray-400 text-xs">Recebido</p>
-                            <p className="text-brand-400 font-semibold">
-                              {formatUSDT(transaction.received)} USDT
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-gray-400 text-xs">Taxa</p>
-                            <p className="text-gray-300">
-                              {formatBRL(transaction.fee)}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-gray-400 text-xs">Taxa</p>
-                            <p className="text-gray-300">
-                              @ {formatBRL(transaction.rate)}
-                            </p>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
+                            <div>
+                              <p className="text-gray-400 text-xs">{t("amountPaid")}</p>
+                              <p className="text-white font-medium">
+                                {formatBRL(transaction.amount)}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-gray-400 text-xs">{t("received")}</p>
+                              <p className="text-brand-400 font-semibold">
+                                {formatUSDT(transaction.received)} USDT
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-gray-400 text-xs">{t("feeAmount")}</p>
+                              <p className="text-gray-300">
+                                {formatBRL(transaction.fee)}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-gray-400 text-xs">{t("feeAmount")}</p>
+                              <p className="text-gray-300">
+                                @ {formatBRL(transaction.rate)}
+                              </p>
+                            </div>
                           </div>
                         </div>
                       </div>
-                      {/* Show button to reopen PIX modal for pending transactions */}
-                      {transaction.status === "PENDING" && storedPixData.has(transaction.id) && (
-                        <Button
-                          onClick={() => {
-                            const pixData = storedPixData.get(transaction.id);
-                            if (pixData) {
-                              setPixData(pixData);
-                              setShowPixModal(true);
-                            }
-                          }}
-                          className="flex items-center gap-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 border-yellow-500/30 mt-3 sm:mt-0"
-                          variant="outline"
-                          size="sm"
-                        >
-                          <QrCode className="w-4 h-4" />
-                          Ver QR Code
-                        </Button>
-                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>
@@ -757,10 +693,10 @@ const TradePage = () => {
         {/* Additional Info */}
         <div className="mt-6 text-center">
           <p className="text-xs sm:text-sm text-gray-400">
-            • As cotações são atualizadas em tempo real
+            • {t("quotesUpdated")}
             <br />
-            • Taxa de 3% aplicada em todas as operações
-            <br />• Pagamento via PIX com confirmação automática
+            • {t("feeApplied")}
+            <br />• {t("pixPayment")}
           </p>
         </div>
       </div>
@@ -770,10 +706,10 @@ const TradePage = () => {
         <DialogContent className="bg-[#1E1E1E] border-gray-800 text-white max-w-2xl w-full p-4 sm:p-6">
           <DialogHeader className="pb-3">
             <DialogTitle className="text-white text-lg sm:text-xl">
-              Escaneie o QR Code PIX
+              {t("scanQRCode")}
             </DialogTitle>
             <DialogDescription className="text-[#A1A1AA] text-sm">
-              Escaneie o código abaixo com o app do seu banco para finalizar o pagamento
+              {language === "pt" ? "Escaneie o código abaixo com o app do seu banco para finalizar o pagamento" : "Scan the code below with your bank app to complete payment"}
             </DialogDescription>
           </DialogHeader>
           {pixData && (
@@ -788,7 +724,7 @@ const TradePage = () => {
                   />
                 ) : (
                   <div className="w-48 h-48 sm:w-56 sm:h-56 bg-gray-900 border-2 border-gray-700 rounded-xl flex items-center justify-center">
-                    <p className="text-[#A1A1AA] text-sm">QR Code não disponível</p>
+                    <p className="text-[#A1A1AA] text-sm">{language === "pt" ? "QR Code não disponível" : "QR Code not available"}</p>
                   </div>
                 )}
                 <div className="text-center space-y-1">
@@ -815,7 +751,7 @@ const TradePage = () => {
                   {copied ? (
                     <>
                       <Check className="w-4 h-4 sm:w-5 sm:h-5 text-green-400 flex-shrink-0" />
-                      <span className="text-sm sm:text-base text-green-400 font-semibold">Código copiado!</span>
+                      <span className="text-sm sm:text-base text-green-400 font-semibold">{t("codeCopied")}</span>
                     </>
                   ) : pixData.qrCode ? (
                     <>
@@ -827,7 +763,7 @@ const TradePage = () => {
                   ) : (
                     <>
                       <span className="flex-1 text-xs sm:text-sm text-gray-400 text-left">
-                        Código PIX não disponível. Use o QR Code acima para escanear.
+                        {t("pixCodeNotAvailable")}
                       </span>
                       <Copy className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 text-gray-500" />
                     </>
@@ -835,35 +771,8 @@ const TradePage = () => {
                 </button>
               </div>
 
-              {/* Check Status Button */}
-              <button
-                onClick={async () => {
-                  if (pixData?.transactionId) {
-                    await checkPaymentStatus(pixData.transactionId);
-                  } else {
-                    toast({
-                      title: "Erro",
-                      description: "ID da transação não encontrado",
-                      variant: "destructive",
-                    });
-                  }
-                }}
-                disabled={checkingStatus}
-                className="w-full py-2.5 sm:py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center justify-center gap-2 font-medium text-sm sm:text-base"
-              >
-                {checkingStatus ? (
-                  <>
-                    <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Verificando...
-                  </>
-                ) : (
-                  "Verificar Status do Pagamento"
-                )}
-              </button>
-
               <p className="text-[10px] sm:text-xs text-[#A1A1AA] text-center pt-2">
-                Após o pagamento, seus USDT serão creditados automaticamente via webhook.
-                Você pode verificar o status a qualquer momento.
+                {t("paymentInstructions")}
               </p>
             </div>
           )}

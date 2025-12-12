@@ -64,6 +64,7 @@ export default function ProfilePage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const { toast } = useToast();
+  const { t, language } = useLanguage();
 
   const handleLogout = useCallback(async () => {
     setIsLoggingOut(true);
@@ -96,6 +97,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     fetchUserProfile();
+    fetchKycDocuments();
   }, []);
 
   const fetchUserProfile = async () => {
@@ -113,8 +115,8 @@ export default function ProfilePage() {
       console.error("Error fetching user profile:", error);
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Failed to load profile information",
+        title: t("error"),
+        description: t("failedToLoadProfile"),
       });
     } finally {
       setLoading(false);
@@ -157,8 +159,8 @@ export default function ProfilePage() {
 
       if (response.ok) {
         toast({
-          title: "Profile Updated",
-          description: "Your profile has been updated successfully",
+          title: t("profileUpdated"),
+          description: t("profileUpdatedSuccess"),
         });
         setEditing(false);
         fetchUserProfile();
@@ -168,8 +170,8 @@ export default function ProfilePage() {
     } catch {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Failed to update profile",
+        title: t("error"),
+        description: t("failedToUpdateProfile"),
       });
     }
   };
@@ -196,8 +198,8 @@ export default function ProfilePage() {
 
       if (response.ok) {
         toast({
-          title: "Document Uploaded",
-          description: "Your document has been uploaded successfully",
+          title: t("documentUploaded"),
+          description: t("documentUploadedSuccess"),
         });
         setSelectedFile(null);
         setPreviewUrl(null);
@@ -208,8 +210,8 @@ export default function ProfilePage() {
     } catch {
       toast({
         variant: "destructive",
-        title: "Upload Failed",
-        description: "Failed to upload document",
+        title: t("uploadFailed"),
+        description: t("failedToUpload"),
       });
     } finally {
       setUploading(false);
@@ -222,27 +224,30 @@ export default function ProfilePage() {
         return (
           <Badge className="bg-green-100 text-green-800 border-green-200">
             <CheckCircle className="w-3 h-3 mr-1" />
-            Approved
+            {t("approved")}
           </Badge>
         );
       case "PENDING":
         return (
           <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
             <Clock className="w-3 h-3 mr-1" />
-            Pending
+            {t("pending")}
           </Badge>
         );
       case "REJECTED":
         return (
           <Badge className="bg-red-100 text-red-800 border-red-200">
             <XCircle className="w-3 h-3 mr-1" />
-            Rejected
+            {t("rejected")}
           </Badge>
         );
       default:
         return null;
     }
   };
+
+  // Check if user is fully approved
+  const isApproved = userProfile?.approvalStatus === "APPROVED" && userProfile?.kycStatus === "APPROVED";
 
   if (loading) {
     return (
@@ -252,7 +257,7 @@ export default function ProfilePage() {
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-              <p>Loading profile...</p>
+              <p>{t("loadingProfile")}</p>
             </div>
           </div>
         </div>
@@ -262,19 +267,19 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <NavbarNew isLoggingOut={false} handleLogout={() => {}} />
+      <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
       <div className="container mx-auto px-4 py-6">
         <Breadcrumb
           items={[
-            { label: "Dashboard", href: "/dashboard" },
-            { label: "Profile" },
+            { label: t("dashboard"), href: "/dashboard" },
+            { label: t("profile") },
           ]}
         />
 
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Profile Management</h1>
+          <h1 className="text-3xl font-bold mb-2">Gerenciamento de Perfil</h1>
           <p className="text-muted-foreground">
-            Manage your personal information and KYC documents
+            Gerencie suas informações pessoais e documentos KYC
           </p>
         </div>
 
@@ -284,14 +289,14 @@ export default function ProfilePage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="w-5 h-5" />
-                Personal Information
+                {t("personalInformation")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4">
                 <div>
-                  <Label htmlFor="name">Full Name</Label>
-                  {editing ? (
+                  <Label htmlFor="name">{t("fullName")}</Label>
+                  {editing && !isApproved ? (
                     <Input
                       id="name"
                       value={formData.name}
@@ -300,14 +305,19 @@ export default function ProfilePage() {
                       }
                     />
                   ) : (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {userProfile?.name || "Not provided"}
-                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-sm text-muted-foreground">
+                        {userProfile?.name || t("notProvided")}
+                      </p>
+                      {isApproved && (
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                      )}
+                    </div>
                   )}
                 </div>
 
                 <div>
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">{t("email")}</Label>
                   <div className="flex items-center gap-2 mt-1">
                     <Mail className="w-4 h-4 text-muted-foreground" />
                     <span className="text-sm">{userProfile?.email}</span>
@@ -320,8 +330,8 @@ export default function ProfilePage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="phone">Phone</Label>
-                  {editing ? (
+                  <Label htmlFor="phone">{t("phone")}</Label>
+                  {editing && !isApproved ? (
                     <Input
                       id="phone"
                       value={formData.phone}
@@ -333,7 +343,7 @@ export default function ProfilePage() {
                     <div className="flex items-center gap-2 mt-1">
                       <Phone className="w-4 h-4 text-muted-foreground" />
                       <span className="text-sm">
-                        {userProfile?.phone || "Not provided"}
+                        {userProfile?.phone || t("notProvided")}
                       </span>
                       {userProfile?.phoneVerified ? (
                         <CheckCircle className="w-4 h-4 text-green-500" />
@@ -345,35 +355,40 @@ export default function ProfilePage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="cpf">CPF</Label>
+                  <Label htmlFor="cpf">{t("cpf")}</Label>
                   <div className="flex items-center gap-2 mt-1">
                     <CreditCard className="w-4 h-4 text-muted-foreground" />
                     <span className="text-sm">
-                      {userProfile?.cpf || "Not provided"}
+                      {userProfile?.cpf || t("notProvided")}
                     </span>
+                    {isApproved && userProfile?.cpf && (
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                    )}
                   </div>
                 </div>
               </div>
 
-              <div className="flex gap-2">
-                {editing ? (
-                  <>
-                    <Button onClick={handleSave} size="sm">
-                      <Save className="w-4 h-4 mr-2" />
-                      Save
+              {!isApproved && (
+                <div className="flex gap-2">
+                  {editing ? (
+                    <>
+                      <Button onClick={handleSave} size="sm">
+                        <Save className="w-4 h-4 mr-2" />
+                        {t("save")}
+                      </Button>
+                      <Button onClick={handleCancel} variant="outline" size="sm">
+                        <X className="w-4 h-4 mr-2" />
+                        {t("cancel")}
+                      </Button>
+                    </>
+                  ) : (
+                    <Button onClick={handleEdit} size="sm">
+                      <Edit className="w-4 h-4 mr-2" />
+                      {t("editProfile")}
                     </Button>
-                    <Button onClick={handleCancel} variant="outline" size="sm">
-                      <X className="w-4 h-4 mr-2" />
-                      Cancel
-                    </Button>
-                  </>
-                ) : (
-                  <Button onClick={handleEdit} size="sm">
-                    <Edit className="w-4 h-4 mr-2" />
-                    Edit Profile
-                  </Button>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -382,25 +397,25 @@ export default function ProfilePage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="w-5 h-5" />
-                Account Status
+                {t("accountStatus")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Account Approval</span>
+                  <span className="text-sm font-medium">{t("accountApproval")}</span>
                   {getStatusBadge(userProfile?.approvalStatus || "PENDING")}
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">KYC Status</span>
+                  <span className="text-sm font-medium">{t("kycStatus")}</span>
                   {getStatusBadge(userProfile?.kycStatus || "PENDING")}
                 </div>
 
                 {userProfile?.kycRejectionReason && (
                   <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
                     <p className="text-sm text-red-800 font-medium">
-                      KYC Rejection Reason:
+                      {t("kycRejectionReason")}:
                     </p>
                     <p className="text-sm text-red-700 mt-1">
                       {userProfile.kycRejectionReason}
@@ -411,17 +426,17 @@ export default function ProfilePage() {
                 {userProfile?.kycSubmittedAt && (
                   <div className="text-sm text-muted-foreground">
                     <p>
-                      <strong>Submitted:</strong>{" "}
+                      <strong>{t("submitted")}:</strong>{" "}
                       {new Date(
                         userProfile.kycSubmittedAt
-                      ).toLocaleDateString()}
+                      ).toLocaleDateString(language === "pt" ? "pt-BR" : "en-US")}
                     </p>
                     {userProfile.kycReviewedAt && (
                       <p>
-                        <strong>Reviewed:</strong>{" "}
+                        <strong>{t("reviewed")}:</strong>{" "}
                         {new Date(
                           userProfile.kycReviewedAt
-                        ).toLocaleDateString()}
+                        ).toLocaleDateString(language === "pt" ? "pt-BR" : "en-US")}
                       </p>
                     )}
                   </div>
@@ -436,153 +451,198 @@ export default function ProfilePage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Camera className="w-5 h-5" />
-              KYC Documents
+              {t("kycDocuments")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-6 md:grid-cols-3">
               {/* Document Front */}
               <div className="space-y-3">
-                <Label>Document Front</Label>
+                <Label>{t("documentFront")}</Label>
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
                   {kycDocuments?.documentFront ? (
-                    <div className="space-y-2">
-                      <img
-                        src={kycDocuments.documentFront}
-                        alt="Document Front"
-                        className="w-full h-32 object-cover rounded"
-                      />
-                      <p className="text-sm text-green-600">Uploaded</p>
-                    </div>
+                    isApproved ? (
+                      <div className="space-y-3 py-8">
+                        <CheckCircle className="w-16 h-16 mx-auto text-green-500" />
+                        <div className="flex items-center justify-center gap-1">
+                          <p className="text-sm font-medium text-green-600">Aprovado</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <img
+                          src={kycDocuments.documentFront}
+                          alt="Frente do Documento"
+                          className="w-full h-32 object-cover rounded"
+                        />
+                        <div className="flex items-center justify-center gap-1">
+                          <p className="text-sm text-green-600">{t("uploaded")}</p>
+                        </div>
+                      </div>
+                    )
                   ) : (
                     <div className="space-y-2">
                       <Upload className="w-8 h-8 mx-auto text-gray-400" />
                       <p className="text-sm text-gray-500">
-                        No document uploaded
+                        {t("noDocumentUploaded")}
                       </p>
                     </div>
                   )}
                 </div>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleFileSelect("front", file);
-                  }}
-                  className="hidden"
-                  id="front-upload"
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    document.getElementById("front-upload")?.click()
-                  }
-                  className="w-full"
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload Front
-                </Button>
+                {!isApproved && (
+                  <>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFileSelect("front", file);
+                      }}
+                      className="hidden"
+                      id="front-upload"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        document.getElementById("front-upload")?.click()
+                      }
+                      className="w-full"
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      {t("uploadFront")}
+                    </Button>
+                  </>
+                )}
               </div>
 
               {/* Document Back */}
               <div className="space-y-3">
-                <Label>Document Back</Label>
+                <Label>{t("documentBack")}</Label>
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
                   {kycDocuments?.documentBack ? (
-                    <div className="space-y-2">
-                      <img
-                        src={kycDocuments.documentBack}
-                        alt="Document Back"
-                        className="w-full h-32 object-cover rounded"
-                      />
-                      <p className="text-sm text-green-600">Uploaded</p>
-                    </div>
+                    isApproved ? (
+                      <div className="space-y-3 py-8">
+                        <CheckCircle className="w-16 h-16 mx-auto text-green-500" />
+                        <div className="flex items-center justify-center gap-1">
+                          <p className="text-sm font-medium text-green-600">Aprovado</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <img
+                          src={kycDocuments.documentBack}
+                          alt="Verso do Documento"
+                          className="w-full h-32 object-cover rounded"
+                        />
+                        <div className="flex items-center justify-center gap-1">
+                          <p className="text-sm text-green-600">{t("uploaded")}</p>
+                        </div>
+                      </div>
+                    )
                   ) : (
                     <div className="space-y-2">
                       <Upload className="w-8 h-8 mx-auto text-gray-400" />
                       <p className="text-sm text-gray-500">
-                        No document uploaded
+                        {t("noDocumentUploaded")}
                       </p>
                     </div>
                   )}
                 </div>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleFileSelect("back", file);
-                  }}
-                  className="hidden"
-                  id="back-upload"
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    document.getElementById("back-upload")?.click()
-                  }
-                  className="w-full"
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload Back
-                </Button>
+                {!isApproved && (
+                  <>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFileSelect("back", file);
+                      }}
+                      className="hidden"
+                      id="back-upload"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        document.getElementById("back-upload")?.click()
+                      }
+                      className="w-full"
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      {t("uploadBack")}
+                    </Button>
+                  </>
+                )}
               </div>
 
               {/* Selfie */}
               <div className="space-y-3">
-                <Label>Selfie with Document</Label>
+                <Label>{t("selfieWithDocument")}</Label>
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
                   {kycDocuments?.documentSelfie ? (
-                    <div className="space-y-2">
-                      <img
-                        src={kycDocuments.documentSelfie}
-                        alt="Document Selfie"
-                        className="w-full h-32 object-cover rounded"
-                      />
-                      <p className="text-sm text-green-600">Uploaded</p>
-                    </div>
+                    isApproved ? (
+                      <div className="space-y-3 py-8">
+                        <CheckCircle className="w-16 h-16 mx-auto text-green-500" />
+                        <div className="flex items-center justify-center gap-1">
+                          <p className="text-sm font-medium text-green-600">Aprovado</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <img
+                          src={kycDocuments.documentSelfie}
+                          alt="Selfie com Documento"
+                          className="w-full h-32 object-cover rounded"
+                        />
+                        <div className="flex items-center justify-center gap-1">
+                          <p className="text-sm text-green-600">{t("uploaded")}</p>
+                        </div>
+                      </div>
+                    )
                   ) : (
                     <div className="space-y-2">
                       <Upload className="w-8 h-8 mx-auto text-gray-400" />
                       <p className="text-sm text-gray-500">
-                        No selfie uploaded
+                        {t("noSelfieUploaded")}
                       </p>
                     </div>
                   )}
                 </div>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleFileSelect("selfie", file);
-                  }}
-                  className="hidden"
-                  id="selfie-upload"
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    document.getElementById("selfie-upload")?.click()
-                  }
-                  className="w-full"
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload Selfie
-                </Button>
+                {!isApproved && (
+                  <>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFileSelect("selfie", file);
+                      }}
+                      className="hidden"
+                      id="selfie-upload"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        document.getElementById("selfie-upload")?.click()
+                      }
+                      className="w-full"
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      {t("uploadSelfie")}
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
 
             {/* File Preview and Upload */}
-            {selectedFile && (
+            {selectedFile && !isApproved && (
               <div className="mt-6 p-4 border rounded-lg bg-gray-50">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-medium">
-                    Preview: {selectedFile.type.toUpperCase()} Document
+                    {t("preview")}: {selectedFile.type === "front" ? t("documentFront") : selectedFile.type === "back" ? t("documentBack") : t("selfieWithDocument")}
                   </h3>
                   <Button
                     variant="ghost"
@@ -598,7 +658,7 @@ export default function ProfilePage() {
                 {previewUrl && (
                   <img
                     src={previewUrl}
-                    alt="Preview"
+                    alt={t("preview")}
                     className="w-full max-w-md h-48 object-cover rounded mb-4"
                   />
                 )}
@@ -610,12 +670,12 @@ export default function ProfilePage() {
                   {uploading ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Uploading...
+                      {t("uploading")}
                     </>
                   ) : (
                     <>
                       <Upload className="w-4 h-4 mr-2" />
-                      Upload Document
+                      {t("uploadDocument")}
                     </>
                   )}
                 </Button>
