@@ -69,7 +69,7 @@ interface Transaction {
   userId?: string;
   value: number;
   status: "PENDING" | "APPROVED" | "REJECTED";
-  metadata?: any;
+  metadata?: Record<string, unknown> | null;
   orderId?: string | null;
   depositId?: string | null;
   withdrawalId?: string | null;
@@ -80,6 +80,48 @@ interface ChartData {
   deposits: number;
   withdrawals: number;
   trades: number;
+}
+
+interface TransactionDetails {
+  id: string;
+  type: string;
+  amount: number;
+  currency: string;
+  balance: number;
+  description: string;
+  metadata?: Record<string, unknown> | null;
+  status: string;
+  createdAt: string;
+  user: {
+    name: string;
+    email: string;
+    cpf?: string | null;
+    phone?: string | null;
+  };
+  deposit?: {
+    id: string;
+    status: string;
+    amount: string | number;
+    externalId?: string | null;
+    confirmedAt?: string | null;
+  } | null;
+  withdrawal?: {
+    id: string;
+    status: string;
+    amount: string | number;
+    hash?: string | null;
+    protocol?: string | null;
+    walletAddress?: string | null;
+    network?: string | null;
+  } | null;
+  order?: {
+    id: string;
+    status: string;
+    externalOrderId?: string | null;
+    executedAt?: string | null;
+    amount: string | number;
+    total: string | number;
+  } | null;
 }
 
 export default function AdminDashboard() {
@@ -110,9 +152,9 @@ export default function AdminDashboard() {
   const [sortField, setSortField] = useState<keyof Transaction>("date");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [loading, setLoading] = useState(true);
-  const [selectedTransaction, setSelectedTransaction] =
-    useState<Transaction | null>(null);
-  const [transactionDetails, setTransactionDetails] = useState<any>(null);
+  const [, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [transactionDetails, setTransactionDetails] =
+    useState<TransactionDetails | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const { toast } = useToast();

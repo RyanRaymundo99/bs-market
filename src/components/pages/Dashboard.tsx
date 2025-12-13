@@ -724,6 +724,7 @@ export default function Dashboard() {
                             typeof label === "string"
                               ? label
                               : (() => {
+                                  if (!label) return "";
                                   const date = new Date(label);
                                   const day = String(date.getDate()).padStart(
                                     2,

@@ -72,6 +72,16 @@ const nextConfig: NextConfig = {
     removeConsole: process.env.NODE_ENV === "production",
   },
 
+  // Allow build with ESLint warnings (warnings are non-critical)
+  eslint: {
+    ignoreDuringBuilds: false,
+  },
+
+  // Allow build with TypeScript errors only (warnings are acceptable)
+  typescript: {
+    ignoreBuildErrors: false,
+  },
+
   // Webpack optimizations
   webpack: (config, { isServer }) => {
     if (!isServer) {
