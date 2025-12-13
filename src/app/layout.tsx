@@ -23,10 +23,13 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   icons: {
     icon: [
-      { url: "/shortname-logo.svg", type: "image/svg+xml" },
-      { url: "/favicon.ico", sizes: "any" },
+      { url: "/shortname-logo.svg", type: "image/svg+xml", sizes: "any" },
+      { url: "/favicon.ico", sizes: "32x32", type: "image/x-icon" },
+      { url: "/favicon.ico", sizes: "16x16", type: "image/x-icon" },
     ],
-    apple: "/shortname-logo.svg",
+    apple: [
+      { url: "/shortname-logo.svg", sizes: "180x180", type: "image/svg+xml" },
+    ],
     shortcut: "/shortname-logo.svg",
   },
 };
@@ -50,8 +53,24 @@ export default function RootLayout({
     >
       <head>
         {/* Favicon */}
-        <link rel="icon" type="image/svg+xml" href="/shortname-logo.svg" />
-        <link rel="alternate icon" href="/favicon.ico" />
+        <link
+          rel="icon"
+          type="image/svg+xml"
+          href="/shortname-logo.svg"
+          sizes="any"
+        />
+        <link
+          rel="icon"
+          type="image/x-icon"
+          href="/favicon.ico"
+          sizes="32x32"
+        />
+        <link
+          rel="alternate icon"
+          type="image/x-icon"
+          href="/favicon.ico"
+          sizes="16x16"
+        />
         {/* Preload critical resources */}
         <link
           rel="preload"
@@ -87,9 +106,7 @@ export default function RootLayout({
         />
       </head>
       <body className={`${geistSans.className} antialiased`}>
-        <Providers>
-          {children}
-        </Providers>
+        <Providers>{children}</Providers>
         <Toaster />
       </body>
     </html>
