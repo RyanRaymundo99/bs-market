@@ -239,7 +239,7 @@ export async function POST(request: NextRequest) {
         );
 
         // Create transaction record for USDT credit
-        await ledgerService.createTransaction({
+        const transaction = await ledgerService.createTransaction({
           userId: user.id,
           type: "BUY_CRYPTO",
           amount: new Decimal(usdt_amount),
@@ -252,6 +252,14 @@ export async function POST(request: NextRequest) {
             amountBRL: amount,
             amountUSDT: usdt_amount,
             exchangeRate: amount / usdt_amount,
+          },
+        });
+
+        // Link transaction to order
+        await prisma.order.update({
+          where: { id: order.id },
+          data: {
+            transactionId: transaction.id,
           },
         });
 

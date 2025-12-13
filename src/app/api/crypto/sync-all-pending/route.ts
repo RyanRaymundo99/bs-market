@@ -73,7 +73,9 @@ export async function POST(request: NextRequest) {
 
         // Send to webhook handler
         const webhookRequest = new Request(
-          `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/webhooks/nutzpay`,
+          `${
+            process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+          }/api/webhooks/nutzpay`,
           {
             method: "POST",
             headers: {
@@ -139,7 +141,7 @@ export async function POST(request: NextRequest) {
           );
 
           // Create transaction record
-          await ledgerService.createTransaction({
+          const transaction = await ledgerService.createTransaction({
             userId: order.userId,
             type: "BUY_CRYPTO",
             amount: new Decimal(Number(order.amount)),
@@ -153,6 +155,14 @@ export async function POST(request: NextRequest) {
               amountUSDT: Number(order.amount),
               exchangeRate: Number(order.total) / Number(order.amount),
               source: "bulk_sync",
+            },
+          });
+
+          // Link transaction to order
+          await prisma.order.update({
+            where: { id: order.id },
+            data: {
+              transactionId: transaction.id,
             },
           });
 
@@ -171,7 +181,8 @@ export async function POST(request: NextRequest) {
         }
       } catch (error) {
         results.failed++;
-        const errorMsg = error instanceof Error ? error.message : "Unknown error";
+        const errorMsg =
+          error instanceof Error ? error.message : "Unknown error";
         results.errors.push(`Order ${order.id}: ${errorMsg}`);
         console.error(`❌ Error syncing order ${order.id}:`, error);
       }
@@ -193,6 +204,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-
-

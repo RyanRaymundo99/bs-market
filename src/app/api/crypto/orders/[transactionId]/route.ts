@@ -34,19 +34,13 @@ export async function GET(
     // Find order by externalOrderId (transactionId from NutzPay) or by order ID
     const order = await prisma.order.findFirst({
       where: {
-        OR: [
-          { externalOrderId: transactionId },
-          { id: transactionId },
-        ],
+        OR: [{ externalOrderId: transactionId }, { id: transactionId }],
         userId: session.user.id, // Ensure user owns this order
       },
     });
 
     if (!order) {
-      return NextResponse.json(
-        { error: "Order not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
     // If order is still pending, check status from NutzPay API
@@ -62,23 +56,36 @@ export async function GET(
             },
           },
         });
-        
+
         const externalId = deposit?.externalId;
-        
+
         let nutzPayStatus;
         let usedId = order.externalOrderId;
-        
+
         try {
-          nutzPayStatus = await nutzPayService.getTransactionStatus(order.externalOrderId);
+          nutzPayStatus = await nutzPayService.getTransactionStatus(
+            order.externalOrderId
+          );
         } catch (apiError) {
-          console.error("❌ Error fetching with transaction_id, trying external_id...");
+          console.error(
+            "❌ Error fetching with transaction_id, trying external_id..."
+          );
           // If transaction_id fails and we have external_id, try that
-          if (externalId && apiError instanceof Error && apiError.message.includes("not found")) {
+          if (
+            externalId &&
+            apiError instanceof Error &&
+            apiError.message.includes("not found")
+          ) {
             try {
-              nutzPayStatus = await nutzPayService.getTransactionStatus(externalId);
+              nutzPayStatus = await nutzPayService.getTransactionStatus(
+                externalId
+              );
               usedId = externalId;
             } catch (fallbackError) {
-              console.error("❌ Error fetching with external_id too:", fallbackError);
+              console.error(
+                "❌ Error fetching with external_id too:",
+                fallbackError
+              );
               nutzPayStatus = null;
             }
           } else {
@@ -89,118 +96,126 @@ export async function GET(
             nutzPayStatus = null;
           }
         }
-        
+
         // Handle case where NutzPay API returns null (server errors)
         if (nutzPayStatus === null) {
         } else if (nutzPayStatus) {
           // Try multiple possible status field names
-          const nutzPayStatusValue = 
-            nutzPayStatus.status || 
-            nutzPayStatus.Status || 
+          const nutzPayStatusValue =
+            nutzPayStatus.status ||
+            nutzPayStatus.Status ||
             nutzPayStatus.payment_status ||
             nutzPayStatus.PaymentStatus ||
             nutzPayStatus.transaction_status ||
             nutzPayStatus.TransactionStatus ||
             "pending";
-          
+
           const statusLower = nutzPayStatusValue.toLowerCase();
-          const isCompleted = 
-            statusLower === "completed" || 
+          const isCompleted =
+            statusLower === "completed" ||
             statusLower === "confirmed" ||
             statusLower === "paid" ||
             statusLower === "success" ||
             statusLower === "successful";
 
           if (isCompleted && order.status === "PENDING") {
-
-          // Update order status
-          await prisma.order.update({
-            where: { id: order.id },
-            data: {
-              status: "COMPLETED",
-              executedAt: new Date(),
-            },
-          });
-
-          // Update deposit status
-          const deposit = await prisma.deposit.findFirst({
-            where: {
-              userId: order.userId,
-              amount: order.total,
-              createdAt: {
-                gte: new Date(order.createdAt.getTime() - 60000),
-                lte: new Date(order.createdAt.getTime() + 60000),
-              },
-            },
-          });
-
-          if (deposit) {
-            await prisma.deposit.update({
-              where: { id: deposit.id },
+            // Update order status
+            await prisma.order.update({
+              where: { id: order.id },
               data: {
-                status: "CONFIRMED",
-                confirmedAt: new Date(),
-              },
-            });
-          }
-
-          // Check if balance was already updated (prevent double credit)
-          const existingTransaction = await prisma.transaction.findFirst({
-            where: {
-              userId: order.userId,
-              currency: "USDT",
-              metadata: {
-                path: ["orderId"],
-                equals: order.id,
-              },
-            },
-          });
-
-          if (!existingTransaction) {
-            // Update USDT balance
-            await ledgerService.updateBalance(
-              order.userId,
-              "USDT",
-              new Decimal(Number(order.amount)),
-              "ADD"
-            );
-
-            // Create transaction record
-            await ledgerService.createTransaction({
-              userId: order.userId,
-              type: "BUY_CRYPTO",
-              amount: new Decimal(Number(order.amount)),
-              currency: "USDT",
-              description: `USDT purchase via PIX - ${Number(order.amount)} USDT`,
-              metadata: {
-                orderId: order.id,
-                depositId: deposit?.id,
-                transactionId: order.externalOrderId,
-                amountBRL: Number(order.total),
-                amountUSDT: Number(order.amount),
-                exchangeRate: Number(order.total) / Number(order.amount),
-                source: "nutzpay_api_poll",
+                status: "COMPLETED",
+                executedAt: new Date(),
               },
             });
 
-          }
+            // Update deposit status
+            const deposit = await prisma.deposit.findFirst({
+              where: {
+                userId: order.userId,
+                amount: order.total,
+                createdAt: {
+                  gte: new Date(order.createdAt.getTime() - 60000),
+                  lte: new Date(order.createdAt.getTime() + 60000),
+                },
+              },
+            });
 
-          // Fetch updated order
-          const updatedOrder = await prisma.order.findUnique({
-            where: { id: order.id },
-          });
-          if (updatedOrder) {
-            order.status = updatedOrder.status;
-            order.executedAt = updatedOrder.executedAt;
-          }
-        } else if (nutzPayStatusValue.toLowerCase() === "failed") {
-          // Update to failed if NutzPay says so
-          await prisma.order.update({
-            where: { id: order.id },
-            data: {
-              status: "FAILED",
-            },
-          });
+            if (deposit) {
+              await prisma.deposit.update({
+                where: { id: deposit.id },
+                data: {
+                  status: "CONFIRMED",
+                  confirmedAt: new Date(),
+                },
+              });
+            }
+
+            // Check if balance was already updated (prevent double credit)
+            const existingTransaction = await prisma.transaction.findFirst({
+              where: {
+                userId: order.userId,
+                currency: "USDT",
+                metadata: {
+                  path: ["orderId"],
+                  equals: order.id,
+                },
+              },
+            });
+
+            if (!existingTransaction) {
+              // Update USDT balance
+              await ledgerService.updateBalance(
+                order.userId,
+                "USDT",
+                new Decimal(Number(order.amount)),
+                "ADD"
+              );
+
+              // Create transaction record
+              const transaction = await ledgerService.createTransaction({
+                userId: order.userId,
+                type: "BUY_CRYPTO",
+                amount: new Decimal(Number(order.amount)),
+                currency: "USDT",
+                description: `USDT purchase via PIX - ${Number(
+                  order.amount
+                )} USDT`,
+                metadata: {
+                  orderId: order.id,
+                  depositId: deposit?.id,
+                  transactionId: order.externalOrderId,
+                  amountBRL: Number(order.total),
+                  amountUSDT: Number(order.amount),
+                  exchangeRate: Number(order.total) / Number(order.amount),
+                  source: "nutzpay_api_poll",
+                },
+              });
+
+              // Link transaction to order
+              await prisma.order.update({
+                where: { id: order.id },
+                data: {
+                  transactionId: transaction.id,
+                },
+              });
+            }
+
+            // Fetch updated order
+            const updatedOrder = await prisma.order.findUnique({
+              where: { id: order.id },
+            });
+            if (updatedOrder) {
+              order.status = updatedOrder.status;
+              order.executedAt = updatedOrder.executedAt;
+            }
+          } else if (nutzPayStatusValue.toLowerCase() === "failed") {
+            // Update to failed if NutzPay says so
+            await prisma.order.update({
+              where: { id: order.id },
+              data: {
+                status: "FAILED",
+              },
+            });
             order.status = "FAILED";
           }
         }
@@ -214,7 +229,7 @@ export async function GET(
     const latestOrder = await prisma.order.findUnique({
       where: { id: order.id },
     });
-    
+
     const finalOrder = latestOrder || order;
     const wasSynced = latestOrder?.status !== order.status;
 
@@ -266,12 +281,11 @@ export async function GET(
       stack: error instanceof Error ? error.stack : undefined,
     });
     return NextResponse.json(
-      { 
+      {
         error: "Failed to fetch order",
-        details: error instanceof Error ? error.message : "Unknown error"
+        details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );
   }
 }
-
