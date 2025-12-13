@@ -23,16 +23,38 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const { name, phone } = await request.json();
+    const { name, email, phone, cpf } = await request.json();
+
+    // Build update data object
+    const updateData: {
+      name?: string;
+      email?: string;
+      phone?: string;
+      cpf?: string;
+      updatedAt: Date;
+    } = {
+      updatedAt: new Date(),
+    };
+
+    // Only allow updates if user is PENDING
+    if (
+      session.user.approvalStatus === "PENDING" ||
+      session.user.kycStatus === "PENDING"
+    ) {
+      if (name !== undefined) updateData.name = name;
+      if (email !== undefined) updateData.email = email;
+      if (phone !== undefined) updateData.phone = phone;
+      if (cpf !== undefined) updateData.cpf = cpf;
+    } else {
+      // For approved users, only allow name and phone updates
+      if (name !== undefined) updateData.name = name;
+      if (phone !== undefined) updateData.phone = phone;
+    }
 
     // Update user profile
     const updatedUser = await prisma.user.update({
       where: { id: session.user.id },
-      data: {
-        name: name || session.user.name,
-        phone: phone || session.user.phone,
-        updatedAt: new Date(),
-      },
+      data: updateData,
       select: {
         id: true,
         name: true,
@@ -59,4 +81,3 @@ export async function PATCH(request: NextRequest) {
     );
   }
 }
-

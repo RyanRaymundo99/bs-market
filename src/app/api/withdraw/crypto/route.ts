@@ -26,6 +26,25 @@ export async function POST(request: NextRequest) {
 
     const user = session.user;
 
+    // Check if user is approved
+    if (user.approvalStatus === "REJECTED") {
+      return NextResponse.json(
+        { error: "Sua conta foi rejeitada. Entre em contato com o suporte." },
+        { status: 403 }
+      );
+    }
+
+    // Check if user is pending
+    if (user.approvalStatus === "PENDING") {
+      return NextResponse.json(
+        {
+          error:
+            "Sua conta está pendente de aprovação. Complete seu cadastro e aguarde a aprovação.",
+        },
+        { status: 403 }
+      );
+    }
+
     // Parse request body
     const { amount, walletAddress, network } = await request.json();
 
@@ -84,6 +103,7 @@ export async function POST(request: NextRequest) {
         walletAddress: walletAddress,
         network: network,
         hash: null,
+        externalId: externalId, // Store externalId for webhook matching
         createdAt: new Date(),
       },
     });
@@ -91,10 +111,11 @@ export async function POST(request: NextRequest) {
     try {
       // Call NutzPay API to create withdrawal
       // Use NUTZPAY_WEBHOOK_URL if set (for testing with webhook.site), otherwise use default
-      const callbackUrl = process.env.NUTZPAY_WEBHOOK_URL || 
+      const callbackUrl =
+        process.env.NUTZPAY_WEBHOOK_URL ||
         `${
-        process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"
-      }/api/webhooks/nutzpay`;
+          process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"
+        }/api/webhooks/nutzpay`;
 
       const nutzPayResponse = await nutzPayService.createUSDTWithdrawal({
         amount: amount, // Send the full amount, NutzPay will calculate fee

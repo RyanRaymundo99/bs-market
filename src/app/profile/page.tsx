@@ -56,7 +56,9 @@ export default function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
+    email: "",
     phone: "",
+    cpf: "",
   });
   const [selectedFile, setSelectedFile] = useState<{
     type: "front" | "back" | "selfie";
@@ -75,12 +77,12 @@ export default function ProfilePage() {
         method: "POST",
         credentials: "include",
       });
-      
+
       // Clear local storage
       localStorage.removeItem("auth-session");
       localStorage.removeItem("user");
       sessionStorage.clear();
-      
+
       // Force redirect to home page using window.location for reliability
       window.location.href = "/";
     } catch (error) {
@@ -101,16 +103,61 @@ export default function ProfilePage() {
     fetchKycDocuments();
   }, []);
 
+  // Auto-enable editing mode when user is PENDING
+  useEffect(() => {
+    if (userProfile) {
+      const isPendingUser =
+        userProfile.approvalStatus === "PENDING" ||
+        userProfile.kycStatus === "PENDING";
+      console.log("Profile Status Check:", {
+        approvalStatus: userProfile.approvalStatus,
+        kycStatus: userProfile.kycStatus,
+        isPendingUser,
+        currentEditing: editing,
+      });
+      if (isPendingUser) {
+        setEditing(true);
+      } else if (
+        userProfile.approvalStatus === "APPROVED" &&
+        userProfile.kycStatus === "APPROVED"
+      ) {
+        // Only disable editing if fully approved
+        setEditing(false);
+      }
+    }
+  }, [userProfile, editing]);
+
   const fetchUserProfile = async () => {
     try {
       const response = await fetch("/api/user/status");
       if (response.ok) {
         const data = await response.json();
-        setUserProfile(data.user);
-        setFormData({
-          name: data.user.name || "",
-          phone: data.user.phone || "",
+        console.log("Fetched user profile:", data.user);
+        const user = data.user;
+
+        // Check if user is PENDING before setting state
+        const isPendingUser =
+          user.approvalStatus === "PENDING" || user.kycStatus === "PENDING";
+        console.log("Is PENDING user?", isPendingUser, {
+          approvalStatus: user.approvalStatus,
+          kycStatus: user.kycStatus,
         });
+
+        setUserProfile(user);
+        setFormData({
+          name: user.name || "",
+          email: user.email || "",
+          phone: user.phone || "",
+          cpf: user.cpf || "",
+        });
+
+        // Immediately set editing to true if user is PENDING
+        if (isPendingUser) {
+          console.log("User is PENDING, enabling editing mode immediately");
+          setEditing(true);
+        } else {
+          console.log("User is not PENDING, editing mode:", false);
+        }
       }
     } catch (error) {
       console.error("Error fetching user profile:", error);
@@ -141,11 +188,20 @@ export default function ProfilePage() {
   };
 
   const handleCancel = () => {
-    setEditing(false);
-    setFormData({
-      name: userProfile?.name || "",
-      phone: userProfile?.phone || "",
-    });
+    // Only allow cancel if user is not PENDING
+    if (
+      userProfile &&
+      userProfile.approvalStatus !== "PENDING" &&
+      userProfile.kycStatus !== "PENDING"
+    ) {
+      setEditing(false);
+      setFormData({
+        name: userProfile?.name || "",
+        email: userProfile?.email || "",
+        phone: userProfile?.phone || "",
+        cpf: userProfile?.cpf || "",
+      });
+    }
   };
 
   const handleSave = async () => {
@@ -160,19 +216,83 @@ export default function ProfilePage() {
 
       if (response.ok) {
         toast({
-          title: t("profileUpdated"),
-          description: t("profileUpdatedSuccess"),
+          title: t("profileUpdated") || "Perfil Atualizado",
+          description:
+            t("profileUpdatedSuccess") ||
+            "Suas informações foram atualizadas com sucesso.",
         });
-        setEditing(false);
+        // Don't disable editing if user is still PENDING
+        if (
+          userProfile &&
+          userProfile.approvalStatus !== "PENDING" &&
+          userProfile.kycStatus !== "PENDING"
+        ) {
+          setEditing(false);
+        }
         fetchUserProfile();
       } else {
-        throw new Error("Failed to update profile");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to update profile");
       }
-    } catch {
+    } catch (error) {
       toast({
         variant: "destructive",
-        title: t("error"),
-        description: t("failedToUpdateProfile"),
+        title: t("error") || "Erro",
+        description:
+          error instanceof Error
+            ? error.message
+            : t("failedToUpdateProfile") || "Falha ao atualizar perfil",
+      });
+    }
+  };
+
+  const handleSubmitForReview = async () => {
+    // First save the profile data
+    try {
+      const saveResponse = await fetch("/api/user/update-profile", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (!saveResponse.ok) {
+        throw new Error("Failed to save profile");
+      }
+
+      // Then submit KYC for review
+      const submitResponse = await fetch("/api/user/submit-kyc", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (submitResponse.ok) {
+        toast({
+          title:
+            language === "pt" ? "Enviado para Revisão" : "Submitted for Review",
+          description:
+            language === "pt"
+              ? "Suas informações foram enviadas para revisão. Você será notificado quando houver uma atualização."
+              : "Your information has been submitted for review. You will be notified when there's an update.",
+        });
+        fetchUserProfile();
+      } else {
+        throw new Error("Failed to submit for review");
+      }
+    } catch (error) {
+      console.error("Error submitting for review:", error);
+      toast({
+        variant: "destructive",
+        title: t("error") || "Erro",
+        description:
+          error instanceof Error
+            ? error.message
+            : language === "pt"
+            ? "Falha ao enviar para revisão"
+            : "Failed to submit for review",
       });
     }
   };
@@ -248,7 +368,31 @@ export default function ProfilePage() {
   };
 
   // Check if user is fully approved
-  const isApproved = userProfile?.approvalStatus === "APPROVED" && userProfile?.kycStatus === "APPROVED";
+  const isApproved =
+    userProfile?.approvalStatus === "APPROVED" &&
+    userProfile?.kycStatus === "APPROVED";
+
+  // Check if user is PENDING (for always-editable mode)
+  const isPending =
+    userProfile?.approvalStatus === "PENDING" ||
+    userProfile?.kycStatus === "PENDING";
+
+  // Force editing mode when PENDING - always show editable fields if PENDING
+  const shouldShowEditableFields = isPending || (!isApproved && editing);
+
+  // Debug logging
+  useEffect(() => {
+    if (userProfile) {
+      console.log("Profile State:", {
+        approvalStatus: userProfile.approvalStatus,
+        kycStatus: userProfile.kycStatus,
+        isPending,
+        isApproved,
+        editing,
+        shouldShowEditableFields,
+      });
+    }
+  }, [userProfile, isPending, isApproved, editing, shouldShowEditableFields]);
 
   if (loading) {
     return (
@@ -282,6 +426,15 @@ export default function ProfilePage() {
           <p className="text-muted-foreground">
             Gerencie suas informações pessoais e documentos KYC
           </p>
+          {isPending && (
+            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm text-yellow-800">
+                <strong>Status Pendente:</strong> Você pode editar todas as
+                informações abaixo. Preencha todos os campos e envie para
+                revisão.
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -297,7 +450,7 @@ export default function ProfilePage() {
               <div className="grid gap-4">
                 <div>
                   <Label htmlFor="name">{t("fullName")}</Label>
-                  {editing && !isApproved ? (
+                  {shouldShowEditableFields ? (
                     <Input
                       id="name"
                       value={formData.name}
@@ -319,20 +472,31 @@ export default function ProfilePage() {
 
                 <div>
                   <Label htmlFor="email">{t("email")}</Label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Mail className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm">{userProfile?.email}</span>
-                    {userProfile?.emailVerified ? (
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                    ) : (
-                      <XCircle className="w-4 h-4 text-red-500" />
-                    )}
-                  </div>
+                  {shouldShowEditableFields ? (
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) =>
+                        setFormData({ ...formData, email: e.target.value })
+                      }
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2 mt-1">
+                      <Mail className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm">{userProfile?.email}</span>
+                      {userProfile?.emailVerified ? (
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                      ) : (
+                        <XCircle className="w-4 h-4 text-red-500" />
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div>
                   <Label htmlFor="phone">{t("phone")}</Label>
-                  {editing && !isApproved ? (
+                  {shouldShowEditableFields ? (
                     <Input
                       id="phone"
                       value={formData.phone}
@@ -357,35 +521,64 @@ export default function ProfilePage() {
 
                 <div>
                   <Label htmlFor="cpf">{t("cpf")}</Label>
-                  <div className="flex items-center gap-2 mt-1">
-                    <CreditCard className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm">
-                      {userProfile?.cpf || t("notProvided")}
-                    </span>
-                    {isApproved && userProfile?.cpf && (
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                    )}
-                  </div>
+                  {shouldShowEditableFields ? (
+                    <Input
+                      id="cpf"
+                      value={formData.cpf}
+                      onChange={(e) =>
+                        setFormData({ ...formData, cpf: e.target.value })
+                      }
+                      placeholder="000.000.000-00"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2 mt-1">
+                      <CreditCard className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm">
+                        {userProfile?.cpf || t("notProvided")}
+                      </span>
+                      {isApproved && userProfile?.cpf && (
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
               {!isApproved && (
-                <div className="flex gap-2">
-                  {editing ? (
+                <div className="flex gap-2 flex-wrap">
+                  {editing || isPending ? (
                     <>
                       <Button onClick={handleSave} size="sm">
                         <Save className="w-4 h-4 mr-2" />
-                        {t("save")}
+                        {t("save") || "Salvar"}
                       </Button>
-                      <Button onClick={handleCancel} variant="outline" size="sm">
-                        <X className="w-4 h-4 mr-2" />
-                        {t("cancel")}
-                      </Button>
+                      {!isPending && (
+                        <Button
+                          onClick={handleCancel}
+                          variant="outline"
+                          size="sm"
+                        >
+                          <X className="w-4 h-4 mr-2" />
+                          {t("cancel") || "Cancelar"}
+                        </Button>
+                      )}
+                      {isPending && (
+                        <Button
+                          onClick={handleSubmitForReview}
+                          size="sm"
+                          className="bg-brand-500 hover:bg-brand-600"
+                        >
+                          <Upload className="w-4 h-4 mr-2" />
+                          {language === "pt"
+                            ? "Enviar para Revisão"
+                            : "Submit for Review"}
+                        </Button>
+                      )}
                     </>
                   ) : (
                     <Button onClick={handleEdit} size="sm">
                       <Edit className="w-4 h-4 mr-2" />
-                      {t("editProfile")}
+                      {t("editProfile") || "Editar Perfil"}
                     </Button>
                   )}
                 </div>
@@ -404,7 +597,9 @@ export default function ProfilePage() {
             <CardContent className="space-y-4">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">{t("accountApproval")}</span>
+                  <span className="text-sm font-medium">
+                    {t("accountApproval")}
+                  </span>
                   {getStatusBadge(userProfile?.approvalStatus || "PENDING")}
                 </div>
 
@@ -428,16 +623,16 @@ export default function ProfilePage() {
                   <div className="text-sm text-muted-foreground">
                     <p>
                       <strong>{t("submitted")}:</strong>{" "}
-                      {new Date(
-                        userProfile.kycSubmittedAt
-                      ).toLocaleDateString(language === "pt" ? "pt-BR" : "en-US")}
+                      {new Date(userProfile.kycSubmittedAt).toLocaleDateString(
+                        language === "pt" ? "pt-BR" : "en-US"
+                      )}
                     </p>
                     {userProfile.kycReviewedAt && (
                       <p>
                         <strong>{t("reviewed")}:</strong>{" "}
-                        {new Date(
-                          userProfile.kycReviewedAt
-                        ).toLocaleDateString(language === "pt" ? "pt-BR" : "en-US")}
+                        {new Date(userProfile.kycReviewedAt).toLocaleDateString(
+                          language === "pt" ? "pt-BR" : "en-US"
+                        )}
                       </p>
                     )}
                   </div>
@@ -466,7 +661,9 @@ export default function ProfilePage() {
                       <div className="space-y-3 py-8">
                         <CheckCircle className="w-16 h-16 mx-auto text-green-500" />
                         <div className="flex items-center justify-center gap-1">
-                          <p className="text-sm font-medium text-green-600">Aprovado</p>
+                          <p className="text-sm font-medium text-green-600">
+                            Aprovado
+                          </p>
                         </div>
                       </div>
                     ) : (
@@ -477,7 +674,9 @@ export default function ProfilePage() {
                           className="w-full h-32 object-cover rounded"
                         />
                         <div className="flex items-center justify-center gap-1">
-                          <p className="text-sm text-green-600">{t("uploaded")}</p>
+                          <p className="text-sm text-green-600">
+                            {t("uploaded")}
+                          </p>
                         </div>
                       </div>
                     )
@@ -526,7 +725,9 @@ export default function ProfilePage() {
                       <div className="space-y-3 py-8">
                         <CheckCircle className="w-16 h-16 mx-auto text-green-500" />
                         <div className="flex items-center justify-center gap-1">
-                          <p className="text-sm font-medium text-green-600">Aprovado</p>
+                          <p className="text-sm font-medium text-green-600">
+                            Aprovado
+                          </p>
                         </div>
                       </div>
                     ) : (
@@ -537,7 +738,9 @@ export default function ProfilePage() {
                           className="w-full h-32 object-cover rounded"
                         />
                         <div className="flex items-center justify-center gap-1">
-                          <p className="text-sm text-green-600">{t("uploaded")}</p>
+                          <p className="text-sm text-green-600">
+                            {t("uploaded")}
+                          </p>
                         </div>
                       </div>
                     )
@@ -586,7 +789,9 @@ export default function ProfilePage() {
                       <div className="space-y-3 py-8">
                         <CheckCircle className="w-16 h-16 mx-auto text-green-500" />
                         <div className="flex items-center justify-center gap-1">
-                          <p className="text-sm font-medium text-green-600">Aprovado</p>
+                          <p className="text-sm font-medium text-green-600">
+                            Aprovado
+                          </p>
                         </div>
                       </div>
                     ) : (
@@ -597,7 +802,9 @@ export default function ProfilePage() {
                           className="w-full h-32 object-cover rounded"
                         />
                         <div className="flex items-center justify-center gap-1">
-                          <p className="text-sm text-green-600">{t("uploaded")}</p>
+                          <p className="text-sm text-green-600">
+                            {t("uploaded")}
+                          </p>
                         </div>
                       </div>
                     )
@@ -643,7 +850,12 @@ export default function ProfilePage() {
               <div className="mt-6 p-4 border rounded-lg bg-gray-50">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-medium">
-                    {t("preview")}: {selectedFile.type === "front" ? t("documentFront") : selectedFile.type === "back" ? t("documentBack") : t("selfieWithDocument")}
+                    {t("preview")}:{" "}
+                    {selectedFile.type === "front"
+                      ? t("documentFront")
+                      : selectedFile.type === "back"
+                      ? t("documentBack")
+                      : t("selfieWithDocument")}
                   </h3>
                   <Button
                     variant="ghost"

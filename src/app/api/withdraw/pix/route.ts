@@ -26,6 +26,25 @@ export async function POST(request: NextRequest) {
 
     const user = session.user;
 
+    // Check if user is approved
+    if (user.approvalStatus === "REJECTED") {
+      return NextResponse.json(
+        { error: "Sua conta foi rejeitada. Entre em contato com o suporte." },
+        { status: 403 }
+      );
+    }
+
+    // Check if user is pending
+    if (user.approvalStatus === "PENDING") {
+      return NextResponse.json(
+        {
+          error:
+            "Sua conta está pendente de aprovação. Complete seu cadastro e aguarde a aprovação.",
+        },
+        { status: 403 }
+      );
+    }
+
     // Parse request body
     const { amount, pixKey, password } = await request.json();
 
@@ -51,13 +70,10 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
-    
+
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      return NextResponse.json(
-        { error: "Invalid password" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Invalid password" }, { status: 401 });
     }
 
     // Check BRL balance
@@ -80,7 +96,10 @@ export async function POST(request: NextRequest) {
     const netAmount = amount - fee;
 
     // Generate protocol number
-    const protocol = `PIX${Date.now()}${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+    const protocol = `PIX${Date.now()}${Math.random()
+      .toString(36)
+      .substr(2, 5)
+      .toUpperCase()}`;
 
     // Create withdrawal record
     const withdrawal = await prisma.withdrawal.create({

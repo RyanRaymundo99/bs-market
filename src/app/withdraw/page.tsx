@@ -64,7 +64,6 @@ interface WithdrawalHistory {
   network?: string;
 }
 
-
 export default function WithdrawPage() {
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -112,6 +111,76 @@ export default function WithdrawPage() {
       setIsLoggingOut(false);
     }
   }, []);
+
+  // Check user approval status on mount and logout if rejected
+  useEffect(() => {
+    const checkUserStatus = async () => {
+      try {
+        const response = await fetch("/api/user/status");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.user) {
+            // If user is rejected, logout and redirect to home
+            if (data.user.approvalStatus === "REJECTED") {
+              try {
+                // Call logout API
+                await fetch("/api/auth/logout", {
+                  method: "POST",
+                  credentials: "include",
+                });
+
+                // Clear local storage
+                localStorage.removeItem("auth-session");
+                localStorage.removeItem("user");
+                sessionStorage.clear();
+
+                // Store rejection message
+                const message =
+                  language === "pt"
+                    ? "Sua conta foi rejeitada. Entre em contato com o suporte."
+                    : "Your account has been rejected. Please contact support.";
+                sessionStorage.setItem("rejectionMessage", message);
+
+                // Redirect to home page
+                window.location.href = "/";
+              } catch (error) {
+                console.error("Error during logout:", error);
+                // Even if logout fails, clear storage and redirect
+                localStorage.removeItem("auth-session");
+                localStorage.removeItem("user");
+                sessionStorage.clear();
+                sessionStorage.setItem(
+                  "rejectionMessage",
+                  language === "pt"
+                    ? "Sua conta foi rejeitada. Entre em contato com o suporte."
+                    : "Your account has been rejected. Please contact support."
+                );
+                window.location.href = "/";
+              }
+              return;
+            }
+
+            // If user is pending, redirect to profile page
+            if (data.user.approvalStatus === "PENDING") {
+              toast({
+                title: language === "pt" ? "Conta Pendente" : "Account Pending",
+                description:
+                  language === "pt"
+                    ? "Sua conta está pendente de aprovação. Complete seu cadastro no perfil antes de sacar."
+                    : "Your account is pending approval. Complete your profile before withdrawing.",
+                variant: "destructive",
+              });
+              window.location.href = "/profile";
+              return;
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error checking user status:", error);
+      }
+    };
+    checkUserStatus();
+  }, [language]);
 
   // Fetch wallet data
   const fetchWalletData = useCallback(async () => {
@@ -193,9 +262,7 @@ export default function WithdrawPage() {
       toast({
         title: t("withdrawalError"),
         description:
-          error instanceof Error
-            ? error.message
-            : t("failedToProcess"),
+          error instanceof Error ? error.message : t("failedToProcess"),
         variant: "destructive",
       });
     } finally {
@@ -275,7 +342,11 @@ export default function WithdrawPage() {
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-              <p>{language === "pt" ? "Carregando página de saque..." : "Loading withdrawal page..."}</p>
+              <p>
+                {language === "pt"
+                  ? "Carregando página de saque..."
+                  : "Loading withdrawal page..."}
+              </p>
             </div>
           </div>
         </div>
@@ -293,135 +364,145 @@ export default function WithdrawPage() {
         <div className="text-center mb-6 sm:mb-8">
           <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-brand-500 via-purple-600 to-brand-600 bg-clip-text text-transparent mb-2">
             {t("withdrawUSDT")}
-            </h1>
+          </h1>
           <p className="text-muted-foreground text-sm sm:text-base">
-              {t("chooseWithdrawalMethod")}
-            </p>
+            {t("chooseWithdrawalMethod")}
+          </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Withdrawal Form */}
           <div className="lg:col-span-2">
             <Card className="rounded-xl sm:rounded-2xl border-gray-800 bg-gray-900/50 backdrop-blur-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-white">
-                    <Coins className="h-5 w-5" />
-                    {t("withdrawViaUSDT")}
-                  </CardTitle>
-                  <CardDescription className="text-gray-400">
-                    {t("sendUSDTToWallet")}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4 sm:space-y-6">
-                  {/* USDT Balance */}
-                  <div className="p-4 sm:p-6 bg-gradient-to-br from-brand-500/20 to-blue-500/20 rounded-xl border border-brand-500/30">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Coins className="h-5 w-5 text-brand-400" />
-                      <span className="text-sm font-medium text-gray-300">
-                        {t("availableBalance")}
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-white">
+                  <Coins className="h-5 w-5" />
+                  {t("withdrawViaUSDT")}
+                </CardTitle>
+                <CardDescription className="text-gray-400">
+                  {t("sendUSDTToWallet")}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 sm:space-y-6">
+                {/* USDT Balance */}
+                <div className="p-4 sm:p-6 bg-gradient-to-br from-brand-500/20 to-blue-500/20 rounded-xl border border-brand-500/30">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Coins className="h-5 w-5 text-brand-400" />
+                    <span className="text-sm font-medium text-gray-300">
+                      {t("availableBalance")}
+                    </span>
+                  </div>
+                  <p className="text-2xl sm:text-3xl font-bold text-brand-400">
+                    {usdtBalance && typeof usdtBalance.amount === "number"
+                      ? usdtBalance.amount.toFixed(2)
+                      : "0.00"}{" "}
+                    USDT
+                  </p>
+                </div>
+
+                {/* USDT Form */}
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="usdt-amount" className="text-gray-300">
+                      {t("amountToWithdraw")}
+                    </Label>
+                    <Input
+                      id="usdt-amount"
+                      type="number"
+                      placeholder="0.00"
+                      value={usdtAmount}
+                      onChange={(e) => setUsdtAmount(e.target.value)}
+                      min="0"
+                      step="0.01"
+                      max={usdtBalance ? usdtBalance.amount : undefined}
+                      className="bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 rounded-xl"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="wallet-address" className="text-gray-300">
+                      {t("walletAddress")}
+                    </Label>
+                    <Input
+                      id="wallet-address"
+                      type="text"
+                      placeholder={t("enterWalletAddress")}
+                      value={walletAddress}
+                      onChange={(e) => setWalletAddress(e.target.value)}
+                      className="bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 rounded-xl"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="network" className="text-gray-300">
+                      {t("network")}
+                    </Label>
+                    <Select
+                      value={selectedNetwork}
+                      onValueChange={setSelectedNetwork}
+                    >
+                      <SelectTrigger className="bg-gray-800/50 border-gray-700 text-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 rounded-xl">
+                        <SelectValue placeholder={t("selectNetwork")} />
+                      </SelectTrigger>
+                      <SelectContent className="bg-gray-800 border-gray-700">
+                        <SelectItem
+                          value="TRC20"
+                          className="text-white hover:bg-gray-700"
+                        >
+                          {t("trc20Option")}
+                        </SelectItem>
+                        <SelectItem
+                          value="ERC20"
+                          className="text-white hover:bg-gray-700"
+                        >
+                          {t("erc20Option")}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Fee Calculation */}
+                  <div className="p-4 sm:p-6 bg-gray-800/30 rounded-xl border border-gray-700/50">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-gray-400">
+                        {t("networkFee")}
+                      </span>
+                      <span className="text-sm font-medium text-red-400">
+                        -1 USDT
                       </span>
                     </div>
-                    <p className="text-2xl sm:text-3xl font-bold text-brand-400">
-                      {usdtBalance && typeof usdtBalance.amount === "number"
-                        ? usdtBalance.amount.toFixed(2)
-                        : "0.00"}{" "}
-                      USDT
-                    </p>
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-700">
+                      <span className="text-sm font-medium text-gray-300">
+                        {t("netTotal")}
+                      </span>
+                      <span className="text-lg sm:text-xl font-bold text-brand-400">
+                        {(calculateUSDTNetAmount() || 0).toFixed(2)} USDT
+                      </span>
+                    </div>
                   </div>
 
-                  {/* USDT Form */}
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="usdt-amount" className="text-gray-300">{t("amountToWithdraw")}</Label>
-                      <Input
-                        id="usdt-amount"
-                        type="number"
-                        placeholder="0.00"
-                        value={usdtAmount}
-                        onChange={(e) => setUsdtAmount(e.target.value)}
-                        min="0"
-                        step="0.01"
-                        max={usdtBalance ? usdtBalance.amount : undefined}
-                        className="bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 rounded-xl"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="wallet-address" className="text-gray-300">
-                        {t("walletAddress")}
-                      </Label>
-                      <Input
-                        id="wallet-address"
-                        type="text"
-                        placeholder={t("enterWalletAddress")}
-                        value={walletAddress}
-                        onChange={(e) => setWalletAddress(e.target.value)}
-                        className="bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 rounded-xl"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="network" className="text-gray-300">{t("network")}</Label>
-                      <Select
-                        value={selectedNetwork}
-                        onValueChange={setSelectedNetwork}
-                      >
-                        <SelectTrigger className="bg-gray-800/50 border-gray-700 text-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 rounded-xl">
-                          <SelectValue placeholder={t("selectNetwork")} />
-                        </SelectTrigger>
-                        <SelectContent className="bg-gray-800 border-gray-700">
-                          <SelectItem value="TRC20" className="text-white hover:bg-gray-700">
-                            {t("trc20Option")}
-                          </SelectItem>
-                          <SelectItem value="ERC20" className="text-white hover:bg-gray-700">
-                            {t("erc20Option")}
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Fee Calculation */}
-                    <div className="p-4 sm:p-6 bg-gray-800/30 rounded-xl border border-gray-700/50">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-gray-400">
-                          {t("networkFee")}
-                        </span>
-                        <span className="text-sm font-medium text-red-400">
-                          -1 USDT
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between pt-2 border-t border-gray-700">
-                        <span className="text-sm font-medium text-gray-300">
-                          {t("netTotal")}
-                        </span>
-                        <span className="text-lg sm:text-xl font-bold text-brand-400">
-                          {(calculateUSDTNetAmount() || 0).toFixed(2)} USDT
-                        </span>
-                      </div>
-                    </div>
-
-                    <Button
-                      onClick={handleUSDTWithdrawal}
-                      disabled={
-                        processing ||
-                        !usdtAmount ||
-                        !walletAddress ||
-                        parseFloat(usdtAmount) <= 0
-                      }
-                      className="w-full h-12 sm:h-14 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors text-base sm:text-lg"
-                    >
-                      {processing ? (
-                        <>
-                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                          {t("processing")}
-                        </>
-                      ) : (
-                        t("sendUSDT")
-                      )}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                  <Button
+                    onClick={handleUSDTWithdrawal}
+                    disabled={
+                      processing ||
+                      !usdtAmount ||
+                      !walletAddress ||
+                      parseFloat(usdtAmount) <= 0
+                    }
+                    className="w-full h-12 sm:h-14 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors text-base sm:text-lg"
+                  >
+                    {processing ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                        {t("processing")}
+                      </>
+                    ) : (
+                      t("sendUSDT")
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Sidebar */}
@@ -448,7 +529,9 @@ export default function WithdrawPage() {
                   </p>
                 </div>
                 <div className="text-center p-4 bg-gray-800/30 rounded-xl border border-gray-700/50">
-                  <p className="text-sm text-gray-400 mb-1">{t("lastUpdated")}</p>
+                  <p className="text-sm text-gray-400 mb-1">
+                    {t("lastUpdated")}
+                  </p>
                   <p className="text-lg font-semibold text-gray-300">
                     {walletData
                       ? new Date(walletData.lastUpdated).toLocaleTimeString()
@@ -481,7 +564,9 @@ export default function WithdrawPage() {
                       <th className="text-left py-3 px-4">{t("type")}</th>
                       <th className="text-left py-3 px-4">{t("value")}</th>
                       <th className="text-left py-3 px-4">{t("status")}</th>
-                      <th className="text-left py-3 px-4">{t("hashProtocol")}</th>
+                      <th className="text-left py-3 px-4">
+                        {t("hashProtocol")}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -503,13 +588,16 @@ export default function WithdrawPage() {
                           )}
                         </td>
                         <td className="py-3 px-4">
-                          <Badge variant="secondary" className="bg-brand-500/20 text-brand-400 border-brand-500/30">
+                          <Badge
+                            variant="secondary"
+                            className="bg-brand-500/20 text-brand-400 border-brand-500/30"
+                          >
                             USDT
                           </Badge>
                         </td>
                         <td className="py-3 px-4 font-medium text-white">
                           {typeof withdrawal.amount === "number"
-                                  ? withdrawal.amount.toFixed(2)
+                            ? withdrawal.amount.toFixed(2)
                             : "0.00"}{" "}
                           USDT
                         </td>
@@ -556,7 +644,9 @@ export default function WithdrawPage() {
             <DialogDescription>{successMessage}</DialogDescription>
           </DialogHeader>
           <div className="flex justify-end">
-            <Button onClick={() => setShowSuccessModal(false)}>{t("close")}</Button>
+            <Button onClick={() => setShowSuccessModal(false)}>
+              {t("close")}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

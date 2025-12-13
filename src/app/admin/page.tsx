@@ -18,7 +18,15 @@ import {
   PieChart,
   Search,
   ArrowUpDown,
+  X,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -50,10 +58,21 @@ interface FinanceStats {
 interface Transaction {
   id: string;
   date: string;
-  type: 'DEPOSIT' | 'WITHDRAWAL' | 'FEE' | 'BUY_CRYPTO' | 'SELL_CRYPTO' | 'REFUND';
+  type:
+    | "DEPOSIT"
+    | "WITHDRAWAL"
+    | "FEE"
+    | "BUY_CRYPTO"
+    | "SELL_CRYPTO"
+    | "REFUND";
   user: string;
+  userId?: string;
   value: number;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  metadata?: any;
+  orderId?: string | null;
+  depositId?: string | null;
+  withdrawalId?: string | null;
 }
 
 interface ChartData {
@@ -91,19 +110,24 @@ export default function AdminDashboard() {
   const [sortField, setSortField] = useState<keyof Transaction>("date");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [loading, setLoading] = useState(true);
+  const [selectedTransaction, setSelectedTransaction] =
+    useState<Transaction | null>(null);
+  const [transactionDetails, setTransactionDetails] = useState<any>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
   const fetchFinanceData = useCallback(async () => {
     try {
       const response = await fetch("/api/admin/finance");
-      
+
       if (!response.ok) {
         throw new Error("Failed to fetch finance data");
       }
 
       const data = await response.json();
-      
+
       if (data.success) {
         setFinanceStats(data.financeStats);
         setTransactions(data.transactions);
@@ -174,67 +198,97 @@ export default function AdminDashboard() {
   }, [toast, fetchFinanceData]);
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
     }).format(value);
   };
 
   const formatPercentage = (value: number) => {
-    const sign = value >= 0 ? '+' : '';
+    const sign = value >= 0 ? "+" : "";
     return `${sign}${value.toFixed(1)}%`;
   };
 
   const getTransactionTypeLabel = (type: string) => {
     const labels = {
-      DEPOSIT: 'Depósito',
-      WITHDRAWAL: 'Saque',
-      FEE: 'Comissão',
-      BUY_CRYPTO: 'Compra Crypto',
-      SELL_CRYPTO: 'Venda Crypto',
-      REFUND: 'Reembolso',
+      DEPOSIT: "Depósito",
+      WITHDRAWAL: "Saque",
+      FEE: "Comissão",
+      BUY_CRYPTO: "Compra Crypto",
+      SELL_CRYPTO: "Venda Crypto",
+      REFUND: "Reembolso",
     };
     return labels[type as keyof typeof labels] || type;
   };
 
+  const handleTransactionClick = async (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setShowDetailsDialog(true);
+    setDetailsLoading(true);
+
+    try {
+      const response = await fetch(`/api/admin/transactions/${transaction.id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setTransactionDetails(data.transaction);
+      } else {
+        throw new Error("Failed to fetch transaction details");
+      }
+    } catch (error) {
+      console.error("Error fetching transaction details:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Falha ao carregar detalhes da transação",
+      });
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
+
   const getStatusLabel = (status: string) => {
     const labels = {
-      PENDING: 'Pendente',
-      APPROVED: 'Aprovado',
-      REJECTED: 'Rejeitado',
+      PENDING: "Pendente",
+      APPROVED: "Aprovado",
+      REJECTED: "Rejeitado",
     };
     return labels[status as keyof typeof labels] || status;
   };
 
   const handleSort = (field: keyof Transaction) => {
     if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
       setSortField(field);
-      setSortDirection('asc');
+      setSortDirection("asc");
     }
   };
 
   const filteredAndSortedTransactions = transactions
-    .filter(transaction =>
-      transaction.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      getTransactionTypeLabel(transaction.type).toLowerCase().includes(searchTerm.toLowerCase()) ||
-      getStatusLabel(transaction.status).toLowerCase().includes(searchTerm.toLowerCase())
+    .filter(
+      (transaction) =>
+        transaction.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        getTransactionTypeLabel(transaction.type)
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        getStatusLabel(transaction.status)
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase())
     )
     .sort((a, b) => {
       const aValue = a[sortField];
       const bValue = b[sortField];
-      
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return sortDirection === 'asc' 
+
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        return sortDirection === "asc"
           ? aValue.localeCompare(bValue)
           : bValue.localeCompare(aValue);
       }
-      
-      if (typeof aValue === 'number' && typeof bValue === 'number') {
-        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+
+      if (typeof aValue === "number" && typeof bValue === "number") {
+        return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
       }
-      
+
       return 0;
     });
 
@@ -252,13 +306,13 @@ export default function AdminDashboard() {
     try {
       const confirmed = window.confirm(
         "⚠️ ATENÇÃO: Esta ação irá resetar TODOS os dados financeiros da plataforma!\n\n" +
-        "Isso inclui:\n" +
-        "• Todos os depósitos\n" +
-        "• Todos os saques\n" +
-        "• Todas as transações\n" +
-        "• Todos os saldos dos usuários\n\n" +
-        "Esta ação NÃO pode ser desfeita!\n\n" +
-        "Tem certeza que deseja continuar?"
+          "Isso inclui:\n" +
+          "• Todos os depósitos\n" +
+          "• Todos os saques\n" +
+          "• Todas as transações\n" +
+          "• Todos os saldos dos usuários\n\n" +
+          "Esta ação NÃO pode ser desfeita!\n\n" +
+          "Tem certeza que deseja continuar?"
       );
 
       if (!confirmed) {
@@ -280,7 +334,7 @@ export default function AdminDashboard() {
           title: "✅ Reset Concluído",
           description: "Dados financeiros resetados com sucesso!",
         });
-        
+
         // Refresh the dashboard data
         await fetchStats();
       } else {
@@ -472,7 +526,9 @@ export default function AdminDashboard() {
         <div className="space-y-6">
           <div>
             <h2 className="text-2xl font-bold text-white">Finance Overview</h2>
-            <p className="text-gray-300 mt-1">Acompanhe a movimentação financeira da plataforma em tempo real</p>
+            <p className="text-gray-300 mt-1">
+              Acompanhe a movimentação financeira da plataforma em tempo real
+            </p>
           </div>
 
           {/* Finance Stats Grid */}
@@ -495,7 +551,13 @@ export default function AdminDashboard() {
                   ) : (
                     <ArrowDownRight className="h-3 w-3 text-red-400 mr-1" />
                   )}
-                  <span className={`text-xs ${financeStats.depositsChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  <span
+                    className={`text-xs ${
+                      financeStats.depositsChange >= 0
+                        ? "text-green-400"
+                        : "text-red-400"
+                    }`}
+                  >
                     {formatPercentage(financeStats.depositsChange)}
                   </span>
                 </div>
@@ -520,7 +582,13 @@ export default function AdminDashboard() {
                   ) : (
                     <ArrowDownRight className="h-3 w-3 text-red-400 mr-1" />
                   )}
-                  <span className={`text-xs ${financeStats.withdrawalsChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  <span
+                    className={`text-xs ${
+                      financeStats.withdrawalsChange >= 0
+                        ? "text-green-400"
+                        : "text-red-400"
+                    }`}
+                  >
                     {formatPercentage(financeStats.withdrawalsChange)}
                   </span>
                 </div>
@@ -545,7 +613,13 @@ export default function AdminDashboard() {
                   ) : (
                     <ArrowDownRight className="h-3 w-3 text-red-400 mr-1" />
                   )}
-                  <span className={`text-xs ${financeStats.tradesChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  <span
+                    className={`text-xs ${
+                      financeStats.tradesChange >= 0
+                        ? "text-green-400"
+                        : "text-red-400"
+                    }`}
+                  >
                     {formatPercentage(financeStats.tradesChange)}
                   </span>
                 </div>
@@ -570,7 +644,13 @@ export default function AdminDashboard() {
                   ) : (
                     <ArrowDownRight className="h-3 w-3 text-red-400 mr-1" />
                   )}
-                  <span className={`text-xs ${financeStats.commissionsChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  <span
+                    className={`text-xs ${
+                      financeStats.commissionsChange >= 0
+                        ? "text-green-400"
+                        : "text-red-400"
+                    }`}
+                  >
                     {formatPercentage(financeStats.commissionsChange)}
                   </span>
                 </div>
@@ -595,7 +675,13 @@ export default function AdminDashboard() {
                   ) : (
                     <ArrowDownRight className="h-3 w-3 text-red-400 mr-1" />
                   )}
-                  <span className={`text-xs ${financeStats.balanceChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  <span
+                    className={`text-xs ${
+                      financeStats.balanceChange >= 0
+                        ? "text-green-400"
+                        : "text-red-400"
+                    }`}
+                  >
                     {formatPercentage(financeStats.balanceChange)}
                   </span>
                 </div>
@@ -608,7 +694,9 @@ export default function AdminDashboard() {
             {/* Line Chart - Deposits and Withdrawals */}
             <Card className="bg-gray-900 border-gray-800">
               <CardHeader>
-                <CardTitle className="text-white">📈 Evolução dos Depósitos e Saques (30 dias)</CardTitle>
+                <CardTitle className="text-white">
+                  📈 Evolução dos Depósitos e Saques (30 dias)
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="h-64 flex items-center justify-center">
@@ -624,7 +712,9 @@ export default function AdminDashboard() {
             {/* Bar Chart - Daily Trade Volume */}
             <Card className="bg-gray-900 border-gray-800">
               <CardHeader>
-                <CardTitle className="text-white">📊 Volume Diário de Trades</CardTitle>
+                <CardTitle className="text-white">
+                  📊 Volume Diário de Trades
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="h-64 flex items-center justify-center">
@@ -641,7 +731,9 @@ export default function AdminDashboard() {
           {/* Detailed Transactions Table */}
           <Card className="bg-gray-900 border-gray-800">
             <CardHeader>
-              <CardTitle className="text-white">Tabela Detalhada de Transações</CardTitle>
+              <CardTitle className="text-white">
+                Tabela Detalhada de Transações
+              </CardTitle>
               <div className="flex items-center space-x-4 mt-4">
                 <div className="relative flex-1 max-w-sm">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -659,45 +751,45 @@ export default function AdminDashboard() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-gray-700">
-                      <th 
+                      <th
                         className="text-left py-3 px-4 cursor-pointer hover:text-white text-gray-300"
-                        onClick={() => handleSort('date')}
+                        onClick={() => handleSort("date")}
                       >
                         <div className="flex items-center">
                           Data
                           <ArrowUpDown className="h-3 w-3 ml-1" />
                         </div>
                       </th>
-                      <th 
+                      <th
                         className="text-left py-3 px-4 cursor-pointer hover:text-white text-gray-300"
-                        onClick={() => handleSort('type')}
+                        onClick={() => handleSort("type")}
                       >
                         <div className="flex items-center">
                           Tipo
                           <ArrowUpDown className="h-3 w-3 ml-1" />
                         </div>
                       </th>
-                      <th 
+                      <th
                         className="text-left py-3 px-4 cursor-pointer hover:text-white text-gray-300"
-                        onClick={() => handleSort('user')}
+                        onClick={() => handleSort("user")}
                       >
                         <div className="flex items-center">
                           Usuário
                           <ArrowUpDown className="h-3 w-3 ml-1" />
                         </div>
                       </th>
-                      <th 
+                      <th
                         className="text-left py-3 px-4 cursor-pointer hover:text-white text-gray-300"
-                        onClick={() => handleSort('value')}
+                        onClick={() => handleSort("value")}
                       >
                         <div className="flex items-center">
                           Valor
                           <ArrowUpDown className="h-3 w-3 ml-1" />
                         </div>
                       </th>
-                      <th 
+                      <th
                         className="text-left py-3 px-4 cursor-pointer hover:text-white text-gray-300"
-                        onClick={() => handleSort('status')}
+                        onClick={() => handleSort("status")}
                       >
                         <div className="flex items-center">
                           Status
@@ -708,33 +800,53 @@ export default function AdminDashboard() {
                   </thead>
                   <tbody>
                     {filteredAndSortedTransactions.map((transaction) => (
-                      <tr key={transaction.id} className="border-b border-gray-800 hover:bg-gray-800">
+                      <tr
+                        key={transaction.id}
+                        className="border-b border-gray-800 hover:bg-gray-800 cursor-pointer transition-colors"
+                        onClick={() => handleTransactionClick(transaction)}
+                      >
                         <td className="py-3 px-4 text-gray-300">
-                          {new Date(transaction.date).toLocaleDateString('pt-BR')}
+                          {new Date(transaction.date).toLocaleDateString(
+                            "pt-BR"
+                          )}
                         </td>
                         <td className="py-3 px-4">
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${
-                            transaction.type === 'DEPOSIT' ? 'bg-green-900 text-green-300' :
-                            transaction.type === 'WITHDRAWAL' ? 'bg-red-900 text-red-300' :
-                            transaction.type === 'FEE' ? 'bg-purple-900 text-purple-300' :
-                            transaction.type === 'BUY_CRYPTO' ? 'bg-emerald-900 text-emerald-300' :
-                            transaction.type === 'SELL_CRYPTO' ? 'bg-orange-900 text-orange-300' :
-                            transaction.type === 'REFUND' ? 'bg-gray-900 text-gray-300' :
-                            'bg-gray-900 text-gray-300'
-                          }`}>
+                          <span
+                            className={`px-2 py-1 rounded text-xs font-medium ${
+                              transaction.type === "DEPOSIT"
+                                ? "bg-green-900 text-green-300"
+                                : transaction.type === "WITHDRAWAL"
+                                ? "bg-red-900 text-red-300"
+                                : transaction.type === "FEE"
+                                ? "bg-purple-900 text-purple-300"
+                                : transaction.type === "BUY_CRYPTO"
+                                ? "bg-emerald-900 text-emerald-300"
+                                : transaction.type === "SELL_CRYPTO"
+                                ? "bg-orange-900 text-orange-300"
+                                : transaction.type === "REFUND"
+                                ? "bg-gray-900 text-gray-300"
+                                : "bg-gray-900 text-gray-300"
+                            }`}
+                          >
                             {getTransactionTypeLabel(transaction.type)}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-gray-300">{transaction.user}</td>
+                        <td className="py-3 px-4 text-gray-300">
+                          {transaction.user}
+                        </td>
                         <td className="py-3 px-4 text-white font-medium">
                           {formatCurrency(transaction.value)}
                         </td>
                         <td className="py-3 px-4">
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${
-                            transaction.status === 'APPROVED' ? 'bg-green-900 text-green-300' :
-                            transaction.status === 'PENDING' ? 'bg-yellow-900 text-yellow-300' :
-                            'bg-red-900 text-red-300'
-                          }`}>
+                          <span
+                            className={`px-2 py-1 rounded text-xs font-medium ${
+                              transaction.status === "APPROVED"
+                                ? "bg-green-900 text-green-300"
+                                : transaction.status === "PENDING"
+                                ? "bg-yellow-900 text-yellow-300"
+                                : "bg-red-900 text-red-300"
+                            }`}
+                          >
                             {getStatusLabel(transaction.status)}
                           </span>
                         </td>
@@ -751,6 +863,314 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Transaction Details Dialog */}
+        <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
+          <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-white flex items-center justify-between">
+                <span>Detalhes da Transação</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowDetailsDialog(false)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </DialogTitle>
+              <DialogDescription className="text-gray-400">
+                Informações completas da transação
+              </DialogDescription>
+            </DialogHeader>
+            {detailsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+              </div>
+            ) : transactionDetails ? (
+              <div className="space-y-4 mt-4">
+                {/* Basic Info */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-400">ID da Transação</p>
+                    <p className="text-white font-mono text-sm">
+                      {transactionDetails.id}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-400">Tipo</p>
+                    <p className="text-white">
+                      {getTransactionTypeLabel(transactionDetails.type)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-400">Status</p>
+                    <span
+                      className={`px-2 py-1 rounded text-xs font-medium inline-block ${
+                        transactionDetails.status === "APPROVED"
+                          ? "bg-green-900 text-green-300"
+                          : transactionDetails.status === "PENDING"
+                          ? "bg-yellow-900 text-yellow-300"
+                          : "bg-red-900 text-red-300"
+                      }`}
+                    >
+                      {getStatusLabel(transactionDetails.status)}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-400">Data</p>
+                    <p className="text-white">
+                      {new Date(transactionDetails.createdAt).toLocaleString(
+                        "pt-BR"
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                {/* User Info */}
+                <div className="border-t border-gray-800 pt-4">
+                  <h3 className="text-lg font-semibold mb-3">Usuário</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-400">Nome</p>
+                      <p className="text-white">
+                        {transactionDetails.user.name}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-400">Email</p>
+                      <p className="text-white">
+                        {transactionDetails.user.email}
+                      </p>
+                    </div>
+                    {transactionDetails.user.cpf && (
+                      <div>
+                        <p className="text-sm text-gray-400">CPF</p>
+                        <p className="text-white">
+                          {transactionDetails.user.cpf}
+                        </p>
+                      </div>
+                    )}
+                    {transactionDetails.user.phone && (
+                      <div>
+                        <p className="text-sm text-gray-400">Telefone</p>
+                        <p className="text-white">
+                          {transactionDetails.user.phone}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Transaction Amount */}
+                <div className="border-t border-gray-800 pt-4">
+                  <h3 className="text-lg font-semibold mb-3">Valores</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-400">Valor</p>
+                      <p className="text-white font-semibold">
+                        {formatCurrency(transactionDetails.amount)}{" "}
+                        {transactionDetails.currency}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-400">
+                        Saldo após transação
+                      </p>
+                      <p className="text-white">
+                        {formatCurrency(transactionDetails.balance)}{" "}
+                        {transactionDetails.currency}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Order Details (for BUY_CRYPTO) */}
+                {transactionDetails.order && (
+                  <div className="border-t border-gray-800 pt-4">
+                    <h3 className="text-lg font-semibold mb-3">
+                      Detalhes do Pedido
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-400">ID do Pedido</p>
+                        <p className="text-white font-mono text-sm">
+                          {transactionDetails.order.id}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-400">
+                          Status do Pedido
+                        </p>
+                        <p className="text-white">
+                          {transactionDetails.order.status}
+                        </p>
+                      </div>
+                      {transactionDetails.order.externalOrderId && (
+                        <div>
+                          <p className="text-sm text-gray-400">ID Externo</p>
+                          <p className="text-white font-mono text-sm">
+                            {transactionDetails.order.externalOrderId}
+                          </p>
+                        </div>
+                      )}
+                      {transactionDetails.order.executedAt && (
+                        <div>
+                          <p className="text-sm text-gray-400">Executado em</p>
+                          <p className="text-white">
+                            {new Date(
+                              transactionDetails.order.executedAt
+                            ).toLocaleString("pt-BR")}
+                          </p>
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-sm text-gray-400">Quantidade USDT</p>
+                        <p className="text-white">
+                          {Number(transactionDetails.order.amount)} USDT
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-400">Valor Total BRL</p>
+                        <p className="text-white">
+                          {formatCurrency(
+                            Number(transactionDetails.order.total)
+                          )}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-400">Taxa de Câmbio</p>
+                        <p className="text-white">
+                          {formatCurrency(
+                            Number(transactionDetails.order.total) /
+                              Number(transactionDetails.order.amount)
+                          )}{" "}
+                          BRL/USDT
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Deposit Details */}
+                {transactionDetails.deposit && (
+                  <div className="border-t border-gray-800 pt-4">
+                    <h3 className="text-lg font-semibold mb-3">
+                      Detalhes do Depósito
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-400">Status</p>
+                        <p className="text-white">
+                          {transactionDetails.deposit.status}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-400">Valor</p>
+                        <p className="text-white">
+                          {formatCurrency(
+                            Number(transactionDetails.deposit.amount)
+                          )}
+                        </p>
+                      </div>
+                      {transactionDetails.deposit.externalId && (
+                        <div>
+                          <p className="text-sm text-gray-400">ID Externo</p>
+                          <p className="text-white font-mono text-sm">
+                            {transactionDetails.deposit.externalId}
+                          </p>
+                        </div>
+                      )}
+                      {transactionDetails.deposit.confirmedAt && (
+                        <div>
+                          <p className="text-sm text-gray-400">Confirmado em</p>
+                          <p className="text-white">
+                            {new Date(
+                              transactionDetails.deposit.confirmedAt
+                            ).toLocaleString("pt-BR")}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Withdrawal Details */}
+                {transactionDetails.withdrawal && (
+                  <div className="border-t border-gray-800 pt-4">
+                    <h3 className="text-lg font-semibold mb-3">
+                      Detalhes do Saque
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-400">Status</p>
+                        <p className="text-white">
+                          {transactionDetails.withdrawal.status}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-400">Valor</p>
+                        <p className="text-white">
+                          {formatCurrency(
+                            Number(transactionDetails.withdrawal.amount)
+                          )}
+                        </p>
+                      </div>
+                      {transactionDetails.withdrawal.hash && (
+                        <div>
+                          <p className="text-sm text-gray-400">Hash</p>
+                          <p className="text-white font-mono text-sm break-all">
+                            {transactionDetails.withdrawal.hash}
+                          </p>
+                        </div>
+                      )}
+                      {transactionDetails.withdrawal.protocol && (
+                        <div>
+                          <p className="text-sm text-gray-400">Protocolo</p>
+                          <p className="text-white">
+                            {transactionDetails.withdrawal.protocol}
+                          </p>
+                        </div>
+                      )}
+                      {transactionDetails.withdrawal.walletAddress && (
+                        <div>
+                          <p className="text-sm text-gray-400">
+                            Endereço da Carteira
+                          </p>
+                          <p className="text-white font-mono text-sm break-all">
+                            {transactionDetails.withdrawal.walletAddress}
+                          </p>
+                        </div>
+                      )}
+                      {transactionDetails.withdrawal.network && (
+                        <div>
+                          <p className="text-sm text-gray-400">Rede</p>
+                          <p className="text-white">
+                            {transactionDetails.withdrawal.network}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Metadata */}
+                {transactionDetails.metadata && (
+                  <div className="border-t border-gray-800 pt-4">
+                    <h3 className="text-lg font-semibold mb-3">Metadados</h3>
+                    <pre className="bg-gray-800 p-4 rounded text-xs overflow-x-auto">
+                      {JSON.stringify(transactionDetails.metadata, null, 2)}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-400">
+                Nenhum detalhe disponível
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
 
         {/* Recent Activity Summary */}
         <Card className="bg-gray-900 border-gray-800">

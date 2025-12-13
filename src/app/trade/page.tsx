@@ -89,14 +89,19 @@ const TradePage = () => {
 
   // Store PIX data by transaction ID so we can reopen the modal for pending payments
   // Load from localStorage on mount
-  const [storedPixData, setStoredPixData] = useState<Map<string, {
-    qrCode: string;
-    qrCodeBase64: string | null;
-    qrCodeUrl: string | null;
-    amount: number;
-    usdtAmount: number;
-    transactionId: string;
-  }>>(() => {
+  const [storedPixData, setStoredPixData] = useState<
+    Map<
+      string,
+      {
+        qrCode: string;
+        qrCodeBase64: string | null;
+        qrCodeUrl: string | null;
+        amount: number;
+        usdtAmount: number;
+        transactionId: string;
+      }
+    >
+  >(() => {
     if (typeof window !== "undefined") {
       try {
         const stored = localStorage.getItem("pixData");
@@ -180,6 +185,76 @@ const TradePage = () => {
   const buyTotalBRL = buyAmountBRL + buyFeeBRL; // Total to charge (base + fee)
   const buyUSDTReceived = buyAmountBRL / usdtPrice; // USDT received based on base amount (not including fee)
 
+  // Check user approval status on mount and logout if rejected
+  useEffect(() => {
+    const checkUserStatus = async () => {
+      try {
+        const response = await fetch("/api/user/status");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.user) {
+            // If user is rejected, logout and redirect to home
+            if (data.user.approvalStatus === "REJECTED") {
+              try {
+                // Call logout API
+                await fetch("/api/auth/logout", {
+                  method: "POST",
+                  credentials: "include",
+                });
+
+                // Clear local storage
+                localStorage.removeItem("auth-session");
+                localStorage.removeItem("user");
+                sessionStorage.clear();
+
+                // Store rejection message
+                const message =
+                  language === "pt"
+                    ? "Sua conta foi rejeitada. Entre em contato com o suporte."
+                    : "Your account has been rejected. Please contact support.";
+                sessionStorage.setItem("rejectionMessage", message);
+
+                // Redirect to home page
+                window.location.href = "/";
+              } catch (error) {
+                console.error("Error during logout:", error);
+                // Even if logout fails, clear storage and redirect
+                localStorage.removeItem("auth-session");
+                localStorage.removeItem("user");
+                sessionStorage.clear();
+                sessionStorage.setItem(
+                  "rejectionMessage",
+                  language === "pt"
+                    ? "Sua conta foi rejeitada. Entre em contato com o suporte."
+                    : "Your account has been rejected. Please contact support."
+                );
+                window.location.href = "/";
+              }
+              return;
+            }
+
+            // If user is pending, redirect to profile page
+            if (data.user.approvalStatus === "PENDING") {
+              toast({
+                title: language === "pt" ? "Conta Pendente" : "Account Pending",
+                description:
+                  language === "pt"
+                    ? "Sua conta está pendente de aprovação. Complete seu cadastro no perfil antes de comprar."
+                    : "Your account is pending approval. Complete your profile before purchasing.",
+                variant: "destructive",
+              });
+              window.location.href = "/profile";
+              return;
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error checking user status:", error);
+      }
+    };
+    checkUserStatus();
+  }, [language]);
+
   // Fetch USDT rate and transaction history on mount
   useEffect(() => {
     fetchUSDTRate();
@@ -252,29 +327,32 @@ const TradePage = () => {
               };
             });
           setTransactionHistory(buyOrders);
-          
+
           // Clean up PIX data for completed transactions
           setStoredPixData((prev) => {
             const newMap = new Map(prev);
             let hasChanges = false;
-            
+
             buyOrders.forEach((order) => {
               if (order.status === "COMPLETED" && newMap.has(order.id)) {
                 newMap.delete(order.id);
                 hasChanges = true;
               }
             });
-            
+
             // Update localStorage if there were changes
             if (hasChanges && typeof window !== "undefined") {
               try {
                 const obj = Object.fromEntries(newMap);
                 localStorage.setItem("pixData", JSON.stringify(obj));
               } catch (error) {
-                console.error("Error updating PIX data in localStorage:", error);
+                console.error(
+                  "Error updating PIX data in localStorage:",
+                  error
+                );
               }
             }
-            
+
             return newMap;
           });
         }
@@ -337,11 +415,11 @@ const TradePage = () => {
             // Dynamically import jsQR for client-side QR code decoding
             const jsQRModule = await import("jsqr");
             const jsQR = jsQRModule.default || jsQRModule;
-            
+
             // Create an image element to decode the QR code
             const img = new Image();
             img.crossOrigin = "anonymous";
-            
+
             const decodedCode = await new Promise<string | null>((resolve) => {
               img.onload = () => {
                 try {
@@ -351,8 +429,17 @@ const TradePage = () => {
                   const ctx = canvas.getContext("2d");
                   if (ctx) {
                     ctx.drawImage(img, 0, 0);
-                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                    const code = jsQR(imageData.data, imageData.width, imageData.height);
+                    const imageData = ctx.getImageData(
+                      0,
+                      0,
+                      canvas.width,
+                      canvas.height
+                    );
+                    const code = jsQR(
+                      imageData.data,
+                      imageData.width,
+                      imageData.height
+                    );
                     resolve(code?.data || null);
                   } else {
                     resolve(null);
@@ -366,17 +453,20 @@ const TradePage = () => {
                 console.error("Error loading QR code image");
                 resolve(null);
               };
-              
+
               // Set image source
-              const base64Data = qrCodeBase64.includes(',') 
-                ? qrCodeBase64 
+              const base64Data = qrCodeBase64.includes(",")
+                ? qrCodeBase64
                 : `data:image/png;base64,${qrCodeBase64}`;
               img.src = base64Data;
             });
 
             if (decodedCode) {
               console.log("✅ Successfully decoded PIX code from QR image!");
-              console.log("Decoded PIX code:", decodedCode.substring(0, 50) + "...");
+              console.log(
+                "Decoded PIX code:",
+                decodedCode.substring(0, 50) + "..."
+              );
               pixCode = decodedCode;
             } else {
               console.log("⚠️ Could not decode PIX code from QR image");
@@ -400,7 +490,7 @@ const TradePage = () => {
         setStoredPixData((prev) => {
           const newMap = new Map(prev);
           newMap.set(data.data.transaction_id, pixDataForTransaction);
-          
+
           // Also save to localStorage for persistence
           if (typeof window !== "undefined") {
             try {
@@ -410,7 +500,7 @@ const TradePage = () => {
               console.error("Error saving PIX data to localStorage:", error);
             }
           }
-          
+
           return newMap;
         });
 
@@ -442,7 +532,10 @@ const TradePage = () => {
 
         toast({
           title: "Compra iniciada!",
-          description: language === "pt" ? "Escaneie o QR Code PIX para finalizar o pagamento" : "Scan the PIX QR Code to complete payment",
+          description:
+            language === "pt"
+              ? "Escaneie o QR Code PIX para finalizar o pagamento"
+              : "Scan the PIX QR Code to complete payment",
         });
       }
     } catch (error: unknown) {
@@ -468,7 +561,10 @@ const TradePage = () => {
         setCopied(true);
         toast({
           title: "Copiado!",
-          description: language === "pt" ? "Código PIX copiado para a área de transferência" : "PIX code copied to clipboard",
+          description:
+            language === "pt"
+              ? "Código PIX copiado para a área de transferência"
+              : "PIX code copied to clipboard",
         });
         // Reset copied state after 2 seconds
         setTimeout(() => setCopied(false), 2000);
@@ -482,7 +578,6 @@ const TradePage = () => {
       }
     }
   };
-
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -505,15 +600,19 @@ const TradePage = () => {
               <CardTitle className="text-lg sm:text-xl text-white">
                 {t("buyUSDTViaPIX")}
               </CardTitle>
-              <Badge variant="secondary" className="bg-brand-500/20 text-brand-400 border-brand-500/30">
+              <Badge
+                variant="secondary"
+                className="bg-brand-500/20 text-brand-400 border-brand-500/30"
+              >
                 {priceLoading
-                  ? (language === "pt" ? "Carregando..." : "Loading...")
+                  ? language === "pt"
+                    ? "Carregando..."
+                    : "Loading..."
                   : `1 USDT = ${formatBRL(usdtPrice)}`}
               </Badge>
             </div>
           </CardHeader>
           <CardContent className="space-y-4 sm:space-y-6">
-
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 {t("enterAmount")}
@@ -538,7 +637,9 @@ const TradePage = () => {
                 <span className="text-red-400">{formatBRL(buyFeeBRL)}</span>
               </div>
               <div className="flex justify-between pt-2 border-t border-gray-700">
-                <span className="font-medium text-gray-300">Total a pagar:</span>
+                <span className="font-medium text-gray-300">
+                  Total a pagar:
+                </span>
                 <span className="font-semibold text-white text-lg">
                   {formatBRL(buyTotalBRL)}
                 </span>
@@ -546,7 +647,9 @@ const TradePage = () => {
             </div>
 
             <div className="bg-gradient-to-br from-brand-500/20 to-green-500/20 rounded-xl p-4 sm:p-6 border border-brand-500/30">
-              <div className="text-sm text-gray-300 mb-2">{language === "pt" ? "Você receberá:" : "You will receive:"}</div>
+              <div className="text-sm text-gray-300 mb-2">
+                {language === "pt" ? "Você receberá:" : "You will receive:"}
+              </div>
               <div className="text-2xl sm:text-3xl font-bold text-brand-400">
                 {formatUSDT(buyUSDTReceived)} USDT
               </div>
@@ -630,11 +733,17 @@ const TradePage = () => {
                                 : t("failed")}
                             </Badge>
                             <span className="text-xs text-gray-400">
-                              {transaction.date.toLocaleDateString(language === "pt" ? "pt-BR" : "en-US")} {language === "pt" ? "às" : "at"}{" "}
-                              {transaction.date.toLocaleTimeString(language === "pt" ? "pt-BR" : "en-US", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
+                              {transaction.date.toLocaleDateString(
+                                language === "pt" ? "pt-BR" : "en-US"
+                              )}{" "}
+                              {language === "pt" ? "às" : "at"}{" "}
+                              {transaction.date.toLocaleTimeString(
+                                language === "pt" ? "pt-BR" : "en-US",
+                                {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                }
+                              )}
                             </span>
                             {isPending && hasPixData && (
                               <span className="text-xs text-yellow-400/70 flex items-center gap-1">
@@ -645,25 +754,33 @@ const TradePage = () => {
                           </div>
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
                             <div>
-                              <p className="text-gray-400 text-xs">{t("amountPaid")}</p>
+                              <p className="text-gray-400 text-xs">
+                                {t("amountPaid")}
+                              </p>
                               <p className="text-white font-medium">
                                 {formatBRL(transaction.amount)}
                               </p>
                             </div>
                             <div>
-                              <p className="text-gray-400 text-xs">{t("received")}</p>
+                              <p className="text-gray-400 text-xs">
+                                {t("received")}
+                              </p>
                               <p className="text-brand-400 font-semibold">
                                 {formatUSDT(transaction.received)} USDT
                               </p>
                             </div>
                             <div>
-                              <p className="text-gray-400 text-xs">{t("feeAmount")}</p>
+                              <p className="text-gray-400 text-xs">
+                                {t("feeAmount")}
+                              </p>
                               <p className="text-gray-300">
                                 {formatBRL(transaction.fee)}
                               </p>
                             </div>
                             <div>
-                              <p className="text-gray-400 text-xs">{t("feeAmount")}</p>
+                              <p className="text-gray-400 text-xs">
+                                {t("feeAmount")}
+                              </p>
                               <p className="text-gray-300">
                                 @ {formatBRL(transaction.rate)}
                               </p>
@@ -683,8 +800,7 @@ const TradePage = () => {
         <div className="mt-6 text-center">
           <p className="text-xs sm:text-sm text-gray-400">
             • {t("quotesUpdated")}
-            <br />
-            • {t("feeApplied")}
+            <br />• {t("feeApplied")}
             <br />• {t("pixPayment")}
           </p>
         </div>
@@ -698,7 +814,9 @@ const TradePage = () => {
               {t("scanQRCode")}
             </DialogTitle>
             <DialogDescription className="text-[#A1A1AA] text-sm">
-              {language === "pt" ? "Escaneie o código abaixo com o app do seu banco para finalizar o pagamento" : "Scan the code below with your bank app to complete payment"}
+              {language === "pt"
+                ? "Escaneie o código abaixo com o app do seu banco para finalizar o pagamento"
+                : "Scan the code below with your bank app to complete payment"}
             </DialogDescription>
           </DialogHeader>
           {pixData && (
@@ -713,7 +831,11 @@ const TradePage = () => {
                   />
                 ) : (
                   <div className="w-48 h-48 sm:w-56 sm:h-56 bg-gray-900 border-2 border-gray-700 rounded-xl flex items-center justify-center">
-                    <p className="text-[#A1A1AA] text-sm">{language === "pt" ? "QR Code não disponível" : "QR Code not available"}</p>
+                    <p className="text-[#A1A1AA] text-sm">
+                      {language === "pt"
+                        ? "QR Code não disponível"
+                        : "QR Code not available"}
+                    </p>
                   </div>
                 )}
                 <div className="text-center space-y-1">
@@ -740,7 +862,9 @@ const TradePage = () => {
                   {copied ? (
                     <>
                       <Check className="w-4 h-4 sm:w-5 sm:h-5 text-green-400 flex-shrink-0" />
-                      <span className="text-sm sm:text-base text-green-400 font-semibold">{t("codeCopied")}</span>
+                      <span className="text-sm sm:text-base text-green-400 font-semibold">
+                        {t("codeCopied")}
+                      </span>
                     </>
                   ) : pixData.qrCode ? (
                     <>

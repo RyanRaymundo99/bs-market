@@ -28,11 +28,15 @@ export async function POST(request: NextRequest) {
     // 2. Flat: { event: "...", transaction_id: "...", status: "..." }
     const eventType = body.event || "transaction.unknown";
     const webhookData = body.data || body; // Use nested data if present, otherwise use body itself
-    
+
     // Extract transaction_id from either nested data or top-level
     const transaction_id = webhookData.transaction_id || body.transaction_id;
     const external_id = webhookData.external_id || body.external_id;
-    const status = (webhookData.status || body.status || "pending")?.toLowerCase();
+    const status = (
+      webhookData.status ||
+      body.status ||
+      "pending"
+    )?.toLowerCase();
     const ipAddress =
       request.headers.get("x-forwarded-for") ||
       request.headers.get("x-real-ip") ||
@@ -67,7 +71,8 @@ export async function POST(request: NextRequest) {
 
     // Allow test webhooks only in development
     const isDevelopment = process.env.NODE_ENV === "development";
-    const isTestWebhook = isDevelopment && request.headers.get("x-test-webhook") === "true";
+    const isTestWebhook =
+      isDevelopment && request.headers.get("x-test-webhook") === "true";
 
     // Update webhook event with signature validation result
     if (webhookEventId) {
@@ -109,12 +114,37 @@ export async function POST(request: NextRequest) {
 
     // Extract fields from NutzPay payload structure
     // Handle both nested (body.data) and flat (body) payload formats
-    const amount = webhookData.amount || body.amount || webhookData.value || body.value || webhookData.amount_paid_brl || body.amount_paid_brl;
+    const amount =
+      webhookData.amount ||
+      body.amount ||
+      webhookData.value ||
+      body.value ||
+      webhookData.amount_paid_brl ||
+      body.amount_paid_brl;
     const currency = webhookData.currency || body.currency || "BRL";
-    const type = webhookData.type || body.type || webhookData.payment_method || body.payment_method || "PIX";
-    const user_id = webhookData.user_id || body.user_id || webhookData.customer_id || body.customer_id;
-    const usdt_amount = webhookData.usdt_amount || body.usdt_amount || webhookData.crypto_amount || body.crypto_amount || webhookData.amount || body.amount;
-    const created_at = webhookData.created_at || body.created_at || webhookData.createdAt || body.createdAt;
+    const type =
+      webhookData.type ||
+      body.type ||
+      webhookData.payment_method ||
+      body.payment_method ||
+      "PIX";
+    const user_id =
+      webhookData.user_id ||
+      body.user_id ||
+      webhookData.customer_id ||
+      body.customer_id;
+    const usdt_amount =
+      webhookData.usdt_amount ||
+      body.usdt_amount ||
+      webhookData.crypto_amount ||
+      body.crypto_amount ||
+      webhookData.amount ||
+      body.amount;
+    const created_at =
+      webhookData.created_at ||
+      body.created_at ||
+      webhookData.createdAt ||
+      body.createdAt;
     const completed_at =
       webhookData.completed_at ||
       body.completed_at ||
@@ -123,15 +153,16 @@ export async function POST(request: NextRequest) {
       webhookData.executed_at ||
       body.executed_at;
 
-    if (!transaction_id) {
-      console.error("Webhook missing transaction_id");
+    if (!transaction_id && !external_id) {
+      console.error("Webhook missing transaction_id and external_id");
       if (webhookEventId) {
         try {
           await prisma.webhookEvent.update({
             where: { id: webhookEventId },
             data: {
               processed: false,
-              error: "Missing transaction_id (required)",
+              error:
+                "Missing transaction_id and external_id (at least one required)",
             },
           });
         } catch (dbError) {
@@ -140,13 +171,114 @@ export async function POST(request: NextRequest) {
       }
       return NextResponse.json(
         {
-          error: "Missing transaction_id (required)",
-          note: "NutzPay webhooks must include transaction_id in data object",
+          error:
+            "Missing transaction_id and external_id (at least one required)",
+          note: "NutzPay webhooks must include transaction_id or external_id",
         },
         { status: 400 }
       );
     }
 
+    // Check if this is a withdrawal webhook (external_id starts with "withdrawal_")
+    const isWithdrawalWebhook = external_id?.startsWith("withdrawal_") || false;
+
+    if (isWithdrawalWebhook) {
+      // Handle withdrawal webhook - try to find by externalId first
+      let foundWithdrawal = await prisma.withdrawal.findFirst({
+        where: {
+          externalId: external_id,
+        },
+        include: {
+          transaction: true,
+        },
+      });
+
+      // If not found by externalId, try by transaction_id (hash)
+      if (!foundWithdrawal && transaction_id) {
+        foundWithdrawal = await prisma.withdrawal.findFirst({
+          where: {
+            hash: transaction_id,
+          },
+          include: {
+            transaction: true,
+          },
+        });
+      }
+
+      if (foundWithdrawal) {
+        // Determine withdrawal status from webhook
+        let withdrawalStatus:
+          | "PENDING"
+          | "PROCESSING"
+          | "COMPLETED"
+          | "FAILED"
+          | "CANCELLED" = foundWithdrawal.status;
+
+        if (
+          eventType === "transaction.completed" ||
+          eventType === "withdrawal.completed" ||
+          status === "completed" ||
+          status === "COMPLETED"
+        ) {
+          withdrawalStatus = "COMPLETED";
+        } else if (
+          eventType === "transaction.failed" ||
+          eventType === "withdrawal.failed" ||
+          status === "failed" ||
+          status === "FAILED"
+        ) {
+          withdrawalStatus = "FAILED";
+        } else if (
+          eventType === "transaction.processing" ||
+          status === "processing" ||
+          status === "PROCESSING"
+        ) {
+          withdrawalStatus = "PROCESSING";
+        }
+
+        // Update withdrawal status
+        await prisma.withdrawal.update({
+          where: { id: foundWithdrawal.id },
+          data: {
+            status: withdrawalStatus,
+            hash: transaction_id || foundWithdrawal.hash,
+            fee: webhookData.fee || foundWithdrawal.fee,
+            netAmount:
+              webhookData.amount ||
+              webhookData.net_amount ||
+              foundWithdrawal.netAmount,
+          },
+        });
+
+        // Mark webhook as processed
+        if (webhookEventId) {
+          try {
+            await prisma.webhookEvent.update({
+              where: { id: webhookEventId },
+              data: {
+                processed: true,
+                error: null,
+              },
+            });
+          } catch (dbError) {
+            // Ignore if model doesn't exist
+          }
+        }
+
+        return NextResponse.json({
+          success: true,
+          message: "Withdrawal webhook processed",
+          withdrawalId: foundWithdrawal.id,
+          withdrawalStatus: withdrawalStatus,
+        });
+      } else {
+        // Withdrawal not found, continue to try order matching
+        console.log("Withdrawal not found, trying order matching", {
+          external_id,
+          transaction_id,
+        });
+      }
+    }
 
     // Find the order by matching webhook data
     // According to NutzPay webhook documentation:
@@ -184,7 +316,7 @@ export async function POST(request: NextRequest) {
       });
       if (orderByExternalId) {
         order = orderByExternalId;
-        
+
         // If we matched by external_id but webhook has transaction_id, update the order
         if (transaction_id && transaction_id !== external_id) {
           await prisma.order.update({
@@ -464,7 +596,7 @@ export async function POST(request: NextRequest) {
         );
 
         // Create transaction record for USDT credit
-        await ledgerService.createTransaction({
+        const transaction = await ledgerService.createTransaction({
           userId: order.userId,
           type: "BUY_CRYPTO",
           amount: new Decimal(usdtAmount),
@@ -478,6 +610,14 @@ export async function POST(request: NextRequest) {
             amountUSDT: usdtAmount,
             exchangeRate: (amount || Number(order.total)) / usdtAmount,
             source: "nutzpay_webhook",
+          },
+        });
+
+        // Link transaction to order
+        await prisma.order.update({
+          where: { id: order.id },
+          data: {
+            transactionId: transaction.id,
           },
         });
       }

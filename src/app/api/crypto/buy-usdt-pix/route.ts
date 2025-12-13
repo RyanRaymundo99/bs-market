@@ -28,6 +28,25 @@ export async function POST(request: NextRequest) {
 
     const user = session.user;
 
+    // Check if user is approved
+    if (user.approvalStatus === "REJECTED") {
+      return NextResponse.json(
+        { error: "Sua conta foi rejeitada. Entre em contato com o suporte." },
+        { status: 403 }
+      );
+    }
+
+    // Check if user is pending
+    if (user.approvalStatus === "PENDING") {
+      return NextResponse.json(
+        {
+          error:
+            "Sua conta está pendente de aprovação. Complete seu cadastro e aguarde a aprovação.",
+        },
+        { status: 403 }
+      );
+    }
+
     // Parse request body
     const { amount, usdt_amount } = await request.json();
 
@@ -87,10 +106,11 @@ export async function POST(request: NextRequest) {
     try {
       // Call NutzPay API to create USDT purchase
       // Use NUTZPAY_WEBHOOK_URL if set (for testing with webhook.site), otherwise use default
-      const callbackUrl = process.env.NUTZPAY_WEBHOOK_URL || 
+      const callbackUrl =
+        process.env.NUTZPAY_WEBHOOK_URL ||
         `${
-        process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"
-      }/api/webhooks/nutzpay`;
+          process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"
+        }/api/webhooks/nutzpay`;
 
       const nutzPayResponse = await nutzPayService.createUSDTPurchase({
         amount: amount,
@@ -130,16 +150,31 @@ export async function POST(request: NextRequest) {
       // - Also check top-level qrCode/qr_code for backwards compatibility
       console.log("========================================");
       console.log("=== PIX CODE EXTRACTION ===");
-      console.log("Checking responseData.pix_data?.qr_code:", responseData.pix_data?.qr_code);
-      console.log("Checking responseData.pix_data?.qrCode:", responseData.pix_data?.qrCode);
+      console.log(
+        "Checking responseData.pix_data?.qr_code:",
+        responseData.pix_data?.qr_code
+      );
+      console.log(
+        "Checking responseData.pix_data?.qrCode:",
+        responseData.pix_data?.qrCode
+      );
       console.log("Checking responseData.qrCode:", responseData.qrCode);
       console.log("Checking responseData.pixKey:", responseData.pixKey);
       console.log("Checking responseData.qr_code:", responseData.qr_code);
-      console.log("Checking responseData.pix_data?.pix_key:", responseData.pix_data?.pix_key);
-      console.log("Checking responseData.pix_data?.pixKey:", responseData.pix_data?.pixKey);
+      console.log(
+        "Checking responseData.pix_data?.pix_key:",
+        responseData.pix_data?.pix_key
+      );
+      console.log(
+        "Checking responseData.pix_data?.pixKey:",
+        responseData.pix_data?.pixKey
+      );
       console.log("Checking responseData.code:", responseData.code);
-      console.log("Full pix_data object:", JSON.stringify(responseData.pix_data, null, 2));
-      
+      console.log(
+        "Full pix_data object:",
+        JSON.stringify(responseData.pix_data, null, 2)
+      );
+
       const pixCode =
         responseData.pix_data?.qr_code || // PRIMARY: From pix_data object (per API docs)
         responseData.pix_data?.qrCode || // Alternative field name
@@ -151,8 +186,11 @@ export async function POST(request: NextRequest) {
         responseData.pix_key || // Fallback: Top-level pix_key
         responseData.code || // Fallback: Top-level code
         null;
-      
-      console.log("Extracted pixCode:", pixCode ? pixCode.substring(0, 50) + "..." : "NULL");
+
+      console.log(
+        "Extracted pixCode:",
+        pixCode ? pixCode.substring(0, 50) + "..." : "NULL"
+      );
       console.log("========================================");
 
       // Extract QR code URL if available
@@ -266,7 +304,7 @@ export async function POST(request: NextRequest) {
 
       if (error instanceof Error) {
         errorMessage = error.message;
-        
+
         // Don't mark as failed for network/timeout errors - keep as PENDING
         if (
           error.message.includes("timeout") ||
@@ -281,17 +319,21 @@ export async function POST(request: NextRequest) {
           response?: { data?: unknown; status?: number };
           code?: string;
         };
-        
+
         // Don't mark as failed for 5xx errors (server issues) - keep as PENDING
         if (axiosError.response?.status && axiosError.response.status >= 500) {
           shouldMarkAsFailed = false;
         }
-        
+
         // Don't mark as failed for network errors
-        if (axiosError.code === "ECONNREFUSED" || axiosError.code === "ENOTFOUND" || axiosError.code === "ETIMEDOUT") {
+        if (
+          axiosError.code === "ECONNREFUSED" ||
+          axiosError.code === "ENOTFOUND" ||
+          axiosError.code === "ETIMEDOUT"
+        ) {
           shouldMarkAsFailed = false;
         }
-        
+
         if (axiosError.response?.data) {
           errorDetails = axiosError.response.data;
           if (
@@ -313,7 +355,7 @@ export async function POST(request: NextRequest) {
 
       // Only update status to FAILED if it's a real error (not temporary)
       if (shouldMarkAsFailed) {
-          console.error("Marking order as FAILED due to error");
+        console.error("Marking order as FAILED due to error");
         await prisma.order.update({
           where: { id: order.id },
           data: {

@@ -144,17 +144,16 @@ export async function GET(request: NextRequest) {
 
     // Calculate crypto trade fees (3% of the transaction amount)
     const cryptoFees = Number(cryptoTradeCommissions._sum.amount || 0) * 0.03;
-    const cryptoFeesLastWeek = Number(cryptoTradeCommissionsLastWeek._sum.amount || 0) * 0.03;
+    const cryptoFeesLastWeek =
+      Number(cryptoTradeCommissionsLastWeek._sum.amount || 0) * 0.03;
 
     // Total commissions = deposit fees + trade fees + crypto fees
-    const totalCommissions = 
-      Number(depositCommissions._sum.fee || 0) + 
-      tradeCommissions + 
-      cryptoFees;
+    const totalCommissions =
+      Number(depositCommissions._sum.fee || 0) + tradeCommissions + cryptoFees;
 
-    const totalCommissionsLastWeek = 
-      Number(depositCommissionsLastWeek._sum.fee || 0) + 
-      tradeCommissionsLastWeek + 
+    const totalCommissionsLastWeek =
+      Number(depositCommissionsLastWeek._sum.fee || 0) +
+      tradeCommissionsLastWeek +
       cryptoFeesLastWeek;
 
     // Calculate average user balance
@@ -227,11 +226,27 @@ export async function GET(request: NextRequest) {
         deposit: {
           select: {
             status: true,
+            amount: true,
+            externalId: true,
+            confirmedAt: true,
           },
         },
         withdrawal: {
           select: {
             status: true,
+            amount: true,
+            hash: true,
+            protocol: true,
+          },
+        },
+        order: {
+          select: {
+            id: true,
+            status: true,
+            externalOrderId: true,
+            executedAt: true,
+            amount: true,
+            total: true,
           },
         },
       },
@@ -248,11 +263,27 @@ export async function GET(request: NextRequest) {
 
       // Determine status based on related entity
       if (transaction.deposit) {
-        status = transaction.deposit.status === "CONFIRMED" ? "APPROVED" : 
-                 transaction.deposit.status === "REJECTED" ? "REJECTED" : "PENDING";
+        status =
+          transaction.deposit.status === "CONFIRMED"
+            ? "APPROVED"
+            : transaction.deposit.status === "REJECTED"
+            ? "REJECTED"
+            : "PENDING";
       } else if (transaction.withdrawal) {
-        status = transaction.withdrawal.status === "COMPLETED" ? "APPROVED" : 
-                 transaction.withdrawal.status === "FAILED" ? "REJECTED" : "PENDING";
+        status =
+          transaction.withdrawal.status === "COMPLETED"
+            ? "APPROVED"
+            : transaction.withdrawal.status === "FAILED"
+            ? "REJECTED"
+            : "PENDING";
+      } else if (transaction.order) {
+        // For BUY_CRYPTO and SELL_CRYPTO, use order status
+        status =
+          transaction.order.status === "COMPLETED"
+            ? "APPROVED"
+            : transaction.order.status === "FAILED"
+            ? "REJECTED"
+            : "PENDING";
       }
 
       return {
@@ -260,8 +291,13 @@ export async function GET(request: NextRequest) {
         date: transaction.createdAt.toISOString(),
         type: type,
         user: transaction.user.name || transaction.user.email,
+        userId: transaction.userId,
         value: Number(transaction.amount),
         status: status,
+        metadata: transaction.metadata,
+        orderId: transaction.order?.id || null,
+        depositId: transaction.deposit ? "exists" : null,
+        withdrawalId: transaction.withdrawal ? "exists" : null,
       };
     });
 
@@ -302,7 +338,7 @@ export async function GET(request: NextRequest) {
       const dayTrades = { _sum: { fiatAmount: 0 } };
 
       chartData.push({
-        date: date.toISOString().split('T')[0],
+        date: date.toISOString().split("T")[0],
         deposits: Number(dayDeposits._sum.amount || 0),
         withdrawals: Number(dayWithdrawals._sum.amount || 0),
         trades: Number(dayTrades._sum.fiatAmount || 0),

@@ -26,6 +26,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if user is approved
+    if (session.user.approvalStatus === "REJECTED") {
+      return NextResponse.json(
+        { error: "Sua conta foi rejeitada. Entre em contato com o suporte." },
+        { status: 403 }
+      );
+    }
+
+    // Check if user is pending
+    if (session.user.approvalStatus === "PENDING") {
+      return NextResponse.json(
+        {
+          error:
+            "Sua conta está pendente de aprovação. Complete seu cadastro e aguarde a aprovação.",
+        },
+        { status: 403 }
+      );
+    }
+
     const { amount, paymentMethod, bankAccount } = await request.json();
 
     // Validate required fields

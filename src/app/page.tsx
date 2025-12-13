@@ -1,11 +1,39 @@
-import React from "react";
+"use client";
+
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { TrendingUp, Shield, BarChart3, ArrowRight } from "lucide-react";
+import {
+  TrendingUp,
+  Shield,
+  BarChart3,
+  ArrowRight,
+  XCircle,
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const Home = () => {
+  const { toast } = useToast();
+  const [showRejectionMessage, setShowRejectionMessage] = useState(false);
+
+  useEffect(() => {
+    // Check if there's a rejection message in sessionStorage
+    const rejectionMessage = sessionStorage.getItem("rejectionMessage");
+    if (rejectionMessage) {
+      // Show toast with rejection message
+      toast({
+        title: "Conta Rejeitada",
+        description: rejectionMessage,
+        variant: "destructive",
+      });
+      // Clear the message from sessionStorage
+      sessionStorage.removeItem("rejectionMessage");
+      setShowRejectionMessage(true);
+    }
+  }, [toast]);
+
   return (
     <div className="relative min-h-screen bg-black text-white">
       {/* Navigation */}
@@ -99,7 +127,8 @@ const Home = () => {
             Por Que Escolher a BS Consulting?
           </h2>
           <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-            Nossa plataforma combina tecnologia de ponta com estratégias de investimento comprovadas
+            Nossa plataforma combina tecnologia de ponta com estratégias de
+            investimento comprovadas
           </p>
         </div>
 
@@ -118,7 +147,9 @@ const Home = () => {
                 Insights Impulsionados por IA
               </h3>
               <p className="text-gray-300">
-                Obtenha análise de mercado em tempo real e recomendações de investimento personalizadas alimentadas por algoritmos avançados de aprendizado de máquina.
+                Obtenha análise de mercado em tempo real e recomendações de
+                investimento personalizadas alimentadas por algoritmos avançados
+                de aprendizado de máquina.
               </p>
             </CardContent>
           </Card>
@@ -137,7 +168,9 @@ const Home = () => {
                 Seguro e Conforme
               </h3>
               <p className="text-gray-300">
-                Segurança de nível bancário com conformidade SOC 2. Seus investimentos e dados são protegidos com criptografia de nível empresarial.
+                Segurança de nível bancário com conformidade SOC 2. Seus
+                investimentos e dados são protegidos com criptografia de nível
+                empresarial.
               </p>
             </CardContent>
           </Card>
@@ -156,7 +189,8 @@ const Home = () => {
                 Análises Avançadas
               </h3>
               <p className="text-gray-300">
-                Análises abrangentes de portfólio com métricas de desempenho detalhadas, avaliação de risco e sugestões de otimização.
+                Análises abrangentes de portfólio com métricas de desempenho
+                detalhadas, avaliação de risco e sugestões de otimização.
               </p>
             </CardContent>
           </Card>
@@ -175,9 +209,7 @@ const Home = () => {
             <div className="text-4xl font-bold text-brand-300 mb-2 relative z-10 text-blur">
               $2.5B+
             </div>
-            <div className="text-gray-300 relative z-10">
-              Ativos Sob Gestão
-            </div>
+            <div className="text-gray-300 relative z-10">Ativos Sob Gestão</div>
           </div>
           <div className="bg-black/60 border border-white/10 rounded-xl p-6 shadow-2xl backdrop-blur-[20px] relative overflow-hidden card-blur">
             {/* Mirror effect overlay */}
@@ -188,7 +220,9 @@ const Home = () => {
             <div className="text-4xl font-bold text-brand-300 mb-2 relative z-10 text-blur">
               50K+
             </div>
-            <div className="text-gray-300 relative z-10">Investidores Ativos</div>
+            <div className="text-gray-300 relative z-10">
+              Investidores Ativos
+            </div>
           </div>
           <div className="bg-black/60 border border-white/10 rounded-xl p-6 shadow-2xl backdrop-blur-[20px] relative overflow-hidden card-blur">
             {/* Mirror effect overlay */}

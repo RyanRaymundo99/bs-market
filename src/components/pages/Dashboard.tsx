@@ -236,6 +236,53 @@ export default function Dashboard() {
     }
   };
 
+  // Check if user is rejected and logout if so
+  useEffect(() => {
+    const checkAndLogoutIfRejected = async () => {
+      if (userStatus?.approvalStatus === "REJECTED") {
+        try {
+          // Call logout API
+          await fetch("/api/auth/logout", {
+            method: "POST",
+            credentials: "include",
+          });
+
+          // Clear local storage
+          localStorage.removeItem("auth-session");
+          localStorage.removeItem("user");
+          sessionStorage.clear();
+
+          // Show rejection message and redirect to home
+          const message =
+            language === "pt"
+              ? "Sua conta foi rejeitada. Entre em contato com o suporte."
+              : "Your account has been rejected. Please contact support.";
+
+          // Store rejection message in sessionStorage to show on home page
+          sessionStorage.setItem("rejectionMessage", message);
+
+          // Redirect to home page
+          window.location.href = "/";
+        } catch (error) {
+          console.error("Error during logout:", error);
+          // Even if logout fails, clear storage and redirect
+          localStorage.removeItem("auth-session");
+          localStorage.removeItem("user");
+          sessionStorage.clear();
+          sessionStorage.setItem(
+            "rejectionMessage",
+            language === "pt"
+              ? "Sua conta foi rejeitada. Entre em contato com o suporte."
+              : "Your account has been rejected. Please contact support."
+          );
+          window.location.href = "/";
+        }
+      }
+    };
+
+    checkAndLogoutIfRejected();
+  }, [userStatus, language]);
+
   // Fetch user data
   useEffect(() => {
     const fetchData = async () => {
@@ -300,6 +347,13 @@ export default function Dashboard() {
         sixDaysAgo.setDate(sixDaysAgo.getDate() - 6);
         sixDaysAgo.setHours(0, 0, 0, 0);
 
+        // Helper function to format date as DD/MM
+        const formatDate = (date: Date): string => {
+          const day = String(date.getDate()).padStart(2, "0");
+          const month = String(date.getMonth() + 1).padStart(2, "0");
+          return `${day}/${month}`;
+        };
+
         // Filter transactions from last 7 days
         const relevantTransactions = allTransactions.filter(
           (t: Transaction) => {
@@ -330,13 +384,7 @@ export default function Dashboard() {
         const transactionsByDay: { [key: string]: Transaction[] } = {};
         relevantTransactions.forEach((t: Transaction) => {
           const transactionDate = new Date(t.createdAt);
-          const dayKey = transactionDate.toLocaleDateString(
-            language === "pt" ? "pt-BR" : "en-US",
-            {
-              day: "2-digit",
-              month: "2-digit",
-            }
-          );
+          const dayKey = formatDate(transactionDate);
           if (!transactionsByDay[dayKey]) {
             transactionsByDay[dayKey] = [];
           }
@@ -350,13 +398,7 @@ export default function Dashboard() {
         for (let i = 6; i >= 0; i--) {
           const date = new Date(today);
           date.setDate(date.getDate() - i);
-          const dateStr = date.toLocaleDateString(
-            language === "pt" ? "pt-BR" : "en-US",
-            {
-              day: "2-digit",
-              month: "2-digit",
-            }
-          );
+          const dateStr = formatDate(date);
 
           // Apply transactions for this day
           if (transactionsByDay[dateStr]) {
@@ -561,13 +603,81 @@ export default function Dashboard() {
 
         {/* Balance Chart Card with Area Chart */}
         {chartData.length > 0 && (
-          <Card className="mb-6 sm:mb-8 rounded-2xl sm:rounded-3xl border-gray-800 bg-black/40 backdrop-blur-sm shadow-xl">
+          <Card className="mb-6 sm:mb-8 rounded-2xl sm:rounded-3xl border-gray-800 bg-black/40 backdrop-blur-sm shadow-xl overflow-hidden">
             <CardContent className="p-6 sm:p-8">
-              <div className="h-64 sm:h-80 w-full">
+              <div className="h-64 sm:h-80 w-full relative">
+                {/* Floating info card - Desktop version */}
+                {(() => {
+                  const lastDataPoint = chartData[chartData.length - 1];
+                  const firstDataPoint = chartData[0];
+                  const change = lastDataPoint.USDT - firstDataPoint.USDT;
+                  const changePercent =
+                    firstDataPoint.USDT > 0
+                      ? ((change / firstDataPoint.USDT) * 100).toFixed(1)
+                      : "0";
+                  const isPositive = change >= 0;
+
+                  return (
+                    <>
+                      {/* Mobile - Simple version */}
+                      <div className="md:hidden absolute top-2 right-2 z-10 bg-black/90 backdrop-blur-sm border border-brand-500/30 rounded-lg px-2.5 py-1.5 shadow-xl">
+                        <div className="text-xs text-brand-300 font-bold">
+                          U$ {lastDataPoint.USDT.toFixed(2)}
+                        </div>
+                      </div>
+
+                      {/* Desktop - Full version */}
+                      <div className="hidden md:block absolute top-4 left-4 z-10 bg-black/90 backdrop-blur-sm border border-brand-500/30 rounded-lg p-3 shadow-xl min-w-[140px]">
+                        <div className="space-y-2">
+                          <div className="text-xs text-gray-400 font-medium">
+                            Data
+                          </div>
+                          <div className="text-sm text-white font-semibold">
+                            {lastDataPoint.date}
+                          </div>
+                          <div className="border-t border-gray-700 pt-2">
+                            <div className="text-xs text-gray-400 font-medium mb-1">
+                              Saldo
+                            </div>
+                            <div className="text-base text-brand-300 font-bold">
+                              U$ {lastDataPoint.USDT.toFixed(2)}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              USDT
+                            </div>
+                          </div>
+                          {chartData.length >= 2 && (
+                            <div className="border-t border-gray-700 pt-2">
+                              <div className="flex items-center gap-1.5">
+                                <TrendingUp
+                                  className={`w-3 h-3 ${
+                                    isPositive
+                                      ? "text-green-400"
+                                      : "text-red-400 rotate-180"
+                                  }`}
+                                />
+                                <span
+                                  className={`text-xs font-medium ${
+                                    isPositive
+                                      ? "text-green-400"
+                                      : "text-red-400"
+                                  }`}
+                                >
+                                  {isPositive ? "+" : ""}
+                                  {changePercent}%
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart
                     data={chartData}
-                    margin={{ top: 10, right: 10, left: 0, bottom: 10 }}
+                    margin={{ top: 20, right: 20, left: 0, bottom: 0 }}
                   >
                     <defs>
                       <linearGradient
@@ -580,60 +690,94 @@ export default function Dashboard() {
                         <stop
                           offset="0%"
                           stopColor="#12E0A1"
-                          stopOpacity={0.4}
+                          stopOpacity={0.3}
+                        />
+                        <stop
+                          offset="50%"
+                          stopColor="#12E0A1"
+                          stopOpacity={0.15}
                         />
                         <stop
                           offset="100%"
                           stopColor="#12E0A1"
-                          stopOpacity={0.05}
+                          stopOpacity={0}
                         />
                       </linearGradient>
                     </defs>
+                    {/* Simplified grid - only horizontal lines */}
                     <CartesianGrid
-                      strokeDasharray="3 3"
+                      strokeDasharray="2 2"
                       stroke="#1f2937"
                       vertical={false}
+                      horizontal={true}
                     />
-                    <XAxis
-                      dataKey="date"
-                      stroke="#6b7280"
-                      style={{ fontSize: "11px" }}
-                      tickLine={false}
-                      tick={{ fill: "#9ca3af" }}
-                      axisLine={false}
-                    />
-                    <YAxis
-                      stroke="#6b7280"
-                      style={{ fontSize: "11px" }}
-                      tickFormatter={(value) => `U$ ${value.toFixed(0)}`}
-                      tickLine={false}
-                      tick={{ fill: "#9ca3af" }}
-                      axisLine={false}
-                      width={50}
-                    />
+                    {/* Hide X and Y axes */}
+                    <XAxis hide />
+                    <YAxis hide />
+                    {/* Enhanced tooltip with all information */}
                     <Tooltip
-                      contentStyle={{
-                        backgroundColor: "#111827",
-                        border: "1px solid #374151",
-                        borderRadius: "12px",
-                        color: "#fff",
-                        padding: "10px 14px",
-                        fontSize: "12px",
-                        boxShadow: "0 4px 6px rgba(0, 0, 0, 0.3)",
+                      content={({ active, payload, label }) => {
+                        if (active && payload && payload.length) {
+                          const value = payload[0].value as number;
+                          // Ensure label is formatted as DD/MM
+                          const formattedDate =
+                            typeof label === "string"
+                              ? label
+                              : (() => {
+                                  const date = new Date(label);
+                                  const day = String(date.getDate()).padStart(
+                                    2,
+                                    "0"
+                                  );
+                                  const month = String(
+                                    date.getMonth() + 1
+                                  ).padStart(2, "0");
+                                  return `${day}/${month}`;
+                                })();
+
+                          return (
+                            <div className="bg-black/90 backdrop-blur-sm border border-brand-500/30 rounded-lg p-3 shadow-xl">
+                              <div className="space-y-2">
+                                <div className="text-xs text-gray-400 font-medium">
+                                  Data
+                                </div>
+                                <div className="text-sm text-white font-semibold">
+                                  {formattedDate}
+                                </div>
+                                <div className="border-t border-gray-700 pt-2">
+                                  <div className="text-xs text-gray-400 font-medium mb-1">
+                                    Saldo
+                                  </div>
+                                  <div className="text-base text-brand-300 font-bold">
+                                    U$ {value.toFixed(2)}
+                                  </div>
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    USDT
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
                       }}
-                      formatter={(value: number) => [
-                        `U$ ${value.toFixed(2)}`,
-                        "USDT",
-                      ]}
                     />
+                    {/* Smooth animated area */}
                     <Area
                       type="monotone"
                       dataKey="USDT"
                       stroke="#12E0A1"
-                      strokeWidth={3}
+                      strokeWidth={2.5}
                       fill="url(#areaGradient)"
                       dot={false}
-                      activeDot={{ r: 6, fill: "#12E0A1", strokeWidth: 2 }}
+                      activeDot={{
+                        r: 5,
+                        fill: "#12E0A1",
+                        strokeWidth: 2,
+                        stroke: "#000",
+                      }}
+                      animationDuration={1000}
+                      animationEasing="ease-out"
                     />
                   </AreaChart>
                 </ResponsiveContainer>
