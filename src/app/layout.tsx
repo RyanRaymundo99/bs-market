@@ -22,11 +22,7 @@ export const metadata: Metadata = {
   authors: [{ name: "Build Strategy" }],
   manifest: "/manifest.json",
   icons: {
-    icon: [
-      { url: "/shortname-logo.svg", type: "image/svg+xml", sizes: "any" },
-      { url: "/favicon.ico", sizes: "32x32", type: "image/x-icon" },
-      { url: "/favicon.ico", sizes: "16x16", type: "image/x-icon" },
-    ],
+    icon: [{ url: "/shortname-logo.svg", type: "image/svg+xml", sizes: "any" }],
     apple: [
       { url: "/shortname-logo.svg", sizes: "180x180", type: "image/svg+xml" },
     ],
@@ -52,7 +48,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable}`}
     >
       <head>
-        {/* Favicon */}
+        {/* Favicon - Prioritize SVG for better scaling */}
         <link
           rel="icon"
           type="image/svg+xml"
@@ -60,17 +56,12 @@ export default function RootLayout({
           sizes="any"
         />
         <link
-          rel="icon"
-          type="image/x-icon"
-          href="/favicon.ico"
-          sizes="32x32"
+          rel="apple-touch-icon"
+          href="/shortname-logo.svg"
+          sizes="180x180"
         />
-        <link
-          rel="alternate icon"
-          type="image/x-icon"
-          href="/favicon.ico"
-          sizes="16x16"
-        />
+        {/* Fallback for older browsers */}
+        <link rel="alternate icon" type="image/x-icon" href="/favicon.ico" />
         {/* Preload critical resources */}
         <link
           rel="preload"

@@ -18,6 +18,9 @@ import {
   DollarSign,
   ArrowRight,
   CheckCircle,
+  Users,
+  Receipt,
+  RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -639,9 +642,9 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {/* Category Cards - Horizontal Scrollable */}
+        {/* Category Cards - Grid Layout */}
         <div className="mb-6 sm:mb-8">
-          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide -mx-3 sm:-mx-4 px-3 sm:px-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
             {(() => {
               // Calculate category stats
               const deposits = transactions.filter(
@@ -650,7 +653,7 @@ export default function Dashboard() {
               const withdrawals = transactions.filter(
                 (t) => t.type === "WITHDRAWAL" || t.type === "WITHDRAW"
               );
-              const sells = transactions.filter((t) => t.type === "SELL");
+              const refunds = transactions.filter((t) => t.type === "REFUND");
 
               const totalDeposits = deposits.reduce(
                 (sum, t) => sum + Number(t.amount),
@@ -660,7 +663,7 @@ export default function Dashboard() {
                 (sum, t) => sum + Number(t.amount),
                 0
               );
-              const totalSells = sells.reduce(
+              const totalRefunds = refunds.reduce(
                 (sum, t) => sum + Number(t.amount),
                 0
               );
@@ -668,7 +671,7 @@ export default function Dashboard() {
               const maxValue = Math.max(
                 totalDeposits,
                 totalWithdrawals,
-                totalSells,
+                totalRefunds,
                 1
               );
 
@@ -692,22 +695,13 @@ export default function Dashboard() {
                   count: withdrawals.length,
                 },
                 {
-                  name: t("sell"),
-                  icon: TrendingDown,
-                  value: totalSells,
-                  color: "text-orange-400",
-                  bgColor: "bg-orange-500/10",
-                  progressColor: "bg-orange-500",
-                  count: sells.length,
-                },
-                {
-                  name: t("buyUSDTTransaction"),
-                  icon: TrendingUp,
-                  value: totalDeposits,
-                  color: "text-brand-400",
-                  bgColor: "bg-brand-500/10",
-                  progressColor: "bg-brand-500",
-                  count: deposits.filter((t) => t.type === "BUY_CRYPTO").length,
+                  name: "Reembolso",
+                  icon: RotateCcw,
+                  value: totalRefunds,
+                  color: "text-purple-400",
+                  bgColor: "bg-purple-500/10",
+                  progressColor: "bg-purple-500",
+                  count: refunds.length,
                 },
               ];
 
@@ -718,7 +712,7 @@ export default function Dashboard() {
                 return (
                   <Card
                     key={index}
-                    className="min-w-[140px] sm:min-w-[160px] rounded-xl border-gray-800 bg-black/40 backdrop-blur-sm shadow-lg flex-shrink-0"
+                    className="rounded-xl border-gray-800 bg-black/40 backdrop-blur-sm shadow-lg"
                   >
                     <CardContent className="p-4 sm:p-5">
                       <div
@@ -751,63 +745,6 @@ export default function Dashboard() {
               });
             })()}
           </div>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4 mb-4 sm:mb-6">
-          {(() => {
-            const totalTransactions = transactions.length;
-            const completedTransactions = transactions.filter(
-              (t) => t.status === "COMPLETED"
-            ).length;
-            const successRate =
-              totalTransactions > 0
-                ? ((completedTransactions / totalTransactions) * 100).toFixed(0)
-                : "0";
-
-            return (
-              <>
-                <Card className="rounded-xl sm:rounded-2xl border-gray-800 bg-gray-900/50 backdrop-blur-sm">
-                  <CardContent className="p-3 sm:p-4 text-center">
-                    <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-brand-400 mx-auto mb-1 sm:mb-2" />
-                    <p className="text-xl sm:text-2xl font-bold text-white">
-                      {totalTransactions}
-                    </p>
-                    <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5 sm:mt-1">
-                      {t("totalTransactions")}
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card className="rounded-xl sm:rounded-2xl border-gray-800 bg-gray-900/50 backdrop-blur-sm">
-                  <CardContent className="p-3 sm:p-4 text-center">
-                    <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green-400 mx-auto mb-1 sm:mb-2" />
-                    <p className="text-xl sm:text-2xl font-bold text-white">
-                      {successRate}%
-                    </p>
-                    <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5 sm:mt-1">
-                      {t("successRate")}
-                    </p>
-                  </CardContent>
-                </Card>
-                {latestDeposit && (
-                  <Card className="rounded-xl sm:rounded-2xl border-gray-800 bg-gray-900/50 backdrop-blur-sm">
-                    <CardContent className="p-3 sm:p-4 text-center">
-                      <ArrowUpRight className="w-5 h-5 sm:w-6 sm:h-6 text-green-400 mx-auto mb-1 sm:mb-2" />
-                      <p className="text-base sm:text-lg font-bold text-white break-words">
-                        +
-                        {latestDeposit.currency === "BRL"
-                          ? formatCurrency(Number(latestDeposit.amount))
-                          : `${Number(latestDeposit.amount).toFixed(2)}`}
-                      </p>
-                      <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5 sm:mt-1">
-                        {t("lastDeposit")}
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-              </>
-            );
-          })()}
         </div>
 
         {/* Recent Activity */}
