@@ -105,7 +105,9 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [userStatus, setUserStatus] = useState<UserStatus | null>(null);
   const [latestDeposit, setLatestDeposit] = useState<Deposit | null>(null);
-  const [latestWithdrawal, setLatestWithdrawal] = useState<Withdrawal | null>(null);
+  const [latestWithdrawal, setLatestWithdrawal] = useState<Withdrawal | null>(
+    null
+  );
   const [showKYCBanner, setShowKYCBanner] = useState(true);
   const [chartData, setChartData] = useState<
     Array<{ date: string; BRL: number; USDT: number }>
@@ -115,12 +117,12 @@ export default function Dashboard() {
   useEffect(() => {
     const authSession = localStorage.getItem("auth-session");
     const justLoggedIn = sessionStorage.getItem("just-logged-in");
-    
+
     // If user just logged in, clear the flag
     if (justLoggedIn) {
       sessionStorage.removeItem("just-logged-in");
     }
-    
+
     // Only redirect to home if user is not authenticated
     if (!authSession) {
       router.replace("/");
@@ -174,7 +176,7 @@ export default function Dashboard() {
       setShowKYCBanner(false);
     } else {
       // For other statuses, just hide temporarily
-    setShowKYCBanner(false);
+      setShowKYCBanner(false);
     }
   };
 
@@ -244,6 +246,7 @@ export default function Dashboard() {
 
         // Fetch balances
         const balanceResponse = await fetch("/api/balance");
+        let currentUsdtBalance = 0;
         if (balanceResponse.ok) {
           const balanceData = await balanceResponse.json();
           setBalances(balanceData.balances || []);
@@ -257,46 +260,22 @@ export default function Dashboard() {
             }, 0) || 0;
           setTotalBalance(total);
 
-          // Generate chart data (last 7 days)
-          const brlBalance =
-            balanceData.balances?.find((b: Balance) => b.currency === "BRL")
-              ?.amount || 0;
-          const usdtBalance =
+          currentUsdtBalance =
             balanceData.balances?.find((b: Balance) => b.currency === "USDT")
               ?.amount || 0;
-
-          const chartDataArray = [];
-          const today = new Date();
-          for (let i = 6; i >= 0; i--) {
-            const date = new Date(today);
-            date.setDate(date.getDate() - i);
-            const dateStr = date.toLocaleDateString(language === "pt" ? "pt-BR" : "en-US", {
-              day: "2-digit",
-              month: "2-digit",
-            });
-
-            // Generate progressive data (mock, based on current balance)
-            const progressFactor = i / 6; // 0 to 1
-            chartDataArray.push({
-              date: dateStr,
-              BRL: Math.max(0, brlBalance * (0.3 + progressFactor * 0.7)), // Start at 30% of current
-              USDT: Math.max(0, usdtBalance * (0.3 + progressFactor * 0.7)), // Start at 30% of current
-            });
-          }
-          setChartData(chartDataArray);
         }
 
         // Fetch transactions
         const transactionResponse = await fetch("/api/transactions?limit=50");
+        let allTransactions: Transaction[] = [];
         if (transactionResponse.ok) {
           const transactionData = await transactionResponse.json();
-          const allTransactions = transactionData.transactions || [];
+          allTransactions = transactionData.transactions || [];
           setTransactions(allTransactions);
 
           // Find latest deposit (BUY_CRYPTO or DEPOSIT)
           const deposits = allTransactions.filter(
-            (t: Transaction) =>
-              t.type === "DEPOSIT" || t.type === "BUY_CRYPTO"
+            (t: Transaction) => t.type === "DEPOSIT" || t.type === "BUY_CRYPTO"
           );
           if (deposits.length > 0) {
             setLatestDeposit(deposits[0]);
@@ -304,59 +283,156 @@ export default function Dashboard() {
 
           // Find latest withdrawal
           const withdrawals = allTransactions.filter(
-            (t: Transaction) =>
-              t.type === "WITHDRAWAL" || t.type === "WITHDRAW"
+            (t: Transaction) => t.type === "WITHDRAWAL" || t.type === "WITHDRAW"
           );
           if (withdrawals.length > 0) {
             setLatestWithdrawal(withdrawals[0]);
           }
         }
 
+        // Generate chart data from previous balance to current balance
+        const today = new Date();
+        today.setHours(23, 59, 59, 999);
+        const sixDaysAgo = new Date(today);
+        sixDaysAgo.setDate(sixDaysAgo.getDate() - 6);
+        sixDaysAgo.setHours(0, 0, 0, 0);
+
+        // Filter transactions from last 7 days
+        const relevantTransactions = allTransactions.filter(
+          (t: Transaction) => {
+            const transactionDate = new Date(t.createdAt);
+            return transactionDate >= sixDaysAgo && transactionDate <= today;
+          }
+        );
+
+        // Calculate previous balance (6 days ago) by reversing all transactions
+        let previousUsdtBalance = currentUsdtBalance;
+        relevantTransactions.forEach((t: Transaction) => {
+          if (t.currency === "USDT" || !t.currency) {
+            // Reverse the transaction to get the balance before it
+            if (t.type === "DEPOSIT" || t.type === "BUY_CRYPTO") {
+              previousUsdtBalance -= Number(t.amount);
+            } else if (
+              t.type === "WITHDRAWAL" ||
+              t.type === "WITHDRAW" ||
+              t.type === "SELL"
+            ) {
+              previousUsdtBalance += Number(t.amount);
+            }
+          }
+        });
+        previousUsdtBalance = Math.max(0, previousUsdtBalance);
+
+        // Group transactions by day
+        const transactionsByDay: { [key: string]: Transaction[] } = {};
+        relevantTransactions.forEach((t: Transaction) => {
+          const transactionDate = new Date(t.createdAt);
+          const dayKey = transactionDate.toLocaleDateString(
+            language === "pt" ? "pt-BR" : "en-US",
+            {
+              day: "2-digit",
+              month: "2-digit",
+            }
+          );
+          if (!transactionsByDay[dayKey]) {
+            transactionsByDay[dayKey] = [];
+          }
+          transactionsByDay[dayKey].push(t);
+        });
+
+        // Build chart data from previous balance to current balance
+        const chartDataArray = [];
+        let runningBalance = previousUsdtBalance;
+
+        for (let i = 6; i >= 0; i--) {
+          const date = new Date(today);
+          date.setDate(date.getDate() - i);
+          const dateStr = date.toLocaleDateString(
+            language === "pt" ? "pt-BR" : "en-US",
+            {
+              day: "2-digit",
+              month: "2-digit",
+            }
+          );
+
+          // Apply transactions for this day
+          if (transactionsByDay[dateStr]) {
+            transactionsByDay[dateStr].forEach((t: Transaction) => {
+              if (t.currency === "USDT" || !t.currency) {
+                if (t.type === "DEPOSIT" || t.type === "BUY_CRYPTO") {
+                  runningBalance += Number(t.amount);
+                } else if (
+                  t.type === "WITHDRAWAL" ||
+                  t.type === "WITHDRAW" ||
+                  t.type === "SELL"
+                ) {
+                  runningBalance -= Number(t.amount);
+                }
+              }
+            });
+          }
+
+          // For the last day (today), ensure we use the actual current balance
+          if (i === 0) {
+            runningBalance = currentUsdtBalance;
+          }
+
+          const balanceValue = Math.max(0, runningBalance);
+
+          chartDataArray.push({
+            date: dateStr,
+            BRL: 0,
+            USDT: balanceValue,
+          });
+        }
+
+        setChartData(chartDataArray);
+
         // Mock crypto prices (price API removed)
         const mockCryptoData: CryptoPrice[] = [
-            {
-              symbol: "BTC",
-              price: 350000,
-              change24h: 2500,
-              changePercent: 0.72,
-              volume: 1250000000,
-              marketCap: 6800000000000,
-            },
-            {
-              symbol: "ETH",
-              price: 18500,
-              change24h: -150,
-              changePercent: -0.8,
-              volume: 850000000,
-              marketCap: 2200000000000,
-            },
-            {
-              symbol: "BNB",
-              price: 3200,
-              change24h: 45,
-              changePercent: 1.43,
-              volume: 320000000,
-              marketCap: 480000000000,
-            },
-            {
-              symbol: "ADA",
-              price: 2.85,
-              change24h: -0.12,
-              changePercent: -4.04,
-              volume: 85000000,
-              marketCap: 100000000000,
-            },
-            {
-              symbol: "SOL",
-              price: 450,
-              change24h: 12.5,
-              changePercent: 2.86,
-              volume: 180000000,
-              marketCap: 180000000000,
-            },
-          ];
+          {
+            symbol: "BTC",
+            price: 350000,
+            change24h: 2500,
+            changePercent: 0.72,
+            volume: 1250000000,
+            marketCap: 6800000000000,
+          },
+          {
+            symbol: "ETH",
+            price: 18500,
+            change24h: -150,
+            changePercent: -0.8,
+            volume: 850000000,
+            marketCap: 2200000000000,
+          },
+          {
+            symbol: "BNB",
+            price: 3200,
+            change24h: 45,
+            changePercent: 1.43,
+            volume: 320000000,
+            marketCap: 480000000000,
+          },
+          {
+            symbol: "ADA",
+            price: 2.85,
+            change24h: -0.12,
+            changePercent: -4.04,
+            volume: 85000000,
+            marketCap: 100000000000,
+          },
+          {
+            symbol: "SOL",
+            price: 450,
+            change24h: 12.5,
+            changePercent: 2.86,
+            volume: 180000000,
+            marketCap: 180000000000,
+          },
+        ];
 
-          setCryptoPrices(mockCryptoData);
+        setCryptoPrices(mockCryptoData);
       } catch (error) {
         console.error("Failed to fetch data:", error);
         toast({
@@ -380,12 +456,12 @@ export default function Dashboard() {
         method: "POST",
         credentials: "include",
       });
-      
+
       // Clear local storage
       localStorage.removeItem("auth-session");
       localStorage.removeItem("user");
       sessionStorage.clear();
-      
+
       // Force redirect to home page using window.location for reliability
       window.location.href = "/";
     } catch (error) {
@@ -428,124 +504,254 @@ export default function Dashboard() {
           />
         )}
 
-        {/* Main Balance Display - Hero Section */}
-        <div className="mb-4 sm:mb-6">
-          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-brand-500/20 via-purple-500/20 to-brand-600/20 backdrop-blur-xl border border-white/10 p-4 sm:p-6 md:p-8 shadow-2xl">
-            <div className="relative z-10">
-              <div className="flex items-start justify-between mb-4 sm:mb-6">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm text-gray-300 mb-1">{t("totalBalance")}</p>
-                  {(() => {
-                    const usdtBalance = balances.find((b) => b.currency === "USDT");
-                    const usdtAmount = usdtBalance?.amount || 0;
-                    return (
-                      <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-2 break-words">
-                        {showBalances
-                          ? `U$ ${usdtAmount.toFixed(2)}`
-                          : "U$ ••••••"}
-                        <span className="text-lg sm:text-xl md:text-2xl text-gray-300 ml-1 sm:ml-2 block sm:inline">USDT</span>
-                      </h2>
-                    );
-                  })()}
-        </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowBalances(!showBalances)}
-                  className="text-white hover:bg-white/10 rounded-full w-9 h-9 sm:w-10 sm:h-10 p-0 flex-shrink-0 ml-2"
-                >
-                  {showBalances ? (
-                    <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" />
-                  ) : (
-                    <Eye className="w-4 h-4 sm:w-5 sm:h-5" />
-                  )}
-                </Button>
-              </div>
+        {/* Main Balance Display - Centered Hero Section */}
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col items-center text-center">
+            {/* Total Balance Label */}
+            <p className="text-sm sm:text-base text-gray-400 mb-2">
+              {t("totalBalance")}
+            </p>
 
-              {/* Quick Action Buttons */}
-              <div className="flex gap-2 sm:gap-3 mt-4 sm:mt-6">
-                <Button
-                  onClick={() => router.push("/trade")}
-                  className="flex-1 aspect-square sm:aspect-auto sm:h-16 bg-white text-brand-600 hover:bg-gray-100 font-semibold rounded-xl shadow-lg text-xs sm:text-sm md:text-base flex flex-col items-center justify-center gap-1 sm:gap-2 p-2 sm:p-4"
-                  size="lg"
-                >
-                  <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7" />
-                  <span className="text-center leading-tight">{t("buyUSDT")}</span>
-                </Button>
-                <Button
-                  onClick={() => router.push("/withdraw")}
-                  variant="outline"
-                  className="flex-1 aspect-square sm:aspect-auto sm:h-16 bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20 font-semibold rounded-xl text-xs sm:text-sm md:text-base flex flex-col items-center justify-center gap-1 sm:gap-2 p-2 sm:p-4"
-                  size="lg"
-                >
-                  <ArrowDownRight className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7" />
-                  <span className="text-center leading-tight">{t("withdrawFunds")}</span>
-                </Button>
-              </div>
+            {/* Balance Amount */}
+            {(() => {
+              const usdtBalance = balances.find((b) => b.currency === "USDT");
+              const usdtAmount = usdtBalance?.amount || 0;
+              return (
+                <div className="flex items-center justify-center gap-2 mb-6">
+                  <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white">
+                    {showBalances ? `U$ ${usdtAmount.toFixed(2)}` : "U$ ••••••"}
+                  </h2>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowBalances(!showBalances)}
+                    className="text-white hover:bg-white/10 rounded-full w-8 h-8 sm:w-9 sm:h-9 p-0"
+                  >
+                    {showBalances ? (
+                      <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" />
+                    ) : (
+                      <Eye className="w-4 h-4 sm:w-5 sm:h-5" />
+                    )}
+                  </Button>
+                </div>
+              );
+            })()}
+
+            {/* Deposits/Withdrawals Toggle */}
+            <div className="relative inline-flex items-center bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-1 shadow-lg">
+              <button
+                onClick={() => router.push("/withdraw")}
+                className="px-6 py-2 rounded-lg text-sm font-medium transition-all text-gray-400 hover:text-white hover:bg-white/5"
+              >
+                {t("withdraw")}
+              </button>
+              <div className="h-6 w-px bg-white/10 mx-1"></div>
+              <button
+                onClick={() => router.push("/trade")}
+                className="px-6 py-2 rounded-lg text-sm font-medium transition-all text-gray-400 hover:text-white hover:bg-white/5"
+              >
+                {t("deposit")}
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Balance Chart Card */}
+        {/* Balance Chart Card with Area Chart */}
         {chartData.length > 0 && (
-          <Card className="mb-4 sm:mb-6 rounded-xl sm:rounded-2xl border-gray-800 bg-gray-900/50 backdrop-blur-sm">
-            <CardHeader className="pb-2 sm:pb-3 px-4 sm:px-6 pt-4 sm:pt-6">
-              <CardTitle className="text-base sm:text-lg text-white flex items-center gap-2">
-                <Activity className="w-4 h-4 sm:w-5 sm:h-5" />
-                {t("balanceEvolution")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
-              <div className="h-40 sm:h-48 w-full -ml-2 sm:-ml-0">
+          <Card className="mb-6 sm:mb-8 rounded-2xl sm:rounded-3xl border-gray-800 bg-black/40 backdrop-blur-sm shadow-xl">
+            <CardContent className="p-6 sm:p-8">
+              <div className="h-64 sm:h-80 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
+                  <AreaChart
+                    data={chartData}
+                    margin={{ top: 10, right: 10, left: 0, bottom: 10 }}
+                  >
                     <defs>
-                      <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#10b981" stopOpacity={0.8}/>
-                        <stop offset="100%" stopColor="#10b981" stopOpacity={0.2}/>
+                      <linearGradient
+                        id="areaGradient"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop
+                          offset="0%"
+                          stopColor="#12E0A1"
+                          stopOpacity={0.4}
+                        />
+                        <stop
+                          offset="100%"
+                          stopColor="#12E0A1"
+                          stopOpacity={0.05}
+                        />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-                    <XAxis 
-                      dataKey="date" 
-                      stroke="#6b7280"
-                      style={{ fontSize: '10px' }}
-                      tickLine={false}
-                      tick={{ fill: '#6b7280' }}
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="#1f2937"
+                      vertical={false}
                     />
-                    <YAxis 
+                    <XAxis
+                      dataKey="date"
                       stroke="#6b7280"
-                      style={{ fontSize: '10px' }}
+                      style={{ fontSize: "11px" }}
+                      tickLine={false}
+                      tick={{ fill: "#9ca3af" }}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      stroke="#6b7280"
+                      style={{ fontSize: "11px" }}
                       tickFormatter={(value) => `U$ ${value.toFixed(0)}`}
                       tickLine={false}
-                      tick={{ fill: '#6b7280' }}
-                      width={45}
+                      tick={{ fill: "#9ca3af" }}
+                      axisLine={false}
+                      width={50}
                     />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: '#111827',
-                        border: '1px solid #374151',
-                        borderRadius: '12px',
-                        color: '#fff',
-                        padding: '8px 12px',
-                        fontSize: '12px'
+                        backgroundColor: "#111827",
+                        border: "1px solid #374151",
+                        borderRadius: "12px",
+                        color: "#fff",
+                        padding: "10px 14px",
+                        fontSize: "12px",
+                        boxShadow: "0 4px 6px rgba(0, 0, 0, 0.3)",
                       }}
-                      formatter={(value: number) => [`U$ ${value.toFixed(2)}`, "USDT"]}
+                      formatter={(value: number) => [
+                        `U$ ${value.toFixed(2)}`,
+                        "USDT",
+                      ]}
                     />
-                    <Line
+                    <Area
                       type="monotone"
                       dataKey="USDT"
-                      stroke="#10b981"
-                      strokeWidth={2.5}
+                      stroke="#12E0A1"
+                      strokeWidth={3}
+                      fill="url(#areaGradient)"
                       dot={false}
-                      activeDot={{ r: 5, fill: '#10b981' }}
+                      activeDot={{ r: 6, fill: "#12E0A1", strokeWidth: 2 }}
                     />
-                  </LineChart>
+                  </AreaChart>
                 </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
         )}
+
+        {/* Category Cards - Horizontal Scrollable */}
+        <div className="mb-6 sm:mb-8">
+          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide -mx-3 sm:-mx-4 px-3 sm:px-4">
+            {(() => {
+              // Calculate category stats
+              const deposits = transactions.filter(
+                (t) => t.type === "DEPOSIT" || t.type === "BUY_CRYPTO"
+              );
+              const withdrawals = transactions.filter(
+                (t) => t.type === "WITHDRAWAL" || t.type === "WITHDRAW"
+              );
+              const sells = transactions.filter((t) => t.type === "SELL");
+
+              const totalDeposits = deposits.reduce(
+                (sum, t) => sum + Number(t.amount),
+                0
+              );
+              const totalWithdrawals = withdrawals.reduce(
+                (sum, t) => sum + Number(t.amount),
+                0
+              );
+              const totalSells = sells.reduce(
+                (sum, t) => sum + Number(t.amount),
+                0
+              );
+
+              const maxValue = Math.max(
+                totalDeposits,
+                totalWithdrawals,
+                totalSells,
+                1
+              );
+
+              const categories = [
+                {
+                  name: t("deposit"),
+                  icon: ArrowUpRight,
+                  value: totalDeposits,
+                  color: "text-green-400",
+                  bgColor: "bg-green-500/10",
+                  progressColor: "bg-green-500",
+                  count: deposits.length,
+                },
+                {
+                  name: t("withdrawal"),
+                  icon: ArrowDownRight,
+                  value: totalWithdrawals,
+                  color: "text-red-400",
+                  bgColor: "bg-red-500/10",
+                  progressColor: "bg-red-500",
+                  count: withdrawals.length,
+                },
+                {
+                  name: t("sell"),
+                  icon: TrendingDown,
+                  value: totalSells,
+                  color: "text-orange-400",
+                  bgColor: "bg-orange-500/10",
+                  progressColor: "bg-orange-500",
+                  count: sells.length,
+                },
+                {
+                  name: t("buyUSDTTransaction"),
+                  icon: TrendingUp,
+                  value: totalDeposits,
+                  color: "text-brand-400",
+                  bgColor: "bg-brand-500/10",
+                  progressColor: "bg-brand-500",
+                  count: deposits.filter((t) => t.type === "BUY_CRYPTO").length,
+                },
+              ];
+
+              return categories.map((category, index) => {
+                const Icon = category.icon;
+                const progress = (category.value / maxValue) * 100;
+
+                return (
+                  <Card
+                    key={index}
+                    className="min-w-[140px] sm:min-w-[160px] rounded-xl border-gray-800 bg-black/40 backdrop-blur-sm shadow-lg flex-shrink-0"
+                  >
+                    <CardContent className="p-4 sm:p-5">
+                      <div
+                        className={`w-12 h-12 rounded-xl ${category.bgColor} flex items-center justify-center mb-3`}
+                      >
+                        <Icon className={`w-6 h-6 ${category.color}`} />
+                      </div>
+                      <h3 className="text-sm sm:text-base font-semibold text-white mb-2">
+                        {category.name}
+                      </h3>
+                      <p className="text-xs text-gray-400 mb-3">
+                        {category.count}{" "}
+                        {category.count === 1
+                          ? language === "pt"
+                            ? "transação"
+                            : "transaction"
+                          : language === "pt"
+                          ? "transações"
+                          : "transactions"}
+                      </p>
+                      <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full ${category.progressColor} transition-all duration-300`}
+                          style={{ width: `${Math.min(progress, 100)}%` }}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              });
+            })()}
+          </div>
+        </div>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4 mb-4 sm:mb-6">
@@ -554,24 +760,33 @@ export default function Dashboard() {
             const completedTransactions = transactions.filter(
               (t) => t.status === "COMPLETED"
             ).length;
-            const successRate = totalTransactions > 0
-              ? ((completedTransactions / totalTransactions) * 100).toFixed(0)
-              : "0";
-            
+            const successRate =
+              totalTransactions > 0
+                ? ((completedTransactions / totalTransactions) * 100).toFixed(0)
+                : "0";
+
             return (
               <>
                 <Card className="rounded-xl sm:rounded-2xl border-gray-800 bg-gray-900/50 backdrop-blur-sm">
                   <CardContent className="p-3 sm:p-4 text-center">
                     <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-brand-400 mx-auto mb-1 sm:mb-2" />
-                    <p className="text-xl sm:text-2xl font-bold text-white">{totalTransactions}</p>
-                    <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5 sm:mt-1">{t("totalTransactions")}</p>
+                    <p className="text-xl sm:text-2xl font-bold text-white">
+                      {totalTransactions}
+                    </p>
+                    <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5 sm:mt-1">
+                      {t("totalTransactions")}
+                    </p>
                   </CardContent>
                 </Card>
                 <Card className="rounded-xl sm:rounded-2xl border-gray-800 bg-gray-900/50 backdrop-blur-sm">
                   <CardContent className="p-3 sm:p-4 text-center">
                     <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green-400 mx-auto mb-1 sm:mb-2" />
-                    <p className="text-xl sm:text-2xl font-bold text-white">{successRate}%</p>
-                    <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5 sm:mt-1">{t("successRate")}</p>
+                    <p className="text-xl sm:text-2xl font-bold text-white">
+                      {successRate}%
+                    </p>
+                    <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5 sm:mt-1">
+                      {t("successRate")}
+                    </p>
                   </CardContent>
                 </Card>
                 {latestDeposit && (
@@ -579,11 +794,14 @@ export default function Dashboard() {
                     <CardContent className="p-3 sm:p-4 text-center">
                       <ArrowUpRight className="w-5 h-5 sm:w-6 sm:h-6 text-green-400 mx-auto mb-1 sm:mb-2" />
                       <p className="text-base sm:text-lg font-bold text-white break-words">
-                        +{latestDeposit.currency === "BRL"
+                        +
+                        {latestDeposit.currency === "BRL"
                           ? formatCurrency(Number(latestDeposit.amount))
                           : `${Number(latestDeposit.amount).toFixed(2)}`}
                       </p>
-                      <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5 sm:mt-1">{t("lastDeposit")}</p>
+                      <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5 sm:mt-1">
+                        {t("lastDeposit")}
+                      </p>
                     </CardContent>
                   </Card>
                 )}
@@ -611,76 +829,95 @@ export default function Dashboard() {
                 </Button>
               )}
             </div>
-            </CardHeader>
+          </CardHeader>
           <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
-              {transactions.length > 0 ? (
+            {transactions.length > 0 ? (
               <div className="space-y-2">
                 {transactions.slice(0, 5).map((transaction, index) => {
-                      const date = new Date(transaction.createdAt);
-                      const time = date.toLocaleTimeString(language === "pt" ? "pt-BR" : "en-US", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      });
-                      const dateStr = date.toLocaleDateString(language === "pt" ? "pt-BR" : "en-US", {
-                        day: "2-digit",
-                        month: "2-digit",
-                      });
+                  const date = new Date(transaction.createdAt);
+                  const time = date.toLocaleTimeString(
+                    language === "pt" ? "pt-BR" : "en-US",
+                    {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    }
+                  );
+                  const dateStr = date.toLocaleDateString(
+                    language === "pt" ? "pt-BR" : "en-US",
+                    {
+                      day: "2-digit",
+                      month: "2-digit",
+                    }
+                  );
 
                   let icon = <ArrowUpRight className="w-4 h-4" />;
                   let bgColor = "bg-green-500/10";
                   let iconColor = "text-green-400";
-                      let title = "";
+                  let title = "";
                   let amountColor = "text-green-400";
                   let prefix = "+";
 
-                      const formattedAmount =
-                        transaction.currency === "BRL"
-                          ? formatCurrency(transaction.amount)
-                      : `${transaction.amount.toFixed(8)} ${transaction.currency || "USDT"}`;
+                  const formattedAmount =
+                    transaction.currency === "BRL"
+                      ? formatCurrency(transaction.amount)
+                      : `${transaction.amount.toFixed(8)} ${
+                          transaction.currency || "USDT"
+                        }`;
 
-                  if (transaction.type === "DEPOSIT" || transaction.type === "BUY_CRYPTO") {
+                  if (
+                    transaction.type === "DEPOSIT" ||
+                    transaction.type === "BUY_CRYPTO"
+                  ) {
                     icon = <ArrowUpRight className="w-4 h-4" />;
                     bgColor = "bg-green-500/10";
                     iconColor = "text-green-400";
                     amountColor = "text-green-400";
-                    title = transaction.type === "BUY_CRYPTO" ? t("buyUSDTTransaction") : t("deposit");
+                    title =
+                      transaction.type === "BUY_CRYPTO"
+                        ? t("buyUSDTTransaction")
+                        : t("deposit");
                     prefix = "+";
-                      } else if (
-                        transaction.type === "WITHDRAWAL" ||
-                        transaction.type === "WITHDRAW"
-                      ) {
+                  } else if (
+                    transaction.type === "WITHDRAWAL" ||
+                    transaction.type === "WITHDRAW"
+                  ) {
                     icon = <ArrowDownRight className="w-4 h-4" />;
                     bgColor = "bg-red-500/10";
                     iconColor = "text-red-400";
                     amountColor = "text-red-400";
                     title = t("withdrawal");
                     prefix = "-";
-                      } else if (transaction.type === "SELL") {
+                  } else if (transaction.type === "SELL") {
                     icon = <TrendingDown className="w-4 h-4" />;
                     bgColor = "bg-orange-500/10";
                     iconColor = "text-orange-400";
                     amountColor = "text-orange-400";
                     title = t("sell");
                     prefix = "-";
-                      } else {
+                  } else {
                     title = transaction.type;
-                      }
+                  }
 
-                      return (
-                        <div
-                          key={transaction.id || index}
+                  return (
+                    <div
+                      key={transaction.id || index}
                       className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gray-800/30 hover:bg-gray-800/50 transition-colors active:bg-gray-800/60"
                     >
-                      <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl ${bgColor} flex items-center justify-center flex-shrink-0`}>
+                      <div
+                        className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl ${bgColor} flex items-center justify-center flex-shrink-0`}
+                      >
                         <div className={iconColor}>{icon}</div>
-                        </div>
+                      </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 sm:gap-2 mb-0.5">
                           <h4 className="font-medium text-white text-xs sm:text-sm truncate">
                             {title}
                           </h4>
-                          <p className={`font-semibold text-xs sm:text-sm ${amountColor} whitespace-nowrap`}>
-                            {prefix}{formattedAmount}
+                          <p
+                            className={`font-semibold text-xs sm:text-sm ${amountColor} whitespace-nowrap`}
+                          >
+                            {prefix}
+                            {formattedAmount}
                           </p>
                         </div>
                         <p className="text-[10px] sm:text-xs text-gray-500">
@@ -691,10 +928,12 @@ export default function Dashboard() {
                   );
                 })}
               </div>
-                ) : (
+            ) : (
               <div className="text-center py-8 sm:py-12">
                 <Wallet className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 text-gray-600" />
-                <p className="text-sm sm:text-base text-gray-400 mb-4">Nenhuma transação recente</p>
+                <p className="text-sm sm:text-base text-gray-400 mb-4">
+                  Nenhuma transação recente
+                </p>
                 <Button
                   onClick={() => router.push("/trade")}
                   className="bg-brand-500 hover:bg-brand-600 h-10 sm:h-11 text-sm sm:text-base"
@@ -703,9 +942,8 @@ export default function Dashboard() {
                 </Button>
               </div>
             )}
-            </CardContent>
-          </Card>
-
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

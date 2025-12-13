@@ -10,7 +10,9 @@ interface LanguageContextType {
   t: (key: string) => string;
 }
 
-const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
+const LanguageContext = createContext<LanguageContextType | undefined>(
+  undefined
+);
 
 // Comprehensive translations for the entire app
 const translations = {
@@ -23,7 +25,7 @@ const translations = {
     logout: "Sair",
     loggingOut: "Saindo...",
     menu: "Menu",
-    
+
     // Dashboard
     buyUSDT: "Comprar USDT",
     withdrawFunds: "Sacar",
@@ -40,7 +42,7 @@ const translations = {
     withdrawal: "Saque",
     sell: "Venda",
     makeFirstPurchase: "Fazer primeira compra",
-    
+
     // Trade
     buyUSDTViaPIX: "Comprar USDT via PIX",
     enterAmount: "Digite o valor em BRL",
@@ -54,15 +56,17 @@ const translations = {
     completed: "Concluída",
     pending: "Pendente",
     failed: "Falhou",
-    
+
     // PIX Modal
     scanQRCode: "Escaneie o QR Code",
     pixCode: "Código PIX (Copia e Cola)",
     codeCopied: "Código copiado!",
-    pixCodeNotAvailable: "Código PIX não disponível. Use o QR Code acima para escanear.",
-    paymentInstructions: "Após o pagamento, seus USDT serão creditados automaticamente via webhook.",
+    pixCodeNotAvailable:
+      "Código PIX não disponível. Use o QR Code acima para escanear.",
+    paymentInstructions:
+      "Após o pagamento, seus USDT serão creditados automaticamente via webhook.",
     clickToSeeQRCode: "Clique para ver QR Code",
-    
+
     // Withdraw
     withdrawUSDT: "Sacar USDT",
     enterUSDTAmount: "Digite o valor em USDT",
@@ -80,7 +84,8 @@ const translations = {
     addressRequired: "Endereço Obrigatório",
     withdrawalError: "Erro no Saque",
     failedToProcess: "Falha ao processar saque USDT",
-    transactionSent: "Transação enviada para processamento. Aguarde a confirmação na blockchain.",
+    transactionSent:
+      "Transação enviada para processamento. Aguarde a confirmação na blockchain.",
     chooseWithdrawalMethod: "Escolha o método de saque e retire seus fundos",
     withdrawViaUSDT: "Saque via USDT",
     sendUSDTToWallet: "Envie USDT para sua carteira externa",
@@ -106,10 +111,11 @@ const translations = {
     rejectedStatus: "Rejeitado",
     trc20Option: "TRC20 (Tron) - Taxa menor",
     erc20Option: "ERC20 (Ethereum) - Taxa maior",
-    noWithdrawalHistory: "Nenhum histórico de saque encontrado. Realize seu primeiro saque para ver o histórico aqui.",
+    noWithdrawalHistory:
+      "Nenhum histórico de saque encontrado. Realize seu primeiro saque para ver o histórico aqui.",
     withdrawalProcessed: "Saque Processado",
     close: "Fechar",
-    
+
     // Profile
     profileManagement: "Gerenciamento de Perfil",
     manageInfo: "Gerencie suas informações pessoais e documentos KYC",
@@ -166,7 +172,7 @@ const translations = {
     logout: "Logout",
     loggingOut: "Logging out...",
     menu: "Menu",
-    
+
     // Dashboard
     buyUSDT: "Buy USDT",
     withdrawFunds: "Withdraw",
@@ -183,7 +189,7 @@ const translations = {
     withdrawal: "Withdrawal",
     sell: "Sell",
     makeFirstPurchase: "Make first purchase",
-    
+
     // Trade
     buyUSDTViaPIX: "Buy USDT via PIX",
     enterAmount: "Enter amount in BRL",
@@ -197,15 +203,17 @@ const translations = {
     completed: "Completed",
     pending: "Pending",
     failed: "Failed",
-    
+
     // PIX Modal
     scanQRCode: "Scan QR Code",
     pixCode: "PIX Code (Copy and Paste)",
     codeCopied: "Code copied!",
-    pixCodeNotAvailable: "PIX code not available. Use the QR Code above to scan.",
-    paymentInstructions: "After payment, your USDT will be credited automatically via webhook.",
+    pixCodeNotAvailable:
+      "PIX code not available. Use the QR Code above to scan.",
+    paymentInstructions:
+      "After payment, your USDT will be credited automatically via webhook.",
     clickToSeeQRCode: "Click to see QR Code",
-    
+
     // Withdraw
     withdrawUSDT: "Withdraw USDT",
     enterUSDTAmount: "Enter amount in USDT",
@@ -223,7 +231,8 @@ const translations = {
     addressRequired: "Address Required",
     withdrawalError: "Withdrawal Error",
     failedToProcess: "Failed to process USDT withdrawal",
-    transactionSent: "Transaction sent for processing. Wait for blockchain confirmation.",
+    transactionSent:
+      "Transaction sent for processing. Wait for blockchain confirmation.",
     chooseWithdrawalMethod: "Choose withdrawal method and withdraw your funds",
     withdrawViaUSDT: "Withdraw via USDT",
     sendUSDTToWallet: "Send USDT to your external wallet",
@@ -249,10 +258,11 @@ const translations = {
     rejectedStatus: "Rejected",
     trc20Option: "TRC20 (Tron) - Lower fee",
     erc20Option: "ERC20 (Ethereum) - Higher fee",
-    noWithdrawalHistory: "No withdrawal history found. Make your first withdrawal to see history here.",
+    noWithdrawalHistory:
+      "No withdrawal history found. Make your first withdrawal to see history here.",
     withdrawalProcessed: "Withdrawal Processed",
     close: "Close",
-    
+
     // Profile
     profileManagement: "Profile Management",
     manageInfo: "Manage your personal information and KYC documents",
@@ -303,13 +313,19 @@ const translations = {
 };
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<Language>(() => {
+  // Always initialize to "pt" to prevent hydration mismatch
+  // We'll read from localStorage in useEffect after mount
+  const [language, setLanguageState] = useState<Language>("pt");
+
+  // Read from localStorage after mount to prevent hydration mismatch
+  useEffect(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("language") as Language;
-      return saved === "en" || saved === "pt" ? saved : "pt";
+      if (saved === "en" || saved === "pt") {
+        setLanguageState(saved);
+      }
     }
-    return "pt";
-  });
+  }, []);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -340,4 +356,3 @@ export function useLanguage() {
   }
   return context;
 }
-
