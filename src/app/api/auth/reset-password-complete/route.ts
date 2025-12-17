@@ -61,6 +61,33 @@ export async function POST(request: NextRequest) {
     });
 
     if (!verification) {
+      // Check if verification exists but expired
+      const expiredVerification = await prisma.verification.findFirst({
+        where: {
+          identifier: formattedIdentifier,
+          type: type === "email" ? "EMAIL" : "PHONE",
+          purpose: "password_reset",
+          value: code,
+        },
+      });
+
+      if (expiredVerification) {
+        console.error("Password reset code expired:", {
+          identifier: formattedIdentifier,
+          expiresAt: expiredVerification.expiresAt,
+          now: new Date(),
+        });
+        return NextResponse.json(
+          { error: "Reset code has expired. Please request a new reset code." },
+          { status: 400 }
+        );
+      }
+
+      console.error("Password reset verification not found:", {
+        identifier: formattedIdentifier,
+        type: type === "email" ? "EMAIL" : "PHONE",
+        code: code,
+      });
       return NextResponse.json(
         { error: "Invalid or expired reset code. Please request a new reset." },
         { status: 400 }
@@ -102,16 +129,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

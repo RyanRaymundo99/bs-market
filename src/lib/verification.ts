@@ -194,7 +194,7 @@ The BS Market Team`,
         };
       }
 
-      // Check attempts
+      // Check attempts BEFORE incrementing
       if (verification.attempts >= verification.maxAttempts) {
         return {
           success: false,
@@ -203,14 +203,14 @@ The BS Market Team`,
         };
       }
 
-      // Increment attempts
-      await prisma.verification.update({
-        where: { id: verification.id },
-        data: { attempts: verification.attempts + 1 },
-      });
-
-      // Check if code matches
+      // Check if code matches BEFORE incrementing attempts
       if (verification.value !== code) {
+        // Increment attempts only if code is wrong
+        await prisma.verification.update({
+          where: { id: verification.id },
+          data: { attempts: verification.attempts + 1 },
+        });
+
         const attemptsRemaining =
           verification.maxAttempts - (verification.attempts + 1);
         return {
@@ -222,6 +222,7 @@ The BS Market Team`,
 
       // Code is valid - only delete the verification record if it's NOT a password reset
       // For password reset, we need to keep the record until the password is actually reset
+      // Don't increment attempts for successful verification
       if (purpose !== "password_reset") {
         await prisma.verification.delete({
           where: { id: verification.id },

@@ -69,6 +69,18 @@ const ResetPassword = () => {
 
       const result = await response.json();
 
+      if (!response.ok) {
+        console.error("Code verification error:", result);
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description:
+            result.error ||
+            `Código de verificação inválido (${response.status})`,
+        });
+        return;
+      }
+
       if (result.success) {
         setVerified(true);
         setStep("reset");
@@ -83,11 +95,12 @@ const ResetPassword = () => {
           description: result.error || "Código de verificação inválido",
         });
       }
-    } catch {
+    } catch (error) {
+      console.error("Code verification exception:", error);
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Falha ao verificar código",
+        description: "Falha ao verificar código. Por favor, tente novamente.",
       });
     } finally {
       setLoading(false);
@@ -165,6 +178,17 @@ const ResetPassword = () => {
 
       const result = await response.json();
 
+      if (!response.ok) {
+        console.error("Password reset error:", result);
+        toast({
+          title: "Erro",
+          description:
+            result.error || `Falha ao redefinir senha (${response.status})`,
+          variant: "destructive",
+        });
+        return;
+      }
+
       if (result.success) {
         toast({
           title: "Sucesso",
@@ -178,10 +202,11 @@ const ResetPassword = () => {
           variant: "destructive",
         });
       }
-    } catch {
+    } catch (error) {
+      console.error("Password reset exception:", error);
       toast({
         title: "Erro",
-        description: "Falha ao redefinir senha",
+        description: "Falha ao redefinir senha. Por favor, tente novamente.",
         variant: "destructive",
       });
     } finally {
