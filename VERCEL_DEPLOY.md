@@ -43,6 +43,17 @@ NUTZPAY_WEBHOOK_SECRET=your-webhook-secret-from-nutzpay-dashboard
 # DO NOT set NUTZPAY_WEBHOOK_URL in production - it will use NEXT_PUBLIC_APP_URL automatically
 ```
 
+#### Vercel Blob Storage (Required for KYC Document Uploads)
+
+Vercel Blob Storage is automatically configured when you enable it in your Vercel project:
+
+1. Go to Vercel Dashboard > Your Project > Storage
+2. Click "Create Database" or "Add Integration"
+3. Select "Blob" storage
+4. The `BLOB_READ_WRITE_TOKEN` will be automatically set by Vercel
+
+**Note:** The token is automatically injected by Vercel, so you don't need to manually set it. The code will automatically use Blob Storage when `process.env.VERCEL === "1"`.
+
 #### Optional but Recommended
 
 ```env

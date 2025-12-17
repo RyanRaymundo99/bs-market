@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
+import { put } from "@vercel/blob";
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,25 +41,84 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create upload directory if it doesn't exist
-    // Use consistent path format: uploads/kyc/{userId} (no "user_" prefix)
-    const uploadDir = join(process.cwd(), "public", "uploads", "kyc", user.id);
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
-    }
-
-    // Generate unique filename
+    // Use Vercel Blob Storage for production, filesystem for localhost
+    const isVercel = process.env.VERCEL === "1";
     const timestamp = Date.now();
     const filename = `${type}_${timestamp}.${file.name.split(".").pop()}`;
-    const filePath = join(uploadDir, filename);
+    let relativePath: string;
 
-    // Convert file to buffer and save it
-    const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(filePath, buffer);
+    if (isVercel) {
+      // Use Vercel Blob Storage for production
+      try {
+        // Vercel Blob accepts File objects directly from FormData
+        const blob = await put(`kyc/${user.id}/${filename}`, file, {
+          access: "public",
+          contentType: file.type,
+        });
+        relativePath = blob.url;
 
-    // Generate relative path for database storage
-    // Use consistent path format: /uploads/kyc/{userId}/filename (no "user_" prefix)
-    const relativePath = `/uploads/kyc/${user.id}/${filename}`;
+        console.log("KYC Document Upload - File uploaded to Vercel Blob:", {
+          userId: user.id,
+          type,
+          url: relativePath,
+        });
+      } catch (blobError: any) {
+        console.error("KYC Document Upload - Blob upload error:", blobError);
+        return NextResponse.json(
+          {
+            error:
+              "Falha ao fazer upload do documento. Por favor, tente novamente.",
+            code: "BLOB_UPLOAD_FAILED",
+            details: blobError.message,
+          },
+          { status: 500 }
+        );
+      }
+    } else {
+      // Use filesystem for localhost/development
+      try {
+        const uploadDir = join(
+          process.cwd(),
+          "public",
+          "uploads",
+          "kyc",
+          user.id
+        );
+        if (!existsSync(uploadDir)) {
+          await mkdir(uploadDir, { recursive: true });
+        }
+
+        const filePath = join(uploadDir, filename);
+        const buffer = Buffer.from(await file.arrayBuffer());
+        await writeFile(filePath, buffer);
+
+        // Verify file was written
+        if (!existsSync(filePath)) {
+          console.error("KYC Document Upload - File not written:", filePath);
+          return NextResponse.json(
+            { error: "Failed to save document file" },
+            { status: 500 }
+          );
+        }
+
+        relativePath = `/uploads/kyc/${user.id}/${filename}`;
+
+        console.log("KYC Document Upload - File saved to filesystem:", {
+          userId: user.id,
+          type,
+          path: relativePath,
+        });
+      } catch (fileError: any) {
+        console.error("KYC Document Upload - File system error:", fileError);
+        return NextResponse.json(
+          {
+            error: "Falha ao salvar o arquivo. Por favor, tente novamente.",
+            code: "FILESYSTEM_ERROR",
+          },
+          { status: 500 }
+        );
+      }
+    }
 
     console.log("KYC Document Upload - Saving:", {
       userId: user.id,
@@ -66,8 +126,7 @@ export async function POST(request: NextRequest) {
       type,
       filename,
       relativePath,
-      filePath,
-      fileExists: existsSync(filePath),
+      storageType: isVercel ? "Vercel Blob" : "Filesystem",
     });
 
     // Update user with the new document path
@@ -89,14 +148,7 @@ export async function POST(request: NextRequest) {
       updateData.kycSubmittedAt = new Date();
     }
 
-    // Verify file was written before updating database
-    if (!existsSync(filePath)) {
-      console.error("KYC Document Upload - File not written:", filePath);
-      return NextResponse.json(
-        { error: "Failed to save document file" },
-        { status: 500 }
-      );
-    }
+    // File is already saved (either to blob or filesystem) at this point
 
     console.log("KYC Document Upload - About to update database:", {
       userId: user.id,

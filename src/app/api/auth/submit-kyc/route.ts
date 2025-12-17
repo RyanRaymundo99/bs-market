@@ -4,6 +4,7 @@ import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
 import { cookies } from "next/headers";
+import { put } from "@vercel/blob";
 
 export async function POST(request: NextRequest) {
   try {
@@ -135,13 +136,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = join(process.cwd(), "public", "uploads", "kyc", user.id);
-    if (!existsSync(uploadsDir)) {
-      await mkdir(uploadsDir, { recursive: true });
-    }
-
-    // Generate unique filenames
+    // Use Vercel Blob Storage for production, filesystem for localhost
+    const isVercel = process.env.VERCEL === "1";
     const timestamp = Date.now();
     const frontFilename = `front_${timestamp}.${documentFront.name
       .split(".")
@@ -153,57 +149,131 @@ export async function POST(request: NextRequest) {
       .split(".")
       .pop()}`;
 
-    // Save files
-    const frontPath = join(uploadsDir, frontFilename);
-    const backPath = join(uploadsDir, backFilename);
-    const selfiePath = join(uploadsDir, selfieFilename);
+    let frontUrl: string;
+    let backUrl: string;
+    let selfieUrl: string;
 
-    const frontBuffer = Buffer.from(await documentFront.arrayBuffer());
-    const backBuffer = Buffer.from(await documentBack.arrayBuffer());
-    const selfieBuffer = Buffer.from(await documentSelfie.arrayBuffer());
+    if (isVercel) {
+      // Use Vercel Blob Storage for production
+      try {
+        // Vercel Blob accepts File objects directly from FormData
+        const frontBlob = await put(
+          `kyc/${user.id}/${frontFilename}`,
+          documentFront,
+          {
+            access: "public",
+            contentType: documentFront.type,
+          }
+        );
+        const backBlob = await put(
+          `kyc/${user.id}/${backFilename}`,
+          documentBack,
+          {
+            access: "public",
+            contentType: documentBack.type,
+          }
+        );
+        const selfieBlob = await put(
+          `kyc/${user.id}/${selfieFilename}`,
+          documentSelfie,
+          {
+            access: "public",
+            contentType: documentSelfie.type,
+          }
+        );
 
-    await writeFile(frontPath, frontBuffer);
-    await writeFile(backPath, backBuffer);
-    await writeFile(selfiePath, selfieBuffer);
+        frontUrl = frontBlob.url;
+        backUrl = backBlob.url;
+        selfieUrl = selfieBlob.url;
 
-    // Generate URLs for database storage
-    // Use relative paths instead of full URLs for better compatibility
-    const frontUrl = `/uploads/kyc/${user.id}/${frontFilename}`;
-    const backUrl = `/uploads/kyc/${user.id}/${backFilename}`;
-    const selfieUrl = `/uploads/kyc/${user.id}/${selfieFilename}`;
+        console.log("KYC Submission - Files uploaded to Vercel Blob:", {
+          userId: user.id,
+          frontUrl,
+          backUrl,
+          selfieUrl,
+        });
+      } catch (blobError: any) {
+        console.error("KYC Submission - Blob upload error:", blobError);
+        return NextResponse.json(
+          {
+            error:
+              "Falha ao fazer upload dos documentos. Por favor, tente novamente.",
+            code: "BLOB_UPLOAD_FAILED",
+            details: blobError.message,
+          },
+          { status: 500 }
+        );
+      }
+    } else {
+      // Use filesystem for localhost/development
+      try {
+        const uploadsDir = join(
+          process.cwd(),
+          "public",
+          "uploads",
+          "kyc",
+          user.id
+        );
+        if (!existsSync(uploadsDir)) {
+          await mkdir(uploadsDir, { recursive: true });
+        }
 
-    console.log("KYC Submission - Saving documents:", {
+        const frontPath = join(uploadsDir, frontFilename);
+        const backPath = join(uploadsDir, backFilename);
+        const selfiePath = join(uploadsDir, selfieFilename);
+
+        const frontBuffer = Buffer.from(await documentFront.arrayBuffer());
+        const backBuffer = Buffer.from(await documentBack.arrayBuffer());
+        const selfieBuffer = Buffer.from(await documentSelfie.arrayBuffer());
+
+        await writeFile(frontPath, frontBuffer);
+        await writeFile(backPath, backBuffer);
+        await writeFile(selfiePath, selfieBuffer);
+
+        // Verify files were written
+        if (
+          !existsSync(frontPath) ||
+          !existsSync(backPath) ||
+          !existsSync(selfiePath)
+        ) {
+          console.error("KYC Submission - Files not written correctly");
+          return NextResponse.json(
+            { error: "Failed to save document files" },
+            { status: 500 }
+          );
+        }
+
+        frontUrl = `/uploads/kyc/${user.id}/${frontFilename}`;
+        backUrl = `/uploads/kyc/${user.id}/${backFilename}`;
+        selfieUrl = `/uploads/kyc/${user.id}/${selfieFilename}`;
+
+        console.log("KYC Submission - Files saved to filesystem:", {
+          userId: user.id,
+          frontUrl,
+          backUrl,
+          selfieUrl,
+        });
+      } catch (fileError: any) {
+        console.error("KYC Submission - File system error:", fileError);
+        return NextResponse.json(
+          {
+            error: "Falha ao salvar os arquivos. Por favor, tente novamente.",
+            code: "FILESYSTEM_ERROR",
+            details: fileError.message,
+          },
+          { status: 500 }
+        );
+      }
+    }
+
+    console.log("KYC Submission - Documents ready for database:", {
       userId: user.id,
       email: user.email,
       frontUrl,
       backUrl,
       selfieUrl,
-      frontPath: frontPath,
-      backPath: backPath,
-      selfiePath: selfiePath,
-      filesExist: {
-        front: existsSync(frontPath),
-        back: existsSync(backPath),
-        selfie: existsSync(selfiePath),
-      },
+      storageType: isVercel ? "Vercel Blob" : "Filesystem",
     });
-
-    // Verify files were written
-    if (
-      !existsSync(frontPath) ||
-      !existsSync(backPath) ||
-      !existsSync(selfiePath)
-    ) {
-      console.error("KYC Submission - Files not written correctly:", {
-        frontExists: existsSync(frontPath),
-        backExists: existsSync(backPath),
-        selfieExists: existsSync(selfiePath),
-      });
-      return NextResponse.json(
-        { error: "Failed to save document files" },
-        { status: 500 }
-      );
-    }
 
     // Update user with KYC data
     try {
