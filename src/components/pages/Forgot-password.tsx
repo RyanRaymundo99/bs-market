@@ -63,7 +63,7 @@ const ForgotPassword = () => {
           title: "Erro",
           description: result.error || "Falha ao enviar código de redefinição",
           variant: "destructive",
-        });
+    });
       }
     } catch (error) {
       toast({
@@ -72,7 +72,7 @@ const ForgotPassword = () => {
         variant: "destructive",
       });
     } finally {
-      setPending(false);
+    setPending(false);
     }
   };
 

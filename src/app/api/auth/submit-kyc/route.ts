@@ -19,17 +19,19 @@ export async function POST(request: NextRequest) {
     // Validate required fields
     if (
       !documentType ||
-      !documentNumber ||
       !cpf ||
       !documentFront ||
       !documentBack ||
       !documentSelfie
     ) {
       return NextResponse.json(
-        { error: "All fields are required" },
+        { error: "All required fields must be provided" },
         { status: 400 }
       );
     }
+
+    // documentNumber is optional, use empty string if not provided
+    const finalDocumentNumber = documentNumber || "";
 
     // Validate document type
     const validDocumentTypes = ["RG", "HABILITACAO", "CNH", "PASSPORT"];
@@ -131,25 +133,94 @@ export async function POST(request: NextRequest) {
     await writeFile(selfiePath, selfieBuffer);
 
     // Generate URLs for database storage
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-    const frontUrl = `${baseUrl}/uploads/kyc/${user.id}/${frontFilename}`;
-    const backUrl = `${baseUrl}/uploads/kyc/${user.id}/${backFilename}`;
-    const selfieUrl = `${baseUrl}/uploads/kyc/${user.id}/${selfieFilename}`;
+    // Use relative paths instead of full URLs for better compatibility
+    const frontUrl = `/uploads/kyc/${user.id}/${frontFilename}`;
+    const backUrl = `/uploads/kyc/${user.id}/${backFilename}`;
+    const selfieUrl = `/uploads/kyc/${user.id}/${selfieFilename}`;
 
-    // Update user with KYC data
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        documentType: documentType as "RG" | "HABILITACAO" | "CNH" | "PASSPORT",
-        documentNumber: documentNumber,
-        documentFront: frontUrl,
-        documentBack: backUrl,
-        documentSelfie: selfieUrl,
-        kycStatus: "PENDING",
-        kycSubmittedAt: new Date(),
-        updatedAt: new Date(),
+    console.log("KYC Submission - Saving documents:", {
+      userId: user.id,
+      email: user.email,
+      frontUrl,
+      backUrl,
+      selfieUrl,
+      frontPath: frontPath,
+      backPath: backPath,
+      selfiePath: selfiePath,
+      filesExist: {
+        front: existsSync(frontPath),
+        back: existsSync(backPath),
+        selfie: existsSync(selfiePath),
       },
     });
+
+    // Verify files were written
+    if (
+      !existsSync(frontPath) ||
+      !existsSync(backPath) ||
+      !existsSync(selfiePath)
+    ) {
+      console.error("KYC Submission - Files not written correctly:", {
+        frontExists: existsSync(frontPath),
+        backExists: existsSync(backPath),
+        selfieExists: existsSync(selfiePath),
+      });
+      return NextResponse.json(
+        { error: "Failed to save document files" },
+        { status: 500 }
+      );
+    }
+
+    // Update user with KYC data
+    try {
+      const updatedUser = await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          documentType: documentType as
+            | "RG"
+            | "HABILITACAO"
+            | "CNH"
+            | "PASSPORT",
+          documentNumber: finalDocumentNumber,
+          documentFront: frontUrl,
+          documentBack: backUrl,
+          documentSelfie: selfieUrl,
+          kycStatus: "PENDING",
+          kycSubmittedAt: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+
+      console.log("KYC Submission - User updated successfully:", {
+        userId: updatedUser.id,
+        email: updatedUser.email,
+        documentFront: updatedUser.documentFront,
+        documentBack: updatedUser.documentBack,
+        documentSelfie: updatedUser.documentSelfie,
+        kycStatus: updatedUser.kycStatus,
+        kycSubmittedAt: updatedUser.kycSubmittedAt,
+      });
+
+      // Verify the update actually saved the documents
+      if (
+        !updatedUser.documentFront ||
+        !updatedUser.documentBack ||
+        !updatedUser.documentSelfie
+      ) {
+        console.error("KYC Submission - Documents not saved in database:", {
+          documentFront: updatedUser.documentFront,
+          documentBack: updatedUser.documentBack,
+          documentSelfie: updatedUser.documentSelfie,
+        });
+        return NextResponse.json(
+          { error: "Documents were not saved to database" },
+          { status: 500 }
+        );
+      }
+    } catch (dbError) {
+      console.error("KYC Submission - Database update error:", dbError);
+      throw dbError;
+    }
 
     return NextResponse.json({
       success: true,

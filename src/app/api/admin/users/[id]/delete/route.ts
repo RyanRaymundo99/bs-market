@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { validateAdminSession } from "@/lib/admin-session";
 
 export async function DELETE(
   request: NextRequest,
@@ -8,24 +9,11 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    // Get the session cookie
-    const sessionCookie = request.cookies.get("better-auth.session");
+    // Validate admin session
+    const adminSession = await validateAdminSession(request);
 
-    if (!sessionCookie?.value) {
+    if (!adminSession) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Find the session in the database
-    const session = await prisma.session.findUnique({
-      where: { token: sessionCookie.value },
-      include: { user: true },
-    });
-
-    if (!session || session.expiresAt <= new Date()) {
-      return NextResponse.json(
-        { error: "Invalid or expired session" },
-        { status: 401 }
-      );
     }
 
     // Check if user exists
@@ -38,7 +26,7 @@ export async function DELETE(
     }
 
     // Prevent deleting the current admin user
-    if (session.user.id === id) {
+    if (adminSession.userId === id) {
       return NextResponse.json(
         { error: "Cannot delete your own account" },
         { status: 400 }
@@ -72,7 +60,6 @@ export async function DELETE(
         where: { userId: id },
       });
 
-
       // Delete user balances
       await tx.balance.deleteMany({
         where: { userId: id },
@@ -96,4 +83,3 @@ export async function DELETE(
     );
   }
 }
-

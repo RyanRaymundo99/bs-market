@@ -69,6 +69,14 @@ export default function AdminUserDetailsPage({
         const response = await fetch(`/api/admin/users/${id}`);
         if (response.ok) {
           const data = await response.json();
+          console.log("User details fetched:", {
+            hasDocumentFront: !!data.user?.documentFront,
+            hasDocumentBack: !!data.user?.documentBack,
+            hasDocumentSelfie: !!data.user?.documentSelfie,
+            documentFront: data.user?.documentFront,
+            documentBack: data.user?.documentBack,
+            documentSelfie: data.user?.documentSelfie,
+          });
           setUser(data.user);
         } else {
           toast({
@@ -297,7 +305,40 @@ export default function AdminUserDetailsPage({
         </div>
 
         {/* KYC Documents */}
-        {user.documentFront || user.documentBack || user.documentSelfie ? (
+        {(() => {
+          // Helper to check if a document value is valid (not null, not empty string)
+          const isValidDocument = (doc: string | null | undefined): boolean => {
+            return !!doc && typeof doc === "string" && doc.trim() !== "";
+          };
+
+          const hasDocuments =
+            isValidDocument(user.documentFront) ||
+            isValidDocument(user.documentBack) ||
+            isValidDocument(user.documentSelfie);
+
+          // Debug: Log document status
+          console.log("KYC Documents Check:", {
+            kycSubmittedAt: user.kycSubmittedAt,
+            hasDocuments,
+            documentFront: user.documentFront,
+            documentBack: user.documentBack,
+            documentSelfie: user.documentSelfie,
+            documentFrontValid: isValidDocument(user.documentFront),
+            documentBackValid: isValidDocument(user.documentBack),
+            documentSelfieValid: isValidDocument(user.documentSelfie),
+          });
+
+          if (user.kycSubmittedAt && !hasDocuments) {
+            console.warn("⚠️ KYC submitted but no valid documents found:", {
+              kycSubmittedAt: user.kycSubmittedAt,
+              documentFront: user.documentFront,
+              documentBack: user.documentBack,
+              documentSelfie: user.documentSelfie,
+            });
+          }
+
+          return hasDocuments;
+        })() ? (
           <Card className="bg-gray-800 border-gray-700 mt-6">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-white">
@@ -308,7 +349,7 @@ export default function AdminUserDetailsPage({
             <CardContent>
               <div className="grid gap-6 md:grid-cols-3">
                 {/* Document Front */}
-                {user.documentFront && (
+                {user.documentFront && user.documentFront.trim() !== "" && (
                   <div className="space-y-3">
                     <label className="text-sm font-medium text-gray-300">
                       Document Front
@@ -327,6 +368,13 @@ export default function AdminUserDetailsPage({
                         src={user.documentFront}
                         alt="Document Front"
                         className="w-full h-48 object-cover rounded-lg border border-gray-600 group-hover:border-blue-500 transition-colors"
+                        onError={(e) => {
+                          console.error(
+                            "Failed to load document front image:",
+                            user.documentFront
+                          );
+                          e.currentTarget.src = "/placeholder-document.png"; // Fallback
+                        }}
                       />
                       <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-lg flex items-center justify-center">
                         <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -336,7 +384,7 @@ export default function AdminUserDetailsPage({
                 )}
 
                 {/* Document Back */}
-                {user.documentBack && (
+                {user.documentBack && user.documentBack.trim() !== "" && (
                   <div className="space-y-3">
                     <label className="text-sm font-medium text-gray-300">
                       Document Back
@@ -355,6 +403,13 @@ export default function AdminUserDetailsPage({
                         src={user.documentBack}
                         alt="Document Back"
                         className="w-full h-48 object-cover rounded-lg border border-gray-600 group-hover:border-blue-500 transition-colors"
+                        onError={(e) => {
+                          console.error(
+                            "Failed to load document back image:",
+                            user.documentBack
+                          );
+                          e.currentTarget.src = "/placeholder-document.png"; // Fallback
+                        }}
                       />
                       <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-lg flex items-center justify-center">
                         <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -364,7 +419,7 @@ export default function AdminUserDetailsPage({
                 )}
 
                 {/* Selfie */}
-                {user.documentSelfie && (
+                {user.documentSelfie && user.documentSelfie.trim() !== "" && (
                   <div className="space-y-3">
                     <label className="text-sm font-medium text-gray-300">
                       Selfie with Document
@@ -383,6 +438,13 @@ export default function AdminUserDetailsPage({
                         src={user.documentSelfie}
                         alt="Document Selfie"
                         className="w-full h-48 object-cover rounded-lg border border-gray-600 group-hover:border-blue-500 transition-colors"
+                        onError={(e) => {
+                          console.error(
+                            "Failed to load document selfie image:",
+                            user.documentSelfie
+                          );
+                          e.currentTarget.src = "/placeholder-document.png"; // Fallback
+                        }}
                       />
                       <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-lg flex items-center justify-center">
                         <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -398,6 +460,13 @@ export default function AdminUserDetailsPage({
             <CardContent className="p-6 text-center">
               <FileText className="w-12 h-12 text-gray-500 mx-auto mb-4" />
               <p className="text-gray-400">No KYC documents uploaded</p>
+              {user.kycSubmittedAt && (
+                <p className="text-gray-500 text-sm mt-2">
+                  KYC was submitted on{" "}
+                  {new Date(user.kycSubmittedAt).toLocaleDateString()} but
+                  documents are missing.
+                </p>
+              )}
             </CardContent>
           </Card>
         )}

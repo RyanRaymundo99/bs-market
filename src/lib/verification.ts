@@ -211,10 +211,10 @@ bsmarket.com.br`,
       // Check if code matches BEFORE incrementing attempts
       if (verification.value !== code) {
         // Increment attempts only if code is wrong
-        await prisma.verification.update({
-          where: { id: verification.id },
-          data: { attempts: verification.attempts + 1 },
-        });
+      await prisma.verification.update({
+        where: { id: verification.id },
+        data: { attempts: verification.attempts + 1 },
+      });
 
         const attemptsRemaining =
           verification.maxAttempts - (verification.attempts + 1);
@@ -229,9 +229,9 @@ bsmarket.com.br`,
       // For password reset, we need to keep the record until the password is actually reset
       // Don't increment attempts for successful verification
       if (purpose !== "password_reset") {
-        await prisma.verification.delete({
-          where: { id: verification.id },
-        });
+      await prisma.verification.delete({
+        where: { id: verification.id },
+      });
       }
 
       return {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { validateAdminSession } from "@/lib/admin-session";
 
 export async function POST(
   request: NextRequest,
@@ -8,24 +9,11 @@ export async function POST(
   try {
     const { id } = await params;
 
-    // Get the session cookie
-    const sessionCookie = request.cookies.get("better-auth.session");
+    // Validate admin session
+    const adminSession = await validateAdminSession(request);
 
-    if (!sessionCookie?.value) {
+    if (!adminSession) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Find the session in the database
-    const session = await prisma.session.findUnique({
-      where: { token: sessionCookie.value },
-      include: { user: true },
-    });
-
-    if (!session || session.expiresAt <= new Date()) {
-      return NextResponse.json(
-        { error: "Invalid or expired session" },
-        { status: 401 }
-      );
     }
 
     // Reset user approval status to pending

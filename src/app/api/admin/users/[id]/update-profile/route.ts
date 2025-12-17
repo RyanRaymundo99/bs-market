@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { validateAdminSession } from "@/lib/admin-session";
 
 export async function PATCH(
   request: NextRequest,
@@ -7,24 +8,14 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const { name, email, phone, cpf, approvalStatus, kycStatus } = await request.json();
+    const { name, email, phone, cpf, approvalStatus, kycStatus } =
+      await request.json();
 
-    const sessionCookie = request.cookies.get("better-auth.session");
+    // Validate admin session
+    const adminSession = await validateAdminSession(request);
 
-    if (!sessionCookie?.value) {
+    if (!adminSession) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const session = await prisma.session.findUnique({
-      where: { token: sessionCookie.value },
-      include: { user: true },
-    });
-
-    if (!session || session.expiresAt <= new Date()) {
-      return NextResponse.json(
-        { error: "Invalid or expired session" },
-        { status: 401 }
-      );
     }
 
     // Check if user exists
@@ -115,4 +106,3 @@ export async function PATCH(
     );
   }
 }
-

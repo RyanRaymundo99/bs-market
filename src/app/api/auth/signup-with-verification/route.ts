@@ -25,12 +25,15 @@ export async function POST(request: NextRequest) {
 
     const formattedPhone = SMSService.formatPhoneNumber(phone);
 
+    // Clean CPF for comparison (same as what we'll store)
+    const cleanCpf = cpf.replace(/\D/g, "");
+
     // Check if user already exists
     const existingUser = await prisma.user.findFirst({
       where: {
         OR: [
           { email: email.toLowerCase() },
-          { cpf },
+          { cpf: cleanCpf },
           { phone: formattedPhone },
         ],
       },
@@ -40,11 +43,24 @@ export async function POST(request: NextRequest) {
       let errorMessage = "User already exists with this ";
       if (existingUser.email === email.toLowerCase()) {
         errorMessage += "email address";
-      } else if (existingUser.cpf === cpf) {
+      } else if (existingUser.cpf === cleanCpf) {
         errorMessage += "CPF";
       } else if (existingUser.phone === formattedPhone) {
         errorMessage += "phone number";
       }
+
+      console.log("Signup conflict detected:", {
+        email: email.toLowerCase(),
+        cpf: cleanCpf,
+        phone: formattedPhone,
+        existingUser: {
+          id: existingUser.id,
+          email: existingUser.email,
+          cpf: existingUser.cpf,
+          phone: existingUser.phone,
+        },
+        conflictField: errorMessage,
+      });
 
       return NextResponse.json({ error: errorMessage }, { status: 409 });
     }

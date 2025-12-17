@@ -64,6 +64,11 @@ const SignupWithMandatoryKYC = () => {
 
   const createAccount = useCallback(
     async (data: SignUpFormValues) => {
+      // Prevent multiple submissions
+      if (loading) {
+        return;
+      }
+
       try {
         setLoading(true);
 
@@ -91,11 +96,26 @@ const SignupWithMandatoryKYC = () => {
             description: "Agora complete sua verificação de identidade",
           });
         } else {
+          // Handle specific error messages
+          let errorMessage =
+            result.error || "Ocorreu um erro ao criar sua conta.";
+
+          // Translate common error messages
+          if (errorMessage.includes("email address")) {
+            errorMessage =
+              "Este email já está cadastrado. Use outro email ou faça login.";
+          } else if (errorMessage.includes("CPF")) {
+            errorMessage =
+              "Este CPF já está cadastrado. Use outro CPF ou faça login.";
+          } else if (errorMessage.includes("phone number")) {
+            errorMessage =
+              "Este telefone já está cadastrado. Use outro telefone ou faça login.";
+          }
+
           toast({
             variant: "destructive",
             title: "Erro ao criar conta",
-            description:
-              result.error || "Ocorreu um erro ao criar sua conta.",
+            description: errorMessage,
           });
         }
       } catch (error) {
@@ -103,13 +123,13 @@ const SignupWithMandatoryKYC = () => {
         toast({
           variant: "destructive",
           title: "Erro ao criar conta",
-          description: "Ocorreu um erro inesperado",
+          description: "Ocorreu um erro inesperado. Tente novamente.",
         });
       } finally {
         setLoading(false);
       }
     },
-    [toast]
+    [toast, loading]
   );
 
   const handleKYCSubmit = async () => {
@@ -119,12 +139,20 @@ const SignupWithMandatoryKYC = () => {
       setUploading(true);
 
       // Upload KYC documents
+      // First, we need to get the user's CPF from the account creation
+      if (!userData?.cpf) {
+        throw new Error("CPF is required for KYC submission");
+      }
+
       const formData = new FormData();
+      formData.append("documentType", "RG"); // Default document type
+      formData.append("documentNumber", ""); // Optional field
+      formData.append("cpf", userData.cpf);
       formData.append("documentFront", kycData.documentFront);
       formData.append("documentBack", kycData.documentBack);
       formData.append("documentSelfie", kycData.documentSelfie);
 
-      const response = await fetch("/api/user/submit-kyc", {
+      const response = await fetch("/api/auth/submit-kyc", {
         method: "POST",
         body: formData,
       });
@@ -427,8 +455,8 @@ const SignupWithMandatoryKYC = () => {
                 Verificação de Identidade Obrigatória
               </h3>
               <p className="text-sm text-muted-foreground">
-                Por favor, envie seus documentos de identidade para completar
-                a configuração da sua conta.
+                Por favor, envie seus documentos de identidade para completar a
+                configuração da sua conta.
               </p>
             </div>
 

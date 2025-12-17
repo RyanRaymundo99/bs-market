@@ -41,13 +41,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Create upload directory if it doesn't exist
-    const uploadDir = join(
-      process.cwd(),
-      "public",
-      "uploads",
-      "kyc",
-      `user_${user.id}`
-    );
+    // Use consistent path format: uploads/kyc/{userId} (no "user_" prefix)
+    const uploadDir = join(process.cwd(), "public", "uploads", "kyc", user.id);
     if (!existsSync(uploadDir)) {
       await mkdir(uploadDir, { recursive: true });
     }
@@ -62,7 +57,18 @@ export async function POST(request: NextRequest) {
     await writeFile(filePath, buffer);
 
     // Generate relative path for database storage
-    const relativePath = `/uploads/kyc/user_${user.id}/${filename}`;
+    // Use consistent path format: /uploads/kyc/{userId}/filename (no "user_" prefix)
+    const relativePath = `/uploads/kyc/${user.id}/${filename}`;
+
+    console.log("KYC Document Upload - Saving:", {
+      userId: user.id,
+      email: user.email,
+      type,
+      filename,
+      relativePath,
+      filePath,
+      fileExists: existsSync(filePath),
+    });
 
     // Update user with the new document path
     const updateData: Record<string, string | Date> = {
@@ -83,10 +89,124 @@ export async function POST(request: NextRequest) {
       updateData.kycSubmittedAt = new Date();
     }
 
-    await prisma.user.update({
-      where: { id: user.id },
-      data: updateData,
+    // Verify file was written before updating database
+    if (!existsSync(filePath)) {
+      console.error("KYC Document Upload - File not written:", filePath);
+      return NextResponse.json(
+        { error: "Failed to save document file" },
+        { status: 500 }
+      );
+    }
+
+    console.log("KYC Document Upload - About to update database:", {
+      userId: user.id,
+      updateData,
+      updateDataKeys: Object.keys(updateData),
+      updateDataValues: Object.values(updateData),
     });
+
+    let updatedUser;
+    try {
+      updatedUser = await prisma.user.update({
+        where: { id: user.id },
+        data: updateData,
+      });
+      console.log(
+        "KYC Document Upload - Prisma update completed without error"
+      );
+    } catch (updateError) {
+      console.error("KYC Document Upload - Prisma update failed:", updateError);
+      throw updateError;
+    }
+
+    // Immediately verify by querying the database again
+    const verifyUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: {
+        id: true,
+        email: true,
+        documentFront: true,
+        documentBack: true,
+        documentSelfie: true,
+      },
+    });
+
+    console.log("KYC Document Upload - User updated:", {
+      userId: updatedUser.id,
+      email: updatedUser.email,
+      documentFront: updatedUser.documentFront,
+      documentBack: updatedUser.documentBack,
+      documentSelfie: updatedUser.documentSelfie,
+      type,
+      savedPath:
+        type === "front"
+          ? updatedUser.documentFront
+          : type === "back"
+          ? updatedUser.documentBack
+          : updatedUser.documentSelfie,
+    });
+
+    console.log("KYC Document Upload - Verification query:", {
+      userId: verifyUser?.id,
+      email: verifyUser?.email,
+      documentFront: verifyUser?.documentFront,
+      documentBack: verifyUser?.documentBack,
+      documentSelfie: verifyUser?.documentSelfie,
+      expectedPath: relativePath,
+      type,
+      matches: {
+        front:
+          verifyUser?.documentFront ===
+          (type === "front" ? relativePath : user.documentFront),
+        back:
+          verifyUser?.documentBack ===
+          (type === "back" ? relativePath : user.documentBack),
+        selfie:
+          verifyUser?.documentSelfie ===
+          (type === "selfie" ? relativePath : user.documentSelfie),
+      },
+    });
+
+    // Check if the update actually persisted
+    const expectedField =
+      type === "front"
+        ? "documentFront"
+        : type === "back"
+        ? "documentBack"
+        : "documentSelfie";
+    const actualValue = verifyUser?.[
+      expectedField as keyof typeof verifyUser
+    ] as string | null;
+
+    if (actualValue !== relativePath) {
+      console.error(
+        "⚠️ KYC Document Upload - Database update did NOT persist!",
+        {
+          expected: relativePath,
+          actual: actualValue,
+          field: expectedField,
+          updateData,
+        }
+      );
+
+      // Try one more time with explicit field update
+      try {
+        const retryUpdate = await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            [expectedField]: relativePath,
+            updatedAt: new Date(),
+          },
+        });
+
+        console.log("KYC Document Upload - Retry update result:", {
+          [expectedField]:
+            retryUpdate[expectedField as keyof typeof retryUpdate],
+        });
+      } catch (retryError) {
+        console.error("KYC Document Upload - Retry update failed:", retryError);
+      }
+    }
 
     return NextResponse.json({
       success: true,
