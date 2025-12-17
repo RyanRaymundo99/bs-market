@@ -62,14 +62,16 @@ export async function POST(request: NextRequest) {
           type,
           url: relativePath,
         });
-      } catch (blobError: any) {
+      } catch (blobError: unknown) {
+        const errorMessage =
+          blobError instanceof Error ? blobError.message : "Unknown error";
         console.error("KYC Document Upload - Blob upload error:", blobError);
         return NextResponse.json(
           {
             error:
               "Falha ao fazer upload do documento. Por favor, tente novamente.",
             code: "BLOB_UPLOAD_FAILED",
-            details: blobError.message,
+            details: errorMessage,
           },
           { status: 500 }
         );
@@ -108,12 +110,15 @@ export async function POST(request: NextRequest) {
           type,
           path: relativePath,
         });
-      } catch (fileError: any) {
+      } catch (fileError: unknown) {
+        const errorMessage =
+          fileError instanceof Error ? fileError.message : "Unknown error";
         console.error("KYC Document Upload - File system error:", fileError);
         return NextResponse.json(
           {
             error: "Falha ao salvar o arquivo. Por favor, tente novamente.",
             code: "FILESYSTEM_ERROR",
+            details: errorMessage,
           },
           { status: 500 }
         );
