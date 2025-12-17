@@ -95,6 +95,12 @@ const SignupWithMandatoryKYC = () => {
             title: "Conta criada!",
             description: "Agora complete sua verificação de identidade",
           });
+
+          // Store the session info for KYC submission
+          if (result.sessionId) {
+            // Session cookie should be set automatically by the server
+            console.log("Account created, session ID:", result.sessionId);
+          }
         } else {
           // Handle specific error messages
           let errorMessage =
@@ -155,7 +161,10 @@ const SignupWithMandatoryKYC = () => {
       const response = await fetch("/api/auth/submit-kyc", {
         method: "POST",
         body: formData,
+        credentials: "include", // Ensure cookies are sent
       });
+
+      const result = await response.json();
 
       if (response.ok) {
         setCurrentStep("success");
@@ -164,8 +173,21 @@ const SignupWithMandatoryKYC = () => {
           description: "Seus documentos foram enviados para revisão",
         });
       } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to submit KYC documents");
+        // Provide more detailed error message
+        let errorMessage = result.error || "Falha ao enviar documentos KYC";
+
+        // Add helpful context based on error
+        if (errorMessage.includes("User not found")) {
+          errorMessage =
+            "Usuário não encontrado. Por favor, recrie sua conta ou entre em contato com o suporte.";
+        } else if (errorMessage.includes("Unauthorized")) {
+          errorMessage = "Sessão expirada. Por favor, recrie sua conta.";
+        } else if (errorMessage.includes("Failed to save document files")) {
+          errorMessage =
+            "Erro ao salvar arquivos. Verifique se os arquivos são válidos e tente novamente.";
+        }
+
+        throw new Error(errorMessage);
       }
     } catch (error) {
       console.error("KYC submission error:", error);

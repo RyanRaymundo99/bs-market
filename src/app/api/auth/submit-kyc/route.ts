@@ -44,9 +44,10 @@ export async function POST(request: NextRequest) {
 
     // Try to get user from session first, then fallback to CPF lookup
     let user = null;
+    let cookieStore = null;
 
     try {
-      const cookieStore = await cookies();
+      cookieStore = await cookies();
       const sessionToken = cookieStore.get("better-auth.session")?.value;
 
       if (sessionToken) {
@@ -71,11 +72,36 @@ export async function POST(request: NextRequest) {
     // Fallback to CPF lookup if session method failed
     if (!user) {
       const cleanCpf = cpf.replace(/\D/g, "");
-      console.log("Looking for user with CPF:", { originalCpf: cpf, cleanCpf });
+      console.log("Looking for user with CPF:", {
+        originalCpf: cpf,
+        cleanCpf,
+        cpfLength: cleanCpf.length,
+      });
 
+      // Try exact match first
       user = await prisma.user.findFirst({
         where: { cpf: cleanCpf },
       });
+
+      if (!user) {
+        // Try finding by partial CPF match (in case of formatting issues)
+        const allUsers = await prisma.user.findMany({
+          where: {
+            cpf: {
+              contains: cleanCpf.slice(-8), // Last 8 digits
+            },
+          },
+        });
+        console.log("Users found with partial CPF match:", allUsers.length);
+
+        if (allUsers.length === 1) {
+          user = allUsers[0];
+          console.log("User found via partial CPF match:", {
+            id: user.id,
+            cpf: user.cpf,
+          });
+        }
+      }
 
       if (user) {
         console.log("User found via CPF:", { id: user.id, cpf: user.cpf });
@@ -83,11 +109,19 @@ export async function POST(request: NextRequest) {
     }
 
     if (!user) {
-      console.error("User not found for CPF:", { originalCpf: cpf });
+      const sessionToken = cookieStore?.get("better-auth.session")?.value;
+      console.error("User not found for KYC submission:", {
+        originalCpf: cpf,
+        cleanCpf: cpf.replace(/\D/g, ""),
+        sessionToken: sessionToken ? "present" : "missing",
+        sessionTokenValue: sessionToken
+          ? sessionToken.substring(0, 20) + "..."
+          : null,
+      });
       return NextResponse.json(
         {
           error:
-            "User not found. Please make sure you're using the same CPF from your account registration.",
+            "Usuário não encontrado. Certifique-se de usar o mesmo CPF do cadastro. Se o problema persistir, entre em contato com o suporte.",
         },
         { status: 404 }
       );
