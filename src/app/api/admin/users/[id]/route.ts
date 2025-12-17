@@ -52,48 +52,53 @@ export async function GET(
         "⚠️ Documents are null but kycSubmittedAt exists - checking raw database..."
       );
 
-      const rawUser = await prisma.$queryRaw<
-        Array<{
-          _id: string;
-          documentFront: string | null;
-          documentBack: string | null;
-          documentSelfie: string | null;
-        }>
-      >`
-        SELECT "_id", "documentFront", "documentBack", "documentSelfie"
-        FROM "user"
-        WHERE "_id" = ${id}
-      `;
+      try {
+        const rawUser = await prisma.$queryRaw<
+          Array<{
+            _id: string;
+            documentFront: string | null;
+            documentBack: string | null;
+            documentSelfie: string | null;
+          }>
+        >`
+          SELECT "_id", "documentFront", "documentBack", "documentSelfie"
+          FROM "user"
+          WHERE "_id" = ${id}
+        `;
 
-      if (
-        rawUser.length > 0 &&
-        (rawUser[0].documentFront ||
-          rawUser[0].documentBack ||
-          rawUser[0].documentSelfie)
-      ) {
-        console.log(
-          "✅ Found documents in raw query but not in Prisma query!",
-          {
-            raw: {
-              documentFront: rawUser[0].documentFront,
-              documentBack: rawUser[0].documentBack,
-              documentSelfie: rawUser[0].documentSelfie,
-            },
-            prisma: {
-              documentFront: user.documentFront,
-              documentBack: user.documentBack,
-              documentSelfie: user.documentSelfie,
-            },
-          }
-        );
+        if (
+          rawUser.length > 0 &&
+          (rawUser[0].documentFront ||
+            rawUser[0].documentBack ||
+            rawUser[0].documentSelfie)
+        ) {
+          console.log(
+            "✅ Found documents in raw query but not in Prisma query!",
+            {
+              raw: {
+                documentFront: rawUser[0].documentFront,
+                documentBack: rawUser[0].documentBack,
+                documentSelfie: rawUser[0].documentSelfie,
+              },
+              prisma: {
+                documentFront: user.documentFront,
+                documentBack: user.documentBack,
+                documentSelfie: user.documentSelfie,
+              },
+            }
+          );
 
-        // Use raw data if it has documents
-        user = {
-          ...user,
-          documentFront: rawUser[0].documentFront,
-          documentBack: rawUser[0].documentBack,
-          documentSelfie: rawUser[0].documentSelfie,
-        };
+          // Use raw data if it has documents
+          user = {
+            ...user,
+            documentFront: rawUser[0].documentFront,
+            documentBack: rawUser[0].documentBack,
+            documentSelfie: rawUser[0].documentSelfie,
+          };
+        }
+      } catch (rawQueryError) {
+        console.error("Raw query failed (non-critical):", rawQueryError);
+        // Continue with Prisma result if raw query fails
       }
     }
 
@@ -118,54 +123,60 @@ export async function GET(
     });
 
     // Additional check: Query raw database to see if documents exist but aren't being returned
-    const rawUser = await prisma.$queryRaw<
-      Array<{
-        _id: string;
-        documentFront: string | null;
-        documentBack: string | null;
-        documentSelfie: string | null;
-      }>
-    >`
-      SELECT "_id", "documentFront", "documentBack", "documentSelfie"
-      FROM "user"
-      WHERE "_id" = ${id}
-    `;
+    // Wrap in try-catch to prevent 500 errors if raw query fails
+    try {
+      const rawUser = await prisma.$queryRaw<
+        Array<{
+          _id: string;
+          documentFront: string | null;
+          documentBack: string | null;
+          documentSelfie: string | null;
+        }>
+      >`
+        SELECT "_id", "documentFront", "documentBack", "documentSelfie"
+        FROM "user"
+        WHERE "_id" = ${id}
+      `;
 
-    if (rawUser.length > 0) {
-      console.log("Admin user details API - Raw database query:", {
-        userId: rawUser[0]._id,
-        documentFront: rawUser[0].documentFront,
-        documentBack: rawUser[0].documentBack,
-        documentSelfie: rawUser[0].documentSelfie,
-        matchesPrisma: {
-          front: rawUser[0].documentFront === user.documentFront,
-          back: rawUser[0].documentBack === user.documentBack,
-          selfie: rawUser[0].documentSelfie === user.documentSelfie,
-        },
-      });
-
-      // If raw query shows documents but Prisma doesn't, use raw data
-      if (
-        (rawUser[0].documentFront ||
-          rawUser[0].documentBack ||
-          rawUser[0].documentSelfie) &&
-        !user.documentFront &&
-        !user.documentBack &&
-        !user.documentSelfie
-      ) {
-        console.warn(
-          "⚠️ Documents exist in database but Prisma query returned null!"
-        );
-        return NextResponse.json({
-          success: true,
-          user: {
-            ...user,
-            documentFront: rawUser[0].documentFront,
-            documentBack: rawUser[0].documentBack,
-            documentSelfie: rawUser[0].documentSelfie,
+      if (rawUser.length > 0) {
+        console.log("Admin user details API - Raw database query:", {
+          userId: rawUser[0]._id,
+          documentFront: rawUser[0].documentFront,
+          documentBack: rawUser[0].documentBack,
+          documentSelfie: rawUser[0].documentSelfie,
+          matchesPrisma: {
+            front: rawUser[0].documentFront === user.documentFront,
+            back: rawUser[0].documentBack === user.documentBack,
+            selfie: rawUser[0].documentSelfie === user.documentSelfie,
           },
         });
+
+        // If raw query shows documents but Prisma doesn't, use raw data
+        if (
+          (rawUser[0].documentFront ||
+            rawUser[0].documentBack ||
+            rawUser[0].documentSelfie) &&
+          !user.documentFront &&
+          !user.documentBack &&
+          !user.documentSelfie
+        ) {
+          console.warn(
+            "⚠️ Documents exist in database but Prisma query returned null!"
+          );
+          return NextResponse.json({
+            success: true,
+            user: {
+              ...user,
+              documentFront: rawUser[0].documentFront,
+              documentBack: rawUser[0].documentBack,
+              documentSelfie: rawUser[0].documentSelfie,
+            },
+          });
+        }
       }
+    } catch (rawQueryError) {
+      console.error("Raw database query failed (non-critical):", rawQueryError);
+      // Continue with Prisma result if raw query fails
     }
 
     return NextResponse.json({ success: true, user });
