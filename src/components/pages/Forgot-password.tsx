@@ -8,12 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
 import { InputField } from "@/components/Auth/FormFields";
 import {
   ForgotPasswordFormValues,
   forgotPasswordSchema,
 } from "@/lib/schema/forgotPasswordSchema";
-import { authClient } from "@/lib/auth-client";
 import { AuthLayout } from "@/components/ui/auth-layout";
 
 const ForgotPassword = () => {
@@ -25,34 +25,61 @@ const ForgotPassword = () => {
   });
   const [pending, setPending] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
   const onSubmit = async (data: ForgotPasswordFormValues) => {
     setPending(true);
-    const { error } = await authClient.forgetPassword({
-      email: data.email,
-      redirectTo: "/reset-password",
-    });
-    if (error) {
+    try {
+      const response = await fetch("/api/auth/password-reset-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          identifier: data.email,
+          type: "email",
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast({
+          title: "Código enviado",
+          description: "Um código de verificação foi enviado para seu email",
+          variant: "default",
+        });
+
+        // Show dev code in development
+        if (result.code) {
+          toast({
+            title: "Modo Desenvolvimento",
+            description: `Código de redefinição: ${result.code}`,
+          });
+        }
+
+        // Redirect to reset password page with email in query params
+        router.push(`/reset-password?email=${encodeURIComponent(data.email)}`);
+      } else {
+        toast({
+          title: "Erro",
+          description: result.error || "Falha ao enviar código de redefinição",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Erro",
+        description: "Falha ao enviar código de redefinição",
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Success",
-        description:
-          "If an account exists with this email, you will receive a password reset link",
-        variant: "default",
-      });
+    } finally {
+      setPending(false);
     }
-    setPending(false);
   };
 
   return (
     <AuthLayout
       title="Esqueceu a senha?"
-      description="Digite seu email para receber um link de redefinição de senha"
+      description="Digite seu email para receber um código de redefinição de senha"
     >
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -77,7 +104,7 @@ const ForgotPassword = () => {
               </>
             ) : (
               <>
-                Enviar link de redefinição{" "}
+                Enviar código de redefinição{" "}
                 <ArrowRight className="h-4 w-4 ml-2" />
               </>
             )}

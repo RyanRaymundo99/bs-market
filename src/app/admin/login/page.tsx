@@ -60,7 +60,7 @@ const AdminLoginPage = () => {
         toast({
           variant: "destructive",
           title: "Login failed",
-          description: result.error || "Invalid credentials",
+          description: result.error || "Wrong password",
         });
       }
     } catch (error) {

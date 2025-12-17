@@ -182,10 +182,7 @@ export async function POST(request: NextRequest) {
         console.log(
           "This usually means the password was hashed differently or there's a mismatch"
         );
-        return NextResponse.json(
-          { error: "Invalid password" },
-          { status: 401 }
-        );
+        return NextResponse.json({ error: "Wrong password" }, { status: 401 });
       }
 
       console.log("✅ Encrypted password verified successfully!");

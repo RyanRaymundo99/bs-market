@@ -220,10 +220,13 @@ The BS Market Team`,
         };
       }
 
-      // Code is valid - delete the verification record
-      await prisma.verification.delete({
-        where: { id: verification.id },
-      });
+      // Code is valid - only delete the verification record if it's NOT a password reset
+      // For password reset, we need to keep the record until the password is actually reset
+      if (purpose !== "password_reset") {
+        await prisma.verification.delete({
+          where: { id: verification.id },
+        });
+      }
 
       return {
         success: true,

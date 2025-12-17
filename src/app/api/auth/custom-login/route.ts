@@ -59,10 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!isValidPassword) {
-      return NextResponse.json(
-        { error: "Invalid credentials" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Wrong password" }, { status: 401 });
     }
 
     // Check if user is approved
@@ -75,7 +72,6 @@ export async function POST(request: NextRequest) {
 
     // Create a proper better-auth session
     try {
-
       // Generate a unique session ID
       const sessionId = `dev-session-${Date.now()}-${Math.random()
         .toString(36)

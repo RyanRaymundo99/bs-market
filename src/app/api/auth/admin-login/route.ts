@@ -38,10 +38,7 @@ export async function POST(request: NextRequest) {
 
     const isPasswordValid = await compare(password, adminUser.password);
     if (!isPasswordValid) {
-      return NextResponse.json(
-        { error: "Invalid admin credentials" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Wrong password" }, { status: 401 });
     }
 
     // Create admin session
