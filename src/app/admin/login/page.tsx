@@ -57,11 +57,19 @@ const AdminLoginPage = () => {
           window.location.href = "/admin";
         }, 3000);
       } else {
+        const errorMessage = result.error || "Wrong password";
         toast({
           variant: "destructive",
           title: "Login failed",
-          description: result.error || "Wrong password",
+          description: errorMessage,
         });
+
+        // If admin doesn't exist, provide helpful message
+        if (errorMessage.includes("Invalid admin credentials")) {
+          console.error(
+            "Admin login failed. Check if admin user exists at /api/auth/check-admin"
+          );
+        }
       }
     } catch (error) {
       console.error("Login error:", error);
@@ -134,13 +142,13 @@ const AdminLoginPage = () => {
           </form>
 
           <div className="mt-6 p-4 bg-gray-800 rounded-lg">
-            <h4 className="text-white font-medium mb-2">
-              Default Admin Credentials:
-            </h4>
+            <h4 className="text-white font-medium mb-2">Admin Access:</h4>
             <p className="text-gray-300 text-sm">
               Email: admin@bsmarket.com.br
             </p>
-            <p className="text-gray-300 text-sm">Password: admin123</p>
+            <p className="text-gray-300 text-xs mt-2 opacity-75">
+              Contact system administrator for access credentials
+            </p>
           </div>
         </CardContent>
       </Card>

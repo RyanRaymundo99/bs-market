@@ -13,33 +13,62 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find admin user
-    const adminUser = await prisma.user.findFirst({
+    const emailLower = email.toLowerCase();
+
+    // First check if user exists with this email
+    const userByEmail = await prisma.user.findFirst({
       where: {
-        email: email.toLowerCase(),
-        id: "admin_001", // Ensure it's the admin user
+        email: emailLower,
       },
     });
 
-    if (!adminUser) {
+    if (!userByEmail) {
+      console.error("Admin login attempt - User not found:", emailLower);
       return NextResponse.json(
-        { error: "Invalid admin credentials" },
+        {
+          error: "Invalid admin credentials",
+          hint: "Admin user may not exist. Check /api/auth/check-admin or /api/auth/diagnose-admin",
+        },
         { status: 401 }
       );
     }
 
+    // Check if user is the admin user
+    if (userByEmail.id !== "admin_001") {
+      console.error("Admin login attempt - User is not admin:", {
+        email: emailLower,
+        userId: userByEmail.id,
+      });
+      return NextResponse.json(
+        {
+          error: "Invalid admin credentials",
+          hint: `User exists but ID is '${userByEmail.id}' instead of 'admin_001'. Check /api/auth/diagnose-admin for details.`,
+        },
+        { status: 401 }
+      );
+    }
+
+    const adminUser = userByEmail;
+
     // Verify password
     if (!adminUser.password) {
+      console.error("Admin login attempt - No password set for admin user");
       return NextResponse.json(
-        { error: "Invalid admin credentials" },
+        {
+          error:
+            "Admin account has no password set. Please reset the password.",
+        },
         { status: 401 }
       );
     }
 
     const isPasswordValid = await compare(password, adminUser.password);
     if (!isPasswordValid) {
+      console.error("Admin login attempt - Wrong password for:", emailLower);
       return NextResponse.json({ error: "Wrong password" }, { status: 401 });
     }
+
+    console.log("Admin login successful for:", emailLower);
 
     // Create admin session
     const sessionId = `admin-session-${Date.now()}-${Math.random()
