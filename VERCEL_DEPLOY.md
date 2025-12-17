@@ -47,7 +47,9 @@ NUTZPAY_WEBHOOK_SECRET=your-webhook-secret-from-nutzpay-dashboard
 
 ```env
 RESEND_API_KEY=re_your-resend-key
-FROM_EMAIL=noreply@your-domain.com
+FROM_EMAIL=noreply@bsmarket.com.br
+# Note: Make sure bsmarket.com.br is verified in your Resend dashboard
+# If domain is not verified, Resend will use onboarding@resend.dev automatically
 MERCADO_PAGO_ACCESS_TOKEN=APP_USR-your-token
 MERCADO_PAGO_PUBLIC_KEY=your-public-key
 MERCADO_PAGO_PIX_KEY=your-pix-key

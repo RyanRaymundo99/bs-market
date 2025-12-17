@@ -131,15 +131,20 @@ The BS Market Team`;
       // Send email
       const emailResult = await sendEmail({
         to: formattedIdentifier,
-        subject: "BS Market Password Reset Code",
-        text: `Your password reset code is: ${code}
+        subject: "BS Market - Código de Redefinição de Senha",
+        text: `Olá!
 
-This code will expire in 10 minutes.
+Você solicitou a redefinição de senha para sua conta no BS Market.
 
-If you didn't request a password reset, please ignore this email.
+Seu código de redefinição é: ${code}
 
-Best regards,
-The BS Market Team`,
+Este código expira em 10 minutos.
+
+Se você não solicitou esta redefinição, ignore este email.
+
+Atenciosamente,
+Equipe BS Market
+bsmarket.com.br`,
       });
 
       if (emailResult.success) {
