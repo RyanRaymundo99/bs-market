@@ -1,33 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { validateAdminSession } from "@/lib/admin-session";
 
 export async function POST(request: NextRequest) {
   try {
-    // Get the session cookie
-    const sessionCookie = request.cookies.get("better-auth.session");
+    // Validate admin session
+    const adminSession = await validateAdminSession(request);
 
-    if (!sessionCookie?.value) {
+    if (!adminSession) {
       return NextResponse.json(
-        { error: "No session cookie found" },
+        { error: "Unauthorized: Admin session required" },
         { status: 401 }
       );
     }
-
-    // Find the session in the database
-    const session = await prisma.session.findUnique({
-      where: { token: sessionCookie.value },
-      include: { user: true },
-    });
-
-    if (!session || session.expiresAt <= new Date()) {
-      return NextResponse.json(
-        { error: "Invalid or expired session" },
-        { status: 401 }
-      );
-    }
-
-    // Check if user is admin (you might want to add an admin role check here)
-    // For now, we'll assume any authenticated user can access admin data
 
     console.log("Starting finance data reset...");
 
@@ -38,7 +23,6 @@ export async function POST(request: NextRequest) {
     // Reset withdrawals
     const deletedWithdrawals = await prisma.withdrawal.deleteMany({});
     console.log(`Deleted ${deletedWithdrawals.count} withdrawals`);
-
 
     // Reset orders
     const deletedOrders = await prisma.order.deleteMany({});
@@ -73,9 +57,9 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Finance data reset error:", error);
     return NextResponse.json(
-      { 
+      {
         error: "Erro interno do servidor",
-        details: error instanceof Error ? error.message : "Erro desconhecido"
+        details: error instanceof Error ? error.message : "Erro desconhecido",
       },
       { status: 500 }
     );

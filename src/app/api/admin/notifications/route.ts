@@ -1,26 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { validateAdminSession } from "@/lib/admin-session";
 
 export async function GET(request: NextRequest) {
   try {
-    // Get the session cookie
-    const sessionCookie = request.cookies.get("better-auth.session");
+    // Validate admin session
+    const adminSession = await validateAdminSession(request);
 
-    if (!sessionCookie?.value) {
+    if (!adminSession) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Find the session in the database
-    const session = await prisma.session.findUnique({
-      where: { token: sessionCookie.value },
-      include: { user: true },
-    });
-
-    if (!session || session.expiresAt <= new Date()) {
-      return NextResponse.json(
-        { error: "Invalid or expired session" },
-        { status: 401 }
-      );
     }
 
     // Get query parameters
@@ -29,7 +17,21 @@ export async function GET(request: NextRequest) {
     const showAll = searchParams.get("showAll") === "true";
 
     // Get current admin user to check their last seen timestamp
-    const adminUser = session.user;
+    const adminUser = await prisma.user.findUnique({
+      where: { id: adminSession.userId },
+      select: {
+        id: true,
+        adminNotificationLastSeenAt: true,
+      },
+    });
+
+    if (!adminUser) {
+      return NextResponse.json(
+        { error: "Admin user not found" },
+        { status: 404 }
+      );
+    }
+
     const adminLastSeen = adminUser.adminNotificationLastSeenAt || new Date(0);
 
     // Build where clauses based on showAll parameter

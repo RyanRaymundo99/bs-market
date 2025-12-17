@@ -106,7 +106,7 @@ const AdminLoginPage = () => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@bsmarket.com.br"
+                placeholder="Enter your email"
                 className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-400"
                 required
               />
@@ -140,16 +140,6 @@ const AdminLoginPage = () => {
               )}
             </Button>
           </form>
-
-          <div className="mt-6 p-4 bg-gray-800 rounded-lg">
-            <h4 className="text-white font-medium mb-2">Admin Access:</h4>
-            <p className="text-gray-300 text-sm">
-              Email: admin@bsmarket.com.br
-            </p>
-            <p className="text-gray-300 text-xs mt-2 opacity-75">
-              Contact system administrator for access credentials
-            </p>
-          </div>
         </CardContent>
       </Card>
     </div>

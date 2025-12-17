@@ -1,8 +1,15 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { validateAdminSession } from "@/lib/admin-session";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // Validate admin session
+    const adminSession = await validateAdminSession(request);
+
+    if (!adminSession) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     // Get all users with KYC data (any document uploaded)
     const users = await prisma.user.findMany({
       where: {

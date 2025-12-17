@@ -1,29 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { validateAdminSession } from "@/lib/admin-session";
 
 export async function PATCH(request: NextRequest) {
   try {
-    const sessionCookie = request.cookies.get("better-auth.session");
+    // Validate admin session
+    const adminSession = await validateAdminSession(request);
 
-    if (!sessionCookie?.value) {
+    if (!adminSession) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const session = await prisma.session.findUnique({
-      where: { token: sessionCookie.value },
-      include: { user: true },
-    });
-
-    if (!session || session.expiresAt <= new Date()) {
-      return NextResponse.json(
-        { error: "Invalid or expired session" },
-        { status: 401 }
-      );
     }
 
     // Update the admin's last seen timestamp to now
     await prisma.user.update({
-      where: { id: session.user.id },
+      where: { id: adminSession.userId },
       data: {
         adminNotificationLastSeenAt: new Date(),
         updatedAt: new Date(),
