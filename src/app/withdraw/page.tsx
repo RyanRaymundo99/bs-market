@@ -270,12 +270,25 @@ export default function WithdrawPage() {
     }
   };
 
-  // Calculate USDT net amount (1 USDT fee)
+  // Get network fee based on selected network
+  const getNetworkFee = () => {
+    switch (selectedNetwork) {
+      case "TRC20":
+        return 1; // TRC20 typically has lower fees (~1 USDT)
+      case "ERC20":
+        return 5; // ERC20 typically has higher fees (~5 USDT)
+      default:
+        return 1;
+    }
+  };
+
+  // Calculate USDT net amount based on network fee
   const calculateUSDTNetAmount = () => {
     if (!usdtAmount || parseFloat(usdtAmount) <= 0) return 0;
     const amount = parseFloat(usdtAmount);
     if (isNaN(amount)) return 0;
-    const netAmount = amount - 1; // 1 USDT fee
+    const networkFee = getNetworkFee();
+    const netAmount = amount - networkFee;
     return isNaN(netAmount) || netAmount < 0 ? 0 : netAmount;
   };
 
@@ -468,7 +481,7 @@ export default function WithdrawPage() {
                         {t("networkFee")}
                       </span>
                       <span className="text-sm font-medium text-red-400">
-                        -1 USDT
+                        -{getNetworkFee().toFixed(2)} USDT
                       </span>
                     </div>
                     <div className="flex items-center justify-between pt-2 border-t border-gray-700">
