@@ -79,6 +79,29 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    // Get transaction records for these orders to check if payment actually succeeded
+    const transactions = await prisma.transaction.findMany({
+      where: {
+        userId: session.user.id,
+        type: "BUY_CRYPTO",
+        OR: orderIds.map((orderId) => ({
+          metadata: {
+            path: ["orderId"],
+            equals: orderId,
+          },
+        })),
+      },
+    });
+
+    // Create a map of orderId -> has successful transaction
+    const orderHasTransaction = new Map<string, boolean>();
+    transactions.forEach((tx) => {
+      const orderId = (tx.metadata as { orderId?: string })?.orderId;
+      if (orderId) {
+        orderHasTransaction.set(orderId, true);
+      }
+    });
+
     // Convert Decimal amounts to numbers for frontend compatibility
     // Include webhook information for each order
     const formattedOrders = orders.map((order) => {
@@ -97,6 +120,9 @@ export async function GET(request: NextRequest) {
       // 3. Webhook has a different status than the order (might indicate a recent update)
       let finalStatus = order.status;
 
+      // Check if there's evidence the payment succeeded (transaction record exists)
+      const hasSuccessfulTransaction = orderHasTransaction.get(order.id);
+
       if (matchingWebhook && matchingWebhook.processed) {
         // Webhook was processed, so order should have been updated
         // But if order is still PENDING and webhook says COMPLETED, trust the webhook
@@ -106,8 +132,21 @@ export async function GET(request: NextRequest) {
           // Order is pending but webhook says completed - use webhook status
           finalStatus = "COMPLETED";
         } else if (order.status === "PENDING" && webhookStatus === "FAILED") {
-          // Order is pending but webhook says failed - use webhook status
-          finalStatus = "FAILED";
+          // Only mark as FAILED if:
+          // 1. Webhook was processed successfully
+          // 2. There's NO evidence of a successful transaction (no transaction record)
+          // 3. The webhook is recent (not stale - within last 5 minutes)
+          const webhookAge = Date.now() - matchingWebhook.createdAt.getTime();
+          const isRecentWebhook = webhookAge < 5 * 60 * 1000; // 5 minutes
+
+          if (!hasSuccessfulTransaction && isRecentWebhook) {
+            // No transaction record and recent failed webhook - likely actually failed
+            finalStatus = "FAILED";
+          } else if (hasSuccessfulTransaction) {
+            // Transaction exists - payment succeeded, ignore failed webhook
+            finalStatus = "COMPLETED";
+          }
+          // If webhook is old and no transaction, keep as PENDING (might be stale)
         } else {
           // Order status is already updated, use it as source of truth
           finalStatus = order.status;
@@ -119,6 +158,11 @@ export async function GET(request: NextRequest) {
       ) {
         // Webhook has error - keep order status but note the error
         finalStatus = order.status;
+      }
+
+      // Final safety check: if there's a transaction record, payment succeeded
+      if (hasSuccessfulTransaction && finalStatus !== "COMPLETED") {
+        finalStatus = "COMPLETED";
       }
 
       return {

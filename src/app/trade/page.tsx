@@ -807,7 +807,19 @@ const TradePage = () => {
       </div>
 
       {/* PIX QR Code Modal */}
-      <Dialog open={showPixModal} onOpenChange={setShowPixModal}>
+      <Dialog
+        open={showPixModal}
+        onOpenChange={(open) => {
+          setShowPixModal(open);
+          // When modal closes, wait a bit before refetching to avoid race conditions
+          // This prevents showing "FAILED" status immediately after closing if payment is still processing
+          if (!open) {
+            setTimeout(() => {
+              fetchTransactionHistory();
+            }, 2000); // 2 second delay to allow webhook processing
+          }
+        }}
+      >
         <DialogContent className="bg-[#1E1E1E] border-gray-800 text-white max-w-2xl w-full p-4 sm:p-6">
           <DialogHeader className="pb-3">
             <DialogTitle className="text-white text-lg sm:text-xl">
