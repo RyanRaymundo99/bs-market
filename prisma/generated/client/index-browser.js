@@ -326,6 +326,18 @@ exports.Prisma.WebhookEventScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.NotificationScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  type: 'type',
+  title: 'title',
+  message: 'message',
+  read: 'read',
+  metadata: 'metadata',
+  createdAt: 'createdAt',
+  readAt: 'readAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -452,7 +464,8 @@ exports.Prisma.ModelName = {
   P2POffer: 'P2POffer',
   P2PTrade: 'P2PTrade',
   Transaction: 'Transaction',
-  WebhookEvent: 'WebhookEvent'
+  WebhookEvent: 'WebhookEvent',
+  Notification: 'Notification'
 };
 
 /**

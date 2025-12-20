@@ -125,6 +125,40 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Create notification for the user
+    await prisma.notification.create({
+      data: {
+        userId: userId,
+        type: "balance_adjusted",
+        title:
+          operation === "CREDIT"
+            ? `Saldo Creditado - ${amountDecimal.toFixed(2)} ${currency}`
+            : `Saldo Deduzido - ${amountDecimal.toFixed(2)} ${currency}`,
+        message:
+          operation === "CREDIT"
+            ? `Seu saldo foi creditado com ${amountDecimal.toFixed(
+                2
+              )} ${currency}. Novo saldo: ${updatedBalance.amount.toFixed(
+                2
+              )} ${currency}.${reason ? ` Motivo: ${reason}` : ""}`
+            : `Seu saldo foi deduzido em ${amountDecimal.toFixed(
+                2
+              )} ${currency}. Novo saldo: ${updatedBalance.amount.toFixed(
+                2
+              )} ${currency}.${reason ? ` Motivo: ${reason}` : ""}`,
+        metadata: {
+          transactionId: transaction.id,
+          operation: operation,
+          amount: amountDecimal.toNumber(),
+          currency: currency,
+          previousBalance: currentBalance.amount.toNumber(),
+          newBalance: updatedBalance.amount.toNumber(),
+          reason: reason || null,
+          adminId: adminSession.userId,
+        },
+      },
+    });
+
     return NextResponse.json({
       success: true,
       message: `Balance ${

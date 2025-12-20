@@ -48,6 +48,7 @@ model User {
   sessions       Session[]
   transactions   Transaction[]
   withdrawals    Withdrawal[]
+  notifications  Notification[]
 
   @@map("user")
 }
@@ -369,4 +370,21 @@ model WebhookEvent {
   @@index([orderId])
   @@index([createdAt])
   @@map("webhook_event")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // e.g., "balance_adjusted", "deposit_completed", etc.
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  metadata  Json?    // Additional data (e.g., transactionId, amount, etc.)
+  createdAt DateTime @default(now())
+  readAt    DateTime?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([createdAt])
+  @@map("notification")
 }
