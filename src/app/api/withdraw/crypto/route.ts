@@ -88,22 +88,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Estimate network fee based on network (to validate balance before API call)
-    const estimatedNetworkFee =
-      network === "TRC20" ? 1 : network === "ERC20" ? 5 : 1;
-    const totalRequired = amount + estimatedNetworkFee;
-
-    // Check if user has sufficient balance (amount + network fee)
-    if (Number(usdtBalance.amount) < totalRequired) {
+    // Check if user has sufficient balance
+    // The amount sent is the total withdrawal amount (fee is already accounted for in the frontend calculation)
+    if (Number(usdtBalance.amount) < amount) {
       return NextResponse.json(
         {
-          error: `Saldo insuficiente. Você precisa de ${totalRequired.toFixed(
+          error: `Saldo insuficiente. Você precisa de ${amount.toFixed(
             2
-          )} USDT (${amount.toFixed(2)} USDT + ${estimatedNetworkFee.toFixed(
+          )} USDT, mas seu saldo é ${Number(usdtBalance.amount).toFixed(
             2
-          )} USDT de taxa de rede), mas seu saldo é ${Number(
-            usdtBalance.amount
-          ).toFixed(2)} USDT.`,
+          )} USDT.`,
         },
         { status: 400 }
       );
@@ -158,8 +152,15 @@ export async function POST(request: NextRequest) {
       const responseStatus = responseData.status || "pending";
 
       // Safety check: verify user still has enough balance for actual totalDeducted
-      // (in case actual fee is higher than estimated)
-      if (Number(usdtBalance.amount) < totalDeducted) {
+      // Re-fetch balance to ensure we have the latest value
+      const currentBalance = await prisma.balance.findFirst({
+        where: {
+          userId: user.id,
+          currency: "USDT",
+        },
+      });
+
+      if (!currentBalance || Number(currentBalance.amount) < totalDeducted) {
         // Update withdrawal status to failed
         await prisma.withdrawal.update({
           where: { id: withdrawal.id },
@@ -170,13 +171,13 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json(
           {
-            error: `Saldo insuficiente após cálculo da taxa. Taxa de rede real: ${responseFee.toFixed(
+            error: `Saldo insuficiente. Total necessário: ${totalDeducted.toFixed(
               2
-            )} USDT. Total necessário: ${totalDeducted.toFixed(
+            )} USDT (incluindo taxa de rede de ${responseFee.toFixed(
               2
-            )} USDT, mas seu saldo é ${Number(usdtBalance.amount).toFixed(
-              2
-            )} USDT.`,
+            )} USDT), mas seu saldo é ${Number(
+              currentBalance?.amount || 0
+            ).toFixed(2)} USDT.`,
           },
           { status: 400 }
         );
