@@ -26,7 +26,10 @@ export async function POST(request: NextRequest) {
       !documentSelfie
     ) {
       return NextResponse.json(
-        { error: "All required fields must be provided" },
+        {
+          error:
+            "Por favor, preencha todos os campos obrigatórios e envie todas as imagens (frente do documento, verso do documento e selfie).",
+        },
         { status: 400 }
       );
     }
@@ -38,7 +41,10 @@ export async function POST(request: NextRequest) {
     const validDocumentTypes = ["RG", "HABILITACAO", "CNH", "PASSPORT"];
     if (!validDocumentTypes.includes(documentType)) {
       return NextResponse.json(
-        { error: "Invalid document type" },
+        {
+          error:
+            "Tipo de documento inválido. Por favor, selecione RG, CNH, Habilitação ou Passaporte.",
+        },
         { status: 400 }
       );
     }
@@ -130,8 +136,17 @@ export async function POST(request: NextRequest) {
 
     // Check if user already has KYC submitted
     if (user.kycStatus !== "PENDING" && user.documentType) {
+      const statusMessage =
+        user.kycStatus === "APPROVED"
+          ? "aprovado"
+          : user.kycStatus === "REJECTED"
+          ? "rejeitado"
+          : "em análise";
+
       return NextResponse.json(
-        { error: "KYC documents already submitted" },
+        {
+          error: `Seus documentos já foram enviados e estão ${statusMessage}. Se você precisa enviar novos documentos, entre em contato com o suporte.`,
+        },
         { status: 400 }
       );
     }
@@ -196,12 +211,25 @@ export async function POST(request: NextRequest) {
         const errorMessage =
           blobError instanceof Error ? blobError.message : "Unknown error";
         console.error("KYC Submission - Blob upload error:", blobError);
+
+        // Check if it's a 403 Forbidden error (likely invalid token)
+        if (
+          errorMessage.includes("Forbidden") ||
+          errorMessage.includes("403")
+        ) {
+          return NextResponse.json(
+            {
+              error:
+                "Não foi possível fazer upload dos documentos. Por favor, verifique sua conexão com a internet e tente novamente. Se o problema persistir, entre em contato com o suporte.",
+            },
+            { status: 403 }
+          );
+        }
+
         return NextResponse.json(
           {
             error:
-              "Falha ao fazer upload dos documentos. Por favor, tente novamente.",
-            code: "BLOB_UPLOAD_FAILED",
-            details: errorMessage,
+              "Não foi possível fazer upload dos documentos. Por favor, verifique sua conexão com a internet, certifique-se de que as imagens não estão muito grandes (máximo 10MB cada) e tente novamente.",
           },
           { status: 500 }
         );
@@ -240,7 +268,10 @@ export async function POST(request: NextRequest) {
         ) {
           console.error("KYC Submission - Files not written correctly");
           return NextResponse.json(
-            { error: "Failed to save document files" },
+            {
+              error:
+                "Não foi possível salvar os arquivos. Por favor, verifique se as imagens estão em formato válido (JPG, PNG) e tente novamente.",
+            },
             { status: 500 }
           );
         }
@@ -265,10 +296,8 @@ export async function POST(request: NextRequest) {
         console.error("KYC Submission - File system error:", fileError);
         return NextResponse.json(
           {
-            error: "Falha ao salvar os arquivos. Por favor, tente novamente.",
-            code: "FILESYSTEM_ERROR",
-            details: errorMessage,
-            errorCode,
+            error:
+              "Não foi possível salvar os arquivos. Por favor, verifique se as imagens estão em formato válido (JPG, PNG), não estão muito grandes (máximo 10MB cada) e tente novamente.",
           },
           { status: 500 }
         );
@@ -326,13 +355,22 @@ export async function POST(request: NextRequest) {
           documentSelfie: updatedUser.documentSelfie,
         });
         return NextResponse.json(
-          { error: "Documents were not saved to database" },
+          {
+            error:
+              "Os documentos foram enviados, mas não foram salvos corretamente. Por favor, tente enviar novamente. Se o problema persistir, entre em contato com o suporte.",
+          },
           { status: 500 }
         );
       }
     } catch (dbError) {
       console.error("KYC Submission - Database update error:", dbError);
-      throw dbError;
+      return NextResponse.json(
+        {
+          error:
+            "Não foi possível salvar seus dados. Por favor, verifique sua conexão com a internet e tente novamente. Se o problema persistir, entre em contato com o suporte.",
+        },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
@@ -342,8 +380,29 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("KYC submission error:", error);
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+
+    // Check for authentication/authorization errors
+    if (
+      errorMessage.includes("Forbidden") ||
+      errorMessage.includes("Unauthorized") ||
+      errorMessage.includes("403")
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Acesso negado. Por favor, certifique-se de estar logado com a mesma conta usada no cadastro e tente novamente. Se o problema persistir, entre em contato com o suporte.",
+        },
+        { status: 403 }
+      );
+    }
+
     return NextResponse.json(
-      { error: "Failed to submit KYC documents" },
+      {
+        error:
+          "Ocorreu um erro inesperado ao enviar os documentos. Por favor, verifique sua conexão com a internet, certifique-se de que todas as imagens foram selecionadas corretamente e tente novamente. Se o problema persistir, entre em contato com o suporte.",
+      },
       { status: 500 }
     );
   }

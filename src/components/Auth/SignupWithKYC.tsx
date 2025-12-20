@@ -137,29 +137,56 @@ const SignupWithKYC = () => {
           body: formData,
         });
 
-        const result = await response.json();
+        // Check if response is JSON before parsing
+        const contentType = response.headers.get("content-type");
+        let result: any = {
+          error: "Ocorreu um erro inesperado. Por favor, tente novamente.",
+        };
+
+        if (contentType && contentType.includes("application/json")) {
+          try {
+            result = await response.json();
+          } catch (jsonError) {
+            console.error("Failed to parse JSON response:", jsonError);
+            const text = await response.text();
+            result = {
+              error:
+                "Não foi possível processar a resposta do servidor. Por favor, verifique sua conexão com a internet e tente novamente.",
+            };
+          }
+        } else {
+          // Handle non-JSON responses (like 403 Forbidden plain text)
+          const text = await response.text();
+          result = {
+            error:
+              text ||
+              "Ocorreu um erro ao enviar os documentos. Por favor, verifique sua conexão com a internet e tente novamente.",
+          };
+        }
 
         if (response.ok) {
           setKycData(data);
           setCurrentStep("success");
           toast({
-            title: "KYC submitted!",
-            description: "Your documents have been submitted for verification",
+            title: "KYC Enviado!",
+            description: "Seus documentos foram enviados para revisão",
           });
         } else {
           toast({
             variant: "destructive",
-            title: "Error submitting documents",
+            title: "Erro ao enviar documentos",
             description:
-              result.error || "Failed to submit documents for verification",
+              result.error ||
+              "Não foi possível enviar os documentos. Por favor, tente novamente.",
           });
         }
       } catch (error) {
         console.error("KYC submission error:", error);
         toast({
           variant: "destructive",
-          title: "Error submitting documents",
-          description: "An unexpected error occurred",
+          title: "Erro ao enviar documentos",
+          description:
+            "Ocorreu um erro inesperado. Por favor, verifique sua conexão com a internet e tente novamente.",
         });
       } finally {
         setLoading(false);

@@ -147,7 +147,13 @@ const SignupWithMandatoryKYC = () => {
       // Upload KYC documents
       // First, we need to get the user's CPF from the account creation
       if (!userData?.cpf) {
-        throw new Error("CPF is required for KYC submission");
+        toast({
+          variant: "destructive",
+          title: "Erro ao enviar documentos",
+          description:
+            "CPF não encontrado. Por favor, complete seu cadastro primeiro.",
+        });
+        return;
       }
 
       const formData = new FormData();
@@ -164,7 +170,32 @@ const SignupWithMandatoryKYC = () => {
         credentials: "include", // Ensure cookies are sent
       });
 
-      const result = await response.json();
+      // Check if response is JSON before parsing
+      const contentType = response.headers.get("content-type");
+      let result: any = {
+        error: "Ocorreu um erro inesperado. Por favor, tente novamente.",
+      };
+
+      if (contentType && contentType.includes("application/json")) {
+        try {
+          result = await response.json();
+        } catch (jsonError) {
+          console.error("Failed to parse JSON response:", jsonError);
+          const text = await response.text();
+          result = {
+            error:
+              "Não foi possível processar a resposta do servidor. Por favor, verifique sua conexão com a internet e tente novamente.",
+          };
+        }
+      } else {
+        // Handle non-JSON responses (like 403 Forbidden plain text)
+        const text = await response.text();
+        result = {
+          error:
+            text ||
+            "Ocorreu um erro ao enviar os documentos. Por favor, verifique sua conexão com a internet e tente novamente.",
+        };
+      }
 
       if (response.ok) {
         setCurrentStep("success");
@@ -173,21 +204,16 @@ const SignupWithMandatoryKYC = () => {
           description: "Seus documentos foram enviados para revisão",
         });
       } else {
-        // Provide more detailed error message
-        let errorMessage = result.error || "Falha ao enviar documentos KYC";
+        // Use the error message from the server (already user-friendly)
+        const errorMessage =
+          result.error ||
+          "Falha ao enviar documentos KYC. Por favor, tente novamente.";
 
-        // Add helpful context based on error
-        if (errorMessage.includes("User not found")) {
-          errorMessage =
-            "Usuário não encontrado. Por favor, recrie sua conta ou entre em contato com o suporte.";
-        } else if (errorMessage.includes("Unauthorized")) {
-          errorMessage = "Sessão expirada. Por favor, recrie sua conta.";
-        } else if (errorMessage.includes("Failed to save document files")) {
-          errorMessage =
-            "Erro ao salvar arquivos. Verifique se os arquivos são válidos e tente novamente.";
-        }
-
-        throw new Error(errorMessage);
+        toast({
+          variant: "destructive",
+          title: "Falha no Envio do KYC",
+          description: errorMessage,
+        });
       }
     } catch (error) {
       console.error("KYC submission error:", error);
@@ -195,7 +221,9 @@ const SignupWithMandatoryKYC = () => {
         variant: "destructive",
         title: "Falha no Envio do KYC",
         description:
-          error instanceof Error ? error.message : "Falha ao enviar documentos",
+          error instanceof Error
+            ? error.message
+            : "Ocorreu um erro inesperado. Por favor, verifique sua conexão com a internet e tente novamente.",
       });
     } finally {
       setUploading(false);
