@@ -216,11 +216,17 @@ export async function POST(request: NextRequest) {
       // Create deposit record for tracking
       // Store our original externalId in deposit.externalId for webhook matching
       // Store transaction ID in order.externalOrderId for status checking
+      // Calculate commission: User pays 3% total, but our commission is 1.8% of the deposit amount
+      // amount is the total paid (base + 3% fee), so base = amount / 1.03
+      // Our commission is 1.8% of the base amount
+      const baseAmount = Number(amount) / 1.03; // Base amount before fee
+      const platformCommission = baseAmount * 0.018; // 1.8% commission for us
+
       const deposit = await prisma.deposit.create({
         data: {
           userId: user.id,
           amount: new Decimal(amount),
-          fee: new Decimal(0), // Fee is already included in the amount
+          fee: new Decimal(platformCommission), // Store our 1.8% commission
           status: isCompleted ? "CONFIRMED" : "PENDING",
           paymentMethod: "PIX",
           externalId: externalId, // Store our original externalId for webhook matching
@@ -283,10 +289,44 @@ export async function POST(request: NextRequest) {
             transactionId: transactionId || externalId,
             date: new Date(),
             paymentMethod: "PIX",
-          }).catch((error) => {
-            console.error("Failed to send purchase receipt email:", error);
-            // Don't fail the request if email fails
-          });
+          })
+            .then(async (result) => {
+              // Track receipt in transaction metadata
+              if (transaction) {
+                const metadata =
+                  (transaction.metadata as Record<string, unknown>) || {};
+                const receiptHistory =
+                  (metadata.receiptHistory as Array<{
+                    sentAt: string;
+                    success: boolean;
+                    error?: string;
+                  }>) || [];
+
+                receiptHistory.push({
+                  sentAt: new Date().toISOString(),
+                  success: result.success,
+                  ...(result.message && !result.success
+                    ? { error: result.message }
+                    : {}),
+                });
+
+                await prisma.transaction.update({
+                  where: { id: transaction.id },
+                  data: {
+                    metadata: {
+                      ...metadata,
+                      receiptHistory,
+                      lastReceiptSentAt: new Date().toISOString(),
+                      lastReceiptSuccess: result.success,
+                    },
+                  },
+                });
+              }
+            })
+            .catch((error) => {
+              console.error("Failed to send purchase receipt email:", error);
+              // Don't fail the request if email fails
+            });
         }
       }
 

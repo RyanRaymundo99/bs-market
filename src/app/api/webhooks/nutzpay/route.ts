@@ -266,6 +266,18 @@ export async function POST(request: NextRequest) {
           withdrawalUser?.email &&
           withdrawalUser?.name
         ) {
+          // Find the transaction associated with this withdrawal
+          const withdrawalTransaction = await prisma.transaction.findFirst({
+            where: {
+              userId: foundWithdrawal.userId,
+              type: "WITHDRAWAL",
+              metadata: {
+                path: ["withdrawalId"],
+                equals: foundWithdrawal.id,
+              },
+            },
+          });
+
           sendWithdrawalReceipt({
             userName: withdrawalUser.name,
             userEmail: withdrawalUser.email,
@@ -280,10 +292,45 @@ export async function POST(request: NextRequest) {
             transactionId: foundWithdrawal.externalId || undefined,
             date: new Date(),
             status: withdrawalStatus,
-          }).catch((error) => {
-            console.error("Failed to send withdrawal receipt email:", error);
-            // Don't fail the webhook if email fails
-          });
+          })
+            .then(async (result) => {
+              // Track receipt in transaction metadata if transaction exists
+              if (withdrawalTransaction) {
+                const metadata =
+                  (withdrawalTransaction.metadata as Record<string, unknown>) ||
+                  {};
+                const receiptHistory =
+                  (metadata.receiptHistory as Array<{
+                    sentAt: string;
+                    success: boolean;
+                    error?: string;
+                  }>) || [];
+
+                receiptHistory.push({
+                  sentAt: new Date().toISOString(),
+                  success: result.success,
+                  ...(result.message && !result.success
+                    ? { error: result.message }
+                    : {}),
+                });
+
+                await prisma.transaction.update({
+                  where: { id: withdrawalTransaction.id },
+                  data: {
+                    metadata: {
+                      ...metadata,
+                      receiptHistory,
+                      lastReceiptSentAt: new Date().toISOString(),
+                      lastReceiptSuccess: result.success,
+                    },
+                  },
+                });
+              }
+            })
+            .catch((error) => {
+              console.error("Failed to send withdrawal receipt email:", error);
+              // Don't fail the webhook if email fails
+            });
         }
 
         // Mark webhook as processed
@@ -679,10 +726,44 @@ export async function POST(request: NextRequest) {
             transactionId: transaction_id || order.externalOrderId || order.id,
             date: new Date(),
             paymentMethod: "PIX",
-          }).catch((error) => {
-            console.error("Failed to send purchase receipt email:", error);
-            // Don't fail the webhook if email fails
-          });
+          })
+            .then(async (result) => {
+              // Track receipt in transaction metadata
+              if (transaction) {
+                const metadata =
+                  (transaction.metadata as Record<string, unknown>) || {};
+                const receiptHistory =
+                  (metadata.receiptHistory as Array<{
+                    sentAt: string;
+                    success: boolean;
+                    error?: string;
+                  }>) || [];
+
+                receiptHistory.push({
+                  sentAt: new Date().toISOString(),
+                  success: result.success,
+                  ...(result.message && !result.success
+                    ? { error: result.message }
+                    : {}),
+                });
+
+                await prisma.transaction.update({
+                  where: { id: transaction.id },
+                  data: {
+                    metadata: {
+                      ...metadata,
+                      receiptHistory,
+                      lastReceiptSentAt: new Date().toISOString(),
+                      lastReceiptSuccess: result.success,
+                    },
+                  },
+                });
+              }
+            })
+            .catch((error) => {
+              console.error("Failed to send purchase receipt email:", error);
+              // Don't fail the webhook if email fails
+            });
         }
       }
     }

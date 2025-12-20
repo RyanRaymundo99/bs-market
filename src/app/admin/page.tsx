@@ -19,6 +19,10 @@ import {
   Search,
   ArrowUpDown,
   X,
+  Wifi,
+  WifiOff,
+  Mail,
+  Send,
 } from "lucide-react";
 import {
   Dialog,
@@ -157,12 +161,61 @@ export default function AdminDashboard() {
     useState<TransactionDetails | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [resendingReceipt, setResendingReceipt] = useState(false);
+  const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
+  const [isPolling, setIsPolling] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
+  // Real-time transaction updates (lightweight, fast)
+  const fetchRealtimeTransactions = useCallback(async (since?: Date) => {
+    try {
+      const url = new URL(
+        "/api/admin/transactions/realtime",
+        window.location.origin
+      );
+      url.searchParams.set("limit", "50");
+      if (since) {
+        url.searchParams.set("since", since.toISOString());
+      }
+
+      const response = await fetch(url.toString(), {
+        cache: "no-store", // Always fetch fresh data
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch realtime transactions");
+      }
+
+      const data = await response.json();
+
+      if (data.success && data.transactions) {
+        if (since) {
+          // Incremental update - prepend new transactions
+          setTransactions((prev) => {
+            const existingIds = new Set(prev.map((t) => t.id));
+            const newTransactions = data.transactions.filter(
+              (t: Transaction) => !existingIds.has(t.id)
+            );
+            return [...newTransactions, ...prev].slice(0, 100); // Keep max 100
+          });
+        } else {
+          // Full refresh
+          setTransactions(data.transactions);
+        }
+        setLastUpdateTime(new Date());
+      }
+    } catch (error) {
+      console.error("Error fetching realtime transactions:", error);
+      // Don't show toast for polling errors to avoid spam
+    }
+  }, []);
+
   const fetchFinanceData = useCallback(async () => {
     try {
-      const response = await fetch("/api/admin/finance");
+      const response = await fetch("/api/admin/finance", {
+        cache: "no-store",
+      });
 
       if (!response.ok) {
         throw new Error("Failed to fetch finance data");
@@ -172,7 +225,10 @@ export default function AdminDashboard() {
 
       if (data.success) {
         setFinanceStats(data.financeStats);
-        setTransactions(data.transactions);
+        // Only set transactions if we don't have realtime updates yet
+        if (transactions.length === 0) {
+          setTransactions(data.transactions);
+        }
         setChartData(data.chartData);
       } else {
         throw new Error(data.error || "Unknown error");
@@ -185,7 +241,7 @@ export default function AdminDashboard() {
         description: "Falha ao carregar dados financeiros",
       });
     }
-  }, [toast]);
+  }, [toast, transactions.length]);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -297,6 +353,79 @@ export default function AdminDashboard() {
     return labels[status as keyof typeof labels] || status;
   };
 
+  const handleResendReceipt = async () => {
+    if (!transactionDetails) return;
+
+    setResendingReceipt(true);
+    try {
+      const response = await fetch(
+        `/api/admin/transactions/${transactionDetails.id}/resend-receipt`,
+        {
+          method: "POST",
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast({
+          title: "Sucesso",
+          description: "Recibo enviado com sucesso!",
+          variant: "default",
+        });
+
+        // Refresh transaction details to update receipt status
+        const detailsResponse = await fetch(
+          `/api/admin/transactions/${transactionDetails.id}`
+        );
+        if (detailsResponse.ok) {
+          const detailsData = await detailsResponse.json();
+          if (detailsData.success) {
+            setTransactionDetails(detailsData.transaction);
+          }
+        }
+      } else {
+        throw new Error(data.error || "Failed to send receipt");
+      }
+    } catch (error) {
+      console.error("Error resending receipt:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description:
+          error instanceof Error ? error.message : "Falha ao reenviar recibo",
+      });
+    } finally {
+      setResendingReceipt(false);
+    }
+  };
+
+  // Get receipt status from metadata
+  const getReceiptStatus = () => {
+    if (!transactionDetails?.metadata) return null;
+
+    const metadata = transactionDetails.metadata as Record<string, unknown>;
+    const receiptHistory = metadata.receiptHistory as
+      | Array<{
+          sentAt: string;
+          success: boolean;
+          error?: string;
+        }>
+      | undefined;
+
+    if (!receiptHistory || receiptHistory.length === 0) {
+      return null;
+    }
+
+    const lastReceipt = receiptHistory[receiptHistory.length - 1];
+    return {
+      sent: lastReceipt.success,
+      sentAt: lastReceipt.sentAt,
+      error: lastReceipt.error,
+      count: receiptHistory.length,
+    };
+  };
+
   const handleSort = (field: keyof Transaction) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -394,7 +523,23 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     fetchStats();
-  }, [fetchStats]);
+    // Initial realtime transaction fetch
+    fetchRealtimeTransactions();
+  }, [fetchStats, fetchRealtimeTransactions]);
+
+  // Real-time polling for transactions (every 5 seconds)
+  useEffect(() => {
+    setIsPolling(true);
+    const interval = setInterval(() => {
+      // Only fetch new transactions since last update
+      fetchRealtimeTransactions(lastUpdateTime);
+    }, 5000); // Poll every 5 seconds
+
+    return () => {
+      clearInterval(interval);
+      setIsPolling(false);
+    };
+  }, [fetchRealtimeTransactions, lastUpdateTime]);
 
   if (loading) {
     return (
@@ -415,6 +560,20 @@ export default function AdminDashboard() {
           </div>
           <div className="flex items-center space-x-2">
             <NotificationBell className="text-white hover:text-blue-400" />
+            {/* Real-time status indicator */}
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-gray-900 border border-gray-700">
+              {isPolling ? (
+                <>
+                  <Wifi className="w-4 h-4 text-green-400 animate-pulse" />
+                  <span className="text-xs text-gray-300">Live</span>
+                </>
+              ) : (
+                <>
+                  <WifiOff className="w-4 h-4 text-gray-500" />
+                  <span className="text-xs text-gray-500">Offline</span>
+                </>
+              )}
+            </div>
             <Button
               onClick={fetchStats}
               variant="outline"
@@ -910,16 +1069,8 @@ export default function AdminDashboard() {
         <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
           <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="text-white flex items-center justify-between">
-                <span>Detalhes da Transação</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowDetailsDialog(false)}
-                  className="text-gray-400 hover:text-white"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+              <DialogTitle className="text-white">
+                Detalhes da Transação
               </DialogTitle>
               <DialogDescription className="text-gray-400">
                 Informações completas da transação
@@ -985,6 +1136,80 @@ export default function AdminDashboard() {
                         {transactionDetails.user.email}
                       </p>
                     </div>
+                    {/* Receipt Email Status */}
+                    {(transactionDetails.type === "BUY_CRYPTO" ||
+                      transactionDetails.type === "WITHDRAWAL") && (
+                      <div className="col-span-2 border-t border-gray-800 pt-4 mt-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <Mail className="h-4 w-4 text-gray-400" />
+                            <div>
+                              <p className="text-sm text-gray-400">
+                                Status do Recibo por Email
+                              </p>
+                              {(() => {
+                                const receiptStatus = getReceiptStatus();
+                                if (!receiptStatus) {
+                                  return (
+                                    <p className="text-yellow-400 text-sm">
+                                      Não enviado
+                                    </p>
+                                  );
+                                }
+                                return (
+                                  <div className="flex items-center gap-2">
+                                    {receiptStatus.sent ? (
+                                      <>
+                                        <CheckCircle className="h-4 w-4 text-green-400" />
+                                        <p className="text-green-400 text-sm">
+                                          Enviado em{" "}
+                                          {new Date(
+                                            receiptStatus.sentAt
+                                          ).toLocaleString("pt-BR")}
+                                        </p>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <X className="h-4 w-4 text-red-400" />
+                                        <p className="text-red-400 text-sm">
+                                          Falha ao enviar
+                                          {receiptStatus.error &&
+                                            `: ${receiptStatus.error}`}
+                                        </p>
+                                      </>
+                                    )}
+                                    {receiptStatus.count > 1 && (
+                                      <span className="text-xs text-gray-500">
+                                        ({receiptStatus.count} tentativas)
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          </div>
+                          <Button
+                            onClick={handleResendReceipt}
+                            disabled={resendingReceipt}
+                            variant="outline"
+                            size="sm"
+                            className="border-gray-700 text-white hover:bg-gray-800"
+                          >
+                            {resendingReceipt ? (
+                              <>
+                                <Clock className="h-4 w-4 mr-2 animate-spin" />
+                                Enviando...
+                              </>
+                            ) : (
+                              <>
+                                <Send className="h-4 w-4 mr-2" />
+                                Reenviar Recibo
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                     {transactionDetails.user.cpf && (
                       <div>
                         <p className="text-sm text-gray-400">CPF</p>

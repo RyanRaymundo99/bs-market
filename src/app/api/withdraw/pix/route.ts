@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Create transaction record
-    await prisma.transaction.create({
+    const pixWithdrawalTransaction = await prisma.transaction.create({
       data: {
         userId: user.id,
         type: "WITHDRAWAL",
@@ -154,10 +154,43 @@ export async function POST(request: NextRequest) {
         protocol: protocol,
         date: new Date(),
         status: "PENDING",
-      }).catch((error) => {
-        console.error("Failed to send PIX withdrawal receipt email:", error);
-        // Don't fail the request if email fails
-      });
+      })
+        .then(async (result) => {
+          // Track receipt in transaction metadata
+          const metadata =
+            (pixWithdrawalTransaction.metadata as Record<string, unknown>) ||
+            {};
+          const receiptHistory =
+            (metadata.receiptHistory as Array<{
+              sentAt: string;
+              success: boolean;
+              error?: string;
+            }>) || [];
+
+          receiptHistory.push({
+            sentAt: new Date().toISOString(),
+            success: result.success,
+            ...(result.message && !result.success
+              ? { error: result.message }
+              : {}),
+          });
+
+          await prisma.transaction.update({
+            where: { id: pixWithdrawalTransaction.id },
+            data: {
+              metadata: {
+                ...metadata,
+                receiptHistory,
+                lastReceiptSentAt: new Date().toISOString(),
+                lastReceiptSuccess: result.success,
+              },
+            },
+          });
+        })
+        .catch((error) => {
+          console.error("Failed to send PIX withdrawal receipt email:", error);
+          // Don't fail the request if email fails
+        });
     }
 
     // TODO: In a real implementation, you would:

@@ -88,6 +88,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Estimate network fee based on network (to validate balance before API call)
+    const estimatedNetworkFee =
+      network === "TRC20" ? 1 : network === "ERC20" ? 5 : 1;
+    const totalRequired = amount + estimatedNetworkFee;
+
+    // Check if user has sufficient balance (amount + network fee)
+    if (Number(usdtBalance.amount) < totalRequired) {
+      return NextResponse.json(
+        {
+          error: `Saldo insuficiente. Você precisa de ${totalRequired.toFixed(
+            2
+          )} USDT (${amount.toFixed(2)} USDT + ${estimatedNetworkFee.toFixed(
+            2
+          )} USDT de taxa de rede), mas seu saldo é ${Number(
+            usdtBalance.amount
+          ).toFixed(2)} USDT.`,
+        },
+        { status: 400 }
+      );
+    }
+
     // Generate external ID for NutzPay
     const externalId = `withdrawal_${user.id}_${Date.now()}`;
 
@@ -136,6 +157,31 @@ export async function POST(request: NextRequest) {
         responseData.total_deducted || responseAmount + responseFee;
       const responseStatus = responseData.status || "pending";
 
+      // Safety check: verify user still has enough balance for actual totalDeducted
+      // (in case actual fee is higher than estimated)
+      if (Number(usdtBalance.amount) < totalDeducted) {
+        // Update withdrawal status to failed
+        await prisma.withdrawal.update({
+          where: { id: withdrawal.id },
+          data: {
+            status: "FAILED",
+          },
+        });
+
+        return NextResponse.json(
+          {
+            error: `Saldo insuficiente após cálculo da taxa. Taxa de rede real: ${responseFee.toFixed(
+              2
+            )} USDT. Total necessário: ${totalDeducted.toFixed(
+              2
+            )} USDT, mas seu saldo é ${Number(usdtBalance.amount).toFixed(
+              2
+            )} USDT.`,
+          },
+          { status: 400 }
+        );
+      }
+
       // Update withdrawal with NutzPay response data
       await prisma.withdrawal.update({
         where: { id: withdrawal.id },
@@ -166,7 +212,7 @@ export async function POST(request: NextRequest) {
       });
 
       // Create transaction record
-      await prisma.transaction.create({
+      const withdrawalTransaction = await prisma.transaction.create({
         data: {
           userId: user.id,
           type: "WITHDRAWAL",
@@ -192,10 +238,42 @@ export async function POST(request: NextRequest) {
           transactionId: externalId,
           date: new Date(),
           status: responseStatus === "completed" ? "COMPLETED" : "PENDING",
-        }).catch((error) => {
-          console.error("Failed to send withdrawal receipt email:", error);
-          // Don't fail the request if email fails
-        });
+        })
+          .then(async (result) => {
+            // Track receipt in transaction metadata
+            const metadata =
+              (withdrawalTransaction.metadata as Record<string, unknown>) || {};
+            const receiptHistory =
+              (metadata.receiptHistory as Array<{
+                sentAt: string;
+                success: boolean;
+                error?: string;
+              }>) || [];
+
+            receiptHistory.push({
+              sentAt: new Date().toISOString(),
+              success: result.success,
+              ...(result.message && !result.success
+                ? { error: result.message }
+                : {}),
+            });
+
+            await prisma.transaction.update({
+              where: { id: withdrawalTransaction.id },
+              data: {
+                metadata: {
+                  ...metadata,
+                  receiptHistory,
+                  lastReceiptSentAt: new Date().toISOString(),
+                  lastReceiptSuccess: result.success,
+                },
+              },
+            });
+          })
+          .catch((error) => {
+            console.error("Failed to send withdrawal receipt email:", error);
+            // Don't fail the request if email fails
+          });
       }
 
       return NextResponse.json({

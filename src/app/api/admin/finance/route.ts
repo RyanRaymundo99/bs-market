@@ -18,121 +18,149 @@ export async function GET(request: NextRequest) {
     const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    // Calculate total deposits (confirmed only)
-    const totalDeposits = await prisma.deposit.aggregate({
-      where: {
-        status: "CONFIRMED",
-        currency: "BRL",
-      },
-      _sum: {
-        amount: true,
-      },
-    });
-
-    const totalDepositsLastWeek = await prisma.deposit.aggregate({
-      where: {
-        status: "CONFIRMED",
-        currency: "BRL",
-        createdAt: {
-          gte: oneWeekAgo,
+    // Run all aggregate queries in parallel for better performance
+    const [
+      totalDeposits,
+      totalDepositsLastWeek,
+      totalWithdrawals,
+      totalWithdrawalsLastWeek,
+      depositCommissions,
+      depositCommissionsLastWeek,
+      cryptoTradeCommissions,
+      cryptoTradeCommissionsLastWeek,
+      averageBalance,
+      averageBalanceLastWeek,
+    ] = await Promise.all([
+      // Calculate total deposits (confirmed only)
+      prisma.deposit.aggregate({
+        where: {
+          status: "CONFIRMED",
+          currency: "BRL",
         },
-      },
-      _sum: {
-        amount: true,
-      },
-    });
-
-    // Calculate total withdrawals (completed only)
-    const totalWithdrawals = await prisma.withdrawal.aggregate({
-      where: {
-        status: "COMPLETED",
-        currency: "BRL",
-      },
-      _sum: {
-        amount: true,
-      },
-    });
-
-    const totalWithdrawalsLastWeek = await prisma.withdrawal.aggregate({
-      where: {
-        status: "COMPLETED",
-        currency: "BRL",
-        createdAt: {
-          gte: oneWeekAgo,
+        _sum: {
+          amount: true,
         },
-      },
-      _sum: {
-        amount: true,
-      },
-    });
+      }),
+      prisma.deposit.aggregate({
+        where: {
+          status: "CONFIRMED",
+          currency: "BRL",
+          createdAt: {
+            gte: oneWeekAgo,
+          },
+        },
+        _sum: {
+          amount: true,
+        },
+      }),
+      // Calculate total withdrawals (completed only)
+      prisma.withdrawal.aggregate({
+        where: {
+          status: "COMPLETED",
+          currency: "BRL",
+        },
+        _sum: {
+          amount: true,
+        },
+      }),
+      prisma.withdrawal.aggregate({
+        where: {
+          status: "COMPLETED",
+          currency: "BRL",
+          createdAt: {
+            gte: oneWeekAgo,
+          },
+        },
+        _sum: {
+          amount: true,
+        },
+      }),
+      // Calculate total commissions based on actual fees charged
+      // Deposit commissions: 1.8% commission on deposits (user pays 3% total, we keep 1.8%)
+      prisma.deposit.aggregate({
+        where: {
+          status: "CONFIRMED",
+          currency: "BRL",
+        },
+        _sum: {
+          fee: true, // This contains 1.8% commission per deposit
+        },
+      }),
+      prisma.deposit.aggregate({
+        where: {
+          status: "CONFIRMED",
+          currency: "BRL",
+          createdAt: {
+            gte: oneWeekAgo,
+          },
+        },
+        _sum: {
+          fee: true, // This contains 1.8% commission per deposit
+        },
+      }),
+      // Commission from crypto trades
+      prisma.transaction.aggregate({
+        where: {
+          type: {
+            in: ["BUY_CRYPTO", "SELL_CRYPTO"],
+          },
+          currency: "BRL",
+        },
+        _sum: {
+          amount: true,
+        },
+      }),
+      prisma.transaction.aggregate({
+        where: {
+          type: {
+            in: ["BUY_CRYPTO", "SELL_CRYPTO"],
+          },
+          currency: "BRL",
+          createdAt: {
+            gte: oneWeekAgo,
+          },
+        },
+        _sum: {
+          amount: true,
+        },
+      }),
+      // Calculate average user balance
+      prisma.balance.aggregate({
+        where: {
+          currency: "BRL",
+        },
+        _avg: {
+          amount: true,
+        },
+      }),
+      prisma.balance.aggregate({
+        where: {
+          currency: "BRL",
+          updatedAt: {
+            gte: oneWeekAgo,
+          },
+        },
+        _avg: {
+          amount: true,
+        },
+      }),
+    ]);
 
     // Total trades volume (removed P2P)
     const totalTrades = { _sum: { fiatAmount: 0 } };
     const totalTradesLastWeek = { _sum: { fiatAmount: 0 } };
 
-    // Calculate total commissions based on actual fees charged
-    // 1. Commission from deposits (3% fee on confirmed deposits)
-    const depositCommissions = await prisma.deposit.aggregate({
-      where: {
-        status: "CONFIRMED",
-        currency: "BRL",
-      },
-      _sum: {
-        fee: true,
-      },
-    });
-
-    const depositCommissionsLastWeek = await prisma.deposit.aggregate({
-      where: {
-        status: "CONFIRMED",
-        currency: "BRL",
-        createdAt: {
-          gte: oneWeekAgo,
-        },
-      },
-      _sum: {
-        fee: true,
-      },
-    });
-
     // 2. Commission from P2P trades (removed)
     const tradeCommissions = 0;
     const tradeCommissionsLastWeek = 0;
-
-    // 3. Commission from crypto trades (3% fee on buy/sell operations)
-    const cryptoTradeCommissions = await prisma.transaction.aggregate({
-      where: {
-        type: {
-          in: ["BUY_CRYPTO", "SELL_CRYPTO"],
-        },
-        currency: "BRL",
-      },
-      _sum: {
-        amount: true,
-      },
-    });
-
-    const cryptoTradeCommissionsLastWeek = await prisma.transaction.aggregate({
-      where: {
-        type: {
-          in: ["BUY_CRYPTO", "SELL_CRYPTO"],
-        },
-        currency: "BRL",
-        createdAt: {
-          gte: oneWeekAgo,
-        },
-      },
-      _sum: {
-        amount: true,
-      },
-    });
 
     // Calculate crypto trade fees (3% of the transaction amount)
     const cryptoFees = Number(cryptoTradeCommissions._sum.amount || 0) * 0.03;
     const cryptoFeesLastWeek =
       Number(cryptoTradeCommissionsLastWeek._sum.amount || 0) * 0.03;
 
-    // Total commissions = deposit fees + trade fees + crypto fees
+    // Total commissions = deposit commissions (1.8%) + trade fees + crypto fees
+    // Note: User pays 3% total on deposits, but our commission is 1.8% (stored in deposit.fee)
     const totalCommissions =
       Number(depositCommissions._sum.fee || 0) + tradeCommissions + cryptoFees;
 
@@ -140,28 +168,6 @@ export async function GET(request: NextRequest) {
       Number(depositCommissionsLastWeek._sum.fee || 0) +
       tradeCommissionsLastWeek +
       cryptoFeesLastWeek;
-
-    // Calculate average user balance
-    const averageBalance = await prisma.balance.aggregate({
-      where: {
-        currency: "BRL",
-      },
-      _avg: {
-        amount: true,
-      },
-    });
-
-    const averageBalanceLastWeek = await prisma.balance.aggregate({
-      where: {
-        currency: "BRL",
-        updatedAt: {
-          gte: oneWeekAgo,
-        },
-      },
-      _avg: {
-        amount: true,
-      },
-    });
 
     // Calculate percentage changes
     const calculatePercentageChange = (current: number, previous: number) => {
