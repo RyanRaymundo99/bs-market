@@ -134,25 +134,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Estimate network fee based on network
-    const estimatedNetworkFee =
-      network === "TRC20" ? 1 : network === "ERC20" ? 5 : 1;
-
-    // Calculate the amount to send to NutzPay
-    // If user wants to withdraw their full balance (or close to it), adjust for the fee
-    // The fee is the user's responsibility and the network's fee, not our platform fee
-    const balanceAmount = Number(usdtBalance.amount);
-    let amountToSend = amount;
-
-    // If the user is trying to withdraw their full balance (within 0.01 USDT tolerance),
-    // adjust the amount to account for the network fee
-    // This allows users to withdraw their full balance without platform blocking them
-    if (Math.abs(balanceAmount - amount) < 0.01) {
-      // User wants to withdraw full balance, so send (balance - estimated fee) to NutzPay
-      // NutzPay will deduct this amount + fee, which should equal the user's balance
-      amountToSend = Math.max(0.01, balanceAmount - estimatedNetworkFee);
-    }
-
     // Generate external ID for NutzPay
     const externalId = `withdrawal_${user.id}_${Date.now()}`;
 
@@ -161,8 +142,8 @@ export async function POST(request: NextRequest) {
       data: {
         userId: user.id,
         type: "USDT",
-        amount: amount, // Store the original amount the user requested
-        fee: null, // Will be updated from API response
+        amount: amount, // Store the amount the user requested
+        fee: null, // Will be updated from API response (informative only - network fee)
         netAmount: null, // Will be updated from API response
         status: "PENDING",
         paymentMethod: "USDT",
@@ -183,8 +164,10 @@ export async function POST(request: NextRequest) {
           process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"
         }/api/webhooks/nutzpay`;
 
+      // Send the full amount to NutzPay - the fee is handled by NutzPay/network
+      // We only deduct the amount from user's balance, not amount + fee
       const nutzPayResponse = await nutzPayService.createUSDTWithdrawal({
-        amount: amountToSend, // Send the adjusted amount (accounting for fee if full balance)
+        amount: amount, // Send the full amount the user requested
         recipient_address: walletAddress,
         recipient_network: network,
         description: `USDT withdrawal - ${user.email || user.id}`,
@@ -201,12 +184,10 @@ export async function POST(request: NextRequest) {
         responseData.total_deducted || responseAmount + responseFee;
       const responseStatus = responseData.status || "pending";
 
-      // Note: We don't check if balance >= totalDeducted here because:
-      // - The user entered the amount they want to withdraw
-      // - The network fee is handled by NutzPay and deducted from the amount
-      // - If the user has exactly the amount they want to withdraw, they should be allowed
-      // - NutzPay will handle any insufficient balance errors on their end
-      // - The fee is the user's responsibility and the network's fee, not our platform fee
+      // IMPORTANT: The network fee (1 USDT for TRC20, 5 USDT for ERC20) is ONLY informative
+      // We deduct ONLY the amount from user's balance, not amount + fee
+      // Example: User has 10 USDT, withdraws 10 USDT -> balance becomes 0 USDT (not -1 or -5)
+      // The fee is handled by NutzPay/network and is not our responsibility
 
       // Update withdrawal with NutzPay response data
       await prisma.withdrawal.update({
@@ -226,26 +207,31 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Update user balance (subtract total_deducted)
+      // Update user balance (subtract only the amount, not amount + fee)
+      // The fee is handled by NutzPay/network and is not our responsibility
+      // If user has 10 USDT and withdraws 10 USDT, balance becomes 0 USDT
       await prisma.balance.update({
         where: {
           id: usdtBalance.id,
         },
         data: {
-          amount: Number(usdtBalance.amount) - totalDeducted,
+          amount: Number(usdtBalance.amount) - amount, // Deduct only the amount, not totalDeducted
           updatedAt: new Date(),
         },
       });
 
       // Create transaction record
+      // Record only the amount withdrawn, not amount + fee
       const withdrawalTransaction = await prisma.transaction.create({
         data: {
           userId: user.id,
           type: "WITHDRAWAL",
-          amount: totalDeducted,
+          amount: amount, // Record only the amount, not totalDeducted
           currency: "USDT",
-          balance: Number(usdtBalance.amount) - totalDeducted,
-          description: `USDT withdrawal to ${walletAddress} (${network})`,
+          balance: Number(usdtBalance.amount) - amount, // Balance after deducting only the amount
+          description: `USDT withdrawal to ${walletAddress} (${network}) - Taxa de rede: ${responseFee.toFixed(
+            2
+          )} USDT (informativa)`,
           createdAt: new Date(),
         },
       });
