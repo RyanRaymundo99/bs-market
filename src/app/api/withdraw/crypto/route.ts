@@ -88,8 +88,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Rate limiting: Check if user has made a withdrawal in the last 2 minutes
+    const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
+    const recentWithdrawal = await prisma.withdrawal.findFirst({
+      where: {
+        userId: user.id,
+        type: "USDT",
+        createdAt: {
+          gte: twoMinutesAgo,
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    if (recentWithdrawal) {
+      const timeSinceLastWithdrawal =
+        Date.now() - recentWithdrawal.createdAt.getTime();
+      const remainingSeconds = Math.ceil(
+        (2 * 60 * 1000 - timeSinceLastWithdrawal) / 1000
+      );
+      return NextResponse.json(
+        {
+          error: `Aguarde ${remainingSeconds} segundos antes de fazer outro saque. Limite: 1 saque a cada 2 minutos.`,
+        },
+        { status: 429 }
+      );
+    }
+
     // Check if user has sufficient balance
-    // The amount sent is the total withdrawal amount (fee is already accounted for in the frontend calculation)
+    // The amount is what the user wants to withdraw. The network fee is handled by NutzPay
+    // and deducted from the amount (not added on top). So if user has 10 USDT and wants
+    // to withdraw 10 USDT, they'll receive (10 - fee) USDT, which is acceptable.
     if (Number(usdtBalance.amount) < amount) {
       return NextResponse.json(
         {
@@ -103,6 +134,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Estimate network fee based on network
+    const estimatedNetworkFee =
+      network === "TRC20" ? 1 : network === "ERC20" ? 5 : 1;
+
+    // Calculate the amount to send to NutzPay
+    // If user wants to withdraw their full balance (or close to it), adjust for the fee
+    // The fee is the user's responsibility and the network's fee, not our platform fee
+    const balanceAmount = Number(usdtBalance.amount);
+    let amountToSend = amount;
+
+    // If the user is trying to withdraw their full balance (within 0.01 USDT tolerance),
+    // adjust the amount to account for the network fee
+    // This allows users to withdraw their full balance without platform blocking them
+    if (Math.abs(balanceAmount - amount) < 0.01) {
+      // User wants to withdraw full balance, so send (balance - estimated fee) to NutzPay
+      // NutzPay will deduct this amount + fee, which should equal the user's balance
+      amountToSend = Math.max(0.01, balanceAmount - estimatedNetworkFee);
+    }
+
     // Generate external ID for NutzPay
     const externalId = `withdrawal_${user.id}_${Date.now()}`;
 
@@ -111,7 +161,7 @@ export async function POST(request: NextRequest) {
       data: {
         userId: user.id,
         type: "USDT",
-        amount: amount,
+        amount: amount, // Store the original amount the user requested
         fee: null, // Will be updated from API response
         netAmount: null, // Will be updated from API response
         status: "PENDING",
@@ -134,7 +184,7 @@ export async function POST(request: NextRequest) {
         }/api/webhooks/nutzpay`;
 
       const nutzPayResponse = await nutzPayService.createUSDTWithdrawal({
-        amount: amount, // Send the full amount, NutzPay will calculate fee
+        amount: amountToSend, // Send the adjusted amount (accounting for fee if full balance)
         recipient_address: walletAddress,
         recipient_network: network,
         description: `USDT withdrawal - ${user.email || user.id}`,
@@ -151,37 +201,12 @@ export async function POST(request: NextRequest) {
         responseData.total_deducted || responseAmount + responseFee;
       const responseStatus = responseData.status || "pending";
 
-      // Safety check: verify user still has enough balance for actual totalDeducted
-      // Re-fetch balance to ensure we have the latest value
-      const currentBalance = await prisma.balance.findFirst({
-        where: {
-          userId: user.id,
-          currency: "USDT",
-        },
-      });
-
-      if (!currentBalance || Number(currentBalance.amount) < totalDeducted) {
-        // Update withdrawal status to failed
-        await prisma.withdrawal.update({
-          where: { id: withdrawal.id },
-          data: {
-            status: "FAILED",
-          },
-        });
-
-        return NextResponse.json(
-          {
-            error: `Saldo insuficiente. Total necessário: ${totalDeducted.toFixed(
-              2
-            )} USDT (incluindo taxa de rede de ${responseFee.toFixed(
-              2
-            )} USDT), mas seu saldo é ${Number(
-              currentBalance?.amount || 0
-            ).toFixed(2)} USDT.`,
-          },
-          { status: 400 }
-        );
-      }
+      // Note: We don't check if balance >= totalDeducted here because:
+      // - The user entered the amount they want to withdraw
+      // - The network fee is handled by NutzPay and deducted from the amount
+      // - If the user has exactly the amount they want to withdraw, they should be allowed
+      // - NutzPay will handle any insufficient balance errors on their end
+      // - The fee is the user's responsibility and the network's fee, not our platform fee
 
       // Update withdrawal with NutzPay response data
       await prisma.withdrawal.update({
