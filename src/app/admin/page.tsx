@@ -81,7 +81,7 @@ interface Transaction {
     | "BUY_CRYPTO"
     | "SELL_CRYPTO"
     | "REFUND";
-  user: string;
+  user: string | { name: string; email: string } | null; // Can be string or object for backward compatibility
   userId?: string;
   value: number;
   status: "PENDING" | "APPROVED" | "REJECTED";
@@ -463,16 +463,23 @@ export default function AdminDashboard() {
   };
 
   const filteredAndSortedTransactions = transactions
-    .filter(
-      (transaction) =>
-        transaction.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    .filter((transaction) => {
+      const userString =
+        typeof transaction.user === "string"
+          ? transaction.user
+          : transaction.user
+          ? `${transaction.user.name} ${transaction.user.email}`
+          : "";
+      return (
+        userString.toLowerCase().includes(searchTerm.toLowerCase()) ||
         getTransactionTypeLabel(transaction.type)
           .toLowerCase()
           .includes(searchTerm.toLowerCase()) ||
         getStatusLabel(transaction.status)
           .toLowerCase()
           .includes(searchTerm.toLowerCase())
-    )
+      );
+    })
     .sort((a, b) => {
       const aValue = a[sortField];
       const bValue = b[sortField];
@@ -1153,7 +1160,11 @@ export default function AdminDashboard() {
                           </span>
                         </td>
                         <td className="py-3 px-4 text-gray-300">
-                          {transaction.user}
+                          {typeof transaction.user === "string"
+                            ? transaction.user
+                            : transaction.user
+                            ? `${transaction.user.name} (${transaction.user.email})`
+                            : "N/A"}
                         </td>
                         <td className="py-3 px-4 text-white font-medium">
                           {formatCurrency(transaction.value)}

@@ -123,12 +123,7 @@ export async function GET(request: NextRequest) {
         balance: balance,
         description: tx.description,
         date: tx.createdAt.toISOString(),
-        user: tx.user
-          ? {
-              name: tx.user.name,
-              email: tx.user.email,
-            }
-          : null,
+        user: tx.user ? tx.user.name || tx.user.email || "Unknown" : "Unknown",
         fiatAmount: fiatAmount,
         status: status,
         relatedId: relatedId,
