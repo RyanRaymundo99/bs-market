@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { hash, compare } from "bcryptjs";
+import { compare } from "bcryptjs";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const email = "admin@bsmarket.com.br";
     const testPassword = "admin123";
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
             "✅ All checks passed! Admin should be able to login."
           );
         }
-      } catch (error) {
+      } catch {
         diagnostics.issues.push("Error testing password");
         diagnostics.solutions.push("Check password hash format in database");
       }

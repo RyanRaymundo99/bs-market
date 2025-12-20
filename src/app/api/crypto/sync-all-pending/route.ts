@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { nutzPayService } from "@/lib/nutzpay";
 import { ledgerService } from "@/lib/ledger";
 import { Decimal } from "@prisma/client/runtime/library";
 
@@ -53,38 +52,6 @@ export async function POST(request: NextRequest) {
     for (const order of pendingOrders) {
       try {
         if (!order.externalOrderId) continue;
-
-        // Create a webhook payload with completed status
-        const webhookPayload = {
-          event: "transaction.completed",
-          data: {
-            transaction_id: order.externalOrderId,
-            external_id: order.externalOrderId,
-            status: "COMPLETED",
-            amount: Number(order.total),
-            currency: "BRL",
-            type: "PIX",
-            usdt_amount: Number(order.amount),
-            created_at: order.createdAt.toISOString(),
-            completed_at: new Date().toISOString(),
-          },
-          timestamp: new Date().toISOString(),
-        };
-
-        // Send to webhook handler
-        const webhookRequest = new Request(
-          `${
-            process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-          }/api/webhooks/nutzpay`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-test-webhook": "true",
-            },
-            body: JSON.stringify(webhookPayload),
-          }
-        );
 
         // We need to call the webhook handler directly since we're in the same process
         // Instead, let's update the order directly

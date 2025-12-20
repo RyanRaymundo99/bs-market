@@ -172,16 +172,21 @@ const SignupWithMandatoryKYC = () => {
 
       // Check if response is JSON before parsing
       const contentType = response.headers.get("content-type");
-      let result: any = {
+      interface ApiResponse {
+        error?: string;
+        success?: boolean;
+        message?: string;
+      }
+      let result: ApiResponse = {
         error: "Ocorreu um erro inesperado. Por favor, tente novamente.",
       };
 
       if (contentType && contentType.includes("application/json")) {
         try {
-          result = await response.json();
+          result = (await response.json()) as ApiResponse;
         } catch (jsonError) {
           console.error("Failed to parse JSON response:", jsonError);
-          const text = await response.text();
+          await response.text(); // Consume the response
           result = {
             error:
               "Não foi possível processar a resposta do servidor. Por favor, verifique sua conexão com a internet e tente novamente.",

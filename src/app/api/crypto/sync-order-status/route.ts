@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { nutzPayService } from "@/lib/nutzpay";
-import { ledgerService } from "@/lib/ledger";
-import { Decimal } from "@prisma/client/runtime/library";
 
 /**
  * Manual sync endpoint to force check and update order status
@@ -53,10 +51,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!order) {
-      return NextResponse.json(
-        { error: "Order not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
     if (order.status === "COMPLETED") {
@@ -76,7 +71,9 @@ export async function POST(request: NextRequest) {
 
     if (order.externalOrderId) {
       try {
-        nutzPayStatus = await nutzPayService.getTransactionStatus(order.externalOrderId);
+        nutzPayStatus = await nutzPayService.getTransactionStatus(
+          order.externalOrderId
+        );
       } catch (error) {
         apiError = error;
         console.error("Error fetching from NutzPay API:", error);
@@ -93,9 +90,13 @@ export async function POST(request: NextRequest) {
         externalOrderId: order.externalOrderId,
       },
       nutzPayStatus: nutzPayStatus,
-      apiError: apiError ? (apiError instanceof Error ? apiError.message : "Unknown error") : null,
-      message: nutzPayStatus 
-        ? "Status fetched from NutzPay API" 
+      apiError: apiError
+        ? apiError instanceof Error
+          ? apiError.message
+          : "Unknown error"
+        : null,
+      message: nutzPayStatus
+        ? "Status fetched from NutzPay API"
         : "Could not fetch from NutzPay API (you may need to manually process the webhook)",
     });
   } catch (error) {
@@ -109,6 +110,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-
-

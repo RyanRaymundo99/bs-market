@@ -60,7 +60,6 @@ export async function GET(
         const externalId = deposit?.externalId;
 
         let nutzPayStatus;
-        let usedId = order.externalOrderId;
 
         try {
           nutzPayStatus = await nutzPayService.getTransactionStatus(
@@ -80,7 +79,6 @@ export async function GET(
               nutzPayStatus = await nutzPayService.getTransactionStatus(
                 externalId
               );
-              usedId = externalId;
             } catch (fallbackError) {
               console.error(
                 "❌ Error fetching with external_id too:",
