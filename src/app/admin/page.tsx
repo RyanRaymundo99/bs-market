@@ -535,7 +535,13 @@ export default function AdminDashboard() {
     fetchUsersList();
   };
 
-  const handleBalanceAdjustment = async () => {
+  const handleBalanceAdjustment = async (e?: React.MouseEvent) => {
+    // Prevent any default form submission behavior
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
     if (!balanceUserId || !balanceAmount || parseFloat(balanceAmount) <= 0) {
       toast({
         variant: "destructive",
@@ -559,17 +565,32 @@ export default function AdminDashboard() {
         }),
       });
 
+      // Check if response is ok before parsing JSON
+      if (!response.ok) {
+        let errorMessage = "Falha ao ajustar saldo";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorData.details || errorMessage;
+        } catch {
+          // If JSON parsing fails, use status text
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+
+      // Parse JSON response
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to adjust balance");
+      // Check for success in response data
+      if (!data.success) {
+        throw new Error(data.error || data.message || "Falha ao ajustar saldo");
       }
 
       toast({
-        title: "Sucesso",
+        title: "✅ Sucesso",
         description: `Saldo ${
           balanceOperation === "CREDIT" ? "creditado" : "deduzido"
-        } com sucesso`,
+        } com sucesso! ${data.data?.userName ? `(${data.data.userName})` : ""}`,
       });
 
       // Reset form
@@ -579,12 +600,12 @@ export default function AdminDashboard() {
       setShowBalanceDialog(false);
 
       // Refresh transactions and finance data
-      fetchFinanceData();
-      fetchRealtimeTransactions();
+      await Promise.all([fetchFinanceData(), fetchRealtimeTransactions()]);
     } catch (error) {
+      console.error("Balance adjustment error:", error);
       toast({
         variant: "destructive",
-        title: "Erro",
+        title: "❌ Erro",
         description:
           error instanceof Error ? error.message : "Falha ao ajustar saldo",
       });
@@ -1898,6 +1919,7 @@ export default function AdminDashboard() {
                 Cancelar
               </Button>
               <Button
+                type="button"
                 onClick={handleBalanceAdjustment}
                 disabled={processingBalance || !balanceUserId || !balanceAmount}
                 className={`${

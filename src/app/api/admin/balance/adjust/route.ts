@@ -126,41 +126,46 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Create notification for the user
-    await prisma.notification.create({
-      data: {
-        userId: userId,
-        type: "balance_adjusted",
-        title:
-          operation === "CREDIT"
-            ? `Saldo Creditado - ${amountDecimal.toFixed(2)} ${currency}`
-            : `Saldo Deduzido - ${amountDecimal.toFixed(2)} ${currency}`,
-        message:
-          operation === "CREDIT"
-            ? `Seu saldo foi creditado com ${amountDecimal.toFixed(
-                2
-              )} ${currency}. Novo saldo: ${updatedBalance.amount.toFixed(
-                2
-              )} ${currency}.${reason ? ` Motivo: ${reason}` : ""}`
-            : `Seu saldo foi deduzido em ${amountDecimal.toFixed(
-                2
-              )} ${currency}. Novo saldo: ${updatedBalance.amount.toFixed(
-                2
-              )} ${currency}.${reason ? ` Motivo: ${reason}` : ""}`,
-        metadata: {
-          transactionId: transaction.id,
-          operation: operation,
-          amount: amountDecimal.toNumber(),
-          currency: currency,
-          previousBalance: currentBalance.amount.toNumber(),
-          newBalance: updatedBalance.amount.toNumber(),
-          reason: reason || null,
-          adminId: adminSession.userId,
+    // Create notification for the user (non-blocking - don't fail if this errors)
+    try {
+      await prisma.notification.create({
+        data: {
+          userId: userId,
+          type: "balance_adjusted",
+          title:
+            operation === "CREDIT"
+              ? `Saldo Creditado - ${amountDecimal.toFixed(2)} ${currency}`
+              : `Saldo Deduzido - ${amountDecimal.toFixed(2)} ${currency}`,
+          message:
+            operation === "CREDIT"
+              ? `Seu saldo foi creditado com ${amountDecimal.toFixed(
+                  2
+                )} ${currency}. Novo saldo: ${updatedBalance.amount.toFixed(
+                  2
+                )} ${currency}.${reason ? ` Motivo: ${reason}` : ""}`
+              : `Seu saldo foi deduzido em ${amountDecimal.toFixed(
+                  2
+                )} ${currency}. Novo saldo: ${updatedBalance.amount.toFixed(
+                  2
+                )} ${currency}.${reason ? ` Motivo: ${reason}` : ""}`,
+          metadata: {
+            transactionId: transaction.id,
+            operation: operation,
+            amount: amountDecimal.toNumber(),
+            currency: currency,
+            previousBalance: currentBalance.amount.toNumber(),
+            newBalance: updatedBalance.amount.toNumber(),
+            reason: reason || null,
+            adminId: adminSession.userId,
+          },
         },
-      },
-    });
+      });
+    } catch (notificationError) {
+      console.error("Failed to create notification:", notificationError);
+      // Don't fail the request if notification creation fails
+    }
 
-    // Send balance adjustment email (don't await to avoid blocking response)
+    // Send balance adjustment email (non-blocking - don't await to avoid blocking response)
     if (user.email && user.name) {
       sendBalanceAdjustmentEmail({
         userName: user.name,
