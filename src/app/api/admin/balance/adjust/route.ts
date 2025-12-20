@@ -68,12 +68,10 @@ export async function POST(request: NextRequest) {
     const currentBalance = await ledgerService.getUserBalance(userId, currency);
 
     // Perform operation
-    let newBalance: Decimal;
     let transactionType: "DEPOSIT" | "WITHDRAWAL" | "FEE" | "REFUND";
 
     if (operation === "CREDIT") {
       await ledgerService.updateBalance(userId, currency, amountDecimal, "ADD");
-      newBalance = currentBalance.amount.add(amountDecimal);
       transactionType = "DEPOSIT";
     } else {
       // DEDUCT
@@ -96,7 +94,6 @@ export async function POST(request: NextRequest) {
         amountDecimal,
         "SUBTRACT"
       );
-      newBalance = currentBalance.amount.sub(amountDecimal);
       transactionType = "WITHDRAWAL";
     }
 

@@ -21,7 +21,10 @@ export async function GET(request: NextRequest) {
     const lastId = searchParams.get("lastId"); // Last transaction ID for pagination
 
     // Build where clause
-    const where: any = {};
+    const where: {
+      createdAt?: { gt: Date };
+      id?: { gt: string };
+    } = {};
 
     // If 'since' is provided, only get transactions after that time (for real-time updates)
     if (since) {
