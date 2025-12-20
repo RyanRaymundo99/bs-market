@@ -287,12 +287,6 @@ export async function POST(request: NextRequest) {
           selfieUrl,
         });
       } catch (fileError: unknown) {
-        const errorMessage =
-          fileError instanceof Error ? fileError.message : "Unknown error";
-        const errorCode =
-          fileError instanceof Error && "code" in fileError
-            ? String(fileError.code)
-            : undefined;
         console.error("KYC Submission - File system error:", fileError);
         return NextResponse.json(
           {
