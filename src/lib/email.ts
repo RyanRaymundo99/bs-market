@@ -5,10 +5,12 @@ export async function sendEmail({
   to,
   subject,
   text,
+  html,
 }: {
   to: string;
   subject: string;
   text: string;
+  html?: string;
 }) {
   console.log("🔍 Email function called with:", { to, subject });
 
@@ -83,6 +85,7 @@ export async function sendEmail({
       to: to.toLowerCase().trim(),
       subject: subject.trim(),
       text: text.trim(),
+      html: html || text.trim().replace(/\n/g, "<br>"),
     });
 
     if (useResend) {
