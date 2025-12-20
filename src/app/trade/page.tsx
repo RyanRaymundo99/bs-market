@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, Check, TrendingUp, Clock, QrCode } from "lucide-react";
+import { Copy, Check, TrendingUp, Clock, QrCode, Loader2 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const TradePage = () => {
@@ -84,8 +84,14 @@ const TradePage = () => {
       fee: number;
       rate: number;
       status: string;
+      isRecent?: boolean;
     }>
   >([]);
+
+  // Track which transactions are in loading state (recently created, status being determined)
+  const [loadingTransactions, setLoadingTransactions] = useState<Set<string>>(
+    new Set()
+  );
 
   // Store PIX data by transaction ID so we can reopen the modal for pending payments
   // Load from localStorage on mount
@@ -315,18 +321,48 @@ const TradePage = () => {
               // Use externalOrderId (transaction_id) as id if available, otherwise use order.id
               // This ensures consistency with how new transactions are added
               const transactionId = order.externalOrderId || order.id;
+
+              // Check if this is a recent transaction (within last 10 seconds)
+              const orderDate = new Date(order.createdAt);
+              const isRecent = Date.now() - orderDate.getTime() < 10000;
+
               return {
                 id: transactionId,
-                date: new Date(order.createdAt),
+                date: orderDate,
                 type: "buy" as const,
                 amount: total, // Total paid
                 received: parseFloat(order.amount.toString()),
                 fee: fee,
                 rate: parseFloat(order.price.toString()),
                 status: order.status,
+                isRecent: isRecent, // Mark as recent
               };
             });
+
+          // Update transaction history
           setTransactionHistory(buyOrders);
+
+          // Mark recent transactions as loading if they're not COMPLETED
+          setLoadingTransactions((prev) => {
+            const newSet = new Set(prev);
+            buyOrders.forEach((order) => {
+              if (order.isRecent && order.status !== "COMPLETED") {
+                newSet.add(order.id);
+                // Auto-remove from loading after 10 seconds
+                setTimeout(() => {
+                  setLoadingTransactions((current) => {
+                    const updated = new Set(current);
+                    updated.delete(order.id);
+                    return updated;
+                  });
+                }, 10000);
+              } else if (order.status === "COMPLETED") {
+                // Remove from loading if completed
+                newSet.delete(order.id);
+              }
+            });
+            return newSet;
+          });
 
           // Clean up PIX data for completed transactions
           setStoredPixData((prev) => {
@@ -530,6 +566,21 @@ const TradePage = () => {
         };
         setTransactionHistory((prev) => [newTransaction, ...prev]);
 
+        // Mark this transaction as loading for 10 seconds to prevent premature status display
+        const transactionId = data.data.transaction_id;
+        setLoadingTransactions((prev) => new Set(prev).add(transactionId));
+
+        // Remove from loading state after 10 seconds
+        setTimeout(() => {
+          setLoadingTransactions((prev) => {
+            const newSet = new Set(prev);
+            newSet.delete(transactionId);
+            return newSet;
+          });
+          // Refetch to get actual status
+          fetchTransactionHistory();
+        }, 10000);
+
         toast({
           title: "Compra iniciada!",
           description:
@@ -695,6 +746,7 @@ const TradePage = () => {
                   const hasPixData = storedPixData.has(transaction.id);
                   const isPending = transaction.status === "PENDING";
                   const isClickable = isPending && hasPixData;
+                  const isLoading = loadingTransactions.has(transaction.id);
 
                   return (
                     <div
@@ -717,21 +769,30 @@ const TradePage = () => {
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
-                            <Badge
-                              className={
-                                transaction.status === "COMPLETED"
-                                  ? "bg-green-500/20 text-green-400 border-green-500/30"
+                            {isLoading ? (
+                              <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 flex items-center gap-1.5">
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                                {language === "pt"
+                                  ? "Verificando..."
+                                  : "Checking..."}
+                              </Badge>
+                            ) : (
+                              <Badge
+                                className={
+                                  transaction.status === "COMPLETED"
+                                    ? "bg-green-500/20 text-green-400 border-green-500/30"
+                                    : transaction.status === "PENDING"
+                                    ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
+                                    : "bg-red-500/20 text-red-400 border-red-500/30"
+                                }
+                              >
+                                {transaction.status === "COMPLETED"
+                                  ? t("completed")
                                   : transaction.status === "PENDING"
-                                  ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
-                                  : "bg-red-500/20 text-red-400 border-red-500/30"
-                              }
-                            >
-                              {transaction.status === "COMPLETED"
-                                ? t("completed")
-                                : transaction.status === "PENDING"
-                                ? t("pending")
-                                : t("failed")}
-                            </Badge>
+                                  ? t("pending")
+                                  : t("failed")}
+                              </Badge>
+                            )}
                             <span className="text-xs text-gray-400">
                               {transaction.date.toLocaleDateString(
                                 language === "pt" ? "pt-BR" : "en-US"
@@ -813,10 +874,21 @@ const TradePage = () => {
           setShowPixModal(open);
           // When modal closes, wait a bit before refetching to avoid race conditions
           // This prevents showing "FAILED" status immediately after closing if payment is still processing
-          if (!open) {
+          if (!open && pixData) {
+            // Mark transaction as loading when modal closes
+            setLoadingTransactions((prev) =>
+              new Set(prev).add(pixData.transactionId)
+            );
+
+            // Remove from loading after 8 seconds and refetch
             setTimeout(() => {
+              setLoadingTransactions((prev) => {
+                const newSet = new Set(prev);
+                newSet.delete(pixData.transactionId);
+                return newSet;
+              });
               fetchTransactionHistory();
-            }, 2000); // 2 second delay to allow webhook processing
+            }, 8000); // 8 second delay to allow webhook processing
           }
         }}
       >
