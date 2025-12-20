@@ -326,13 +326,25 @@ export async function GET(request: NextRequest) {
         },
       });
 
-      const dayTrades = { _sum: { fiatAmount: 0 } };
+      // Calculate daily trade volume (from orders)
+      const dayTrades = await prisma.order.aggregate({
+        where: {
+          status: "COMPLETED",
+          createdAt: {
+            gte: date,
+            lt: nextDate,
+          },
+        },
+        _sum: {
+          total: true,
+        },
+      });
 
       chartData.push({
         date: date.toISOString().split("T")[0],
         deposits: Number(dayDeposits._sum.amount || 0),
         withdrawals: Number(dayWithdrawals._sum.amount || 0),
-        trades: Number(dayTrades._sum.fiatAmount || 0),
+        trades: Number(dayTrades._sum.total || 0),
       });
     }
 

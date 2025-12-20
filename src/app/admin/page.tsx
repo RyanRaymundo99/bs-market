@@ -47,6 +47,18 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import NotificationBell from "@/components/admin/NotificationBell";
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 
 interface DashboardStats {
   totalUsers: number;
@@ -163,7 +175,7 @@ export default function AdminDashboard() {
     balanceChange: 0,
   });
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [, setChartData] = useState<ChartData[]>([]);
+  const [chartData, setChartData] = useState<ChartData[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<keyof Transaction>("date");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
@@ -1018,13 +1030,80 @@ export default function AdminDashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-64 flex items-center justify-center">
-                  <div className="text-center text-gray-400">
-                    <BarChart3 className="h-12 w-12 mx-auto mb-2" />
-                    <p>Gráfico de linha será implementado</p>
-                    <p className="text-sm">Dados dos últimos 30 dias</p>
+                {chartData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                      <XAxis
+                        dataKey="date"
+                        stroke="#9CA3AF"
+                        fontSize={12}
+                        tickFormatter={(value) => {
+                          const date = new Date(value);
+                          return `${date.getDate()}/${date.getMonth() + 1}`;
+                        }}
+                      />
+                      <YAxis
+                        stroke="#9CA3AF"
+                        fontSize={12}
+                        tickFormatter={(value) => {
+                          if (value >= 1000000) {
+                            return `R$ ${(value / 1000000).toFixed(1)}M`;
+                          }
+                          if (value >= 1000) {
+                            return `R$ ${(value / 1000).toFixed(1)}k`;
+                          }
+                          return `R$ ${value.toFixed(0)}`;
+                        }}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#1F2937",
+                          border: "1px solid #374151",
+                          borderRadius: "8px",
+                          color: "#F3F4F6",
+                        }}
+                        labelFormatter={(value) => {
+                          const date = new Date(value);
+                          return date.toLocaleDateString("pt-BR");
+                        }}
+                        formatter={(value: number) => [
+                          `R$ ${value.toFixed(2)}`,
+                          "",
+                        ]}
+                      />
+                      <Legend
+                        wrapperStyle={{ color: "#9CA3AF" }}
+                        iconType="line"
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="deposits"
+                        stroke="#10B981"
+                        strokeWidth={2}
+                        name="Depósitos"
+                        dot={{ fill: "#10B981", r: 3 }}
+                        activeDot={{ r: 5 }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="withdrawals"
+                        stroke="#EF4444"
+                        strokeWidth={2}
+                        name="Saques"
+                        dot={{ fill: "#EF4444", r: 3 }}
+                        activeDot={{ r: 5 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-64 flex items-center justify-center">
+                    <div className="text-center text-gray-400">
+                      <BarChart3 className="h-12 w-12 mx-auto mb-2" />
+                      <p>Carregando dados...</p>
+                    </div>
                   </div>
-                </div>
+                )}
               </CardContent>
             </Card>
 
@@ -1036,13 +1115,65 @@ export default function AdminDashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-64 flex items-center justify-center">
-                  <div className="text-center text-gray-400">
-                    <PieChart className="h-12 w-12 mx-auto mb-2" />
-                    <p>Gráfico de barras será implementado</p>
-                    <p className="text-sm">Volume diário de negociações</p>
+                {chartData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                      <XAxis
+                        dataKey="date"
+                        stroke="#9CA3AF"
+                        fontSize={12}
+                        tickFormatter={(value) => {
+                          const date = new Date(value);
+                          return `${date.getDate()}/${date.getMonth() + 1}`;
+                        }}
+                      />
+                      <YAxis
+                        stroke="#9CA3AF"
+                        fontSize={12}
+                        tickFormatter={(value) => {
+                          if (value >= 1000000) {
+                            return `R$ ${(value / 1000000).toFixed(1)}M`;
+                          }
+                          if (value >= 1000) {
+                            return `R$ ${(value / 1000).toFixed(1)}k`;
+                          }
+                          return `R$ ${value.toFixed(0)}`;
+                        }}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#1F2937",
+                          border: "1px solid #374151",
+                          borderRadius: "8px",
+                          color: "#F3F4F6",
+                        }}
+                        labelFormatter={(value) => {
+                          const date = new Date(value);
+                          return date.toLocaleDateString("pt-BR");
+                        }}
+                        formatter={(value: number) => [
+                          `R$ ${value.toFixed(2)}`,
+                          "Volume",
+                        ]}
+                      />
+                      <Legend wrapperStyle={{ color: "#9CA3AF" }} />
+                      <Bar
+                        dataKey="trades"
+                        fill="#3B82F6"
+                        name="Volume de Trades"
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-64 flex items-center justify-center">
+                    <div className="text-center text-gray-400">
+                      <PieChart className="h-12 w-12 mx-auto mb-2" />
+                      <p>Carregando dados...</p>
+                    </div>
                   </div>
-                </div>
+                )}
               </CardContent>
             </Card>
           </div>

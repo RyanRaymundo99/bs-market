@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { validateAdminSession } from "@/lib/admin-session";
 import { LedgerService } from "@/lib/ledger";
 import { Decimal } from "@prisma/client/runtime/library";
+import { sendBalanceAdjustmentEmail } from "@/lib/receipt-email";
 
 const ledgerService = new LedgerService();
 
@@ -158,6 +159,37 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+
+    // Send balance adjustment email (don't await to avoid blocking response)
+    if (user.email && user.name) {
+      sendBalanceAdjustmentEmail({
+        userName: user.name,
+        userEmail: user.email,
+        operation: operation,
+        amount: amountDecimal.toNumber(),
+        currency: currency,
+        previousBalance: currentBalance.amount.toNumber(),
+        newBalance: updatedBalance.amount.toNumber(),
+        reason: reason || null,
+        transactionId: transaction.id,
+        date: new Date(),
+      })
+        .then((result) => {
+          if (result.success) {
+            console.log(
+              `✅ Balance adjustment email sent to ${user.email} (${operation})`
+            );
+          } else {
+            console.error(
+              `❌ Failed to send balance adjustment email: ${result.message}`
+            );
+          }
+        })
+        .catch((error) => {
+          console.error("Failed to send balance adjustment email:", error);
+          // Don't fail the request if email fails
+        });
+    }
 
     return NextResponse.json({
       success: true,

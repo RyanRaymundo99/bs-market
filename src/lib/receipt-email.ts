@@ -287,3 +287,97 @@ Equipe BS Market
     return { success: false, message: "Failed to send receipt email" };
   }
 }
+
+interface BalanceAdjustmentData {
+  userName: string;
+  userEmail: string;
+  operation: "CREDIT" | "DEDUCT";
+  amount: number;
+  currency: string;
+  previousBalance: number;
+  newBalance: number;
+  reason?: string | null;
+  transactionId: string;
+  date: Date;
+}
+
+export async function sendBalanceAdjustmentEmail(data: BalanceAdjustmentData) {
+  try {
+    const formattedDate = new Intl.DateTimeFormat("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(data.date);
+
+    const isCredit = data.operation === "CREDIT";
+    const subject = `BS Market - ${
+      isCredit ? "Crédito" : "Débito"
+    } de Saldo #${data.transactionId.slice(0, 8)}`;
+
+    const text = `
+Olá ${data.userName},
+
+Seu saldo foi ${isCredit ? "creditado" : "deduzido"}!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 DETALHES DA OPERAÇÃO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ID da Transação: ${data.transactionId}
+Data: ${formattedDate}
+Tipo: ${isCredit ? "Crédito" : "Débito"}
+Moeda: ${data.currency}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💰 VALORES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${isCredit ? "Valor Creditado" : "Valor Deduzido"}: ${data.amount.toFixed(2)} ${
+      data.currency
+    }
+Saldo Anterior: ${data.previousBalance.toFixed(2)} ${data.currency}
+Novo Saldo: ${data.newBalance.toFixed(2)} ${data.currency}
+
+${data.reason ? `Motivo: ${data.reason}` : ""}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${
+  isCredit
+    ? "O valor foi creditado na sua conta e já está disponível para uso."
+    : "O valor foi deduzido da sua conta conforme solicitado."
+}
+
+Se você tiver alguma dúvida sobre esta operação, entre em contato com nosso suporte.
+
+Atenciosamente,
+Equipe BS Market
+`;
+
+    const result = await sendEmail({
+      to: data.userEmail,
+      subject,
+      text,
+    });
+
+    if (result.success) {
+      console.log(
+        `✅ Balance adjustment email sent to ${data.userEmail} (${data.operation})`
+      );
+    } else {
+      console.error(
+        `❌ Failed to send balance adjustment email: ${result.message}`
+      );
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Error sending balance adjustment email:", error);
+    return {
+      success: false,
+      message: "Failed to send balance adjustment email",
+    };
+  }
+}
