@@ -105,6 +105,11 @@ export async function GET(request: NextRequest) {
     // Convert Decimal amounts to numbers for frontend compatibility
     // Include webhook information for each order
     const formattedOrders = orders.map((order) => {
+      // CRITICAL FIRST CHECK: Calculate order age immediately
+      const orderAge = Date.now() - order.createdAt.getTime();
+      const isRecentOrder = orderAge < 20 * 60 * 1000; // 20 minutes (increased for safety)
+      const isVeryRecentOrder = orderAge < 15 * 60 * 1000; // 15 minutes (increased for safety)
+
       // Find matching webhook by orderId, transactionId, or externalId
       const matchingWebhook =
         webhookMap.get(order.id) ||
@@ -113,56 +118,121 @@ export async function GET(request: NextRequest) {
             webhookByExternalId.get(order.externalOrderId)
           : null);
 
-      // IMPORTANT: Order status is the source of truth since webhook handler already updates it
-      // Only use webhook status if:
-      // 1. Order is still PENDING (webhook might not have been processed yet)
-      // 2. Webhook was processed successfully and order hasn't been updated since
-      // 3. Webhook has a different status than the order (might indicate a recent update)
-      let finalStatus = order.status;
-
       // Check if there's evidence the payment succeeded (transaction record exists)
       const hasSuccessfulTransaction = orderHasTransaction.get(order.id);
 
-      if (matchingWebhook && matchingWebhook.processed) {
-        // Webhook was processed, so order should have been updated
-        // But if order is still PENDING and webhook says COMPLETED, trust the webhook
+      // IMPORTANT: Be very conservative with FAILED status
+      // Only show FAILED if we're absolutely certain the payment failed
+
+      // CRITICAL: For recent orders, NEVER show FAILED - always show PENDING
+      // This prevents premature failure status while webhooks are still processing
+      let finalStatus = order.status;
+
+      // FIRST PRIORITY: If order is very recent and marked as FAILED, immediately override to PENDING
+      // Do this BEFORE any other logic to prevent FAILED from showing
+      const orderStatusStr = String(order.status).toUpperCase();
+      if (isVeryRecentOrder && orderStatusStr === "FAILED") {
+        finalStatus = "PENDING";
+      }
+
+      // If there's a transaction record, payment definitely succeeded
+      if (hasSuccessfulTransaction) {
+        finalStatus = "COMPLETED";
+      } else if (matchingWebhook && matchingWebhook.processed) {
+        // Webhook was processed
         const webhookStatus = matchingWebhook.status?.toUpperCase();
 
         if (order.status === "PENDING" && webhookStatus === "COMPLETED") {
           // Order is pending but webhook says completed - use webhook status
           finalStatus = "COMPLETED";
-        } else if (order.status === "PENDING" && webhookStatus === "FAILED") {
-          // Only mark as FAILED if:
-          // 1. Webhook was processed successfully
-          // 2. There's NO evidence of a successful transaction (no transaction record)
-          // 3. The webhook is recent (not stale - within last 5 minutes)
+        } else if (
+          order.status === ("FAILED" as any) ||
+          webhookStatus === "FAILED"
+        ) {
+          // Order or webhook says FAILED - but be very conservative
+          // Only trust FAILED if:
+          // 1. Order is NOT recent (at least 15 minutes old) - gives time for webhooks to process
+          // 2. Webhook was processed successfully
+          // 3. There's NO transaction record
+          // 4. Webhook is also not too recent (at least 5 minutes old) - avoids premature failures
           const webhookAge = Date.now() - matchingWebhook.createdAt.getTime();
           const isRecentWebhook = webhookAge < 5 * 60 * 1000; // 5 minutes
 
-          if (!hasSuccessfulTransaction && isRecentWebhook) {
-            // No transaction record and recent failed webhook - likely actually failed
+          if (!isRecentOrder && !isRecentWebhook) {
+            // Order and webhook are both old enough - likely actually failed
             finalStatus = "FAILED";
-          } else if (hasSuccessfulTransaction) {
-            // Transaction exists - payment succeeded, ignore failed webhook
-            finalStatus = "COMPLETED";
+          } else {
+            // Order or webhook is too recent - keep as PENDING to avoid false negatives
+            // Payment might still be processing
+            finalStatus = "PENDING";
           }
-          // If webhook is old and no transaction, keep as PENDING (might be stale)
+        } else if (
+          order.status === "COMPLETED" ||
+          webhookStatus === "COMPLETED"
+        ) {
+          // Trust completed status
+          finalStatus = "COMPLETED";
         } else {
-          // Order status is already updated, use it as source of truth
-          finalStatus = order.status;
+          // Default to order status, but prefer PENDING for recent orders
+          if (isRecentOrder && order.status === ("FAILED" as any)) {
+            // Recent order marked as FAILED - might be premature, keep as PENDING
+            finalStatus = "PENDING";
+          } else {
+            finalStatus = order.status;
+          }
         }
       } else if (
         matchingWebhook &&
         !matchingWebhook.processed &&
         matchingWebhook.error
       ) {
-        // Webhook has error - keep order status but note the error
-        finalStatus = order.status;
+        // Webhook has error - keep order status but prefer PENDING for recent orders
+        if (isRecentOrder && order.status === ("FAILED" as any)) {
+          finalStatus = "PENDING";
+        } else {
+          finalStatus = order.status;
+        }
+      } else {
+        // No webhook or unprocessed webhook - be conservative
+        if (isRecentOrder && order.status === ("FAILED" as any)) {
+          // Recent order marked as FAILED without clear evidence - keep as PENDING
+          finalStatus = "PENDING";
+        } else {
+          finalStatus = order.status;
+        }
       }
 
-      // Final safety check: if there's a transaction record, payment succeeded
+      // Final safety check: if there's a transaction record, payment definitely succeeded
       if (hasSuccessfulTransaction && finalStatus !== "COMPLETED") {
         finalStatus = "COMPLETED";
+      }
+
+      // Ultimate safety: for recent orders, NEVER show FAILED
+      // Always show PENDING to give webhooks time to process
+      // Convert to string and uppercase for reliable comparison
+      const finalStatusStr = String(finalStatus).toUpperCase();
+
+      if (isRecentOrder && finalStatusStr === "FAILED") {
+        finalStatus = "PENDING";
+      }
+
+      // Double-check: if somehow we still have FAILED for recent orders, force PENDING
+      if (isVeryRecentOrder && finalStatusStr === "FAILED") {
+        finalStatus = "PENDING";
+      }
+
+      // Triple-check: absolute safety net - if order is less than 20 minutes old and status is FAILED, force PENDING
+      // This is the final override - no matter what logic ran before, if order is recent and status is FAILED, show PENDING
+      if (
+        orderAge < 20 * 60 * 1000 &&
+        String(finalStatus).toUpperCase() === "FAILED"
+      ) {
+        console.log(
+          `[Orders API] Overriding FAILED to PENDING for recent order ${
+            order.id
+          } (age: ${Math.round(orderAge / 1000)}s)`
+        );
+        finalStatus = "PENDING";
       }
 
       return {
