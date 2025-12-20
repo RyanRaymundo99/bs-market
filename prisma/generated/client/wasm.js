@@ -5,28 +5,13 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 
 const {
-  PrismaClientKnownRequestError,
-  PrismaClientUnknownRequestError,
-  PrismaClientRustPanicError,
-  PrismaClientInitializationError,
-  PrismaClientValidationError,
-  getPrismaClient,
-  sqltag,
-  empty,
-  join,
-  raw,
-  skip,
   Decimal,
-  Debug,
   objectEnumValues,
   makeStrictEnum,
-  Extensions,
-  warnOnce,
-  defineDmmfProperty,
   Public,
   getRuntime,
-  createParam,
-} = require('./runtime/wasm-engine-edge.js')
+  skip
+} = require('./runtime/index-browser.js')
 
 
 const Prisma = {}
@@ -35,35 +20,79 @@ exports.Prisma = Prisma
 exports.$Enums = {}
 
 /**
- * Prisma Client JS version: 6.17.1
- * Query Engine version: 272a37d34178c2894197e17273bf937f25acdeac
+ * Prisma Client JS version: 6.12.0
+ * Query Engine version: 8047c96bbd92db98a2abc7c9323ce77c02c89dbc
  */
 Prisma.prismaVersion = {
-  client: "6.17.1",
-  engine: "272a37d34178c2894197e17273bf937f25acdeac"
+  client: "6.12.0",
+  engine: "8047c96bbd92db98a2abc7c9323ce77c02c89dbc"
 }
 
-Prisma.PrismaClientKnownRequestError = PrismaClientKnownRequestError;
-Prisma.PrismaClientUnknownRequestError = PrismaClientUnknownRequestError
-Prisma.PrismaClientRustPanicError = PrismaClientRustPanicError
-Prisma.PrismaClientInitializationError = PrismaClientInitializationError
-Prisma.PrismaClientValidationError = PrismaClientValidationError
+Prisma.PrismaClientKnownRequestError = () => {
+  const runtimeName = getRuntime().prettyName;
+  throw new Error(`PrismaClientKnownRequestError is unable to run in this browser environment, or has been bundled for the browser (running in ${runtimeName}).
+In case this error is unexpected for you, please report it in https://pris.ly/prisma-prisma-bug-report`,
+)};
+Prisma.PrismaClientUnknownRequestError = () => {
+  const runtimeName = getRuntime().prettyName;
+  throw new Error(`PrismaClientUnknownRequestError is unable to run in this browser environment, or has been bundled for the browser (running in ${runtimeName}).
+In case this error is unexpected for you, please report it in https://pris.ly/prisma-prisma-bug-report`,
+)}
+Prisma.PrismaClientRustPanicError = () => {
+  const runtimeName = getRuntime().prettyName;
+  throw new Error(`PrismaClientRustPanicError is unable to run in this browser environment, or has been bundled for the browser (running in ${runtimeName}).
+In case this error is unexpected for you, please report it in https://pris.ly/prisma-prisma-bug-report`,
+)}
+Prisma.PrismaClientInitializationError = () => {
+  const runtimeName = getRuntime().prettyName;
+  throw new Error(`PrismaClientInitializationError is unable to run in this browser environment, or has been bundled for the browser (running in ${runtimeName}).
+In case this error is unexpected for you, please report it in https://pris.ly/prisma-prisma-bug-report`,
+)}
+Prisma.PrismaClientValidationError = () => {
+  const runtimeName = getRuntime().prettyName;
+  throw new Error(`PrismaClientValidationError is unable to run in this browser environment, or has been bundled for the browser (running in ${runtimeName}).
+In case this error is unexpected for you, please report it in https://pris.ly/prisma-prisma-bug-report`,
+)}
 Prisma.Decimal = Decimal
 
 /**
  * Re-export of sql-template-tag
  */
-Prisma.sql = sqltag
-Prisma.empty = empty
-Prisma.join = join
-Prisma.raw = raw
+Prisma.sql = () => {
+  const runtimeName = getRuntime().prettyName;
+  throw new Error(`sqltag is unable to run in this browser environment, or has been bundled for the browser (running in ${runtimeName}).
+In case this error is unexpected for you, please report it in https://pris.ly/prisma-prisma-bug-report`,
+)}
+Prisma.empty = () => {
+  const runtimeName = getRuntime().prettyName;
+  throw new Error(`empty is unable to run in this browser environment, or has been bundled for the browser (running in ${runtimeName}).
+In case this error is unexpected for you, please report it in https://pris.ly/prisma-prisma-bug-report`,
+)}
+Prisma.join = () => {
+  const runtimeName = getRuntime().prettyName;
+  throw new Error(`join is unable to run in this browser environment, or has been bundled for the browser (running in ${runtimeName}).
+In case this error is unexpected for you, please report it in https://pris.ly/prisma-prisma-bug-report`,
+)}
+Prisma.raw = () => {
+  const runtimeName = getRuntime().prettyName;
+  throw new Error(`raw is unable to run in this browser environment, or has been bundled for the browser (running in ${runtimeName}).
+In case this error is unexpected for you, please report it in https://pris.ly/prisma-prisma-bug-report`,
+)}
 Prisma.validator = Public.validator
 
 /**
 * Extensions
 */
-Prisma.getExtensionContext = Extensions.getExtensionContext
-Prisma.defineExtension = Extensions.defineExtension
+Prisma.getExtensionContext = () => {
+  const runtimeName = getRuntime().prettyName;
+  throw new Error(`Extensions.getExtensionContext is unable to run in this browser environment, or has been bundled for the browser (running in ${runtimeName}).
+In case this error is unexpected for you, please report it in https://pris.ly/prisma-prisma-bug-report`,
+)}
+Prisma.defineExtension = () => {
+  const runtimeName = getRuntime().prettyName;
+  throw new Error(`Extensions.defineExtension is unable to run in this browser environment, or has been bundled for the browser (running in ${runtimeName}).
+In case this error is unexpected for you, please report it in https://pris.ly/prisma-prisma-bug-report`,
+)}
 
 /**
  * Shorthand utilities for JSON filtering
@@ -80,11 +109,10 @@ Prisma.NullTypes = {
 
 
 
-
-
 /**
  * Enums
  */
+
 exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
   ReadUncommitted: 'ReadUncommitted',
   ReadCommitted: 'ReadCommitted',
@@ -327,12 +355,6 @@ exports.Prisma.NullsOrder = {
   first: 'first',
   last: 'last'
 };
-exports.VerificationType = exports.$Enums.VerificationType = {
-  EMAIL: 'EMAIL',
-  PHONE: 'PHONE',
-  PASSWORD_RESET: 'PASSWORD_RESET'
-};
-
 exports.ApprovalStatus = exports.$Enums.ApprovalStatus = {
   PENDING: 'PENDING',
   APPROVED: 'APPROVED',
@@ -350,6 +372,12 @@ exports.DocumentType = exports.$Enums.DocumentType = {
   HABILITACAO: 'HABILITACAO',
   CNH: 'CNH',
   PASSPORT: 'PASSPORT'
+};
+
+exports.VerificationType = exports.$Enums.VerificationType = {
+  EMAIL: 'EMAIL',
+  PHONE: 'PHONE',
+  PASSWORD_RESET: 'PASSWORD_RESET'
 };
 
 exports.DepositStatus = exports.$Enums.DepositStatus = {
@@ -426,83 +454,34 @@ exports.Prisma.ModelName = {
   Transaction: 'Transaction',
   WebhookEvent: 'WebhookEvent'
 };
+
 /**
- * Create the Client
+ * This is a stub Prisma Client that will error at runtime if called.
  */
-const config = {
-  "generator": {
-    "name": "client",
-    "provider": {
-      "fromEnvVar": null,
-      "value": "prisma-client-js"
-    },
-    "output": {
-      "value": "C:\\Users\\Rian9\\OneDrive\\Documents\\GitHub\\bs-market\\prisma\\generated\\client",
-      "fromEnvVar": null
-    },
-    "config": {
-      "engineType": "library"
-    },
-    "binaryTargets": [
-      {
-        "fromEnvVar": null,
-        "value": "windows",
-        "native": true
-      }
-    ],
-    "previewFeatures": [],
-    "sourceFilePath": "C:\\Users\\Rian9\\OneDrive\\Documents\\GitHub\\bs-market\\prisma\\schema.prisma",
-    "isCustomOutput": true
-  },
-  "relativeEnvPaths": {
-    "rootEnvPath": null,
-    "schemaEnvPath": "../../../.env"
-  },
-  "relativePath": "../..",
-  "clientVersion": "6.17.1",
-  "engineVersion": "272a37d34178c2894197e17273bf937f25acdeac",
-  "datasourceNames": [
-    "db"
-  ],
-  "activeProvider": "postgresql",
-  "postinstall": false,
-  "inlineDatasources": {
-    "db": {
-      "url": {
-        "fromEnvVar": "DATABASE_URL",
-        "value": null
-      }
-    }
-  },
-  "inlineSchema": "generator client {\n  provider = \"prisma-client-js\"\n  output   = \"./generated/client\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel User {\n  id                          String         @id @map(\"_id\")\n  name                        String\n  email                       String         @unique\n  cpf                         String?        @unique\n  phone                       String?        @unique\n  password                    String? // Add password field directly to User\n  emailVerified               Boolean        @default(false)\n  phoneVerified               Boolean        @default(false)\n  approvalStatus              ApprovalStatus @default(PENDING)\n  image                       String?\n  kycStatus                   KYCStatus      @default(PENDING)\n  kycData                     Json?\n  // KYC Document fields\n  documentType                DocumentType?\n  documentNumber              String?\n  documentFront               String? // URL to front document image\n  documentBack                String? // URL to back document image\n  documentSelfie              String? // URL to selfie with document\n  kycSubmittedAt              DateTime?\n  kycReviewedAt               DateTime?\n  kycRejectionReason          String?\n  // Admin notification tracking\n  adminNotificationLastSeenAt DateTime?\n  // 2FA fields\n  twoFactorEnabled            Boolean        @default(false)\n  twoFactorSecret             String?\n  twoFactorBackupCodes        String[]       @default([])\n  createdAt                   DateTime\n  updatedAt                   DateTime\n  accounts                    Account[]\n  balances                    Balance[]\n  deposits                    Deposit[]\n  orders                      Order[]\n  p2pOffers                   P2POffer[]\n  buyerTrades                 P2PTrade[]     @relation(\"BuyerTrades\")\n  sellerTrades                P2PTrade[]     @relation(\"SellerTrades\")\n  sessions                    Session[]\n  transactions                Transaction[]\n  withdrawals                 Withdrawal[]\n\n  @@map(\"user\")\n}\n\nmodel Session {\n  id        String   @id @map(\"_id\")\n  expiresAt DateTime\n  token     String   @unique\n  createdAt DateTime\n  updatedAt DateTime\n  ipAddress String?\n  userAgent String?\n  userId    String\n  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)\n\n  @@map(\"session\")\n}\n\nmodel Account {\n  id                    String    @id @map(\"_id\")\n  accountId             String\n  providerId            String\n  userId                String\n  accessToken           String?\n  refreshToken          String?\n  idToken               String?\n  accessTokenExpiresAt  DateTime?\n  refreshTokenExpiresAt DateTime?\n  scope                 String?\n  password              String?\n  createdAt             DateTime\n  updatedAt             DateTime\n  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)\n\n  @@map(\"account\")\n}\n\nmodel Verification {\n  id          String           @id @map(\"_id\")\n  identifier  String // email or phone number\n  value       String // verification code (4 digits)\n  type        VerificationType // EMAIL, PHONE, PASSWORD_RESET\n  purpose     String? // Additional context like \"signup\", \"password_reset\"\n  attempts    Int              @default(0)\n  maxAttempts Int              @default(3)\n  expiresAt   DateTime\n  createdAt   DateTime?        @default(now())\n  updatedAt   DateTime?        @updatedAt\n\n  @@map(\"verification\")\n}\n\nenum VerificationType {\n  EMAIL\n  PHONE\n  PASSWORD_RESET\n}\n\nmodel Balance {\n  id        String   @id @default(cuid())\n  userId    String\n  currency  String\n  amount    Decimal  @db.Decimal(20, 8)\n  locked    Decimal  @default(0) @db.Decimal(20, 8)\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)\n\n  @@unique([userId, currency])\n  @@map(\"balance\")\n}\n\nmodel Deposit {\n  id            String        @id @default(cuid())\n  userId        String\n  amount        Decimal       @db.Decimal(20, 2)\n  currency      String        @default(\"BRL\")\n  status        DepositStatus @default(PENDING)\n  paymentMethod String\n  externalId    String?\n  proofUrl      String?\n  confirmedAt   DateTime?\n  createdAt     DateTime      @default(now())\n  updatedAt     DateTime      @updatedAt\n  transactionId String?       @unique\n  transaction   Transaction?  @relation(fields: [transactionId], references: [id])\n  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)\n\n  // Payment integration fields\n  paymentId       String? // External payment provider payment ID\n  paymentStatus   String? // External payment provider payment status\n  paymentAmount   Decimal? @db.Decimal(20, 2) // Actual amount paid\n  fee             Decimal? @db.Decimal(20, 2) // Processing fee charged\n  pixQrCode       String? // PIX QR code data\n  pixQrCodeBase64 String? // PIX QR code image in base64\n\n  @@map(\"deposit\")\n}\n\nmodel Withdrawal {\n  id            String           @id @default(cuid())\n  userId        String\n  amount        Decimal          @db.Decimal(20, 2)\n  currency      String           @default(\"BRL\")\n  status        WithdrawalStatus @default(PENDING)\n  paymentMethod String\n  externalId    String?\n  bankAccount   Json?\n  processedAt   DateTime?\n  createdAt     DateTime         @default(now())\n  updatedAt     DateTime         @updatedAt\n  transactionId String?          @unique\n  transaction   Transaction?     @relation(fields: [transactionId], references: [id])\n  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)\n\n  // New fields for PIX and USDT withdrawals\n  type      String? // \"PIX\" or \"USDT\"\n  fee       Decimal? @db.Decimal(20, 2) // Withdrawal fee\n  netAmount Decimal? @db.Decimal(20, 2) // Amount after fee\n\n  // PIX specific fields\n  pixKey   String? // PIX key (email, CPF, phone)\n  protocol String? // PIX protocol number\n\n  // USDT specific fields\n  walletAddress String? // Destination wallet address\n  network       String? // Network (TRC20, ERC20, BSC)\n  hash          String? // Transaction hash\n\n  @@map(\"withdrawal\")\n}\n\nmodel Order {\n  id              String       @id @default(cuid())\n  userId          String\n  type            OrderType\n  baseCurrency    String\n  quoteCurrency   String\n  amount          Decimal      @db.Decimal(20, 8)\n  price           Decimal      @db.Decimal(20, 2)\n  total           Decimal      @db.Decimal(20, 2)\n  status          OrderStatus  @default(PENDING)\n  externalOrderId String?\n  executedAt      DateTime?\n  createdAt       DateTime     @default(now())\n  updatedAt       DateTime     @updatedAt\n  transactionId   String?      @unique\n  transaction     Transaction? @relation(fields: [transactionId], references: [id])\n  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)\n\n  @@map(\"order\")\n}\n\nmodel P2POffer {\n  id             String      @id @default(cuid())\n  userId         String\n  type           OfferType\n  cryptoCurrency String\n  fiatCurrency   String      @default(\"BRL\")\n  cryptoAmount   Decimal     @db.Decimal(20, 8)\n  fiatAmount     Decimal     @db.Decimal(20, 2)\n  price          Decimal     @db.Decimal(20, 2)\n  status         OfferStatus @default(ACTIVE)\n  paymentMethods Json\n  minTrade       Decimal     @db.Decimal(20, 2)\n  maxTrade       Decimal     @db.Decimal(20, 2)\n  expiresAt      DateTime?\n  createdAt      DateTime    @default(now())\n  updatedAt      DateTime    @updatedAt\n  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)\n  trades         P2PTrade[]\n\n  @@map(\"p2p_offer\")\n}\n\nmodel P2PTrade {\n  id                  String       @id @default(cuid())\n  offerId             String\n  buyerId             String\n  sellerId            String\n  cryptoAmount        Decimal      @db.Decimal(20, 8)\n  fiatAmount          Decimal      @db.Decimal(20, 2)\n  status              TradeStatus  @default(PENDING)\n  paymentProof        String?\n  cryptoReleased      Boolean      @default(false)\n  fiatConfirmed       Boolean      @default(false)\n  disputeReason       String?\n  expiresAt           DateTime\n  createdAt           DateTime     @default(now())\n  updatedAt           DateTime     @updatedAt\n  buyerTransactionId  String?      @unique\n  sellerTransactionId String?      @unique\n  buyer               User         @relation(\"BuyerTrades\", fields: [buyerId], references: [id])\n  buyerTransaction    Transaction? @relation(\"BuyerTransaction\", fields: [buyerTransactionId], references: [id])\n  offer               P2POffer     @relation(fields: [offerId], references: [id], onDelete: Cascade)\n  seller              User         @relation(\"SellerTrades\", fields: [sellerId], references: [id])\n  sellerTransaction   Transaction? @relation(\"SellerTransaction\", fields: [sellerTransactionId], references: [id])\n\n  @@map(\"p2p_trade\")\n}\n\nmodel Transaction {\n  id          String          @id @default(cuid())\n  userId      String\n  type        TransactionType\n  amount      Decimal         @db.Decimal(20, 8)\n  currency    String\n  balance     Decimal         @db.Decimal(20, 8)\n  description String\n  metadata    Json?\n  createdAt   DateTime        @default(now())\n  deposit     Deposit?\n  order       Order?\n  buyerTrade  P2PTrade?       @relation(\"BuyerTransaction\")\n  sellerTrade P2PTrade?       @relation(\"SellerTransaction\")\n  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)\n  withdrawal  Withdrawal?\n\n  @@map(\"transaction\")\n}\n\nenum ApprovalStatus {\n  PENDING\n  APPROVED\n  REJECTED\n}\n\nenum KYCStatus {\n  PENDING\n  APPROVED\n  REJECTED\n}\n\nenum DocumentType {\n  RG\n  HABILITACAO\n  CNH\n  PASSPORT\n}\n\nenum DepositStatus {\n  PENDING\n  CONFIRMED\n  REJECTED\n  CANCELLED\n}\n\nenum WithdrawalStatus {\n  PENDING\n  PROCESSING\n  COMPLETED\n  FAILED\n  CANCELLED\n}\n\nenum OrderType {\n  BUY\n  SELL\n}\n\nenum OrderStatus {\n  PENDING\n  EXECUTING\n  COMPLETED\n  FAILED\n  CANCELLED\n}\n\nenum OfferType {\n  BUY\n  SELL\n}\n\nenum OfferStatus {\n  ACTIVE\n  PAUSED\n  CANCELLED\n  EXPIRED\n}\n\nenum TradeStatus {\n  PENDING\n  PAYMENT_SENT\n  PAYMENT_CONFIRMED\n  CRYPTO_RELEASED\n  COMPLETED\n  DISPUTED\n  CANCELLED\n}\n\nenum TransactionType {\n  DEPOSIT\n  WITHDRAWAL\n  BUY_CRYPTO\n  SELL_CRYPTO\n  P2P_TRADE\n  FEE\n  REFUND\n}\n\nmodel WebhookEvent {\n  id             String   @id @default(cuid())\n  eventType      String // e.g., \"transaction.completed\"\n  source         String   @default(\"nutzpay\") // \"nutzpay\", \"test\", etc.\n  payload        Json // Full webhook payload\n  transactionId  String? // NutzPay transaction ID\n  externalId     String? // External ID from webhook\n  status         String? // Status from webhook (COMPLETED, PENDING, FAILED)\n  orderId        String? // Related order ID if found\n  processed      Boolean  @default(false) // Whether webhook was successfully processed\n  error          String? // Error message if processing failed\n  ipAddress      String? // IP address of webhook sender\n  userAgent      String? // User agent of webhook sender\n  signatureValid Boolean? // Whether signature was valid\n  createdAt      DateTime @default(now())\n\n  @@index([transactionId])\n  @@index([externalId])\n  @@index([orderId])\n  @@index([createdAt])\n  @@map(\"webhook_event\")\n}\n",
-  "inlineSchemaHash": "6b748db0fad28c4fc3dbcf7d90f8d540db8473edf15f4ed9040fa4fd8709ae5f",
-  "copyEngine": true
-}
-config.dirname = '/'
+class PrismaClient {
+  constructor() {
+    return new Proxy(this, {
+      get(target, prop) {
+        let message
+        const runtime = getRuntime()
+        if (runtime.isEdge) {
+          message = `PrismaClient is not configured to run in ${runtime.prettyName}. In order to run Prisma Client on edge runtime, either:
+- Use Prisma Accelerate: https://pris.ly/d/accelerate
+- Use Driver Adapters: https://pris.ly/d/driver-adapters
+`;
+        } else {
+          message = 'PrismaClient is unable to run in this browser environment, or has been bundled for the browser (running in `' + runtime.prettyName + '`).'
+        }
 
-config.runtimeDataModel = JSON.parse("{\"models\":{\"User\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"_id\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"cpf\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"phone\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"password\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"emailVerified\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"phoneVerified\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"approvalStatus\",\"kind\":\"enum\",\"type\":\"ApprovalStatus\"},{\"name\":\"image\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"kycStatus\",\"kind\":\"enum\",\"type\":\"KYCStatus\"},{\"name\":\"kycData\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"documentType\",\"kind\":\"enum\",\"type\":\"DocumentType\"},{\"name\":\"documentNumber\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"documentFront\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"documentBack\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"documentSelfie\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"kycSubmittedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"kycReviewedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"kycRejectionReason\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"adminNotificationLastSeenAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"twoFactorEnabled\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"twoFactorSecret\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"twoFactorBackupCodes\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"accounts\",\"kind\":\"object\",\"type\":\"Account\",\"relationName\":\"AccountToUser\"},{\"name\":\"balances\",\"kind\":\"object\",\"type\":\"Balance\",\"relationName\":\"BalanceToUser\"},{\"name\":\"deposits\",\"kind\":\"object\",\"type\":\"Deposit\",\"relationName\":\"DepositToUser\"},{\"name\":\"orders\",\"kind\":\"object\",\"type\":\"Order\",\"relationName\":\"OrderToUser\"},{\"name\":\"p2pOffers\",\"kind\":\"object\",\"type\":\"P2POffer\",\"relationName\":\"P2POfferToUser\"},{\"name\":\"buyerTrades\",\"kind\":\"object\",\"type\":\"P2PTrade\",\"relationName\":\"BuyerTrades\"},{\"name\":\"sellerTrades\",\"kind\":\"object\",\"type\":\"P2PTrade\",\"relationName\":\"SellerTrades\"},{\"name\":\"sessions\",\"kind\":\"object\",\"type\":\"Session\",\"relationName\":\"SessionToUser\"},{\"name\":\"transactions\",\"kind\":\"object\",\"type\":\"Transaction\",\"relationName\":\"TransactionToUser\"},{\"name\":\"withdrawals\",\"kind\":\"object\",\"type\":\"Withdrawal\",\"relationName\":\"UserToWithdrawal\"}],\"dbName\":\"user\"},\"Session\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"_id\"},{\"name\":\"expiresAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"token\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"ipAddress\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userAgent\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"SessionToUser\"}],\"dbName\":\"session\"},\"Account\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"_id\"},{\"name\":\"accountId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"providerId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"accessToken\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"refreshToken\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"idToken\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"accessTokenExpiresAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"refreshTokenExpiresAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"scope\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"password\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"AccountToUser\"}],\"dbName\":\"account\"},\"Verification\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"_id\"},{\"name\":\"identifier\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"value\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"type\",\"kind\":\"enum\",\"type\":\"VerificationType\"},{\"name\":\"purpose\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"attempts\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"maxAttempts\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"expiresAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"verification\"},\"Balance\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"currency\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"locked\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"BalanceToUser\"}],\"dbName\":\"balance\"},\"Deposit\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"currency\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"DepositStatus\"},{\"name\":\"paymentMethod\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"externalId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"proofUrl\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"confirmedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"transactionId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"transaction\",\"kind\":\"object\",\"type\":\"Transaction\",\"relationName\":\"DepositToTransaction\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"DepositToUser\"},{\"name\":\"paymentId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"paymentStatus\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"paymentAmount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"fee\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"pixQrCode\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"pixQrCodeBase64\",\"kind\":\"scalar\",\"type\":\"String\"}],\"dbName\":\"deposit\"},\"Withdrawal\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"currency\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"WithdrawalStatus\"},{\"name\":\"paymentMethod\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"externalId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"bankAccount\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"processedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"transactionId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"transaction\",\"kind\":\"object\",\"type\":\"Transaction\",\"relationName\":\"TransactionToWithdrawal\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"UserToWithdrawal\"},{\"name\":\"type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"fee\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"netAmount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"pixKey\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"protocol\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"walletAddress\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"network\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"hash\",\"kind\":\"scalar\",\"type\":\"String\"}],\"dbName\":\"withdrawal\"},\"Order\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"type\",\"kind\":\"enum\",\"type\":\"OrderType\"},{\"name\":\"baseCurrency\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"quoteCurrency\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"price\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"total\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"OrderStatus\"},{\"name\":\"externalOrderId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"executedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"transactionId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"transaction\",\"kind\":\"object\",\"type\":\"Transaction\",\"relationName\":\"OrderToTransaction\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"OrderToUser\"}],\"dbName\":\"order\"},\"P2POffer\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"type\",\"kind\":\"enum\",\"type\":\"OfferType\"},{\"name\":\"cryptoCurrency\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"fiatCurrency\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"cryptoAmount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"fiatAmount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"price\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"OfferStatus\"},{\"name\":\"paymentMethods\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"minTrade\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"maxTrade\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"expiresAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"P2POfferToUser\"},{\"name\":\"trades\",\"kind\":\"object\",\"type\":\"P2PTrade\",\"relationName\":\"P2POfferToP2PTrade\"}],\"dbName\":\"p2p_offer\"},\"P2PTrade\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"offerId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"buyerId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"sellerId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"cryptoAmount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"fiatAmount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"TradeStatus\"},{\"name\":\"paymentProof\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"cryptoReleased\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"fiatConfirmed\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"disputeReason\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"expiresAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"buyerTransactionId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"sellerTransactionId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"buyer\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"BuyerTrades\"},{\"name\":\"buyerTransaction\",\"kind\":\"object\",\"type\":\"Transaction\",\"relationName\":\"BuyerTransaction\"},{\"name\":\"offer\",\"kind\":\"object\",\"type\":\"P2POffer\",\"relationName\":\"P2POfferToP2PTrade\"},{\"name\":\"seller\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"SellerTrades\"},{\"name\":\"sellerTransaction\",\"kind\":\"object\",\"type\":\"Transaction\",\"relationName\":\"SellerTransaction\"}],\"dbName\":\"p2p_trade\"},\"Transaction\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"type\",\"kind\":\"enum\",\"type\":\"TransactionType\"},{\"name\":\"amount\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"currency\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"balance\",\"kind\":\"scalar\",\"type\":\"Decimal\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"metadata\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"deposit\",\"kind\":\"object\",\"type\":\"Deposit\",\"relationName\":\"DepositToTransaction\"},{\"name\":\"order\",\"kind\":\"object\",\"type\":\"Order\",\"relationName\":\"OrderToTransaction\"},{\"name\":\"buyerTrade\",\"kind\":\"object\",\"type\":\"P2PTrade\",\"relationName\":\"BuyerTransaction\"},{\"name\":\"sellerTrade\",\"kind\":\"object\",\"type\":\"P2PTrade\",\"relationName\":\"SellerTransaction\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"TransactionToUser\"},{\"name\":\"withdrawal\",\"kind\":\"object\",\"type\":\"Withdrawal\",\"relationName\":\"TransactionToWithdrawal\"}],\"dbName\":\"transaction\"},\"WebhookEvent\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"eventType\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"source\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"payload\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"transactionId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"externalId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"status\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"orderId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"processed\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"error\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"ipAddress\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userAgent\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"signatureValid\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"webhook_event\"}},\"enums\":{},\"types\":{}}")
-defineDmmfProperty(exports.Prisma, config.runtimeDataModel)
-config.engineWasm = {
-  getRuntime: async () => require('./query_engine_bg.js'),
-  getQueryEngineWasmModule: async () => {
-    const loader = (await import('#wasm-engine-loader')).default
-    const engine = (await loader).default
-    return engine
+        message += `
+If this is unexpected, please open an issue: https://pris.ly/prisma-prisma-bug-report`
+
+        throw new Error(message)
+      }
+    })
   }
 }
-config.compilerWasm = undefined
 
-config.injectableEdgeEnv = () => ({
-  parsed: {
-    DATABASE_URL: typeof globalThis !== 'undefined' && globalThis['DATABASE_URL'] || typeof process !== 'undefined' && process.env && process.env.DATABASE_URL || undefined
-  }
-})
-
-if (typeof globalThis !== 'undefined' && globalThis['DEBUG'] || typeof process !== 'undefined' && process.env && process.env.DEBUG || undefined) {
-  Debug.enable(typeof globalThis !== 'undefined' && globalThis['DEBUG'] || typeof process !== 'undefined' && process.env && process.env.DEBUG || undefined)
-}
-
-const PrismaClient = getPrismaClient(config)
 exports.PrismaClient = PrismaClient
-Object.assign(exports, Prisma)
 
+Object.assign(exports, Prisma)
