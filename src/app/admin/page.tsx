@@ -4,6 +4,15 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Users,
   FileText,
@@ -23,6 +32,9 @@ import {
   WifiOff,
   Mail,
   Send,
+  Plus,
+  Minus,
+  Wallet,
 } from "lucide-react";
 import {
   Dialog,
@@ -164,6 +176,21 @@ export default function AdminDashboard() {
   const [resendingReceipt, setResendingReceipt] = useState(false);
   const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
   const [isPolling, setIsPolling] = useState(false);
+  const [showBalanceDialog, setShowBalanceDialog] = useState(false);
+  const [balanceUserId, setBalanceUserId] = useState("");
+  const [balanceCurrency, setBalanceCurrency] = useState<"USDT" | "BRL">(
+    "USDT"
+  );
+  const [balanceAmount, setBalanceAmount] = useState("");
+  const [balanceOperation, setBalanceOperation] = useState<"CREDIT" | "DEDUCT">(
+    "CREDIT"
+  );
+  const [balanceReason, setBalanceReason] = useState("");
+  const [usersList, setUsersList] = useState<
+    Array<{ id: string; name: string; email: string }>
+  >([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [processingBalance, setProcessingBalance] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -462,6 +489,90 @@ export default function AdminDashboard() {
 
       return 0;
     });
+
+  const fetchUsersList = useCallback(async () => {
+    try {
+      setLoadingUsers(true);
+      const response = await fetch("/api/admin/users?limit=1000");
+      if (!response.ok) {
+        throw new Error("Failed to fetch users");
+      }
+      const data = await response.json();
+      setUsersList(data.users || []);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Falha ao carregar lista de usuários",
+      });
+    } finally {
+      setLoadingUsers(false);
+    }
+  }, [toast]);
+
+  const handleOpenBalanceDialog = () => {
+    setShowBalanceDialog(true);
+    fetchUsersList();
+  };
+
+  const handleBalanceAdjustment = async () => {
+    if (!balanceUserId || !balanceAmount || parseFloat(balanceAmount) <= 0) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Preencha todos os campos corretamente",
+      });
+      return;
+    }
+
+    try {
+      setProcessingBalance(true);
+      const response = await fetch("/api/admin/balance/adjust", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: balanceUserId,
+          currency: balanceCurrency,
+          amount: parseFloat(balanceAmount),
+          operation: balanceOperation,
+          reason: balanceReason || null,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to adjust balance");
+      }
+
+      toast({
+        title: "Sucesso",
+        description: `Saldo ${
+          balanceOperation === "CREDIT" ? "creditado" : "deduzido"
+        } com sucesso`,
+      });
+
+      // Reset form
+      setBalanceUserId("");
+      setBalanceAmount("");
+      setBalanceReason("");
+      setShowBalanceDialog(false);
+
+      // Refresh transactions and finance data
+      fetchFinanceData();
+      fetchRealtimeTransactions();
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description:
+          error instanceof Error ? error.message : "Falha ao ajustar saldo",
+      });
+    } finally {
+      setProcessingBalance(false);
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -932,9 +1043,18 @@ export default function AdminDashboard() {
           {/* Detailed Transactions Table */}
           <Card className="bg-gray-900 border-gray-800">
             <CardHeader>
-              <CardTitle className="text-white">
-                Tabela Detalhada de Transações
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-white">
+                  Tabela Detalhada de Transações
+                </CardTitle>
+                <Button
+                  onClick={handleOpenBalanceDialog}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <Wallet className="h-4 w-4 mr-2" />
+                  Ajustar Saldo
+                </Button>
+              </div>
               <div className="flex items-center space-x-4 mt-4">
                 <div className="relative flex-1 max-w-sm">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -1477,6 +1597,183 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Balance Adjustment Dialog */}
+      <Dialog open={showBalanceDialog} onOpenChange={setShowBalanceDialog}>
+        <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center">
+              <Wallet className="h-5 w-5 mr-2" />
+              Ajustar Saldo do Usuário
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Creditar ou deduzir saldo de um usuário
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div>
+              <Label htmlFor="user-select" className="text-gray-300">
+                Usuário
+              </Label>
+              <Select
+                value={balanceUserId}
+                onValueChange={setBalanceUserId}
+                disabled={loadingUsers}
+              >
+                <SelectTrigger
+                  id="user-select"
+                  className="bg-gray-800 border-gray-700 text-white"
+                >
+                  <SelectValue placeholder="Selecione um usuário" />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-700">
+                  {usersList.map((user) => (
+                    <SelectItem
+                      key={user.id}
+                      value={user.id}
+                      className="text-white hover:bg-gray-700"
+                    >
+                      {user.name} ({user.email})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="currency-select" className="text-gray-300">
+                Moeda
+              </Label>
+              <Select
+                value={balanceCurrency}
+                onValueChange={(value) =>
+                  setBalanceCurrency(value as "USDT" | "BRL")
+                }
+              >
+                <SelectTrigger
+                  id="currency-select"
+                  className="bg-gray-800 border-gray-700 text-white"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-700">
+                  <SelectItem
+                    value="USDT"
+                    className="text-white hover:bg-gray-700"
+                  >
+                    USDT
+                  </SelectItem>
+                  <SelectItem
+                    value="BRL"
+                    className="text-white hover:bg-gray-700"
+                  >
+                    BRL
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="operation-select" className="text-gray-300">
+                Operação
+              </Label>
+              <Select
+                value={balanceOperation}
+                onValueChange={(value) =>
+                  setBalanceOperation(value as "CREDIT" | "DEDUCT")
+                }
+              >
+                <SelectTrigger
+                  id="operation-select"
+                  className="bg-gray-800 border-gray-700 text-white"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-700">
+                  <SelectItem
+                    value="CREDIT"
+                    className="text-white hover:bg-gray-700"
+                  >
+                    <div className="flex items-center">
+                      <Plus className="h-4 w-4 mr-2 text-green-400" />
+                      Creditar
+                    </div>
+                  </SelectItem>
+                  <SelectItem
+                    value="DEDUCT"
+                    className="text-white hover:bg-gray-700"
+                  >
+                    <div className="flex items-center">
+                      <Minus className="h-4 w-4 mr-2 text-red-400" />
+                      Deduzir
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="amount-input" className="text-gray-300">
+                Valor
+              </Label>
+              <Input
+                id="amount-input"
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={balanceAmount}
+                onChange={(e) => setBalanceAmount(e.target.value)}
+                placeholder="0.00"
+                className="bg-gray-800 border-gray-700 text-white"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="reason-textarea" className="text-gray-300">
+                Motivo (opcional)
+              </Label>
+              <Textarea
+                id="reason-textarea"
+                value={balanceReason}
+                onChange={(e) => setBalanceReason(e.target.value)}
+                placeholder="Descreva o motivo do ajuste..."
+                className="bg-gray-800 border-gray-700 text-white min-h-[80px]"
+                rows={3}
+              />
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowBalanceDialog(false);
+                  setBalanceUserId("");
+                  setBalanceAmount("");
+                  setBalanceReason("");
+                }}
+                className="border-gray-700 text-gray-300 hover:bg-gray-800"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleBalanceAdjustment}
+                disabled={processingBalance || !balanceUserId || !balanceAmount}
+                className={`${
+                  balanceOperation === "CREDIT"
+                    ? "bg-green-600 hover:bg-green-700"
+                    : "bg-red-600 hover:bg-red-700"
+                } text-white`}
+              >
+                {processingBalance
+                  ? "Processando..."
+                  : balanceOperation === "CREDIT"
+                  ? "Creditar"
+                  : "Deduzir"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
