@@ -146,7 +146,7 @@ export async function GET(request: NextRequest) {
           // Order is pending but webhook says completed - use webhook status
           finalStatus = "COMPLETED";
         } else if (
-          order.status === ("FAILED" as any) ||
+          String(order.status) === "FAILED" ||
           webhookStatus === "FAILED"
         ) {
           // Order or webhook says FAILED - but be very conservative
@@ -174,7 +174,7 @@ export async function GET(request: NextRequest) {
           finalStatus = "COMPLETED";
         } else {
           // Default to order status, but prefer PENDING for recent orders
-          if (isRecentOrder && order.status === ("FAILED" as any)) {
+          if (isRecentOrder && String(order.status) === "FAILED") {
             // Recent order marked as FAILED - might be premature, keep as PENDING
             finalStatus = "PENDING";
           } else {
@@ -187,14 +187,14 @@ export async function GET(request: NextRequest) {
         matchingWebhook.error
       ) {
         // Webhook has error - keep order status but prefer PENDING for recent orders
-        if (isRecentOrder && order.status === ("FAILED" as any)) {
+        if (isRecentOrder && String(order.status) === "FAILED") {
           finalStatus = "PENDING";
         } else {
           finalStatus = order.status;
         }
       } else {
         // No webhook or unprocessed webhook - be conservative
-        if (isRecentOrder && order.status === ("FAILED" as any)) {
+        if (isRecentOrder && String(order.status) === "FAILED") {
           // Recent order marked as FAILED without clear evidence - keep as PENDING
           finalStatus = "PENDING";
         } else {
