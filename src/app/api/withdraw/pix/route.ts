@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { sendPIXWithdrawalReceipt } from "@/lib/receipt-email";
 
 export async function POST(request: NextRequest) {
   try {
@@ -140,6 +141,24 @@ export async function POST(request: NextRequest) {
         createdAt: new Date(),
       },
     });
+
+    // Send PIX withdrawal receipt email (don't await to avoid blocking response)
+    if (user.email && user.name) {
+      sendPIXWithdrawalReceipt({
+        userName: user.name,
+        userEmail: user.email,
+        amount: Number(amount),
+        fee: Number(fee),
+        netAmount: Number(netAmount),
+        pixKey: pixKey,
+        protocol: protocol,
+        date: new Date(),
+        status: "PENDING",
+      }).catch((error) => {
+        console.error("Failed to send PIX withdrawal receipt email:", error);
+        // Don't fail the request if email fails
+      });
+    }
 
     // TODO: In a real implementation, you would:
     // 1. Send the PIX request to a payment processor

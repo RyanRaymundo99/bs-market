@@ -3,6 +3,10 @@ import prisma from "@/lib/prisma";
 import { nutzPayService } from "@/lib/nutzpay";
 import { ledgerService } from "@/lib/ledger";
 import { Decimal } from "@prisma/client/runtime/library";
+import {
+  sendPurchaseReceipt,
+  sendWithdrawalReceipt,
+} from "@/lib/receipt-email";
 
 // Allow GET requests for webhook URL verification/testing
 export async function GET(request: NextRequest) {
@@ -206,6 +210,12 @@ export async function POST(request: NextRequest) {
       }
 
       if (foundWithdrawal) {
+        // Get user info for email
+        const withdrawalUser = await prisma.user.findUnique({
+          where: { id: foundWithdrawal.userId },
+          select: { name: true, email: true },
+        });
+
         // Determine withdrawal status from webhook
         let withdrawalStatus:
           | "PENDING"
@@ -237,7 +247,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Update withdrawal status
-        await prisma.withdrawal.update({
+        const updatedWithdrawal = await prisma.withdrawal.update({
           where: { id: foundWithdrawal.id },
           data: {
             status: withdrawalStatus,
@@ -249,6 +259,32 @@ export async function POST(request: NextRequest) {
               foundWithdrawal.netAmount,
           },
         });
+
+        // Send withdrawal receipt email when completed (don't await to avoid blocking)
+        if (
+          withdrawalStatus === "COMPLETED" &&
+          withdrawalUser?.email &&
+          withdrawalUser?.name
+        ) {
+          sendWithdrawalReceipt({
+            userName: withdrawalUser.name,
+            userEmail: withdrawalUser.email,
+            amount: Number(foundWithdrawal.amount),
+            networkFee: Number(updatedWithdrawal.fee || 0),
+            netAmount: Number(
+              updatedWithdrawal.netAmount || foundWithdrawal.amount
+            ),
+            network: foundWithdrawal.network || "UNKNOWN",
+            walletAddress: foundWithdrawal.walletAddress || "",
+            transactionHash: updatedWithdrawal.hash || undefined,
+            transactionId: foundWithdrawal.externalId || undefined,
+            date: new Date(),
+            status: withdrawalStatus,
+          }).catch((error) => {
+            console.error("Failed to send withdrawal receipt email:", error);
+            // Don't fail the webhook if email fails
+          });
+        }
 
         // Mark webhook as processed
         if (webhookEventId) {
@@ -620,6 +656,34 @@ export async function POST(request: NextRequest) {
             transactionId: transaction.id,
           },
         });
+
+        // Send purchase receipt email (don't await to avoid blocking webhook)
+        const purchaseUser = await prisma.user.findUnique({
+          where: { id: order.userId },
+          select: { name: true, email: true },
+        });
+
+        if (purchaseUser?.email && purchaseUser?.name) {
+          const totalAmount = amount || Number(order.total);
+          const fee = (totalAmount * 0.03) / 1.03; // 3% fee calculation
+          const baseAmount = totalAmount - fee;
+
+          sendPurchaseReceipt({
+            userName: purchaseUser.name,
+            userEmail: purchaseUser.email,
+            amountBRL: baseAmount,
+            amountUSDT: usdtAmount,
+            exchangeRate: totalAmount / usdtAmount,
+            fee: fee,
+            totalPaid: totalAmount,
+            transactionId: transaction_id || order.externalOrderId || order.id,
+            date: new Date(),
+            paymentMethod: "PIX",
+          }).catch((error) => {
+            console.error("Failed to send purchase receipt email:", error);
+            // Don't fail the webhook if email fails
+          });
+        }
       }
     }
 

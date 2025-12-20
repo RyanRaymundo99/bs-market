@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { nutzPayService } from "@/lib/nutzpay";
 import { ledgerService } from "@/lib/ledger";
 import { Decimal } from "@prisma/client/runtime/library";
+import { sendPurchaseReceipt } from "@/lib/receipt-email";
 
 export async function POST(request: NextRequest) {
   try {
@@ -266,6 +267,27 @@ export async function POST(request: NextRequest) {
         console.log(
           `User ${user.id} balance credited with ${usdt_amount} USDT`
         );
+
+        // Send purchase receipt email (don't await to avoid blocking response)
+        if (user.email && user.name) {
+          const fee = (amount * 0.03) / 1.03; // 3% fee calculation
+          const baseAmount = amount - fee;
+          sendPurchaseReceipt({
+            userName: user.name,
+            userEmail: user.email,
+            amountBRL: baseAmount,
+            amountUSDT: usdt_amount,
+            exchangeRate: amount / usdt_amount,
+            fee: fee,
+            totalPaid: amount,
+            transactionId: transactionId || externalId,
+            date: new Date(),
+            paymentMethod: "PIX",
+          }).catch((error) => {
+            console.error("Failed to send purchase receipt email:", error);
+            // Don't fail the request if email fails
+          });
+        }
       }
 
       // Return response matching NutzPay structure + our additional fields

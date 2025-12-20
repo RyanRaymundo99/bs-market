@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { nutzPayService } from "@/lib/nutzpay";
+import { sendWithdrawalReceipt } from "@/lib/receipt-email";
 
 export async function POST(request: NextRequest) {
   try {
@@ -176,6 +177,26 @@ export async function POST(request: NextRequest) {
           createdAt: new Date(),
         },
       });
+
+      // Send withdrawal receipt email (don't await to avoid blocking response)
+      if (user.email && user.name) {
+        sendWithdrawalReceipt({
+          userName: user.name,
+          userEmail: user.email,
+          amount: Number(amount),
+          networkFee: Number(responseFee),
+          netAmount: Number(responseAmount),
+          network: network,
+          walletAddress: walletAddress,
+          transactionHash: transactionId || undefined,
+          transactionId: externalId,
+          date: new Date(),
+          status: responseStatus === "completed" ? "COMPLETED" : "PENDING",
+        }).catch((error) => {
+          console.error("Failed to send withdrawal receipt email:", error);
+          // Don't fail the request if email fails
+        });
+      }
 
       return NextResponse.json({
         success: true,
