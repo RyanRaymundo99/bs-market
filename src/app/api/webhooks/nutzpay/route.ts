@@ -611,29 +611,83 @@ export async function POST(request: NextRequest) {
     // Since deposit doesn't have direct relation to order, we match by these criteria
     let deposit = await prisma.deposit.findFirst({
       where: {
-        OR: [{ externalId: external_id }, { externalId: transaction_id }],
+        OR: [
+          { externalId: external_id },
+          { externalId: transaction_id },
+          { paymentId: transaction_id }, // Also check paymentId field (stores transaction_id from previous webhooks)
+          { paymentId: external_id },
+          // Also try matching by order's externalOrderId if it matches our original externalId
+          ...(order.externalOrderId
+            ? [{ externalId: order.externalOrderId }]
+            : []),
+          ...(order.externalOrderId
+            ? [{ paymentId: order.externalOrderId }]
+            : []),
+        ],
       },
     });
 
     // If not found by externalId, try matching by order's userId and amount
+    // Use a wider time window and allow for small amount differences (due to fee calculations)
     if (!deposit && order) {
+      // First try exact amount match
       deposit = await prisma.deposit.findFirst({
         where: {
           userId: order.userId,
           amount: order.total,
+          paymentMethod: "PIX",
           createdAt: {
-            gte: new Date(order.createdAt.getTime() - 60000),
-            lte: new Date(order.createdAt.getTime() + 60000),
+            gte: new Date(order.createdAt.getTime() - 300000), // 5 minutes before
+            lte: new Date(order.createdAt.getTime() + 300000), // 5 minutes after
           },
+        },
+        orderBy: {
+          createdAt: "desc", // Get the most recent matching deposit
+        },
+      });
+    }
+
+    // If still not found, try matching by userId and approximate amount (within 1% difference)
+    // This handles cases where amounts might differ slightly due to rounding
+    if (!deposit && order) {
+      const orderTotal = Number(order.total);
+      const minAmount = orderTotal * 0.99; // 1% lower
+      const maxAmount = orderTotal * 1.01; // 1% higher
+
+      deposit = await prisma.deposit.findFirst({
+        where: {
+          userId: order.userId,
+          paymentMethod: "PIX",
+          amount: {
+            gte: new Decimal(minAmount),
+            lte: new Decimal(maxAmount),
+          },
+          createdAt: {
+            gte: new Date(order.createdAt.getTime() - 300000), // 5 minutes before
+            lte: new Date(order.createdAt.getTime() + 300000), // 5 minutes after
+          },
+          status: "PENDING", // Only match pending deposits
+        },
+        orderBy: {
+          createdAt: "desc", // Get the most recent matching deposit
         },
       });
     }
 
     if (deposit) {
       const depositStatus =
-        status === "completed" || status === "COMPLETED"
+        status === "completed" ||
+        status === "COMPLETED" ||
+        eventType === "transaction.completed" ||
+        eventType === "payment.completed" ||
+        eventType === "payment.confirmed" ||
+        orderStatus === "COMPLETED"
           ? "CONFIRMED"
-          : status === "failed" || status === "FAILED"
+          : status === "failed" ||
+            status === "FAILED" ||
+            eventType === "transaction.failed" ||
+            eventType === "payment.failed" ||
+            orderStatus === "FAILED"
           ? "REJECTED"
           : "PENDING";
 
@@ -642,11 +696,73 @@ export async function POST(request: NextRequest) {
         data: {
           status: depositStatus,
           confirmedAt:
-            status === "completed" || status === "COMPLETED"
-              ? new Date()
-              : null,
+            depositStatus === "CONFIRMED" ? new Date() : deposit.confirmedAt, // Keep existing confirmedAt if already set
+          // Store transaction_id in paymentId field for future webhook matching
+          ...(transaction_id ? { paymentId: transaction_id } : {}),
+          // Store payment status from webhook
+          ...(status ? { paymentStatus: status.toUpperCase() } : {}),
         },
       });
+
+      console.log(`✅ Deposit ${deposit.id} updated to ${depositStatus}`, {
+        depositId: deposit.id,
+        depositStatus,
+        orderStatus,
+        webhookStatus: status,
+        eventType,
+      });
+    } else {
+      // Final fallback: Try to find any PENDING PIX deposit for this user around the order time
+      // This is a last resort to ensure deposits get confirmed
+      const fallbackDeposit = await prisma.deposit.findFirst({
+        where: {
+          userId: order.userId,
+          paymentMethod: "PIX",
+          status: "PENDING",
+          createdAt: {
+            gte: new Date(order.createdAt.getTime() - 600000), // 10 minutes before
+            lte: new Date(order.createdAt.getTime() + 600000), // 10 minutes after
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+
+      if (fallbackDeposit && orderStatus === "COMPLETED") {
+        // Only use fallback if order is completed and we're confident it's the right deposit
+        deposit = fallbackDeposit;
+
+        const depositStatus = "CONFIRMED";
+        await prisma.deposit.update({
+          where: { id: deposit.id },
+          data: {
+            status: depositStatus,
+            confirmedAt: new Date(),
+          },
+        });
+
+        console.log(
+          `✅ Deposit ${deposit.id} updated to ${depositStatus} (fallback match)`,
+          {
+            depositId: deposit.id,
+            depositStatus,
+            orderStatus,
+            webhookStatus: status,
+            eventType,
+          }
+        );
+      } else {
+        console.warn("⚠️ Deposit not found for order", {
+          orderId: order.id,
+          external_id,
+          transaction_id,
+          orderExternalOrderId: order.externalOrderId,
+          userId: order.userId,
+          orderTotal: order.total,
+          fallbackDepositFound: !!fallbackDeposit,
+        });
+      }
     }
 
     // Handle payment completion - credit user balance
