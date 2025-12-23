@@ -13,7 +13,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, Check, TrendingUp, Clock, QrCode, Loader2 } from "lucide-react";
+import {
+  Copy,
+  Check,
+  TrendingUp,
+  Clock,
+  QrCode,
+  Loader2,
+  Wallet,
+} from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const TradePage = () => {
@@ -51,7 +59,7 @@ const TradePage = () => {
   }, []);
 
   // Estados para compra
-  const [buyBRL, setBuyBRL] = useState<string>("");
+  const [buyUSDT, setBuyUSDT] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [showPixModal, setShowPixModal] = useState(false);
   const [pixData, setPixData] = useState<{
@@ -142,18 +150,19 @@ const TradePage = () => {
     }).format(value);
   };
 
-  // Format BRL input value (for display in input field)
-  const formatBRLInput = (value: string): string => {
-    // Remove all non-digit characters except comma
-    const cleaned = value.replace(/[^\d,]/g, "");
+  // Format USDT input value (for display in input field)
+  const formatUSDTInput = (value: string): string => {
+    // Remove all non-digit characters except comma and dot
+    const cleaned = value.replace(/[^\d,.]/g, "");
 
-    // Handle empty or just comma
-    if (!cleaned || cleaned === ",") return "";
+    // Handle empty
+    if (!cleaned) return "";
 
-    // Split by comma to handle decimals
-    const parts = cleaned.split(",");
+    // Replace comma with dot for parsing, then format
+    const normalized = cleaned.replace(",", ".");
+    const parts = normalized.split(".");
     const integerPart = parts[0].replace(/\D/g, "");
-    const decimalPart = parts[1]?.replace(/\D/g, "").slice(0, 2) || "";
+    const decimalPart = parts[1]?.replace(/\D/g, "").slice(0, 4) || ""; // USDT can have up to 4 decimals
 
     // Format integer part with thousand separators
     const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
@@ -161,15 +170,15 @@ const TradePage = () => {
     // Combine parts
     if (decimalPart) {
       return `${formattedInteger},${decimalPart}`;
-    } else if (cleaned.includes(",")) {
+    } else if (normalized.includes(".") || cleaned.includes(",")) {
       return `${formattedInteger},`;
     } else {
       return formattedInteger;
     }
   };
 
-  // Parse BRL input value (convert formatted string to number)
-  const parseBRLInput = (value: string): number => {
+  // Parse USDT input value (convert formatted string to number)
+  const parseUSDTInput = (value: string): number => {
     if (!value) return 0;
     // Replace Brazilian format (dots as thousand separators, comma as decimal)
     const normalized = value.replace(/\./g, "").replace(",", ".");
@@ -177,19 +186,19 @@ const TradePage = () => {
     return isNaN(parsed) ? 0 : parsed;
   };
 
-  // Handle BRL input change
-  const handleBRLInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle USDT input change
+  const handleUSDTInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
-    const formatted = formatBRLInput(inputValue);
-    setBuyBRL(formatted);
+    const formatted = formatUSDTInput(inputValue);
+    setBuyUSDT(formatted);
   };
 
-  // Cálculos para compra (BRL → USDT)
-  // Fee is ADDED on top of the purchase amount
-  const buyAmountBRL = parseBRLInput(buyBRL); // Parse formatted input to number
-  const buyFeeBRL = buyAmountBRL * FEE_RATE; // 3% fee on top
-  const buyTotalBRL = buyAmountBRL + buyFeeBRL; // Total to charge (base + fee)
-  const buyUSDTReceived = buyAmountBRL / usdtPrice; // USDT received based on base amount (not including fee)
+  // Cálculos para compra (USDT → BRL)
+  // User enters USDT amount, we calculate BRL total with 3% fee
+  const buyUSDTAmount = parseUSDTInput(buyUSDT); // USDT amount user wants
+  const buyBaseBRL = buyUSDTAmount * usdtPrice; // Base BRL amount (USDT * exchange rate)
+  const buyFeeBRL = buyBaseBRL * FEE_RATE; // 3% fee on base amount
+  const buyTotalBRL = buyBaseBRL + buyFeeBRL; // Total to charge (base + 3% fee)
 
   // Check user approval status on mount and logout if rejected
   useEffect(() => {
@@ -399,7 +408,7 @@ const TradePage = () => {
   };
 
   const handleBuyConfirm = async () => {
-    if (buyAmountBRL <= 0) {
+    if (buyUSDTAmount <= 0) {
       toast({
         title: "Erro",
         description: "O valor deve ser maior que zero",
@@ -418,7 +427,7 @@ const TradePage = () => {
         },
         body: JSON.stringify({
           amount: buyTotalBRL, // Total amount to charge (base + 3% fee)
-          usdt_amount: buyUSDTReceived, // USDT based on base amount
+          usdt_amount: buyUSDTAmount, // USDT amount user wants
         }),
       });
 
@@ -543,7 +552,7 @@ const TradePage = () => {
         // Show PIX QR code modal
         setPixData(pixDataForTransaction);
         setShowPixModal(true);
-        setBuyBRL(""); // Clear the field
+        setBuyUSDT(""); // Clear the field
 
         // Payment confirmation will be handled by NutzPay webhook
         // The webhook will update the order status in the database
@@ -666,49 +675,64 @@ const TradePage = () => {
           <CardContent className="space-y-4 sm:space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                {t("enterAmount")}
+                {language === "pt" ? "Quantidade de USDT:" : "USDT Amount:"}
               </label>
               <input
                 type="text"
-                value={buyBRL}
-                onChange={handleBRLInputChange}
+                value={buyUSDT}
+                onChange={handleUSDTInputChange}
                 placeholder="0,00"
                 inputMode="decimal"
                 className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition-all"
               />
             </div>
 
-            <div className="bg-gray-800/30 rounded-xl p-4 space-y-2 border border-gray-700/50">
-              <div className="flex justify-between text-sm text-gray-400">
-                <span>Valor base:</span>
-                <span className="text-white">{formatBRL(buyAmountBRL)}</span>
-              </div>
-              <div className="flex justify-between text-sm text-gray-400">
-                <span>Taxa (3%):</span>
-                <span className="text-red-400">{formatBRL(buyFeeBRL)}</span>
-              </div>
-              <div className="flex justify-between pt-2 border-t border-gray-700">
-                <span className="font-medium text-gray-300">
-                  Total a pagar:
-                </span>
-                <span className="font-semibold text-white text-lg">
+            {/* Total BRL to pay with PIX icon */}
+            {buyUSDTAmount > 0 && (
+              <div className="bg-gradient-to-br from-green-500/20 to-brand-500/20 rounded-xl p-4 sm:p-6 border border-green-500/30">
+                <div className="flex items-center gap-2 mb-2">
+                  <QrCode className="w-5 h-5 text-green-400" />
+                  <div className="text-sm text-gray-300">
+                    {language === "pt"
+                      ? "Total a pagar via PIX:"
+                      : "Total to pay via PIX:"}
+                  </div>
+                </div>
+                <div className="text-2xl sm:text-3xl font-bold text-green-400 flex items-center gap-2">
                   {formatBRL(buyTotalBRL)}
-                </span>
+                  <span className="text-sm font-normal text-gray-400">BRL</span>
+                </div>
+                <div className="mt-3 pt-3 border-t border-gray-700/50 space-y-1.5">
+                  <div className="flex justify-between text-xs text-gray-400">
+                    <span>
+                      {language === "pt" ? "Valor base:" : "Base amount:"}
+                    </span>
+                    <span className="text-gray-300">
+                      {formatBRL(buyBaseBRL)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-400">
+                    <span>
+                      {language === "pt" ? "Taxa (3%):" : "Fee (3%):"}
+                    </span>
+                    <span className="text-red-400">{formatBRL(buyFeeBRL)}</span>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="bg-gradient-to-br from-brand-500/20 to-green-500/20 rounded-xl p-4 sm:p-6 border border-brand-500/30">
               <div className="text-sm text-gray-300 mb-2">
                 {language === "pt" ? "Você receberá:" : "You will receive:"}
               </div>
               <div className="text-2xl sm:text-3xl font-bold text-brand-400">
-                {formatUSDT(buyUSDTReceived)} USDT
+                {formatUSDT(buyUSDTAmount)} USDT
               </div>
             </div>
 
             <Button
               onClick={handleBuyConfirm}
-              disabled={buyAmountBRL <= 0 || loading}
+              disabled={buyUSDTAmount <= 0 || loading}
               className="w-full h-12 sm:h-14 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors text-base sm:text-lg"
             >
               {loading ? (
