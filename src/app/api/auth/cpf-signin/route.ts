@@ -3,8 +3,118 @@ import prisma from "@/lib/prisma";
 import { getAuth } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 
+// Rate limiting constants
+const MAX_LOGIN_ATTEMPTS = 10; // Allow up to 10 wrong password attempts
+const LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minutes in milliseconds
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute window
+const MAX_ATTEMPTS_PER_WINDOW = 3; // Max attempts per minute
+
+// In-memory rate limiting (in production, use Redis)
+const loginAttempts = new Map<
+  string,
+  { count: number; lastAttempt: number; lockedUntil?: number }
+>();
+
+function getClientIdentifier(request: NextRequest): string {
+  const forwarded = request.headers.get("x-forwarded-for");
+  const ip = forwarded
+    ? forwarded.split(",")[0]
+    : request.headers.get("x-real-ip") || "unknown";
+  return ip;
+}
+
+function isRateLimited(identifier: string): {
+  limited: boolean;
+  retryAfter?: number;
+} {
+  const now = Date.now();
+  const attempts = loginAttempts.get(identifier);
+
+  if (!attempts) {
+    loginAttempts.set(identifier, { count: 1, lastAttempt: now });
+    return { limited: false };
+  }
+
+  // Check if account is locked
+  if (attempts.lockedUntil && attempts.lockedUntil > now) {
+    const retryAfter = Math.ceil((attempts.lockedUntil - now) / 1000);
+    return { limited: true, retryAfter };
+  }
+
+  // Reset lock if expired
+  if (attempts.lockedUntil && attempts.lockedUntil <= now) {
+    attempts.lockedUntil = undefined;
+    attempts.count = 0;
+  }
+
+  // Check rate limit window
+  if (now - attempts.lastAttempt < RATE_LIMIT_WINDOW) {
+    attempts.count++;
+  } else {
+    // Reset count if outside window
+    attempts.count = 1;
+  }
+
+  attempts.lastAttempt = now;
+
+  // Lock account if too many attempts
+  if (attempts.count >= MAX_LOGIN_ATTEMPTS) {
+    attempts.lockedUntil = now + LOCKOUT_DURATION;
+    const retryAfter = Math.ceil(LOCKOUT_DURATION / 1000);
+    return { limited: true, retryAfter };
+  }
+
+  // Check rate limit per window
+  if (attempts.count > MAX_ATTEMPTS_PER_WINDOW) {
+    const retryAfter = Math.ceil(
+      (RATE_LIMIT_WINDOW - (now - attempts.lastAttempt)) / 1000
+    );
+    return { limited: true, retryAfter };
+  }
+
+  loginAttempts.set(identifier, attempts);
+  return { limited: false };
+}
+
+function resetLoginAttempts(identifier: string) {
+  loginAttempts.delete(identifier);
+}
+
+function recordFailedAttempt(identifier: string) {
+  const attempts = loginAttempts.get(identifier) || {
+    count: 0,
+    lastAttempt: Date.now(),
+  };
+  attempts.count++;
+  attempts.lastAttempt = Date.now();
+
+  if (attempts.count >= MAX_LOGIN_ATTEMPTS) {
+    attempts.lockedUntil = Date.now() + LOCKOUT_DURATION;
+  }
+
+  loginAttempts.set(identifier, attempts);
+}
+
 export async function POST(request: NextRequest) {
   try {
+    const clientIdentifier = getClientIdentifier(request);
+
+    // Check rate limiting
+    const rateLimit = isRateLimited(clientIdentifier);
+    if (rateLimit.limited) {
+      return NextResponse.json(
+        {
+          error: rateLimit.retryAfter
+            ? `Muitas tentativas de login. Tente novamente em ${Math.ceil(
+                rateLimit.retryAfter / 60
+              )} minutos.`
+            : "Muitas tentativas de login. Por favor, aguarde um momento antes de tentar novamente.",
+          retryAfter: rateLimit.retryAfter,
+        },
+        { status: 429 }
+      );
+    }
+
     const { cpf, password } = await request.json();
 
     if (!cpf || !password) {
@@ -133,6 +243,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      recordFailedAttempt(clientIdentifier);
       return NextResponse.json(
         {
           error: `No account found with this ${searchType}. Please check your ${searchType} or create a new account.`,
@@ -182,8 +293,24 @@ export async function POST(request: NextRequest) {
         console.log(
           "This usually means the password was hashed differently or there's a mismatch"
         );
-        return NextResponse.json({ error: "Wrong password" }, { status: 401 });
+        recordFailedAttempt(clientIdentifier);
+        const attempts = loginAttempts.get(clientIdentifier);
+        const remainingAttempts = MAX_LOGIN_ATTEMPTS - (attempts?.count || 0);
+
+        return NextResponse.json(
+          {
+            error:
+              remainingAttempts > 0
+                ? `Senha incorreta. Você tem ${remainingAttempts} tentativa(s) restante(s).`
+                : "Muitas tentativas falhadas. Sua conta foi temporariamente bloqueada. Tente novamente em alguns minutos.",
+            remainingAttempts: remainingAttempts > 0 ? remainingAttempts : 0,
+          },
+          { status: 401 }
+        );
       }
+
+      // Reset failed attempts on successful login
+      resetLoginAttempts(clientIdentifier);
 
       console.log("✅ Encrypted password verified successfully!");
     } catch (bcryptError) {

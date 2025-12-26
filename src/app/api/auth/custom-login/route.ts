@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 import { compare } from "bcryptjs";
 
 // Rate limiting constants
-const MAX_LOGIN_ATTEMPTS = 5;
+const MAX_LOGIN_ATTEMPTS = 10; // Allow up to 10 wrong password attempts
 const LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minutes in milliseconds
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute window
 const MAX_ATTEMPTS_PER_WINDOW = 3; // Max attempts per minute
