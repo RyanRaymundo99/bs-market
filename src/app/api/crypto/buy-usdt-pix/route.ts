@@ -49,19 +49,42 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse request body
-    const { amount, usdt_amount } = await request.json();
-
-    // Validate input
-    if (!amount || amount <= 0) {
+    let requestBody;
+    try {
+      requestBody = await request.json();
+    } catch (error) {
+      console.error("Failed to parse request body:", error);
       return NextResponse.json(
-        { error: "Amount must be greater than 0" },
+        { error: "Invalid request body" },
         { status: 400 }
       );
     }
 
-    if (!usdt_amount || usdt_amount <= 0) {
+    const { amount, usdt_amount } = requestBody;
+
+    // Validate input
+    if (!amount || amount <= 0 || isNaN(Number(amount))) {
       return NextResponse.json(
-        { error: "USDT amount must be greater than 0" },
+        { error: "Amount must be a valid number greater than 0" },
+        { status: 400 }
+      );
+    }
+
+    if (!usdt_amount || usdt_amount <= 0 || isNaN(Number(usdt_amount))) {
+      return NextResponse.json(
+        { error: "USDT amount must be a valid number greater than 0" },
+        { status: 400 }
+      );
+    }
+
+    // Ensure amounts are numbers
+    const amountNum = Number(amount);
+    const usdtAmountNum = Number(usdt_amount);
+
+    // Validate division won't cause issues
+    if (usdtAmountNum === 0 || !isFinite(amountNum / usdtAmountNum)) {
+      return NextResponse.json(
+        { error: "Invalid amount calculation" },
         { status: 400 }
       );
     }
@@ -90,19 +113,31 @@ export async function POST(request: NextRequest) {
     // IMPORTANT: Set externalOrderId to externalId immediately to prevent race condition
     // If webhook arrives before NutzPay response, it can still match by external_id
     // We'll update it with the real transactionId after NutzPay responds
-    const order = await prisma.order.create({
-      data: {
-        userId: user.id,
-        type: "BUY",
-        baseCurrency: "USDT",
-        quoteCurrency: "BRL",
-        amount: new Decimal(usdt_amount),
-        price: new Decimal(amount / usdt_amount),
-        total: new Decimal(amount),
-        status: "PENDING",
-        externalOrderId: externalId, // Set immediately to prevent webhook race condition
-      },
-    });
+    let order;
+    try {
+      order = await prisma.order.create({
+        data: {
+          userId: user.id,
+          type: "BUY",
+          baseCurrency: "USDT",
+          quoteCurrency: "BRL",
+          amount: new Decimal(usdtAmountNum),
+          price: new Decimal(amountNum / usdtAmountNum),
+          total: new Decimal(amountNum),
+          status: "PENDING",
+          externalOrderId: externalId, // Set immediately to prevent webhook race condition
+        },
+      });
+    } catch (dbError) {
+      console.error("Failed to create order in database:", dbError);
+      if (dbError instanceof Error) {
+        console.error("Database error details:", dbError.message);
+      }
+      return NextResponse.json(
+        { error: "Failed to create order. Please try again." },
+        { status: 500 }
+      );
+    }
 
     try {
       // Call NutzPay API to create USDT purchase
@@ -114,8 +149,8 @@ export async function POST(request: NextRequest) {
         }/api/webhooks/nutzpay`;
 
       const nutzPayResponse = await nutzPayService.createUSDTPurchase({
-        amount: amount,
-        usdt_amount: usdt_amount,
+        amount: amountNum,
+        usdt_amount: usdtAmountNum,
         customer: {
           name: user.name,
           document: document,
@@ -219,73 +254,112 @@ export async function POST(request: NextRequest) {
       // Calculate commission: User pays 3% total, but our commission is 1.8% of the deposit amount
       // amount is the total paid (base + 3% fee), so base = amount / 1.03
       // Our commission is 1.8% of the base amount
-      const baseAmount = Number(amount) / 1.03; // Base amount before fee
+      const baseAmount = amountNum / 1.03; // Base amount before fee
       const platformCommission = baseAmount * 0.018; // 1.8% commission for us
 
-      const deposit = await prisma.deposit.create({
-        data: {
-          userId: user.id,
-          amount: new Decimal(amount),
-          fee: new Decimal(platformCommission), // Store our 1.8% commission
-          status: isCompleted ? "CONFIRMED" : "PENDING",
-          paymentMethod: "PIX",
-          externalId: externalId, // Store our original externalId for webhook matching
-          pixQrCode: pixCode,
-          pixQrCodeBase64: responseData.pix_data?.qr_code_base64 || null,
-        },
-      });
+      let deposit;
+      try {
+        deposit = await prisma.deposit.create({
+          data: {
+            userId: user.id,
+            amount: new Decimal(amountNum),
+            fee: new Decimal(platformCommission), // Store our 1.8% commission
+            status: isCompleted ? "CONFIRMED" : "PENDING",
+            paymentMethod: "PIX",
+            externalId: externalId, // Store our original externalId for webhook matching
+            pixQrCode: pixCode,
+            pixQrCodeBase64: responseData.pix_data?.qr_code_base64 || null,
+          },
+        });
+      } catch (dbError) {
+        console.error("Failed to create deposit in database:", dbError);
+        if (dbError instanceof Error) {
+          console.error("Database error details:", dbError.message);
+        }
+        // Order was already created, so we need to handle this gracefully
+        // Mark order as failed since we couldn't create the deposit
+        await prisma.order.update({
+          where: { id: order.id },
+          data: { status: "FAILED" },
+        }).catch(() => {
+          // Ignore errors when updating order status
+        });
+        return NextResponse.json(
+          { error: "Failed to create deposit record. Please try again." },
+          { status: 500 }
+        );
+      }
 
       // If payment is completed, update user balance immediately
       if (isCompleted) {
         // Update USDT balance (add the USDT amount)
-        await ledgerService.updateBalance(
-          user.id,
-          "USDT",
-          new Decimal(usdt_amount),
-          "ADD"
-        );
+        try {
+          await ledgerService.updateBalance(
+            user.id,
+            "USDT",
+            new Decimal(usdtAmountNum),
+            "ADD"
+          );
+        } catch (balanceError) {
+          console.error("Failed to update user balance:", balanceError);
+          // Continue anyway - transaction will be created but balance update failed
+        }
 
         // Create transaction record for USDT credit
-        const transaction = await ledgerService.createTransaction({
-          userId: user.id,
-          type: "BUY_CRYPTO",
-          amount: new Decimal(usdt_amount),
-          currency: "USDT",
-          description: `USDT purchase via PIX - ${usdt_amount} USDT`,
-          metadata: {
-            orderId: order.id,
-            depositId: deposit.id,
-            transactionId: transactionId,
-            amountBRL: amount,
-            amountUSDT: usdt_amount,
-            exchangeRate: amount / usdt_amount,
-          },
-        });
+        let transaction;
+        try {
+          transaction = await ledgerService.createTransaction({
+            userId: user.id,
+            type: "BUY_CRYPTO",
+            amount: new Decimal(usdtAmountNum),
+            currency: "USDT",
+            description: `USDT purchase via PIX - ${usdtAmountNum} USDT`,
+            metadata: {
+              orderId: order.id,
+              depositId: deposit.id,
+              transactionId: transactionId,
+              amountBRL: amountNum,
+              amountUSDT: usdtAmountNum,
+              exchangeRate: amountNum / usdtAmountNum,
+            },
+          });
+        } catch (transactionError) {
+          console.error("Failed to create transaction record:", transactionError);
+          // Continue anyway - order and deposit are created
+          transaction = null;
+        }
 
-        // Link transaction to order
-        await prisma.order.update({
-          where: { id: order.id },
-          data: {
-            transactionId: transaction.id,
-          },
-        });
+        // Link transaction to order if transaction was created
+        if (transaction) {
+          try {
+            await prisma.order.update({
+              where: { id: order.id },
+              data: {
+                transactionId: transaction.id,
+              },
+            });
+          } catch (updateError) {
+            console.error("Failed to link transaction to order:", updateError);
+            // Non-critical error, continue
+          }
+        }
 
         console.log(
-          `User ${user.id} balance credited with ${usdt_amount} USDT`
+          `User ${user.id} balance credited with ${usdtAmountNum} USDT`
         );
 
         // Send purchase receipt email (don't await to avoid blocking response)
-        if (user.email && user.name) {
-          const fee = (amount * 0.03) / 1.03; // 3% fee calculation
-          const baseAmount = amount - fee;
+        if (user.email && user.name && transaction) {
+          const fee = (amountNum * 0.03) / 1.03; // 3% fee calculation
+          const baseAmount = amountNum - fee;
           sendPurchaseReceipt({
             userName: user.name,
             userEmail: user.email,
             amountBRL: baseAmount,
-            amountUSDT: usdt_amount,
-            exchangeRate: amount / usdt_amount,
+            amountUSDT: usdtAmountNum,
+            exchangeRate: amountNum / usdtAmountNum,
             fee: fee,
-            totalPaid: amount,
+            totalPaid: amountNum,
             transactionId: transactionId || externalId,
             date: new Date(),
             paymentMethod: "PIX",
@@ -340,9 +414,9 @@ export async function POST(request: NextRequest) {
           transactionId: finalTransactionId, // Also include camelCase for compatibility
           external_id: externalId,
           status: responseStatus,
-          amount_brl: amount,
-          amount_usdt: usdt_amount,
-          exchange_rate: amount / usdt_amount,
+          amount_brl: amountNum,
+          amount_usdt: usdtAmountNum,
+          exchange_rate: amountNum / usdtAmountNum,
           // PIX code fields - match NutzPay API structure
           qrCode: pixCode, // Direct field from NutzPay
           pixKey: pixCode, // Also include as pixKey (same value)
@@ -448,9 +522,49 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error("USDT purchase error:", error);
+    
+    // Log detailed error information for debugging
+    if (error instanceof Error) {
+      console.error("Error name:", error.name);
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+    } else {
+      console.error("Unknown error type:", typeof error);
+      console.error("Error value:", JSON.stringify(error, null, 2));
+    }
+    
+    // Check for common issues
+    let errorMessage = "Failed to process USDT purchase";
+    let statusCode = 500;
+    
+    if (error instanceof Error) {
+      // Check for database connection errors
+      if (error.message.includes("PrismaClient") || error.message.includes("database") || error.message.includes("connection")) {
+        errorMessage = "Database connection error. Please try again later.";
+        console.error("Database error detected");
+      }
+      // Check for environment variable errors
+      else if (error.message.includes("PUBLIC_KEY") || error.message.includes("SECRET_KEY") || error.message.includes("NutzPay credentials")) {
+        errorMessage = "Payment service configuration error. Please contact support.";
+        console.error("NutzPay configuration error detected");
+      }
+      // Check for validation errors
+      else if (error.message.includes("Invalid") || error.message.includes("required") || error.message.includes("must be")) {
+        errorMessage = error.message;
+        statusCode = 400;
+      }
+      // Use the error message if it's informative
+      else if (error.message && error.message !== "Failed to process USDT purchase") {
+        errorMessage = error.message;
+      }
+    }
+    
     return NextResponse.json(
-      { error: "Failed to process USDT purchase" },
-      { status: 500 }
+      { 
+        error: errorMessage,
+        ...(process.env.NODE_ENV === "development" && { details: error instanceof Error ? error.message : String(error) })
+      },
+      { status: statusCode }
     );
   }
 }
