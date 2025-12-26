@@ -77,9 +77,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Ensure amounts are numbers
-    const amountNum = Number(amount);
-    const usdtAmountNum = Number(usdt_amount);
+    // Ensure amounts are numbers and properly formatted
+    let amountNum = Number(amount);
+    let usdtAmountNum = Number(usdt_amount);
 
     // Validate division won't cause issues
     if (usdtAmountNum === 0 || !isFinite(amountNum / usdtAmountNum)) {
@@ -88,6 +88,37 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Round amounts to appropriate decimal places to avoid floating point precision issues
+    // BRL amount must have exactly 2 decimal places for Mercado Pago
+    amountNum = Math.round(amountNum * 100) / 100;
+    // USDT amount can have up to 8 decimal places, but we'll round to 4 for API compatibility
+    usdtAmountNum = Math.round(usdtAmountNum * 10000) / 10000;
+
+    // Validate minimum amounts
+    if (amountNum < 0.01) {
+      return NextResponse.json(
+        { error: "Amount must be at least R$ 0,01" },
+        { status: 400 }
+      );
+    }
+
+    if (usdtAmountNum < 0.0001) {
+      return NextResponse.json(
+        { error: "USDT amount must be at least 0.0001 USDT" },
+        { status: 400 }
+      );
+    }
+
+    // Log the amounts being processed
+    console.log("Processing purchase with amounts:", {
+      originalAmount: amount,
+      roundedAmount: amountNum,
+      originalUsdtAmount: usdt_amount,
+      roundedUsdtAmount: usdtAmountNum,
+      amountString: amountNum.toFixed(2),
+      usdtAmountString: usdtAmountNum.toFixed(4),
+    });
 
     // Validate user has required information
     if (!user.name || !user.email) {

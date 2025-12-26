@@ -119,8 +119,8 @@ export class NutzPayService {
   }) {
     try {
       // Validate amounts
-      const amount = Number(data.amount);
-      const usdtAmount = Number(data.usdt_amount);
+      let amount = Number(data.amount);
+      let usdtAmount = Number(data.usdt_amount);
       if (
         isNaN(amount) ||
         amount <= 0 ||
@@ -130,10 +130,39 @@ export class NutzPayService {
         throw new Error("Invalid amounts: must be positive numbers");
       }
 
+      // Round amounts to appropriate decimal places
+      // BRL amount must have exactly 2 decimal places for Mercado Pago
+      amount = Math.round(amount * 100) / 100;
+      // USDT amount can have up to 8 decimal places, but we'll round to 4 for API compatibility
+      usdtAmount = Math.round(usdtAmount * 10000) / 10000;
+
+      // Validate minimum amounts (Mercado Pago typically requires minimum 0.01 BRL)
+      if (amount < 0.01) {
+        throw new Error("Amount must be at least 0.01 BRL");
+      }
+
+      if (usdtAmount < 0.0001) {
+        throw new Error("USDT amount must be at least 0.0001 USDT");
+      }
+
+      // Log the amounts being sent for debugging
+      console.log("NutzPay purchase request amounts:", {
+        originalAmount: data.amount,
+        roundedAmount: amount,
+        originalUsdtAmount: data.usdt_amount,
+        roundedUsdtAmount: usdtAmount,
+        amountString: amount.toFixed(2),
+        usdtAmountString: usdtAmount.toFixed(4),
+      });
+
       // Prepare the purchase payload according to NutzPay API
+      // Mercado Pago requires amounts as numbers with exactly 2 decimal places
+      // We need to ensure no floating point precision issues
       const purchasePayload = {
-        amount: amount,
-        usdt_amount: usdtAmount,
+        // Convert to string with fixed decimals, then back to number to ensure clean format
+        // This ensures we have exactly 2 decimal places without floating point artifacts
+        amount: parseFloat(amount.toFixed(2)), // Number with exactly 2 decimal places for BRL
+        usdt_amount: parseFloat(usdtAmount.toFixed(4)), // Number with exactly 4 decimal places for USDT
         customer: {
           name: data.customer.name,
           document: data.customer.document,
@@ -207,12 +236,31 @@ export class NutzPayService {
           throw new Error(errorMessage);
         }
 
-        // Log other API errors
+        // Log other API errors with request details
         if (error.response?.data) {
           console.error(
             "NutzPay API error response:",
             JSON.stringify(error.response.data, null, 2)
           );
+          console.error("Request payload that caused error:", {
+            amount: purchasePayload.amount,
+            usdt_amount: purchasePayload.usdt_amount,
+            amountType: typeof purchasePayload.amount,
+            usdtAmountType: typeof purchasePayload.usdt_amount,
+            customer: purchasePayload.customer,
+          });
+        }
+
+        // If it's a 500 error with "Invalid transaction_amount", provide helpful error
+        if (
+          error.response?.status === 500 &&
+          error.response?.data?.message?.includes("Invalid transaction_amount")
+        ) {
+          const helpfulError = new Error(
+            `Invalid transaction amount format. Amount: ${purchasePayload.amount}, USDT: ${purchasePayload.usdt_amount}. Mercado Pago requires BRL amounts with exactly 2 decimal places.`
+          );
+          helpfulError.name = "InvalidTransactionAmountFormat";
+          throw helpfulError;
         }
       }
 
