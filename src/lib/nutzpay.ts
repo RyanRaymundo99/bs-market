@@ -117,6 +117,10 @@ export class NutzPayService {
     external_id?: string;
     callback_url?: string;
   }) {
+    // Store formatted amounts outside try block for error logging
+    let formattedAmount: number | undefined;
+    let formattedUsdtAmount: number | undefined;
+
     try {
       // Validate amounts
       let amount = Number(data.amount);
@@ -145,6 +149,10 @@ export class NutzPayService {
         throw new Error("USDT amount must be at least 0.0001 USDT");
       }
 
+      // Store formatted amounts for error logging
+      formattedAmount = parseFloat(amount.toFixed(2));
+      formattedUsdtAmount = parseFloat(usdtAmount.toFixed(4));
+
       // Log the amounts being sent for debugging
       console.log("NutzPay purchase request amounts:", {
         originalAmount: data.amount,
@@ -161,8 +169,8 @@ export class NutzPayService {
       const purchasePayload = {
         // Convert to string with fixed decimals, then back to number to ensure clean format
         // This ensures we have exactly 2 decimal places without floating point artifacts
-        amount: parseFloat(amount.toFixed(2)), // Number with exactly 2 decimal places for BRL
-        usdt_amount: parseFloat(usdtAmount.toFixed(4)), // Number with exactly 4 decimal places for USDT
+        amount: formattedAmount, // Number with exactly 2 decimal places for BRL
+        usdt_amount: formattedUsdtAmount, // Number with exactly 4 decimal places for USDT
         customer: {
           name: data.customer.name,
           document: data.customer.document,
@@ -243,11 +251,11 @@ export class NutzPayService {
             JSON.stringify(error.response.data, null, 2)
           );
           console.error("Request payload that caused error:", {
-            amount: purchasePayload.amount,
-            usdt_amount: purchasePayload.usdt_amount,
-            amountType: typeof purchasePayload.amount,
-            usdtAmountType: typeof purchasePayload.usdt_amount,
-            customer: purchasePayload.customer,
+            amount: formattedAmount ?? data.amount,
+            usdt_amount: formattedUsdtAmount ?? data.usdt_amount,
+            amountType: typeof (formattedAmount ?? data.amount),
+            usdtAmountType: typeof (formattedUsdtAmount ?? data.usdt_amount),
+            customer: data.customer,
           });
         }
 
@@ -257,7 +265,7 @@ export class NutzPayService {
           error.response?.data?.message?.includes("Invalid transaction_amount")
         ) {
           const helpfulError = new Error(
-            `Invalid transaction amount format. Amount: ${purchasePayload.amount}, USDT: ${purchasePayload.usdt_amount}. Mercado Pago requires BRL amounts with exactly 2 decimal places.`
+            `Invalid transaction amount format. Amount: ${formattedAmount ?? data.amount}, USDT: ${formattedUsdtAmount ?? data.usdt_amount}. Mercado Pago requires BRL amounts with exactly 2 decimal places.`
           );
           helpfulError.name = "InvalidTransactionAmountFormat";
           throw helpfulError;
