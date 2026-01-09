@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { hash } from "bcryptjs";
 import { SMSService } from "@/lib/sms";
+import { DocumentValidator } from "@/lib/utils/document-validation";
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,15 +26,24 @@ export async function POST(request: NextRequest) {
 
     const formattedPhone = SMSService.formatPhoneNumber(phone);
 
-    // Clean CPF for comparison (same as what we'll store)
-    const cleanCpf = cpf.replace(/\D/g, "");
+    // Validate and clean document (CPF or CNPJ)
+    const documentValidation = DocumentValidator.validate(cpf);
+    if (!documentValidation.isValid) {
+      return NextResponse.json(
+        { error: documentValidation.errors[0] || "Invalid CPF or CNPJ" },
+        { status: 400 }
+      );
+    }
+
+    const cleanDocument = documentValidation.cleanDocument;
+    const documentType = documentValidation.type;
 
     // Check if user already exists
     const existingUser = await prisma.user.findFirst({
       where: {
         OR: [
           { email: email.toLowerCase() },
-          { cpf: cleanCpf },
+          { cpf: cleanDocument },
           { phone: formattedPhone },
         ],
       },
@@ -43,15 +53,16 @@ export async function POST(request: NextRequest) {
       let errorMessage = "User already exists with this ";
       if (existingUser.email === email.toLowerCase()) {
         errorMessage += "email address";
-      } else if (existingUser.cpf === cleanCpf) {
-        errorMessage += "CPF";
+      } else if (existingUser.cpf === cleanDocument) {
+        errorMessage += documentType || "document";
       } else if (existingUser.phone === formattedPhone) {
         errorMessage += "phone number";
       }
 
       console.log("Signup conflict detected:", {
         email: email.toLowerCase(),
-        cpf: cleanCpf,
+        document: cleanDocument,
+        documentType,
         phone: formattedPhone,
         existingUser: {
           id: existingUser.id,
@@ -70,11 +81,10 @@ export async function POST(request: NextRequest) {
 
     // Create user with verification requirements
     try {
-      // Clean CPF for storage
-      const cleanCpf = cpf.replace(/\D/g, "");
-      console.log("Creating user with CPF:", {
+      console.log("Creating user with document:", {
         original: cpf,
-        cleaned: cleanCpf,
+        cleaned: cleanDocument,
+        type: documentType,
       });
 
       const user = await prisma.user.create({
@@ -83,7 +93,7 @@ export async function POST(request: NextRequest) {
           name,
           email: email.toLowerCase(),
           phone: formattedPhone,
-          cpf: cleanCpf, // Store cleaned CPF
+          cpf: cleanDocument, // Store cleaned document (CPF or CNPJ)
           password: hashedPassword,
           emailVerified: false, // Will be verified in next step
           phoneVerified: true, // Phone verification removed - set to true
@@ -95,7 +105,11 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      console.log("User created successfully:", { id: user.id, cpf: user.cpf });
+      console.log("User created successfully:", {
+        id: user.id,
+        document: user.cpf,
+        type: documentType,
+      });
 
       // Create initial balance (0 balance for new users)
       await prisma.balance.create({

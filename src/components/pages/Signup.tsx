@@ -8,7 +8,7 @@ import { Form } from "@/components/ui/form";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { InputField } from "@/components/Auth/FormFields";
-import { CPFField } from "@/components/Auth/CPFField";
+import { DocumentField } from "@/components/Auth/DocumentField";
 import { PhoneField } from "@/components/Auth/PhoneField";
 import { SignUpFormValues, signUpSchema } from "@/lib/schema/signupSchema";
 import { AuthLayout } from "@/components/ui/auth-layout";
@@ -137,12 +137,14 @@ const Signup = () => {
             placeholder="(11) 99999-9999"
           />
 
-          <CPFField
+          <DocumentField
             value={form.watch("cpf")}
             onChange={(value) => form.setValue("cpf", value)}
             onBlur={() => form.trigger("cpf")}
             error={form.formState.errors.cpf?.message}
             required
+            label="CPF ou CNPJ"
+            placeholder="000.000.000-00 ou 00.000.000/0000-00"
           />
 
           <InputField

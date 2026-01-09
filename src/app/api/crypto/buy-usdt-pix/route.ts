@@ -147,18 +147,18 @@ export async function POST(request: NextRequest) {
     let order;
     try {
       order = await prisma.order.create({
-        data: {
-          userId: user.id,
-          type: "BUY",
-          baseCurrency: "USDT",
-          quoteCurrency: "BRL",
+      data: {
+        userId: user.id,
+        type: "BUY",
+        baseCurrency: "USDT",
+        quoteCurrency: "BRL",
           amount: new Decimal(usdtAmountNum),
           price: new Decimal(amountNum / usdtAmountNum),
           total: new Decimal(amountNum),
-          status: "PENDING",
-          externalOrderId: externalId, // Set immediately to prevent webhook race condition
-        },
-      });
+        status: "PENDING",
+        externalOrderId: externalId, // Set immediately to prevent webhook race condition
+      },
+    });
     } catch (dbError) {
       console.error("Failed to create order in database:", dbError);
       if (dbError instanceof Error) {
@@ -291,17 +291,17 @@ export async function POST(request: NextRequest) {
       let deposit;
       try {
         deposit = await prisma.deposit.create({
-          data: {
-            userId: user.id,
+        data: {
+          userId: user.id,
             amount: new Decimal(amountNum),
-            fee: new Decimal(platformCommission), // Store our 1.8% commission
-            status: isCompleted ? "CONFIRMED" : "PENDING",
-            paymentMethod: "PIX",
-            externalId: externalId, // Store our original externalId for webhook matching
-            pixQrCode: pixCode,
-            pixQrCodeBase64: responseData.pix_data?.qr_code_base64 || null,
-          },
-        });
+          fee: new Decimal(platformCommission), // Store our 1.8% commission
+          status: isCompleted ? "CONFIRMED" : "PENDING",
+          paymentMethod: "PIX",
+          externalId: externalId, // Store our original externalId for webhook matching
+          pixQrCode: pixCode,
+          pixQrCodeBase64: responseData.pix_data?.qr_code_base64 || null,
+        },
+      });
       } catch (dbError) {
         console.error("Failed to create deposit in database:", dbError);
         if (dbError instanceof Error) {
@@ -325,12 +325,12 @@ export async function POST(request: NextRequest) {
       if (isCompleted) {
         // Update USDT balance (add the USDT amount)
         try {
-          await ledgerService.updateBalance(
-            user.id,
-            "USDT",
+        await ledgerService.updateBalance(
+          user.id,
+          "USDT",
             new Decimal(usdtAmountNum),
-            "ADD"
-          );
+          "ADD"
+        );
         } catch (balanceError) {
           console.error("Failed to update user balance:", balanceError);
           // Continue anyway - transaction will be created but balance update failed
@@ -340,20 +340,20 @@ export async function POST(request: NextRequest) {
         let transaction;
         try {
           transaction = await ledgerService.createTransaction({
-            userId: user.id,
-            type: "BUY_CRYPTO",
+          userId: user.id,
+          type: "BUY_CRYPTO",
             amount: new Decimal(usdtAmountNum),
-            currency: "USDT",
+          currency: "USDT",
             description: `USDT purchase via PIX - ${usdtAmountNum} USDT`,
-            metadata: {
-              orderId: order.id,
-              depositId: deposit.id,
-              transactionId: transactionId,
+          metadata: {
+            orderId: order.id,
+            depositId: deposit.id,
+            transactionId: transactionId,
               amountBRL: amountNum,
               amountUSDT: usdtAmountNum,
               exchangeRate: amountNum / usdtAmountNum,
-            },
-          });
+          },
+        });
         } catch (transactionError) {
           console.error("Failed to create transaction record:", transactionError);
           // Continue anyway - order and deposit are created
@@ -363,12 +363,12 @@ export async function POST(request: NextRequest) {
         // Link transaction to order if transaction was created
         if (transaction) {
           try {
-            await prisma.order.update({
-              where: { id: order.id },
-              data: {
-                transactionId: transaction.id,
-              },
-            });
+        await prisma.order.update({
+          where: { id: order.id },
+          data: {
+            transactionId: transaction.id,
+          },
+        });
           } catch (updateError) {
             console.error("Failed to link transaction to order:", updateError);
             // Non-critical error, continue

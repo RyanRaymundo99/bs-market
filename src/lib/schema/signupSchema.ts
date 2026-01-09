@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CPFValidator } from "@/lib/utils/cpf-validation";
+import { DocumentValidator } from "@/lib/utils/document-validation";
 
 export const signUpSchema = z
   .object({
@@ -17,9 +17,17 @@ export const signUpSchema = z
       ),
     cpf: z
       .string()
-      .min(1, { message: "CPF is required" })
-      .refine((cpf) => CPFValidator.isValid(cpf), {
-        message: "Please enter a valid CPF",
+      .min(1, { message: "CPF ou CNPJ é obrigatório" })
+      .refine(
+        (doc) => {
+          const clean = doc.replace(/\D/g, "");
+          // Must be either 11 digits (CPF) or 14 digits (CNPJ)
+          return clean.length === 11 || clean.length === 14;
+        },
+        { message: "Documento deve ter 11 dígitos (CPF) ou 14 dígitos (CNPJ)" }
+      )
+      .refine((doc) => DocumentValidator.isValid(doc), {
+        message: "Por favor, insira um CPF ou CNPJ válido",
       }),
     password: z
       .string()

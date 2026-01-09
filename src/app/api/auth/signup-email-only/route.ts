@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { hash } from "bcryptjs";
 import prisma from "@/lib/prisma";
+import { DocumentValidator } from "@/lib/utils/document-validation";
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,16 +15,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate and clean document (CPF or CNPJ)
+    const documentValidation = DocumentValidator.validate(cpf);
+    if (!documentValidation.isValid) {
+      return NextResponse.json(
+        { error: documentValidation.errors[0] || "Invalid CPF or CNPJ" },
+        { status: 400 }
+      );
+    }
+
+    const cleanDocument = documentValidation.cleanDocument;
+    const documentType = documentValidation.type;
+
     // Check if user already exists
     const existingUser = await prisma.user.findFirst({
       where: {
-        OR: [{ email: email.toLowerCase() }, { cpf: cpf.replace(/\D/g, "") }],
+        OR: [{ email: email.toLowerCase() }, { cpf: cleanDocument }],
       },
     });
 
     if (existingUser) {
       return NextResponse.json(
-        { error: "User with this email or CPF already exists" },
+        {
+          error: `User with this email or ${documentType || "document"} already exists`,
+        },
         { status: 400 }
       );
     }
@@ -37,7 +52,7 @@ export async function POST(request: NextRequest) {
         id: `user_${Date.now()}`,
         name,
         email: email.toLowerCase(),
-        cpf: cpf.replace(/\D/g, ""),
+        cpf: cleanDocument, // Store cleaned document (CPF or CNPJ)
         password: hashedPassword,
         emailVerified: false, // Will be verified via email
         phoneVerified: true, // Skip phone verification
