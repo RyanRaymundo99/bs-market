@@ -127,29 +127,33 @@ export class DocumentMask {
   static apply(value: string): string {
     const cleanValue = value.replace(/\D/g, "");
 
+    // Limit to 14 digits (max for CNPJ)
+    const limitedValue = cleanValue.slice(0, 14);
+
     // If 11 digits or less, apply CPF mask
-    if (cleanValue.length <= 11) {
-      if (cleanValue.length <= 3) {
-        return cleanValue;
-      } else if (cleanValue.length <= 6) {
-        return `${cleanValue.slice(0, 3)}.${cleanValue.slice(3)}`;
-      } else if (cleanValue.length <= 9) {
-        return `${cleanValue.slice(0, 3)}.${cleanValue.slice(3, 6)}.${cleanValue.slice(6)}`;
+    if (limitedValue.length <= 11) {
+      if (limitedValue.length <= 3) {
+        return limitedValue;
+      } else if (limitedValue.length <= 6) {
+        return `${limitedValue.slice(0, 3)}.${limitedValue.slice(3)}`;
+      } else if (limitedValue.length <= 9) {
+        return `${limitedValue.slice(0, 3)}.${limitedValue.slice(3, 6)}.${limitedValue.slice(6)}`;
       } else {
-        return `${cleanValue.slice(0, 3)}.${cleanValue.slice(3, 6)}.${cleanValue.slice(6, 9)}-${cleanValue.slice(9, 11)}`;
+        return `${limitedValue.slice(0, 3)}.${limitedValue.slice(3, 6)}.${limitedValue.slice(6, 9)}-${limitedValue.slice(9, 11)}`;
       }
     } else {
       // Apply CNPJ mask for 12+ digits
-      if (cleanValue.length <= 2) {
-        return cleanValue;
-      } else if (cleanValue.length <= 5) {
-        return `${cleanValue.slice(0, 2)}.${cleanValue.slice(2)}`;
-      } else if (cleanValue.length <= 8) {
-        return `${cleanValue.slice(0, 2)}.${cleanValue.slice(2, 5)}.${cleanValue.slice(5)}`;
-      } else if (cleanValue.length <= 12) {
-        return `${cleanValue.slice(0, 2)}.${cleanValue.slice(2, 5)}.${cleanValue.slice(5, 8)}/${cleanValue.slice(8)}`;
+      // When transitioning from CPF to CNPJ, reformat from the beginning
+      if (limitedValue.length <= 2) {
+        return limitedValue;
+      } else if (limitedValue.length <= 5) {
+        return `${limitedValue.slice(0, 2)}.${limitedValue.slice(2)}`;
+      } else if (limitedValue.length <= 8) {
+        return `${limitedValue.slice(0, 2)}.${limitedValue.slice(2, 5)}.${limitedValue.slice(5)}`;
+      } else if (limitedValue.length <= 12) {
+        return `${limitedValue.slice(0, 2)}.${limitedValue.slice(2, 5)}.${limitedValue.slice(5, 8)}/${limitedValue.slice(8)}`;
       } else {
-        return `${cleanValue.slice(0, 2)}.${cleanValue.slice(2, 5)}.${cleanValue.slice(5, 8)}/${cleanValue.slice(8, 12)}-${cleanValue.slice(12, 14)}`;
+        return `${limitedValue.slice(0, 2)}.${limitedValue.slice(2, 5)}.${limitedValue.slice(5, 8)}/${limitedValue.slice(8, 12)}-${limitedValue.slice(12, 14)}`;
       }
     }
   }

@@ -36,6 +36,24 @@ export const DocumentField: React.FC<DocumentFieldProps> = ({
     errors: string[];
   } | null>(null);
 
+  // Detect document type based on current input length
+  const cleanValue = value.replace(/\D/g, "");
+  const detectedType: DocumentType | null = cleanValue.length <= 11 ? "CPF" : cleanValue.length <= 14 ? "CNPJ" : null;
+  
+  // Dynamic label based on detected type
+  const dynamicLabel = cleanValue.length === 0 
+    ? label 
+    : cleanValue.length <= 11 
+    ? "CPF" 
+    : "CNPJ";
+  
+  // Dynamic placeholder based on detected type
+  const dynamicPlaceholder = cleanValue.length === 0
+    ? placeholder
+    : cleanValue.length <= 11
+    ? "000.000.000-00"
+    : "00.000.000/0000-00";
+
   // Apply mask to input value (automatically detects CPF or CNPJ)
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value;
@@ -77,17 +95,16 @@ export const DocumentField: React.FC<DocumentFieldProps> = ({
 
   const hasError = error || (validationResult && !validationResult.isValid);
   const isValid = validationResult?.isValid;
-  const documentType = validationResult?.type;
+  const documentType = validationResult?.type || detectedType;
 
-  // Determine max length based on current input
-  const cleanValue = value.replace(/\D/g, "");
-  const maxLength = cleanValue.length <= 11 ? 14 : 18; // CPF: 14 chars, CNPJ: 18 chars
+  // Max length: 18 characters for CNPJ format (00.000.000/0000-00)
+  const maxLength = 18;
 
   return (
     <div className={cn("space-y-2", className)}>
       {label && (
         <Label className="text-sm font-medium text-gray-200">
-          {label}
+          {dynamicLabel}
           {required && <span className="text-red-400 ml-1">*</span>}
         </Label>
       )}
@@ -99,7 +116,7 @@ export const DocumentField: React.FC<DocumentFieldProps> = ({
           onChange={handleChange}
           onBlur={handleBlur}
           onFocus={handleFocus}
-          placeholder={placeholder}
+          placeholder={dynamicPlaceholder}
           disabled={disabled}
           maxLength={maxLength}
           className={cn(
@@ -142,7 +159,11 @@ export const DocumentField: React.FC<DocumentFieldProps> = ({
 
       {/* Help Text */}
       <p className="text-xs text-gray-400">
-        Digite apenas os números do CPF (11 dígitos) ou CNPJ (14 dígitos)
+        {cleanValue.length === 0 
+          ? "Digite apenas os números do CPF (11 dígitos) ou CNPJ (14 dígitos)"
+          : cleanValue.length <= 11
+          ? "CPF: 11 dígitos (ex: 000.000.000-00)"
+          : "CNPJ: 14 dígitos (ex: 00.000.000/0000-00)"}
       </p>
     </div>
   );
