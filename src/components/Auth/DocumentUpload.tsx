@@ -77,7 +77,7 @@ const DocumentUpload = ({
   const handleFileUpload = (file: File, type: "front" | "back" | "selfie" | "contratoSocial" | "cartaoCNPJ" | "cnhSocio") => {
     if (!file) return;
 
-    // For CNPJ documents, accept PDFs; for CPF documents, accept images
+    // For CNPJ documents, accept PDFs or images; for CPF documents, accept images
     const isPDF = file.type === "application/pdf";
     const isImage = file.type.startsWith("image/");
     
@@ -86,7 +86,7 @@ const DocumentUpload = ({
         variant: "destructive",
         title: "Invalid file type",
         description: isCNPJ 
-          ? "Please upload a PDF file" 
+          ? "Please upload a PDF file or image (JPG, PNG, etc.)" 
           : "Please upload an image file (JPG, PNG, etc.)",
       });
       return;
@@ -178,7 +178,7 @@ const DocumentUpload = ({
         toast({
           variant: "destructive",
           title: "Contrato Social obrigatório",
-          description: "Por favor, envie o Contrato Social em PDF",
+          description: "Por favor, envie o Contrato Social (PDF ou foto)",
         });
         return false;
       }
@@ -186,7 +186,7 @@ const DocumentUpload = ({
         toast({
           variant: "destructive",
           title: "Cartão CNPJ obrigatório",
-          description: "Por favor, envie o Cartão CNPJ em PDF",
+          description: "Por favor, envie o Cartão CNPJ (PDF ou foto)",
         });
         return false;
       }
@@ -194,7 +194,7 @@ const DocumentUpload = ({
         toast({
           variant: "destructive",
           title: "CNH do sócio controlado obrigatória",
-          description: "Por favor, envie a CNH do sócio controlado em PDF",
+          description: "Por favor, envie a CNH do sócio controlado (PDF ou foto)",
         });
         return false;
       }
@@ -412,7 +412,7 @@ const DocumentUpload = ({
         >
           <input
             type="file"
-            accept="application/pdf"
+            accept="application/pdf,image/*"
             onChange={(e) =>
               e.target.files?.[0] && handleFileUpload(e.target.files[0], type)
             }
@@ -453,7 +453,7 @@ const DocumentUpload = ({
                 <FileImage className="w-6 h-6 text-white" />
               </div>
               <p className="text-white/80 mb-2">
-                Arraste e solte o PDF aqui
+                Arraste e solte o arquivo aqui (PDF ou foto)
               </p>
               <p className="text-white/60 text-sm mb-4">ou</p>
               <Button
@@ -463,7 +463,7 @@ const DocumentUpload = ({
                 className="border-gray-600 text-white hover:bg-gray-700"
               >
                 <Upload className="w-4 h-4 mr-2" />
-                Escolher arquivo PDF
+                Escolher arquivo (PDF ou foto)
               </Button>
             </div>
           )}
@@ -491,17 +491,17 @@ const DocumentUpload = ({
             {renderPDFUpload(
               "contratoSocial",
               "Contrato Social",
-              "Envie o Contrato Social da empresa em PDF"
+              "Envie o Contrato Social da empresa (PDF ou foto)"
             )}
             {renderPDFUpload(
               "cartaoCNPJ",
               "Cartão CNPJ",
-              "Envie o Cartão CNPJ da empresa em PDF"
+              "Envie o Cartão CNPJ da empresa (PDF ou foto)"
             )}
             {renderPDFUpload(
               "cnhSocio",
               "CNH do Sócio Controlado",
-              "Envie a CNH do sócio controlado em PDF"
+              "Envie a CNH do sócio controlado (PDF ou foto)"
             )}
           </>
         ) : (

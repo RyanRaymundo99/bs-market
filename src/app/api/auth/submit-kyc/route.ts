@@ -183,10 +183,23 @@ export async function POST(request: NextRequest) {
     let cnhSocioUrl: string | undefined;
 
     if (isCNPJ) {
-      // Handle CNPJ documents
-      const contratoFilename = `contrato_social_${timestamp}.${contratoSocial!.name.split(".").pop()}`;
-      const cartaoFilename = `cartao_cnpj_${timestamp}.${cartaoCNPJ!.name.split(".").pop()}`;
-      const cnhFilename = `cnh_socio_${timestamp}.${cnhSocioControlado!.name.split(".").pop()}`;
+      // Handle CNPJ documents (PDF or images)
+      // Get file extension from original filename or MIME type
+      const getFileExtension = (file: File): string => {
+        const nameExt = file.name.split(".").pop()?.toLowerCase() || "";
+        if (nameExt) return nameExt;
+        // Fallback to extension based on MIME type
+        if (file.type === "application/pdf") return "pdf";
+        if (file.type.startsWith("image/")) {
+          const mimeExt = file.type.split("/")[1];
+          return mimeExt === "jpeg" ? "jpg" : mimeExt;
+        }
+        return "bin";
+      };
+      
+      const contratoFilename = `contrato_social_${timestamp}.${getFileExtension(contratoSocial!)}`;
+      const cartaoFilename = `cartao_cnpj_${timestamp}.${getFileExtension(cartaoCNPJ!)}`;
+      const cnhFilename = `cnh_socio_${timestamp}.${getFileExtension(cnhSocioControlado!)}`;
 
       if (isVercel) {
         try {

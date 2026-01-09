@@ -554,7 +554,7 @@ const SignupWithMandatoryKYC = () => {
                     <>
                       {/* Contrato Social */}
                       <div>
-                        <Label>Contrato Social (PDF)</Label>
+                        <Label>Contrato Social (PDF ou Foto)</Label>
                         <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
                           {kycData?.contratoSocial ? (
                             <div className="space-y-2">
@@ -567,14 +567,14 @@ const SignupWithMandatoryKYC = () => {
                             <div className="space-y-2">
                               <Upload className="w-8 h-8 mx-auto text-gray-400" />
                               <p className="text-sm text-gray-500">
-                                Clique para enviar o Contrato Social em PDF
+                                Clique para enviar o Contrato Social (PDF ou foto)
                               </p>
                             </div>
                           )}
                         </div>
                         <input
                           type="file"
-                          accept="application/pdf"
+                          accept="application/pdf,image/*"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) handleFileSelect("contratoSocial", file);
@@ -597,7 +597,7 @@ const SignupWithMandatoryKYC = () => {
 
                       {/* Cartão CNPJ */}
                       <div>
-                        <Label>Cartão CNPJ (PDF)</Label>
+                        <Label>Cartão CNPJ (PDF ou Foto)</Label>
                         <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
                           {kycData?.cartaoCNPJ ? (
                             <div className="space-y-2">
@@ -610,14 +610,14 @@ const SignupWithMandatoryKYC = () => {
                             <div className="space-y-2">
                               <Upload className="w-8 h-8 mx-auto text-gray-400" />
                               <p className="text-sm text-gray-500">
-                                Clique para enviar o Cartão CNPJ em PDF
+                                Clique para enviar o Cartão CNPJ (PDF ou foto)
                               </p>
                             </div>
                           )}
                         </div>
                         <input
                           type="file"
-                          accept="application/pdf"
+                          accept="application/pdf,image/*"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) handleFileSelect("cartaoCNPJ", file);
@@ -640,7 +640,7 @@ const SignupWithMandatoryKYC = () => {
 
                       {/* CNH do Sócio Controlado */}
                       <div>
-                        <Label>CNH do Sócio Controlado (PDF)</Label>
+                        <Label>CNH do Sócio Controlado (PDF ou Foto)</Label>
                         <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
                           {kycData?.cnhSocioControlado ? (
                             <div className="space-y-2">
@@ -653,14 +653,14 @@ const SignupWithMandatoryKYC = () => {
                             <div className="space-y-2">
                               <Upload className="w-8 h-8 mx-auto text-gray-400" />
                               <p className="text-sm text-gray-500">
-                                Clique para enviar a CNH do sócio controlado em PDF
+                                Clique para enviar a CNH do sócio controlado (PDF ou foto)
                               </p>
                             </div>
                           )}
                         </div>
                         <input
                           type="file"
-                          accept="application/pdf"
+                          accept="application/pdf,image/*"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) handleFileSelect("cnhSocioControlado", file);
