@@ -169,17 +169,20 @@ const SignupWithMandatoryKYC = () => {
         // CNPJ documents
         formData.append("documentType", "CNPJ");
         formData.append("cpf", userData.cpf);
-        formData.append("contratoSocial", kycData.contratoSocial || kycData.documentFront);
-        formData.append("cartaoCNPJ", kycData.cartaoCNPJ || kycData.documentBack);
-        formData.append("cnhSocioControlado", kycData.cnhSocioControlado || kycData.documentSelfie);
+        const contratoFile = kycData.contratoSocial || kycData.documentFront;
+        const cartaoFile = kycData.cartaoCNPJ || kycData.documentBack;
+        const cnhFile = kycData.cnhSocioControlado || kycData.documentSelfie;
+        if (contratoFile) formData.append("contratoSocial", contratoFile);
+        if (cartaoFile) formData.append("cartaoCNPJ", cartaoFile);
+        if (cnhFile) formData.append("cnhSocioControlado", cnhFile);
       } else {
         // CPF documents
         formData.append("documentType", "RG"); // Default document type
         formData.append("documentNumber", ""); // Optional field
         formData.append("cpf", userData.cpf);
-        formData.append("documentFront", kycData.documentFront);
-        formData.append("documentBack", kycData.documentBack);
-        formData.append("documentSelfie", kycData.documentSelfie);
+        if (kycData.documentFront) formData.append("documentFront", kycData.documentFront);
+        if (kycData.documentBack) formData.append("documentBack", kycData.documentBack);
+        if (kycData.documentSelfie) formData.append("documentSelfie", kycData.documentSelfie);
       }
 
       const response = await fetch("/api/auth/submit-kyc", {
@@ -679,11 +682,13 @@ const SignupWithMandatoryKYC = () => {
                       </div>
                     </>
                   );
-                }
-              })()}
-            </div>
-              <div>
-                <Label>Frente do Documento (RG/Passaporte)</Label>
+                } else {
+                  // CPF documents
+                  return (
+                    <>
+                      {/* Document Front */}
+                      <div>
+                        <Label>Frente do Documento (RG/Passaporte)</Label>
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
                   {kycData?.documentFront ? (
                     <div className="space-y-2">
@@ -808,7 +813,7 @@ const SignupWithMandatoryKYC = () => {
                   <Camera className="w-4 h-4 mr-2" />
                   Enviar Selfie
                 </Button>
-              </div>
+                      </div>
                     </>
                   );
                 }

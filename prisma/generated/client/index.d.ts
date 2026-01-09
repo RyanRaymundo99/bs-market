@@ -2304,6 +2304,9 @@ export namespace Prisma {
     documentFront: string | null
     documentBack: string | null
     documentSelfie: string | null
+    contratoSocial: string | null
+    cartaoCNPJ: string | null
+    cnhSocioControlado: string | null
     kycSubmittedAt: Date | null
     kycReviewedAt: Date | null
     kycRejectionReason: string | null
@@ -2331,6 +2334,9 @@ export namespace Prisma {
     documentFront: string | null
     documentBack: string | null
     documentSelfie: string | null
+    contratoSocial: string | null
+    cartaoCNPJ: string | null
+    cnhSocioControlado: string | null
     kycSubmittedAt: Date | null
     kycReviewedAt: Date | null
     kycRejectionReason: string | null
@@ -2359,6 +2365,9 @@ export namespace Prisma {
     documentFront: number
     documentBack: number
     documentSelfie: number
+    contratoSocial: number
+    cartaoCNPJ: number
+    cnhSocioControlado: number
     kycSubmittedAt: number
     kycReviewedAt: number
     kycRejectionReason: number
@@ -2389,6 +2398,9 @@ export namespace Prisma {
     documentFront?: true
     documentBack?: true
     documentSelfie?: true
+    contratoSocial?: true
+    cartaoCNPJ?: true
+    cnhSocioControlado?: true
     kycSubmittedAt?: true
     kycReviewedAt?: true
     kycRejectionReason?: true
@@ -2416,6 +2428,9 @@ export namespace Prisma {
     documentFront?: true
     documentBack?: true
     documentSelfie?: true
+    contratoSocial?: true
+    cartaoCNPJ?: true
+    cnhSocioControlado?: true
     kycSubmittedAt?: true
     kycReviewedAt?: true
     kycRejectionReason?: true
@@ -2444,6 +2459,9 @@ export namespace Prisma {
     documentFront?: true
     documentBack?: true
     documentSelfie?: true
+    contratoSocial?: true
+    cartaoCNPJ?: true
+    cnhSocioControlado?: true
     kycSubmittedAt?: true
     kycReviewedAt?: true
     kycRejectionReason?: true
@@ -2546,6 +2564,9 @@ export namespace Prisma {
     documentFront: string | null
     documentBack: string | null
     documentSelfie: string | null
+    contratoSocial: string | null
+    cartaoCNPJ: string | null
+    cnhSocioControlado: string | null
     kycSubmittedAt: Date | null
     kycReviewedAt: Date | null
     kycRejectionReason: string | null
@@ -2592,6 +2613,9 @@ export namespace Prisma {
     documentFront?: boolean
     documentBack?: boolean
     documentSelfie?: boolean
+    contratoSocial?: boolean
+    cartaoCNPJ?: boolean
+    cnhSocioControlado?: boolean
     kycSubmittedAt?: boolean
     kycReviewedAt?: boolean
     kycRejectionReason?: boolean
@@ -2633,6 +2657,9 @@ export namespace Prisma {
     documentFront?: boolean
     documentBack?: boolean
     documentSelfie?: boolean
+    contratoSocial?: boolean
+    cartaoCNPJ?: boolean
+    cnhSocioControlado?: boolean
     kycSubmittedAt?: boolean
     kycReviewedAt?: boolean
     kycRejectionReason?: boolean
@@ -2662,6 +2689,9 @@ export namespace Prisma {
     documentFront?: boolean
     documentBack?: boolean
     documentSelfie?: boolean
+    contratoSocial?: boolean
+    cartaoCNPJ?: boolean
+    cnhSocioControlado?: boolean
     kycSubmittedAt?: boolean
     kycReviewedAt?: boolean
     kycRejectionReason?: boolean
@@ -2691,6 +2721,9 @@ export namespace Prisma {
     documentFront?: boolean
     documentBack?: boolean
     documentSelfie?: boolean
+    contratoSocial?: boolean
+    cartaoCNPJ?: boolean
+    cnhSocioControlado?: boolean
     kycSubmittedAt?: boolean
     kycReviewedAt?: boolean
     kycRejectionReason?: boolean
@@ -2702,7 +2735,7 @@ export namespace Prisma {
     updatedAt?: boolean
   }
 
-  export type UserOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "email" | "cpf" | "phone" | "password" | "emailVerified" | "phoneVerified" | "approvalStatus" | "image" | "kycStatus" | "kycData" | "documentType" | "documentNumber" | "documentFront" | "documentBack" | "documentSelfie" | "kycSubmittedAt" | "kycReviewedAt" | "kycRejectionReason" | "adminNotificationLastSeenAt" | "twoFactorEnabled" | "twoFactorSecret" | "twoFactorBackupCodes" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
+  export type UserOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "email" | "cpf" | "phone" | "password" | "emailVerified" | "phoneVerified" | "approvalStatus" | "image" | "kycStatus" | "kycData" | "documentType" | "documentNumber" | "documentFront" | "documentBack" | "documentSelfie" | "contratoSocial" | "cartaoCNPJ" | "cnhSocioControlado" | "kycSubmittedAt" | "kycReviewedAt" | "kycRejectionReason" | "adminNotificationLastSeenAt" | "twoFactorEnabled" | "twoFactorSecret" | "twoFactorBackupCodes" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
   export type UserInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     accounts?: boolean | User$accountsArgs<ExtArgs>
     balances?: boolean | User$balancesArgs<ExtArgs>
@@ -2753,6 +2786,9 @@ export namespace Prisma {
       documentFront: string | null
       documentBack: string | null
       documentSelfie: string | null
+      contratoSocial: string | null
+      cartaoCNPJ: string | null
+      cnhSocioControlado: string | null
       kycSubmittedAt: Date | null
       kycReviewedAt: Date | null
       kycRejectionReason: string | null
@@ -3213,6 +3249,9 @@ export namespace Prisma {
     readonly documentFront: FieldRef<"User", 'String'>
     readonly documentBack: FieldRef<"User", 'String'>
     readonly documentSelfie: FieldRef<"User", 'String'>
+    readonly contratoSocial: FieldRef<"User", 'String'>
+    readonly cartaoCNPJ: FieldRef<"User", 'String'>
+    readonly cnhSocioControlado: FieldRef<"User", 'String'>
     readonly kycSubmittedAt: FieldRef<"User", 'DateTime'>
     readonly kycReviewedAt: FieldRef<"User", 'DateTime'>
     readonly kycRejectionReason: FieldRef<"User", 'String'>
@@ -18307,6 +18346,9 @@ export namespace Prisma {
     documentFront: 'documentFront',
     documentBack: 'documentBack',
     documentSelfie: 'documentSelfie',
+    contratoSocial: 'contratoSocial',
+    cartaoCNPJ: 'cartaoCNPJ',
+    cnhSocioControlado: 'cnhSocioControlado',
     kycSubmittedAt: 'kycSubmittedAt',
     kycReviewedAt: 'kycReviewedAt',
     kycRejectionReason: 'kycRejectionReason',
@@ -18882,6 +18924,9 @@ export namespace Prisma {
     documentFront?: StringNullableFilter<"User"> | string | null
     documentBack?: StringNullableFilter<"User"> | string | null
     documentSelfie?: StringNullableFilter<"User"> | string | null
+    contratoSocial?: StringNullableFilter<"User"> | string | null
+    cartaoCNPJ?: StringNullableFilter<"User"> | string | null
+    cnhSocioControlado?: StringNullableFilter<"User"> | string | null
     kycSubmittedAt?: DateTimeNullableFilter<"User"> | Date | string | null
     kycReviewedAt?: DateTimeNullableFilter<"User"> | Date | string | null
     kycRejectionReason?: StringNullableFilter<"User"> | string | null
@@ -18922,6 +18967,9 @@ export namespace Prisma {
     documentFront?: SortOrderInput | SortOrder
     documentBack?: SortOrderInput | SortOrder
     documentSelfie?: SortOrderInput | SortOrder
+    contratoSocial?: SortOrderInput | SortOrder
+    cartaoCNPJ?: SortOrderInput | SortOrder
+    cnhSocioControlado?: SortOrderInput | SortOrder
     kycSubmittedAt?: SortOrderInput | SortOrder
     kycReviewedAt?: SortOrderInput | SortOrder
     kycRejectionReason?: SortOrderInput | SortOrder
@@ -18965,6 +19013,9 @@ export namespace Prisma {
     documentFront?: StringNullableFilter<"User"> | string | null
     documentBack?: StringNullableFilter<"User"> | string | null
     documentSelfie?: StringNullableFilter<"User"> | string | null
+    contratoSocial?: StringNullableFilter<"User"> | string | null
+    cartaoCNPJ?: StringNullableFilter<"User"> | string | null
+    cnhSocioControlado?: StringNullableFilter<"User"> | string | null
     kycSubmittedAt?: DateTimeNullableFilter<"User"> | Date | string | null
     kycReviewedAt?: DateTimeNullableFilter<"User"> | Date | string | null
     kycRejectionReason?: StringNullableFilter<"User"> | string | null
@@ -19005,6 +19056,9 @@ export namespace Prisma {
     documentFront?: SortOrderInput | SortOrder
     documentBack?: SortOrderInput | SortOrder
     documentSelfie?: SortOrderInput | SortOrder
+    contratoSocial?: SortOrderInput | SortOrder
+    cartaoCNPJ?: SortOrderInput | SortOrder
+    cnhSocioControlado?: SortOrderInput | SortOrder
     kycSubmittedAt?: SortOrderInput | SortOrder
     kycReviewedAt?: SortOrderInput | SortOrder
     kycRejectionReason?: SortOrderInput | SortOrder
@@ -19040,6 +19094,9 @@ export namespace Prisma {
     documentFront?: StringNullableWithAggregatesFilter<"User"> | string | null
     documentBack?: StringNullableWithAggregatesFilter<"User"> | string | null
     documentSelfie?: StringNullableWithAggregatesFilter<"User"> | string | null
+    contratoSocial?: StringNullableWithAggregatesFilter<"User"> | string | null
+    cartaoCNPJ?: StringNullableWithAggregatesFilter<"User"> | string | null
+    cnhSocioControlado?: StringNullableWithAggregatesFilter<"User"> | string | null
     kycSubmittedAt?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
     kycReviewedAt?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
     kycRejectionReason?: StringNullableWithAggregatesFilter<"User"> | string | null
@@ -20244,6 +20301,9 @@ export namespace Prisma {
     documentFront?: string | null
     documentBack?: string | null
     documentSelfie?: string | null
+    contratoSocial?: string | null
+    cartaoCNPJ?: string | null
+    cnhSocioControlado?: string | null
     kycSubmittedAt?: Date | string | null
     kycReviewedAt?: Date | string | null
     kycRejectionReason?: string | null
@@ -20284,6 +20344,9 @@ export namespace Prisma {
     documentFront?: string | null
     documentBack?: string | null
     documentSelfie?: string | null
+    contratoSocial?: string | null
+    cartaoCNPJ?: string | null
+    cnhSocioControlado?: string | null
     kycSubmittedAt?: Date | string | null
     kycReviewedAt?: Date | string | null
     kycRejectionReason?: string | null
@@ -20324,6 +20387,9 @@ export namespace Prisma {
     documentFront?: NullableStringFieldUpdateOperationsInput | string | null
     documentBack?: NullableStringFieldUpdateOperationsInput | string | null
     documentSelfie?: NullableStringFieldUpdateOperationsInput | string | null
+    contratoSocial?: NullableStringFieldUpdateOperationsInput | string | null
+    cartaoCNPJ?: NullableStringFieldUpdateOperationsInput | string | null
+    cnhSocioControlado?: NullableStringFieldUpdateOperationsInput | string | null
     kycSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycRejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
@@ -20364,6 +20430,9 @@ export namespace Prisma {
     documentFront?: NullableStringFieldUpdateOperationsInput | string | null
     documentBack?: NullableStringFieldUpdateOperationsInput | string | null
     documentSelfie?: NullableStringFieldUpdateOperationsInput | string | null
+    contratoSocial?: NullableStringFieldUpdateOperationsInput | string | null
+    cartaoCNPJ?: NullableStringFieldUpdateOperationsInput | string | null
+    cnhSocioControlado?: NullableStringFieldUpdateOperationsInput | string | null
     kycSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycRejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
@@ -20404,6 +20473,9 @@ export namespace Prisma {
     documentFront?: string | null
     documentBack?: string | null
     documentSelfie?: string | null
+    contratoSocial?: string | null
+    cartaoCNPJ?: string | null
+    cnhSocioControlado?: string | null
     kycSubmittedAt?: Date | string | null
     kycReviewedAt?: Date | string | null
     kycRejectionReason?: string | null
@@ -20433,6 +20505,9 @@ export namespace Prisma {
     documentFront?: NullableStringFieldUpdateOperationsInput | string | null
     documentBack?: NullableStringFieldUpdateOperationsInput | string | null
     documentSelfie?: NullableStringFieldUpdateOperationsInput | string | null
+    contratoSocial?: NullableStringFieldUpdateOperationsInput | string | null
+    cartaoCNPJ?: NullableStringFieldUpdateOperationsInput | string | null
+    cnhSocioControlado?: NullableStringFieldUpdateOperationsInput | string | null
     kycSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycRejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
@@ -20462,6 +20537,9 @@ export namespace Prisma {
     documentFront?: NullableStringFieldUpdateOperationsInput | string | null
     documentBack?: NullableStringFieldUpdateOperationsInput | string | null
     documentSelfie?: NullableStringFieldUpdateOperationsInput | string | null
+    contratoSocial?: NullableStringFieldUpdateOperationsInput | string | null
+    cartaoCNPJ?: NullableStringFieldUpdateOperationsInput | string | null
+    cnhSocioControlado?: NullableStringFieldUpdateOperationsInput | string | null
     kycSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycRejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
@@ -22035,6 +22113,9 @@ export namespace Prisma {
     documentFront?: SortOrder
     documentBack?: SortOrder
     documentSelfie?: SortOrder
+    contratoSocial?: SortOrder
+    cartaoCNPJ?: SortOrder
+    cnhSocioControlado?: SortOrder
     kycSubmittedAt?: SortOrder
     kycReviewedAt?: SortOrder
     kycRejectionReason?: SortOrder
@@ -22063,6 +22144,9 @@ export namespace Prisma {
     documentFront?: SortOrder
     documentBack?: SortOrder
     documentSelfie?: SortOrder
+    contratoSocial?: SortOrder
+    cartaoCNPJ?: SortOrder
+    cnhSocioControlado?: SortOrder
     kycSubmittedAt?: SortOrder
     kycReviewedAt?: SortOrder
     kycRejectionReason?: SortOrder
@@ -22090,6 +22174,9 @@ export namespace Prisma {
     documentFront?: SortOrder
     documentBack?: SortOrder
     documentSelfie?: SortOrder
+    contratoSocial?: SortOrder
+    cartaoCNPJ?: SortOrder
+    cnhSocioControlado?: SortOrder
     kycSubmittedAt?: SortOrder
     kycReviewedAt?: SortOrder
     kycRejectionReason?: SortOrder
@@ -25560,6 +25647,9 @@ export namespace Prisma {
     documentFront?: string | null
     documentBack?: string | null
     documentSelfie?: string | null
+    contratoSocial?: string | null
+    cartaoCNPJ?: string | null
+    cnhSocioControlado?: string | null
     kycSubmittedAt?: Date | string | null
     kycReviewedAt?: Date | string | null
     kycRejectionReason?: string | null
@@ -25599,6 +25689,9 @@ export namespace Prisma {
     documentFront?: string | null
     documentBack?: string | null
     documentSelfie?: string | null
+    contratoSocial?: string | null
+    cartaoCNPJ?: string | null
+    cnhSocioControlado?: string | null
     kycSubmittedAt?: Date | string | null
     kycReviewedAt?: Date | string | null
     kycRejectionReason?: string | null
@@ -25654,6 +25747,9 @@ export namespace Prisma {
     documentFront?: NullableStringFieldUpdateOperationsInput | string | null
     documentBack?: NullableStringFieldUpdateOperationsInput | string | null
     documentSelfie?: NullableStringFieldUpdateOperationsInput | string | null
+    contratoSocial?: NullableStringFieldUpdateOperationsInput | string | null
+    cartaoCNPJ?: NullableStringFieldUpdateOperationsInput | string | null
+    cnhSocioControlado?: NullableStringFieldUpdateOperationsInput | string | null
     kycSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycRejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
@@ -25693,6 +25789,9 @@ export namespace Prisma {
     documentFront?: NullableStringFieldUpdateOperationsInput | string | null
     documentBack?: NullableStringFieldUpdateOperationsInput | string | null
     documentSelfie?: NullableStringFieldUpdateOperationsInput | string | null
+    contratoSocial?: NullableStringFieldUpdateOperationsInput | string | null
+    cartaoCNPJ?: NullableStringFieldUpdateOperationsInput | string | null
+    cnhSocioControlado?: NullableStringFieldUpdateOperationsInput | string | null
     kycSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycRejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
@@ -25732,6 +25831,9 @@ export namespace Prisma {
     documentFront?: string | null
     documentBack?: string | null
     documentSelfie?: string | null
+    contratoSocial?: string | null
+    cartaoCNPJ?: string | null
+    cnhSocioControlado?: string | null
     kycSubmittedAt?: Date | string | null
     kycReviewedAt?: Date | string | null
     kycRejectionReason?: string | null
@@ -25771,6 +25873,9 @@ export namespace Prisma {
     documentFront?: string | null
     documentBack?: string | null
     documentSelfie?: string | null
+    contratoSocial?: string | null
+    cartaoCNPJ?: string | null
+    cnhSocioControlado?: string | null
     kycSubmittedAt?: Date | string | null
     kycReviewedAt?: Date | string | null
     kycRejectionReason?: string | null
@@ -25826,6 +25931,9 @@ export namespace Prisma {
     documentFront?: NullableStringFieldUpdateOperationsInput | string | null
     documentBack?: NullableStringFieldUpdateOperationsInput | string | null
     documentSelfie?: NullableStringFieldUpdateOperationsInput | string | null
+    contratoSocial?: NullableStringFieldUpdateOperationsInput | string | null
+    cartaoCNPJ?: NullableStringFieldUpdateOperationsInput | string | null
+    cnhSocioControlado?: NullableStringFieldUpdateOperationsInput | string | null
     kycSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycRejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
@@ -25865,6 +25973,9 @@ export namespace Prisma {
     documentFront?: NullableStringFieldUpdateOperationsInput | string | null
     documentBack?: NullableStringFieldUpdateOperationsInput | string | null
     documentSelfie?: NullableStringFieldUpdateOperationsInput | string | null
+    contratoSocial?: NullableStringFieldUpdateOperationsInput | string | null
+    cartaoCNPJ?: NullableStringFieldUpdateOperationsInput | string | null
+    cnhSocioControlado?: NullableStringFieldUpdateOperationsInput | string | null
     kycSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycRejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
@@ -25904,6 +26015,9 @@ export namespace Prisma {
     documentFront?: string | null
     documentBack?: string | null
     documentSelfie?: string | null
+    contratoSocial?: string | null
+    cartaoCNPJ?: string | null
+    cnhSocioControlado?: string | null
     kycSubmittedAt?: Date | string | null
     kycReviewedAt?: Date | string | null
     kycRejectionReason?: string | null
@@ -25943,6 +26057,9 @@ export namespace Prisma {
     documentFront?: string | null
     documentBack?: string | null
     documentSelfie?: string | null
+    contratoSocial?: string | null
+    cartaoCNPJ?: string | null
+    cnhSocioControlado?: string | null
     kycSubmittedAt?: Date | string | null
     kycReviewedAt?: Date | string | null
     kycRejectionReason?: string | null
@@ -25998,6 +26115,9 @@ export namespace Prisma {
     documentFront?: NullableStringFieldUpdateOperationsInput | string | null
     documentBack?: NullableStringFieldUpdateOperationsInput | string | null
     documentSelfie?: NullableStringFieldUpdateOperationsInput | string | null
+    contratoSocial?: NullableStringFieldUpdateOperationsInput | string | null
+    cartaoCNPJ?: NullableStringFieldUpdateOperationsInput | string | null
+    cnhSocioControlado?: NullableStringFieldUpdateOperationsInput | string | null
     kycSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycRejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
@@ -26037,6 +26157,9 @@ export namespace Prisma {
     documentFront?: NullableStringFieldUpdateOperationsInput | string | null
     documentBack?: NullableStringFieldUpdateOperationsInput | string | null
     documentSelfie?: NullableStringFieldUpdateOperationsInput | string | null
+    contratoSocial?: NullableStringFieldUpdateOperationsInput | string | null
+    cartaoCNPJ?: NullableStringFieldUpdateOperationsInput | string | null
+    cnhSocioControlado?: NullableStringFieldUpdateOperationsInput | string | null
     kycSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycRejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
@@ -26113,6 +26236,9 @@ export namespace Prisma {
     documentFront?: string | null
     documentBack?: string | null
     documentSelfie?: string | null
+    contratoSocial?: string | null
+    cartaoCNPJ?: string | null
+    cnhSocioControlado?: string | null
     kycSubmittedAt?: Date | string | null
     kycReviewedAt?: Date | string | null
     kycRejectionReason?: string | null
@@ -26152,6 +26278,9 @@ export namespace Prisma {
     documentFront?: string | null
     documentBack?: string | null
     documentSelfie?: string | null
+    contratoSocial?: string | null
+    cartaoCNPJ?: string | null
+    cnhSocioControlado?: string | null
     kycSubmittedAt?: Date | string | null
     kycReviewedAt?: Date | string | null
     kycRejectionReason?: string | null
@@ -26250,6 +26379,9 @@ export namespace Prisma {
     documentFront?: NullableStringFieldUpdateOperationsInput | string | null
     documentBack?: NullableStringFieldUpdateOperationsInput | string | null
     documentSelfie?: NullableStringFieldUpdateOperationsInput | string | null
+    contratoSocial?: NullableStringFieldUpdateOperationsInput | string | null
+    cartaoCNPJ?: NullableStringFieldUpdateOperationsInput | string | null
+    cnhSocioControlado?: NullableStringFieldUpdateOperationsInput | string | null
     kycSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycRejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
@@ -26289,6 +26421,9 @@ export namespace Prisma {
     documentFront?: NullableStringFieldUpdateOperationsInput | string | null
     documentBack?: NullableStringFieldUpdateOperationsInput | string | null
     documentSelfie?: NullableStringFieldUpdateOperationsInput | string | null
+    contratoSocial?: NullableStringFieldUpdateOperationsInput | string | null
+    cartaoCNPJ?: NullableStringFieldUpdateOperationsInput | string | null
+    cnhSocioControlado?: NullableStringFieldUpdateOperationsInput | string | null
     kycSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycRejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
@@ -26365,6 +26500,9 @@ export namespace Prisma {
     documentFront?: string | null
     documentBack?: string | null
     documentSelfie?: string | null
+    contratoSocial?: string | null
+    cartaoCNPJ?: string | null
+    cnhSocioControlado?: string | null
     kycSubmittedAt?: Date | string | null
     kycReviewedAt?: Date | string | null
     kycRejectionReason?: string | null
@@ -26404,6 +26542,9 @@ export namespace Prisma {
     documentFront?: string | null
     documentBack?: string | null
     documentSelfie?: string | null
+    contratoSocial?: string | null
+    cartaoCNPJ?: string | null
+    cnhSocioControlado?: string | null
     kycSubmittedAt?: Date | string | null
     kycReviewedAt?: Date | string | null
     kycRejectionReason?: string | null
@@ -26502,6 +26643,9 @@ export namespace Prisma {
     documentFront?: NullableStringFieldUpdateOperationsInput | string | null
     documentBack?: NullableStringFieldUpdateOperationsInput | string | null
     documentSelfie?: NullableStringFieldUpdateOperationsInput | string | null
+    contratoSocial?: NullableStringFieldUpdateOperationsInput | string | null
+    cartaoCNPJ?: NullableStringFieldUpdateOperationsInput | string | null
+    cnhSocioControlado?: NullableStringFieldUpdateOperationsInput | string | null
     kycSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycRejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
@@ -26541,6 +26685,9 @@ export namespace Prisma {
     documentFront?: NullableStringFieldUpdateOperationsInput | string | null
     documentBack?: NullableStringFieldUpdateOperationsInput | string | null
     documentSelfie?: NullableStringFieldUpdateOperationsInput | string | null
+    contratoSocial?: NullableStringFieldUpdateOperationsInput | string | null
+    cartaoCNPJ?: NullableStringFieldUpdateOperationsInput | string | null
+    cnhSocioControlado?: NullableStringFieldUpdateOperationsInput | string | null
     kycSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycRejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
@@ -26617,6 +26764,9 @@ export namespace Prisma {
     documentFront?: string | null
     documentBack?: string | null
     documentSelfie?: string | null
+    contratoSocial?: string | null
+    cartaoCNPJ?: string | null
+    cnhSocioControlado?: string | null
     kycSubmittedAt?: Date | string | null
     kycReviewedAt?: Date | string | null
     kycRejectionReason?: string | null
@@ -26656,6 +26806,9 @@ export namespace Prisma {
     documentFront?: string | null
     documentBack?: string | null
     documentSelfie?: string | null
+    contratoSocial?: string | null
+    cartaoCNPJ?: string | null
+    cnhSocioControlado?: string | null
     kycSubmittedAt?: Date | string | null
     kycReviewedAt?: Date | string | null
     kycRejectionReason?: string | null
@@ -26754,6 +26907,9 @@ export namespace Prisma {
     documentFront?: NullableStringFieldUpdateOperationsInput | string | null
     documentBack?: NullableStringFieldUpdateOperationsInput | string | null
     documentSelfie?: NullableStringFieldUpdateOperationsInput | string | null
+    contratoSocial?: NullableStringFieldUpdateOperationsInput | string | null
+    cartaoCNPJ?: NullableStringFieldUpdateOperationsInput | string | null
+    cnhSocioControlado?: NullableStringFieldUpdateOperationsInput | string | null
     kycSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycRejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
@@ -26793,6 +26949,9 @@ export namespace Prisma {
     documentFront?: NullableStringFieldUpdateOperationsInput | string | null
     documentBack?: NullableStringFieldUpdateOperationsInput | string | null
     documentSelfie?: NullableStringFieldUpdateOperationsInput | string | null
+    contratoSocial?: NullableStringFieldUpdateOperationsInput | string | null
+    cartaoCNPJ?: NullableStringFieldUpdateOperationsInput | string | null
+    cnhSocioControlado?: NullableStringFieldUpdateOperationsInput | string | null
     kycSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycRejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
@@ -26832,6 +26991,9 @@ export namespace Prisma {
     documentFront?: string | null
     documentBack?: string | null
     documentSelfie?: string | null
+    contratoSocial?: string | null
+    cartaoCNPJ?: string | null
+    cnhSocioControlado?: string | null
     kycSubmittedAt?: Date | string | null
     kycReviewedAt?: Date | string | null
     kycRejectionReason?: string | null
@@ -26871,6 +27033,9 @@ export namespace Prisma {
     documentFront?: string | null
     documentBack?: string | null
     documentSelfie?: string | null
+    contratoSocial?: string | null
+    cartaoCNPJ?: string | null
+    cnhSocioControlado?: string | null
     kycSubmittedAt?: Date | string | null
     kycReviewedAt?: Date | string | null
     kycRejectionReason?: string | null
@@ -26972,6 +27137,9 @@ export namespace Prisma {
     documentFront?: NullableStringFieldUpdateOperationsInput | string | null
     documentBack?: NullableStringFieldUpdateOperationsInput | string | null
     documentSelfie?: NullableStringFieldUpdateOperationsInput | string | null
+    contratoSocial?: NullableStringFieldUpdateOperationsInput | string | null
+    cartaoCNPJ?: NullableStringFieldUpdateOperationsInput | string | null
+    cnhSocioControlado?: NullableStringFieldUpdateOperationsInput | string | null
     kycSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycRejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
@@ -27011,6 +27179,9 @@ export namespace Prisma {
     documentFront?: NullableStringFieldUpdateOperationsInput | string | null
     documentBack?: NullableStringFieldUpdateOperationsInput | string | null
     documentSelfie?: NullableStringFieldUpdateOperationsInput | string | null
+    contratoSocial?: NullableStringFieldUpdateOperationsInput | string | null
+    cartaoCNPJ?: NullableStringFieldUpdateOperationsInput | string | null
+    cnhSocioControlado?: NullableStringFieldUpdateOperationsInput | string | null
     kycSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycRejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
@@ -27066,6 +27237,9 @@ export namespace Prisma {
     documentFront?: string | null
     documentBack?: string | null
     documentSelfie?: string | null
+    contratoSocial?: string | null
+    cartaoCNPJ?: string | null
+    cnhSocioControlado?: string | null
     kycSubmittedAt?: Date | string | null
     kycReviewedAt?: Date | string | null
     kycRejectionReason?: string | null
@@ -27105,6 +27279,9 @@ export namespace Prisma {
     documentFront?: string | null
     documentBack?: string | null
     documentSelfie?: string | null
+    contratoSocial?: string | null
+    cartaoCNPJ?: string | null
+    cnhSocioControlado?: string | null
     kycSubmittedAt?: Date | string | null
     kycReviewedAt?: Date | string | null
     kycRejectionReason?: string | null
@@ -27227,6 +27404,9 @@ export namespace Prisma {
     documentFront?: string | null
     documentBack?: string | null
     documentSelfie?: string | null
+    contratoSocial?: string | null
+    cartaoCNPJ?: string | null
+    cnhSocioControlado?: string | null
     kycSubmittedAt?: Date | string | null
     kycReviewedAt?: Date | string | null
     kycRejectionReason?: string | null
@@ -27266,6 +27446,9 @@ export namespace Prisma {
     documentFront?: string | null
     documentBack?: string | null
     documentSelfie?: string | null
+    contratoSocial?: string | null
+    cartaoCNPJ?: string | null
+    cnhSocioControlado?: string | null
     kycSubmittedAt?: Date | string | null
     kycReviewedAt?: Date | string | null
     kycRejectionReason?: string | null
@@ -27358,6 +27541,9 @@ export namespace Prisma {
     documentFront?: NullableStringFieldUpdateOperationsInput | string | null
     documentBack?: NullableStringFieldUpdateOperationsInput | string | null
     documentSelfie?: NullableStringFieldUpdateOperationsInput | string | null
+    contratoSocial?: NullableStringFieldUpdateOperationsInput | string | null
+    cartaoCNPJ?: NullableStringFieldUpdateOperationsInput | string | null
+    cnhSocioControlado?: NullableStringFieldUpdateOperationsInput | string | null
     kycSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycRejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
@@ -27397,6 +27583,9 @@ export namespace Prisma {
     documentFront?: NullableStringFieldUpdateOperationsInput | string | null
     documentBack?: NullableStringFieldUpdateOperationsInput | string | null
     documentSelfie?: NullableStringFieldUpdateOperationsInput | string | null
+    contratoSocial?: NullableStringFieldUpdateOperationsInput | string | null
+    cartaoCNPJ?: NullableStringFieldUpdateOperationsInput | string | null
+    cnhSocioControlado?: NullableStringFieldUpdateOperationsInput | string | null
     kycSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycRejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
@@ -27537,6 +27726,9 @@ export namespace Prisma {
     documentFront?: NullableStringFieldUpdateOperationsInput | string | null
     documentBack?: NullableStringFieldUpdateOperationsInput | string | null
     documentSelfie?: NullableStringFieldUpdateOperationsInput | string | null
+    contratoSocial?: NullableStringFieldUpdateOperationsInput | string | null
+    cartaoCNPJ?: NullableStringFieldUpdateOperationsInput | string | null
+    cnhSocioControlado?: NullableStringFieldUpdateOperationsInput | string | null
     kycSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycRejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
@@ -27576,6 +27768,9 @@ export namespace Prisma {
     documentFront?: NullableStringFieldUpdateOperationsInput | string | null
     documentBack?: NullableStringFieldUpdateOperationsInput | string | null
     documentSelfie?: NullableStringFieldUpdateOperationsInput | string | null
+    contratoSocial?: NullableStringFieldUpdateOperationsInput | string | null
+    cartaoCNPJ?: NullableStringFieldUpdateOperationsInput | string | null
+    cnhSocioControlado?: NullableStringFieldUpdateOperationsInput | string | null
     kycSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycRejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
@@ -27822,6 +28017,9 @@ export namespace Prisma {
     documentFront?: string | null
     documentBack?: string | null
     documentSelfie?: string | null
+    contratoSocial?: string | null
+    cartaoCNPJ?: string | null
+    cnhSocioControlado?: string | null
     kycSubmittedAt?: Date | string | null
     kycReviewedAt?: Date | string | null
     kycRejectionReason?: string | null
@@ -27861,6 +28059,9 @@ export namespace Prisma {
     documentFront?: string | null
     documentBack?: string | null
     documentSelfie?: string | null
+    contratoSocial?: string | null
+    cartaoCNPJ?: string | null
+    cnhSocioControlado?: string | null
     kycSubmittedAt?: Date | string | null
     kycReviewedAt?: Date | string | null
     kycRejectionReason?: string | null
@@ -28153,6 +28354,9 @@ export namespace Prisma {
     documentFront?: NullableStringFieldUpdateOperationsInput | string | null
     documentBack?: NullableStringFieldUpdateOperationsInput | string | null
     documentSelfie?: NullableStringFieldUpdateOperationsInput | string | null
+    contratoSocial?: NullableStringFieldUpdateOperationsInput | string | null
+    cartaoCNPJ?: NullableStringFieldUpdateOperationsInput | string | null
+    cnhSocioControlado?: NullableStringFieldUpdateOperationsInput | string | null
     kycSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycRejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
@@ -28192,6 +28396,9 @@ export namespace Prisma {
     documentFront?: NullableStringFieldUpdateOperationsInput | string | null
     documentBack?: NullableStringFieldUpdateOperationsInput | string | null
     documentSelfie?: NullableStringFieldUpdateOperationsInput | string | null
+    contratoSocial?: NullableStringFieldUpdateOperationsInput | string | null
+    cartaoCNPJ?: NullableStringFieldUpdateOperationsInput | string | null
+    cnhSocioControlado?: NullableStringFieldUpdateOperationsInput | string | null
     kycSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycRejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
@@ -28286,6 +28493,9 @@ export namespace Prisma {
     documentFront?: string | null
     documentBack?: string | null
     documentSelfie?: string | null
+    contratoSocial?: string | null
+    cartaoCNPJ?: string | null
+    cnhSocioControlado?: string | null
     kycSubmittedAt?: Date | string | null
     kycReviewedAt?: Date | string | null
     kycRejectionReason?: string | null
@@ -28325,6 +28535,9 @@ export namespace Prisma {
     documentFront?: string | null
     documentBack?: string | null
     documentSelfie?: string | null
+    contratoSocial?: string | null
+    cartaoCNPJ?: string | null
+    cnhSocioControlado?: string | null
     kycSubmittedAt?: Date | string | null
     kycReviewedAt?: Date | string | null
     kycRejectionReason?: string | null
@@ -28380,6 +28593,9 @@ export namespace Prisma {
     documentFront?: NullableStringFieldUpdateOperationsInput | string | null
     documentBack?: NullableStringFieldUpdateOperationsInput | string | null
     documentSelfie?: NullableStringFieldUpdateOperationsInput | string | null
+    contratoSocial?: NullableStringFieldUpdateOperationsInput | string | null
+    cartaoCNPJ?: NullableStringFieldUpdateOperationsInput | string | null
+    cnhSocioControlado?: NullableStringFieldUpdateOperationsInput | string | null
     kycSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycRejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
@@ -28419,6 +28635,9 @@ export namespace Prisma {
     documentFront?: NullableStringFieldUpdateOperationsInput | string | null
     documentBack?: NullableStringFieldUpdateOperationsInput | string | null
     documentSelfie?: NullableStringFieldUpdateOperationsInput | string | null
+    contratoSocial?: NullableStringFieldUpdateOperationsInput | string | null
+    cartaoCNPJ?: NullableStringFieldUpdateOperationsInput | string | null
+    cnhSocioControlado?: NullableStringFieldUpdateOperationsInput | string | null
     kycSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     kycRejectionReason?: NullableStringFieldUpdateOperationsInput | string | null

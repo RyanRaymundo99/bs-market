@@ -847,10 +847,12 @@ export default function AdminDashboard() {
                   <>
                     <div className="text-2xl font-bold text-white group-hover:text-green-100">
                       {stats.approvedUsers}
-                </div>
-                <p className="text-xs text-gray-400 mt-1 group-hover:text-gray-300">
-                  Click to view approved users
-                </p>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1 group-hover:text-gray-300">
+                      Click to view approved users
+                    </p>
+                  </>
+                )}
               </CardContent>
             </Card>
           </Link>

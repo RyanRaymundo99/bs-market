@@ -379,7 +379,7 @@ export async function POST(request: NextRequest) {
     // Update user with KYC data
     try {
       const updateData: {
-        documentType?: DocumentType;
+        documentType?: "RG" | "HABILITACAO" | "CNH" | "PASSPORT";
         documentNumber?: string;
         documentFront?: string;
         documentBack?: string;
@@ -387,7 +387,7 @@ export async function POST(request: NextRequest) {
         contratoSocial?: string;
         cartaoCNPJ?: string;
         cnhSocioControlado?: string;
-        kycStatus?: KYCStatus;
+        kycStatus?: "PENDING" | "APPROVED" | "REJECTED";
         kycSubmittedAt?: Date;
         updatedAt: Date;
       } = {
@@ -399,11 +399,11 @@ export async function POST(request: NextRequest) {
         if (contratoSocialUrl) updateData.contratoSocial = contratoSocialUrl;
         if (cartaoCNPJUrl) updateData.cartaoCNPJ = cartaoCNPJUrl;
         if (cnhSocioUrl) updateData.cnhSocioControlado = cnhSocioUrl;
-        updateData.documentType = "CNH" as DocumentType; // Placeholder for CNPJ
+        updateData.documentType = "CNH"; // Placeholder for CNPJ
       } else {
         // CPF documents
         if (documentType) {
-          updateData.documentType = documentType as DocumentType;
+          updateData.documentType = documentType as "RG" | "HABILITACAO" | "CNH" | "PASSPORT";
         }
         if (finalDocumentNumber) updateData.documentNumber = finalDocumentNumber;
         if (frontUrl) updateData.documentFront = frontUrl;

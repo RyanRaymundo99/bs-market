@@ -30,9 +30,13 @@ interface KYCDocumentData {
   documentType: string;
   documentNumber: string;
   cpf: string;
-  documentFront: File;
-  documentBack: File;
-  documentSelfie: File;
+  documentFront?: File;
+  documentBack?: File;
+  documentSelfie?: File;
+  // CNPJ documents
+  contratoSocial?: File;
+  cartaoCNPJ?: File;
+  cnhSocioControlado?: File;
 }
 
 const SignupWithKYC = () => {
@@ -126,11 +130,19 @@ const SignupWithKYC = () => {
         // Create FormData for file upload
         const formData = new FormData();
         formData.append("documentType", data.documentType);
-        formData.append("documentNumber", data.documentNumber);
+        formData.append("documentNumber", data.documentNumber || "");
         formData.append("cpf", data.cpf);
-        formData.append("documentFront", data.documentFront);
-        formData.append("documentBack", data.documentBack);
-        formData.append("documentSelfie", data.documentSelfie);
+        
+        // Handle CNPJ or CPF documents
+        if (data.contratoSocial && data.cartaoCNPJ && data.cnhSocioControlado) {
+          formData.append("contratoSocial", data.contratoSocial);
+          formData.append("cartaoCNPJ", data.cartaoCNPJ);
+          formData.append("cnhSocioControlado", data.cnhSocioControlado);
+        } else {
+          if (data.documentFront) formData.append("documentFront", data.documentFront);
+          if (data.documentBack) formData.append("documentBack", data.documentBack);
+          if (data.documentSelfie) formData.append("documentSelfie", data.documentSelfie);
+        }
 
         const response = await fetch("/api/auth/submit-kyc", {
           method: "POST",
