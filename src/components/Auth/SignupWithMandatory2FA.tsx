@@ -9,7 +9,7 @@ import { Form } from "@/components/ui/form";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { InputField } from "@/components/Auth/FormFields";
-import { CPFField } from "@/components/Auth/CPFField";
+import { DocumentField } from "@/components/Auth/DocumentField";
 import { SignUpFormValues, signUpSchema } from "@/lib/schema/signupSchema";
 import { AuthLayout } from "@/components/ui/auth-layout";
 import { TwoFactorSetup } from "@/components/Auth/TwoFactorSetup";
@@ -286,7 +286,7 @@ const SignupWithMandatory2FA = () => {
               labelPosition="top"
             />
 
-            <CPFField
+            <DocumentField
               value={form.watch("cpf")}
               onChange={(value) => form.setValue("cpf", value)}
               onBlur={() => form.trigger("cpf")}

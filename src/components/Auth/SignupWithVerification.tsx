@@ -17,7 +17,7 @@ import { Form } from "@/components/ui/form";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { InputField } from "@/components/Auth/FormFields";
-import { CPFField } from "@/components/Auth/CPFField";
+import { DocumentField } from "@/components/Auth/DocumentField";
 import { PhoneField } from "@/components/Auth/PhoneField";
 import { SignUpFormValues, signUpSchema } from "@/lib/schema/signupSchema";
 import { AuthLayout } from "@/components/ui/auth-layout";
@@ -539,7 +539,7 @@ const SignupWithVerification = () => {
               required
             />
 
-            <CPFField
+            <DocumentField
               value={form.watch("cpf")}
               onChange={(value) => form.setValue("cpf", value)}
               onBlur={() => form.trigger("cpf")}

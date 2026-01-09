@@ -24,6 +24,7 @@ import {
   PasswordField,
   ConfirmPasswordField,
 } from "@/components/Auth/PasswordField";
+import { DocumentField } from "@/components/Auth/DocumentField";
 import {
   FormField,
   FormItem,
@@ -383,15 +384,13 @@ const SignupWithMandatoryKYC = () => {
                 )}
               </div>
 
-              <div>
-                <Label htmlFor="cpf">CPF</Label>
-                <Input id="cpf" {...form.register("cpf")} className="mt-1" />
-                {form.formState.errors.cpf && (
-                  <p className="text-sm text-red-600 mt-1">
-                    {form.formState.errors.cpf.message}
-                  </p>
-                )}
-              </div>
+              <DocumentField
+                value={form.watch("cpf")}
+                onChange={(value) => form.setValue("cpf", value)}
+                onBlur={() => form.trigger("cpf")}
+                error={form.formState.errors.cpf?.message}
+                required
+              />
 
               <PasswordField
                 control={form.control}
