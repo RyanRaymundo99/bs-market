@@ -21,12 +21,16 @@ model User {
   image          String?
   kycStatus      KYCStatus      @default(PENDING)
   kycData        Json?
-  // KYC Document fields
+  // KYC Document fields (for CPF - individual users)
   documentType   DocumentType?
   documentNumber String?
   documentFront  String?        // URL to front document image
   documentBack   String?        // URL to back document image
   documentSelfie String?        // URL to selfie with document
+  // KYC Document fields (for CNPJ - company users)
+  contratoSocial String?        // URL to Contrato Social PDF
+  cartaoCNPJ     String?        // URL to Cartão CNPJ PDF
+  cnhSocioControlado String?   // URL to CNH do sócio controlado PDF
   kycSubmittedAt DateTime?
   kycReviewedAt  DateTime?
   kycRejectionReason String?

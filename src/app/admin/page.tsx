@@ -209,6 +209,10 @@ export default function AdminDashboard() {
   // Real-time transaction updates (lightweight, fast)
   const fetchRealtimeTransactions = useCallback(async (since?: Date) => {
     try {
+      if (!since) {
+        setTransactionsLoading(true);
+      }
+      
       const url = new URL(
         "/api/admin/transactions/realtime",
         window.location.origin
@@ -247,11 +251,16 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error("Error fetching realtime transactions:", error);
       // Don't show toast for polling errors to avoid spam
+    } finally {
+      if (!since) {
+        setTransactionsLoading(false);
+      }
     }
   }, []);
 
   const fetchFinanceData = useCallback(async () => {
     try {
+      setFinanceLoading(true);
       const response = await fetch("/api/admin/finance", {
         cache: "no-store",
       });
@@ -267,6 +276,7 @@ export default function AdminDashboard() {
         // Only set transactions if we don't have realtime updates yet
         if (transactions.length === 0) {
           setTransactions(data.transactions);
+          setTransactionsLoading(false);
         }
         setChartData(data.chartData);
       } else {
@@ -279,22 +289,30 @@ export default function AdminDashboard() {
         title: "Erro",
         description: "Falha ao carregar dados financeiros",
       });
+    } finally {
+      setFinanceLoading(false);
     }
   }, [toast, transactions.length]);
 
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [financeLoading, setFinanceLoading] = useState(true);
+  const [transactionsLoading, setTransactionsLoading] = useState(true);
+
   const fetchStats = useCallback(async () => {
     try {
-      setLoading(true);
+      setStatsLoading(true);
 
-      // Fetch user stats
-      const usersResponse = await fetch("/api/admin/users");
+      // Fetch user stats and KYC stats in parallel
+      const [usersResponse, kycResponse] = await Promise.all([
+        fetch("/api/admin/users"),
+        fetch("/api/admin/kyc"),
+      ]);
+
       const usersData = usersResponse.ok
         ? await usersResponse.json()
         : { users: [] };
       const users = usersData.users || [];
 
-      // Fetch KYC stats
-      const kycResponse = await fetch("/api/admin/kyc");
       const kycData = kycResponse.ok ? await kycResponse.json() : { users: [] };
       const kycUsers = kycData.users || [];
 
@@ -321,7 +339,6 @@ export default function AdminDashboard() {
       };
 
       setStats(newStats);
-      await fetchFinanceData();
     } catch (error) {
       console.error("Error fetching stats:", error);
       toast({
@@ -330,9 +347,9 @@ export default function AdminDashboard() {
         description: "Failed to load dashboard statistics",
       });
     } finally {
-      setLoading(false);
+      setStatsLoading(false);
     }
-  }, [toast, fetchFinanceData]);
+  }, [toast]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -672,11 +689,20 @@ export default function AdminDashboard() {
     }
   };
 
+  // Load all initial data in parallel for faster page load
   useEffect(() => {
-    fetchStats();
-    // Initial realtime transaction fetch
-    fetchRealtimeTransactions();
-  }, [fetchStats, fetchRealtimeTransactions]);
+    setLoading(true);
+    setTransactionsLoading(true);
+    
+    // Fetch all initial data in parallel
+    Promise.all([
+      fetchStats(),
+      fetchFinanceData(),
+      fetchRealtimeTransactions(),
+    ]).finally(() => {
+      setLoading(false);
+    });
+  }, [fetchStats, fetchFinanceData, fetchRealtimeTransactions]);
 
   // Real-time polling for transactions (every 5 seconds)
   useEffect(() => {
@@ -692,13 +718,7 @@ export default function AdminDashboard() {
     };
   }, [fetchRealtimeTransactions, lastUpdateTime]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-white">Loading dashboard...</div>
-      </div>
-    );
-  }
+  // Don't block the entire page - show skeleton loaders instead
 
   return (
     <div className="min-h-screen bg-black text-white p-8">
@@ -760,12 +780,21 @@ export default function AdminDashboard() {
                 <Users className="h-4 w-4 text-blue-400 group-hover:text-blue-300" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-white group-hover:text-blue-100">
-                  {stats.totalUsers}
-                </div>
-                <p className="text-xs text-gray-400 mt-1 group-hover:text-gray-300">
-                  Click to manage users
-                </p>
+                {statsLoading ? (
+                  <div className="animate-pulse space-y-2">
+                    <div className="h-8 w-16 bg-gray-700 rounded"></div>
+                    <div className="h-4 w-24 bg-gray-700 rounded"></div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-2xl font-bold text-white group-hover:text-blue-100">
+                      {stats.totalUsers}
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1 group-hover:text-gray-300">
+                      Click to manage users
+                    </p>
+                  </>
+                )}
               </CardContent>
             </Card>
           </Link>
@@ -780,12 +809,21 @@ export default function AdminDashboard() {
                 <Clock className="h-4 w-4 text-yellow-400 group-hover:text-yellow-300" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-white group-hover:text-yellow-100">
-                  {stats.pendingApprovals}
-                </div>
-                <p className="text-xs text-gray-400 mt-1 group-hover:text-gray-300">
-                  Click to review approvals
-                </p>
+                {statsLoading ? (
+                  <div className="animate-pulse space-y-2">
+                    <div className="h-8 w-16 bg-gray-700 rounded"></div>
+                    <div className="h-4 w-24 bg-gray-700 rounded"></div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-2xl font-bold text-white group-hover:text-yellow-100">
+                      {stats.pendingApprovals}
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1 group-hover:text-gray-300">
+                      Click to review approvals
+                    </p>
+                  </>
+                )}
               </CardContent>
             </Card>
           </Link>
@@ -800,8 +838,15 @@ export default function AdminDashboard() {
                 <CheckCircle className="h-4 w-4 text-green-400 group-hover:text-green-300" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-white group-hover:text-green-100">
-                  {stats.approvedUsers}
+                {statsLoading ? (
+                  <div className="animate-pulse space-y-2">
+                    <div className="h-8 w-16 bg-gray-700 rounded"></div>
+                    <div className="h-4 w-24 bg-gray-700 rounded"></div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-2xl font-bold text-white group-hover:text-green-100">
+                      {stats.approvedUsers}
                 </div>
                 <p className="text-xs text-gray-400 mt-1 group-hover:text-gray-300">
                   Click to view approved users
@@ -820,12 +865,21 @@ export default function AdminDashboard() {
                 <FileText className="h-4 w-4 text-orange-400 group-hover:text-orange-300" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-white group-hover:text-orange-100">
-                  {stats.pendingKYC}
-                </div>
-                <p className="text-xs text-gray-400 mt-1 group-hover:text-gray-300">
-                  Click to review KYC documents
-                </p>
+                {statsLoading ? (
+                  <div className="animate-pulse space-y-2">
+                    <div className="h-8 w-16 bg-gray-700 rounded"></div>
+                    <div className="h-4 w-24 bg-gray-700 rounded"></div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-2xl font-bold text-white group-hover:text-orange-100">
+                      {stats.pendingKYC}
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1 group-hover:text-gray-300">
+                      Click to review KYC documents
+                    </p>
+                  </>
+                )}
               </CardContent>
             </Card>
           </Link>
@@ -894,25 +948,34 @@ export default function AdminDashboard() {
                 <DollarSign className="h-4 w-4 text-green-400" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-white">
-                  {formatCurrency(financeStats.totalDeposits)}
-                </div>
-                <div className="flex items-center mt-1">
-                  {financeStats.depositsChange >= 0 ? (
-                    <ArrowUpRight className="h-3 w-3 text-green-400 mr-1" />
-                  ) : (
-                    <ArrowDownRight className="h-3 w-3 text-red-400 mr-1" />
-                  )}
-                  <span
-                    className={`text-xs ${
-                      financeStats.depositsChange >= 0
-                        ? "text-green-400"
-                        : "text-red-400"
-                    }`}
-                  >
-                    {formatPercentage(financeStats.depositsChange)}
-                  </span>
-                </div>
+                {financeLoading ? (
+                  <div className="animate-pulse space-y-2">
+                    <div className="h-8 w-32 bg-gray-700 rounded"></div>
+                    <div className="h-4 w-16 bg-gray-700 rounded"></div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-2xl font-bold text-white">
+                      {formatCurrency(financeStats.totalDeposits)}
+                    </div>
+                    <div className="flex items-center mt-1">
+                      {financeStats.depositsChange >= 0 ? (
+                        <ArrowUpRight className="h-3 w-3 text-green-400 mr-1" />
+                      ) : (
+                        <ArrowDownRight className="h-3 w-3 text-red-400 mr-1" />
+                      )}
+                      <span
+                        className={`text-xs ${
+                          financeStats.depositsChange >= 0
+                            ? "text-green-400"
+                            : "text-red-400"
+                        }`}
+                      >
+                        {formatPercentage(financeStats.depositsChange)}
+                      </span>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
 
@@ -925,25 +988,34 @@ export default function AdminDashboard() {
                 <ArrowDownRight className="h-4 w-4 text-red-400" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-white">
-                  {formatCurrency(financeStats.totalWithdrawals)}
-                </div>
-                <div className="flex items-center mt-1">
-                  {financeStats.withdrawalsChange >= 0 ? (
-                    <ArrowUpRight className="h-3 w-3 text-green-400 mr-1" />
-                  ) : (
-                    <ArrowDownRight className="h-3 w-3 text-red-400 mr-1" />
-                  )}
-                  <span
-                    className={`text-xs ${
-                      financeStats.withdrawalsChange >= 0
-                        ? "text-green-400"
-                        : "text-red-400"
-                    }`}
-                  >
-                    {formatPercentage(financeStats.withdrawalsChange)}
-                  </span>
-                </div>
+                {financeLoading ? (
+                  <div className="animate-pulse space-y-2">
+                    <div className="h-8 w-32 bg-gray-700 rounded"></div>
+                    <div className="h-4 w-16 bg-gray-700 rounded"></div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-2xl font-bold text-white">
+                      {formatCurrency(financeStats.totalWithdrawals)}
+                    </div>
+                    <div className="flex items-center mt-1">
+                      {financeStats.withdrawalsChange >= 0 ? (
+                        <ArrowUpRight className="h-3 w-3 text-green-400 mr-1" />
+                      ) : (
+                        <ArrowDownRight className="h-3 w-3 text-red-400 mr-1" />
+                      )}
+                      <span
+                        className={`text-xs ${
+                          financeStats.withdrawalsChange >= 0
+                            ? "text-green-400"
+                            : "text-red-400"
+                        }`}
+                      >
+                        {formatPercentage(financeStats.withdrawalsChange)}
+                      </span>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
 
@@ -956,25 +1028,34 @@ export default function AdminDashboard() {
                 <BarChart3 className="h-4 w-4 text-blue-400" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-white">
-                  {formatCurrency(financeStats.totalTrades)}
-                </div>
-                <div className="flex items-center mt-1">
-                  {financeStats.tradesChange >= 0 ? (
-                    <ArrowUpRight className="h-3 w-3 text-green-400 mr-1" />
-                  ) : (
-                    <ArrowDownRight className="h-3 w-3 text-red-400 mr-1" />
-                  )}
-                  <span
-                    className={`text-xs ${
-                      financeStats.tradesChange >= 0
-                        ? "text-green-400"
-                        : "text-red-400"
-                    }`}
-                  >
-                    {formatPercentage(financeStats.tradesChange)}
-                  </span>
-                </div>
+                {financeLoading ? (
+                  <div className="animate-pulse space-y-2">
+                    <div className="h-8 w-32 bg-gray-700 rounded"></div>
+                    <div className="h-4 w-16 bg-gray-700 rounded"></div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-2xl font-bold text-white">
+                      {formatCurrency(financeStats.totalTrades)}
+                    </div>
+                    <div className="flex items-center mt-1">
+                      {financeStats.tradesChange >= 0 ? (
+                        <ArrowUpRight className="h-3 w-3 text-green-400 mr-1" />
+                      ) : (
+                        <ArrowDownRight className="h-3 w-3 text-red-400 mr-1" />
+                      )}
+                      <span
+                        className={`text-xs ${
+                          financeStats.tradesChange >= 0
+                            ? "text-green-400"
+                            : "text-red-400"
+                        }`}
+                      >
+                        {formatPercentage(financeStats.tradesChange)}
+                      </span>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
 
@@ -987,25 +1068,34 @@ export default function AdminDashboard() {
                 <PieChart className="h-4 w-4 text-purple-400" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-white">
-                  {formatCurrency(financeStats.totalCommissions)}
-                </div>
-                <div className="flex items-center mt-1">
-                  {financeStats.commissionsChange >= 0 ? (
-                    <ArrowUpRight className="h-3 w-3 text-green-400 mr-1" />
-                  ) : (
-                    <ArrowDownRight className="h-3 w-3 text-red-400 mr-1" />
-                  )}
-                  <span
-                    className={`text-xs ${
-                      financeStats.commissionsChange >= 0
-                        ? "text-green-400"
-                        : "text-red-400"
-                    }`}
-                  >
-                    {formatPercentage(financeStats.commissionsChange)}
-                  </span>
-                </div>
+                {financeLoading ? (
+                  <div className="animate-pulse space-y-2">
+                    <div className="h-8 w-32 bg-gray-700 rounded"></div>
+                    <div className="h-4 w-16 bg-gray-700 rounded"></div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-2xl font-bold text-white">
+                      {formatCurrency(financeStats.totalCommissions)}
+                    </div>
+                    <div className="flex items-center mt-1">
+                      {financeStats.commissionsChange >= 0 ? (
+                        <ArrowUpRight className="h-3 w-3 text-green-400 mr-1" />
+                      ) : (
+                        <ArrowDownRight className="h-3 w-3 text-red-400 mr-1" />
+                      )}
+                      <span
+                        className={`text-xs ${
+                          financeStats.commissionsChange >= 0
+                            ? "text-green-400"
+                            : "text-red-400"
+                        }`}
+                      >
+                        {formatPercentage(financeStats.commissionsChange)}
+                      </span>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
 
@@ -1018,25 +1108,34 @@ export default function AdminDashboard() {
                 <TrendingUp className="h-4 w-4 text-yellow-400" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-white">
-                  {formatCurrency(financeStats.averageUserBalance)}
-                </div>
-                <div className="flex items-center mt-1">
-                  {financeStats.balanceChange >= 0 ? (
-                    <ArrowUpRight className="h-3 w-3 text-green-400 mr-1" />
-                  ) : (
-                    <ArrowDownRight className="h-3 w-3 text-red-400 mr-1" />
-                  )}
-                  <span
-                    className={`text-xs ${
-                      financeStats.balanceChange >= 0
-                        ? "text-green-400"
-                        : "text-red-400"
-                    }`}
-                  >
-                    {formatPercentage(financeStats.balanceChange)}
-                  </span>
-                </div>
+                {financeLoading ? (
+                  <div className="animate-pulse space-y-2">
+                    <div className="h-8 w-32 bg-gray-700 rounded"></div>
+                    <div className="h-4 w-16 bg-gray-700 rounded"></div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-2xl font-bold text-white">
+                      {formatCurrency(financeStats.averageUserBalance)}
+                    </div>
+                    <div className="flex items-center mt-1">
+                      {financeStats.balanceChange >= 0 ? (
+                        <ArrowUpRight className="h-3 w-3 text-green-400 mr-1" />
+                      ) : (
+                        <ArrowDownRight className="h-3 w-3 text-red-400 mr-1" />
+                      )}
+                      <span
+                        className={`text-xs ${
+                          financeStats.balanceChange >= 0
+                            ? "text-green-400"
+                            : "text-red-400"
+                        }`}
+                      >
+                        {formatPercentage(financeStats.balanceChange)}
+                      </span>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -1279,7 +1378,23 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredAndSortedTransactions.map((transaction) => (
+                    {transactionsLoading ? (
+                      <tr>
+                        <td colSpan={5} className="py-8 text-center">
+                          <div className="flex flex-col items-center justify-center space-y-2">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400"></div>
+                            <p className="text-gray-400">Carregando transações...</p>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : filteredAndSortedTransactions.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="py-8 text-center text-gray-400">
+                          Nenhuma transação encontrada
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredAndSortedTransactions.map((transaction) => (
                       <tr
                         key={transaction.id}
                         className="border-b border-gray-800 hover:bg-gray-800 cursor-pointer transition-colors"
@@ -1335,14 +1450,10 @@ export default function AdminDashboard() {
                           </span>
                         </td>
                       </tr>
-                    ))}
+                      ))
+                    )}
                   </tbody>
                 </table>
-                {filteredAndSortedTransactions.length === 0 && (
-                  <div className="text-center py-8 text-gray-400">
-                    Nenhuma transação encontrada
-                  </div>
-                )}
               </div>
             </CardContent>
           </Card>

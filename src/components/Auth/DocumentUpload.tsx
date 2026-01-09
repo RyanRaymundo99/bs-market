@@ -28,30 +28,45 @@ interface DocumentUploadProps {
     documentType: string;
     documentNumber: string;
     cpf: string;
-    documentFront: File;
-    documentBack: File;
-    documentSelfie: File;
+    documentFront?: File;
+    documentBack?: File;
+    documentSelfie?: File;
+    // CNPJ documents
+    contratoSocial?: File;
+    cartaoCNPJ?: File;
+    cnhSocioControlado?: File;
   }) => void;
   onBack: () => void;
   loading?: boolean;
+  userDocument?: string; // CPF or CNPJ to determine document type
 }
 
 interface UploadedFile {
   file: File;
   preview: string;
-  type: "front" | "back" | "selfie";
+  type: "front" | "back" | "selfie" | "contratoSocial" | "cartaoCNPJ" | "cnhSocio";
 }
 
 const DocumentUpload = ({
   onComplete,
   onBack,
   loading = false,
+  userDocument = "",
 }: DocumentUploadProps) => {
+  // Detect if user is CNPJ (14 digits) or CPF (11 digits)
+  const cleanDocument = userDocument.replace(/\D/g, "");
+  const isCNPJ = cleanDocument.length === 14;
+  
   const [documentType, setDocumentType] = useState<string>("");
   const [documentNumber, setDocumentNumber] = useState<string>("");
   const [cpf, setCpf] = useState<string>("");
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [dragActive, setDragActive] = useState<string | null>(null);
+  
+  // CNPJ specific files
+  const [contratoSocial, setContratoSocial] = useState<File | null>(null);
+  const [cartaoCNPJ, setCartaoCNPJ] = useState<File | null>(null);
+  const [cnhSocio, setCnhSocio] = useState<File | null>(null);
 
   const frontInputRef = useRef<HTMLInputElement>(null);
   const backInputRef = useRef<HTMLInputElement>(null);
@@ -59,41 +74,66 @@ const DocumentUpload = ({
 
   const { toast } = useToast();
 
-  const handleFileUpload = (file: File, type: "front" | "back" | "selfie") => {
+  const handleFileUpload = (file: File, type: "front" | "back" | "selfie" | "contratoSocial" | "cartaoCNPJ" | "cnhSocio") => {
     if (!file) return;
 
-    // Validate file type
-    if (!file.type.startsWith("image/")) {
+    // For CNPJ documents, accept PDFs; for CPF documents, accept images
+    const isPDF = file.type === "application/pdf";
+    const isImage = file.type.startsWith("image/");
+    
+    if (!isPDF && !isImage) {
       toast({
         variant: "destructive",
         title: "Invalid file type",
-        description: "Please upload an image file (JPG, PNG, etc.)",
+        description: isCNPJ 
+          ? "Please upload a PDF file" 
+          : "Please upload an image file (JPG, PNG, etc.)",
       });
       return;
     }
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
+    // Validate file size (max 10MB for PDFs, 5MB for images)
+    const maxSize = isPDF ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
+    if (file.size > maxSize) {
       toast({
         variant: "destructive",
         title: "File too large",
-        description: "Please upload an image smaller than 5MB",
+        description: isPDF 
+          ? "Please upload a PDF smaller than 10MB" 
+          : "Please upload an image smaller than 5MB",
       });
       return;
     }
 
-    const preview = URL.createObjectURL(file);
+    // For PDFs, we can't create image preview
+    const preview = isPDF ? "" : URL.createObjectURL(file);
+
+    // Handle CNPJ specific files
+    if (type === "contratoSocial") {
+      setContratoSocial(file);
+      return;
+    }
+    if (type === "cartaoCNPJ") {
+      setCartaoCNPJ(file);
+      return;
+    }
+    if (type === "cnhSocio") {
+      setCnhSocio(file);
+      return;
+    }
 
     // Remove existing file of same type
     setUploadedFiles((prev) => prev.filter((f) => f.type !== type));
 
-    // Add new file
-    setUploadedFiles((prev) => [...prev, { file, preview, type }]);
+    // Add new file (only for images with preview)
+    if (isImage) {
+      setUploadedFiles((prev) => [...prev, { file, preview, type }]);
+    }
   };
 
   const handleDrag = (
     e: React.DragEvent,
-    type: "front" | "back" | "selfie"
+    type: "front" | "back" | "selfie" | "contratoSocial" | "cartaoCNPJ" | "cnhSocio"
   ) => {
     e.preventDefault();
     e.stopPropagation();
@@ -106,7 +146,7 @@ const DocumentUpload = ({
 
   const handleDrop = (
     e: React.DragEvent,
-    type: "front" | "back" | "selfie"
+    type: "front" | "back" | "selfie" | "contratoSocial" | "cartaoCNPJ" | "cnhSocio"
   ) => {
     e.preventDefault();
     e.stopPropagation();
@@ -117,7 +157,7 @@ const DocumentUpload = ({
     }
   };
 
-  const removeFile = (type: "front" | "back" | "selfie") => {
+  const removeFile = (type: "front" | "back" | "selfie" | "contratoSocial" | "cartaoCNPJ" | "cnhSocio") => {
     setUploadedFiles((prev) => {
       const fileToRemove = prev.find((f) => f.type === type);
       if (fileToRemove) {
@@ -127,87 +167,127 @@ const DocumentUpload = ({
     });
   };
 
-  const getFileByType = (type: "front" | "back" | "selfie") => {
+  const getFileByType = (type: "front" | "back" | "selfie" | "contratoSocial" | "cartaoCNPJ" | "cnhSocio") => {
     return uploadedFiles.find((f) => f.type === type);
   };
 
   const validateForm = () => {
-    if (!documentType) {
-      toast({
-        variant: "destructive",
-        title: "Document type required",
-        description: "Please select a document type",
-      });
-      return false;
+    if (isCNPJ) {
+      // CNPJ validation
+      if (!contratoSocial) {
+        toast({
+          variant: "destructive",
+          title: "Contrato Social obrigatório",
+          description: "Por favor, envie o Contrato Social em PDF",
+        });
+        return false;
+      }
+      if (!cartaoCNPJ) {
+        toast({
+          variant: "destructive",
+          title: "Cartão CNPJ obrigatório",
+          description: "Por favor, envie o Cartão CNPJ em PDF",
+        });
+        return false;
+      }
+      if (!cnhSocio) {
+        toast({
+          variant: "destructive",
+          title: "CNH do sócio controlado obrigatória",
+          description: "Por favor, envie a CNH do sócio controlado em PDF",
+        });
+        return false;
+      }
+      return true;
+    } else {
+      // CPF validation
+      if (!documentType) {
+        toast({
+          variant: "destructive",
+          title: "Document type required",
+          description: "Please select a document type",
+        });
+        return false;
+      }
+
+      if (!documentNumber.trim()) {
+        toast({
+          variant: "destructive",
+          title: "Document number required",
+          description: "Please enter your document number",
+        });
+        return false;
+      }
+
+      if (!cpf.trim()) {
+        toast({
+          variant: "destructive",
+          title: "CPF required",
+          description: "Please enter your CPF",
+        });
+        return false;
+      }
+
+      const frontFile = getFileByType("front");
+      const backFile = getFileByType("back");
+      const selfieFile = getFileByType("selfie");
+
+      if (!frontFile) {
+        toast({
+          variant: "destructive",
+          title: "Document front required",
+          description: "Please upload the front of your document",
+        });
+        return false;
+      }
+
+      if (!backFile) {
+        toast({
+          variant: "destructive",
+          title: "Document back required",
+          description: "Please upload the back of your document",
+        });
+        return false;
+      }
+
+      if (!selfieFile) {
+        toast({
+          variant: "destructive",
+          title: "Selfie required",
+          description: "Please upload a selfie with your document",
+        });
+        return false;
+      }
+      return true;
     }
-
-    if (!documentNumber.trim()) {
-      toast({
-        variant: "destructive",
-        title: "Document number required",
-        description: "Please enter your document number",
-      });
-      return false;
-    }
-
-    if (!cpf.trim()) {
-      toast({
-        variant: "destructive",
-        title: "CPF required",
-        description: "Please enter your CPF",
-      });
-      return false;
-    }
-
-    const frontFile = getFileByType("front");
-    const backFile = getFileByType("back");
-    const selfieFile = getFileByType("selfie");
-
-    if (!frontFile) {
-      toast({
-        variant: "destructive",
-        title: "Document front required",
-        description: "Please upload the front of your document",
-      });
-      return false;
-    }
-
-    if (!backFile) {
-      toast({
-        variant: "destructive",
-        title: "Document back required",
-        description: "Please upload the back of your document",
-      });
-      return false;
-    }
-
-    if (!selfieFile) {
-      toast({
-        variant: "destructive",
-        title: "Selfie required",
-        description: "Please upload a selfie with your document",
-      });
-      return false;
-    }
-
-    return true;
   };
 
   const handleSubmit = () => {
     if (!validateForm()) return;
 
-    const frontFile = getFileByType("front")!;
-    const backFile = getFileByType("back")!;
-    const selfieFile = getFileByType("selfie")!;
+    if (isCNPJ) {
+      onComplete({
+        documentType: "CNPJ",
+        documentNumber: "",
+        cpf: userDocument,
+        contratoSocial: contratoSocial!,
+        cartaoCNPJ: cartaoCNPJ!,
+        cnhSocioControlado: cnhSocio!,
+      });
+    } else {
+      const frontFile = getFileByType("front")!;
+      const backFile = getFileByType("back")!;
+      const selfieFile = getFileByType("selfie")!;
 
-    onComplete({
-      documentType,
-      documentNumber,
-      cpf,
-      documentFront: frontFile.file,
-      documentBack: backFile.file,
-      documentSelfie: selfieFile.file,
-    });
+      onComplete({
+        documentType,
+        documentNumber,
+        cpf,
+        documentFront: frontFile.file,
+        documentBack: backFile.file,
+        documentSelfie: selfieFile.file,
+      });
+    }
   };
 
   const renderUploadArea = (
@@ -247,7 +327,7 @@ const DocumentUpload = ({
             type="file"
             accept="image/*"
             onChange={(e) =>
-              e.target.files?.[0] && handleFileUpload(e.target.files[0], type)
+              e.target.files?.[0] && handleFileUpload(e.target.files[0], type as "front" | "back" | "selfie")
             }
             className="hidden"
           />
@@ -305,81 +385,192 @@ const DocumentUpload = ({
     );
   };
 
+  const renderPDFUpload = (
+    type: "contratoSocial" | "cartaoCNPJ" | "cnhSocio",
+    title: string,
+    description: string
+  ) => {
+    const file = type === "contratoSocial" ? contratoSocial : type === "cartaoCNPJ" ? cartaoCNPJ : cnhSocio;
+    const isDragActive = dragActive === type;
+
+    return (
+      <div className="space-y-2">
+        <Label className="text-white font-medium">{title}</Label>
+        <p className="text-white/70 text-sm">{description}</p>
+        <div
+          className={`relative border-2 border-dashed rounded-lg p-6 transition-colors ${
+            isDragActive
+              ? "border-blue-500 bg-blue-900/20"
+              : file
+              ? "border-green-500 bg-green-900/20"
+              : "border-gray-600 hover:border-gray-500"
+          }`}
+          onDragEnter={(e) => handleDrag(e, type)}
+          onDragLeave={(e) => handleDrag(e, type)}
+          onDragOver={(e) => handleDrag(e, type)}
+          onDrop={(e) => handleDrop(e, type)}
+        >
+          <input
+            type="file"
+            accept="application/pdf"
+            onChange={(e) =>
+              e.target.files?.[0] && handleFileUpload(e.target.files[0], type)
+            }
+            className="hidden"
+            id={`${type}-upload`}
+          />
+          {file ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-green-400">
+                <CheckCircle className="w-5 h-5" />
+                <span className="font-medium">Arquivo enviado com sucesso</span>
+              </div>
+              <div className="bg-gray-700 rounded-lg p-4">
+                <FileImage className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+                <p className="text-white/70 text-sm text-center">{file.name}</p>
+                <p className="text-white/50 text-xs text-center mt-1">
+                  {(file.size / 1024 / 1024).toFixed(2)} MB
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                className="w-full"
+                onClick={() => {
+                  if (type === "contratoSocial") setContratoSocial(null);
+                  if (type === "cartaoCNPJ") setCartaoCNPJ(null);
+                  if (type === "cnhSocio") setCnhSocio(null);
+                }}
+              >
+                <X className="w-4 h-4 mr-2" />
+                Remover arquivo
+              </Button>
+            </div>
+          ) : (
+            <div className="text-center">
+              <div className="mx-auto w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center mb-4">
+                <FileImage className="w-6 h-6 text-white" />
+              </div>
+              <p className="text-white/80 mb-2">
+                Arraste e solte o PDF aqui
+              </p>
+              <p className="text-white/60 text-sm mb-4">ou</p>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => document.getElementById(`${type}-upload`)?.click()}
+                className="border-gray-600 text-white hover:bg-gray-700"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Escolher arquivo PDF
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <Card className="w-full max-w-2xl mx-auto bg-gray-800 border-gray-700">
       <CardHeader>
         <CardTitle className="text-2xl text-center text-white">
-          Document Verification
+          {isCNPJ ? "Verificação de Documentos CNPJ" : "Document Verification"}
         </CardTitle>
         <p className="text-center text-white/70">
-          Please upload your identity document and take a selfie for
-          verification
+          {isCNPJ
+            ? "Por favor, envie os documentos da empresa para verificação"
+            : "Please upload your identity document and take a selfie for verification"}
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Document Type Selection */}
-        <div className="space-y-2">
-          <Label className="text-white font-medium">Document Type</Label>
-          <Select value={documentType} onValueChange={setDocumentType}>
-            <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
-              <SelectValue placeholder="Select your document type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="RG">RG (Registro Geral)</SelectItem>
-              <SelectItem value="HABILITACAO">
-                Habilitação (Driver&apos;s License)
-              </SelectItem>
-              <SelectItem value="CNH">
-                CNH (Carteira Nacional de Habilitação)
-              </SelectItem>
-              <SelectItem value="PASSPORT">Passport</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        {isCNPJ ? (
+          <>
+            {/* CNPJ Documents */}
+            {renderPDFUpload(
+              "contratoSocial",
+              "Contrato Social",
+              "Envie o Contrato Social da empresa em PDF"
+            )}
+            {renderPDFUpload(
+              "cartaoCNPJ",
+              "Cartão CNPJ",
+              "Envie o Cartão CNPJ da empresa em PDF"
+            )}
+            {renderPDFUpload(
+              "cnhSocio",
+              "CNH do Sócio Controlado",
+              "Envie a CNH do sócio controlado em PDF"
+            )}
+          </>
+        ) : (
+          <>
+            {/* Document Type Selection */}
+            <div className="space-y-2">
+              <Label className="text-white font-medium">Document Type</Label>
+              <Select value={documentType} onValueChange={setDocumentType}>
+                <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
+                  <SelectValue placeholder="Select your document type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="RG">RG (Registro Geral)</SelectItem>
+                  <SelectItem value="HABILITACAO">
+                    Habilitação (Driver&apos;s License)
+                  </SelectItem>
+                  <SelectItem value="CNH">
+                    CNH (Carteira Nacional de Habilitação)
+                  </SelectItem>
+                  <SelectItem value="PASSPORT">Passport</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-        {/* Document Number */}
-        <div className="space-y-2">
-          <Label className="text-white font-medium">Document Number</Label>
-          <Input
-            value={documentNumber}
-            onChange={(e) => setDocumentNumber(e.target.value)}
-            placeholder="Enter your document number"
-            className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
-          />
-        </div>
+            {/* Document Number */}
+            <div className="space-y-2">
+              <Label className="text-white font-medium">Document Number</Label>
+              <Input
+                value={documentNumber}
+                onChange={(e) => setDocumentNumber(e.target.value)}
+                placeholder="Enter your document number"
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+              />
+            </div>
 
-        {/* CPF Confirmation */}
-        <div className="space-y-2">
-          <CPFField
-            value={cpf}
-            onChange={setCpf}
-            onBlur={() => {}}
-            error=""
-            required
-            label="Confirm CPF"
-            className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
-          />
-        </div>
+            {/* CPF Confirmation */}
+            <div className="space-y-2">
+              <CPFField
+                value={cpf}
+                onChange={setCpf}
+                onBlur={() => {}}
+                error=""
+                required
+                label="Confirm CPF"
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
+              />
+            </div>
 
-        {/* Document Upload Areas */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {renderUploadArea(
-            "front",
-            "Document Front",
-            "Upload the front side of your document"
-          )}
-          {renderUploadArea(
-            "back",
-            "Document Back",
-            "Upload the back side of your document"
-          )}
-        </div>
+            {/* Document Upload Areas */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {renderUploadArea(
+                "front",
+                "Document Front",
+                "Upload the front side of your document"
+              )}
+              {renderUploadArea(
+                "back",
+                "Document Back",
+                "Upload the back side of your document"
+              )}
+            </div>
 
-        {/* Selfie Upload */}
-        {renderUploadArea(
-          "selfie",
-          "Selfie with Document",
-          "Take a selfie holding your document next to your face"
+            {/* Selfie Upload */}
+            {renderUploadArea(
+              "selfie",
+              "Selfie with Document",
+              "Take a selfie holding your document next to your face"
+            )}
+          </>
         )}
 
         {/* Security Notice */}

@@ -33,9 +33,13 @@ import {
 } from "@/components/ui/form";
 
 interface KYCDocumentData {
-  documentFront: File;
-  documentBack: File;
-  documentSelfie: File;
+  documentFront?: File;
+  documentBack?: File;
+  documentSelfie?: File;
+  // CNPJ documents
+  contratoSocial?: File;
+  cartaoCNPJ?: File;
+  cnhSocioControlado?: File;
 }
 
 const SignupWithMandatoryKYC = () => {
@@ -158,12 +162,25 @@ const SignupWithMandatoryKYC = () => {
       }
 
       const formData = new FormData();
-      formData.append("documentType", "RG"); // Default document type
-      formData.append("documentNumber", ""); // Optional field
-      formData.append("cpf", userData.cpf);
-      formData.append("documentFront", kycData.documentFront);
-      formData.append("documentBack", kycData.documentBack);
-      formData.append("documentSelfie", kycData.documentSelfie);
+      const cleanDocument = userData.cpf.replace(/\D/g, "");
+      const isCNPJ = cleanDocument.length === 14;
+      
+      if (isCNPJ) {
+        // CNPJ documents
+        formData.append("documentType", "CNPJ");
+        formData.append("cpf", userData.cpf);
+        formData.append("contratoSocial", kycData.contratoSocial || kycData.documentFront);
+        formData.append("cartaoCNPJ", kycData.cartaoCNPJ || kycData.documentBack);
+        formData.append("cnhSocioControlado", kycData.cnhSocioControlado || kycData.documentSelfie);
+      } else {
+        // CPF documents
+        formData.append("documentType", "RG"); // Default document type
+        formData.append("documentNumber", ""); // Optional field
+        formData.append("cpf", userData.cpf);
+        formData.append("documentFront", kycData.documentFront);
+        formData.append("documentBack", kycData.documentBack);
+        formData.append("documentSelfie", kycData.documentSelfie);
+      }
 
       const response = await fetch("/api/auth/submit-kyc", {
         method: "POST",
@@ -506,16 +523,165 @@ const SignupWithMandatoryKYC = () => {
           <div className="space-y-6">
             <div className="text-center">
               <h3 className="text-lg font-semibold mb-2">
-                Verificação de Identidade Obrigatória
+                {(() => {
+                  const cleanDoc = userData?.cpf?.replace(/\D/g, "") || "";
+                  return cleanDoc.length === 14
+                    ? "Verificação de Documentos CNPJ"
+                    : "Verificação de Identidade Obrigatória";
+                })()}
               </h3>
               <p className="text-sm text-muted-foreground">
-                Por favor, envie seus documentos de identidade para completar a
-                configuração da sua conta.
+                {(() => {
+                  const cleanDoc = userData?.cpf?.replace(/\D/g, "") || "";
+                  return cleanDoc.length === 14
+                    ? "Por favor, envie os documentos da empresa para completar a configuração da sua conta."
+                    : "Por favor, envie seus documentos de identidade para completar a configuração da sua conta.";
+                })()}
               </p>
             </div>
 
             <div className="space-y-4">
-              {/* Document Front */}
+              {(() => {
+                const cleanDoc = userData?.cpf?.replace(/\D/g, "") || "";
+                const isCNPJ = cleanDoc.length === 14;
+
+                if (isCNPJ) {
+                  // CNPJ documents
+                  return (
+                    <>
+                      {/* Contrato Social */}
+                      <div>
+                        <Label>Contrato Social (PDF)</Label>
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                          {kycData?.contratoSocial ? (
+                            <div className="space-y-2">
+                              <FileText className="w-8 h-8 mx-auto text-green-500" />
+                              <p className="text-sm text-green-600">
+                                {kycData.contratoSocial.name}
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              <Upload className="w-8 h-8 mx-auto text-gray-400" />
+                              <p className="text-sm text-gray-500">
+                                Clique para enviar o Contrato Social em PDF
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                        <input
+                          type="file"
+                          accept="application/pdf"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleFileSelect("contratoSocial", file);
+                          }}
+                          className="hidden"
+                          id="contrato-upload"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            document.getElementById("contrato-upload")?.click()
+                          }
+                          className="w-full mt-2"
+                        >
+                          <Upload className="w-4 h-4 mr-2" />
+                          Enviar Contrato Social
+                        </Button>
+                      </div>
+
+                      {/* Cartão CNPJ */}
+                      <div>
+                        <Label>Cartão CNPJ (PDF)</Label>
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                          {kycData?.cartaoCNPJ ? (
+                            <div className="space-y-2">
+                              <FileText className="w-8 h-8 mx-auto text-green-500" />
+                              <p className="text-sm text-green-600">
+                                {kycData.cartaoCNPJ.name}
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              <Upload className="w-8 h-8 mx-auto text-gray-400" />
+                              <p className="text-sm text-gray-500">
+                                Clique para enviar o Cartão CNPJ em PDF
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                        <input
+                          type="file"
+                          accept="application/pdf"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleFileSelect("cartaoCNPJ", file);
+                          }}
+                          className="hidden"
+                          id="cartao-upload"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            document.getElementById("cartao-upload")?.click()
+                          }
+                          className="w-full mt-2"
+                        >
+                          <Upload className="w-4 h-4 mr-2" />
+                          Enviar Cartão CNPJ
+                        </Button>
+                      </div>
+
+                      {/* CNH do Sócio Controlado */}
+                      <div>
+                        <Label>CNH do Sócio Controlado (PDF)</Label>
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                          {kycData?.cnhSocioControlado ? (
+                            <div className="space-y-2">
+                              <FileText className="w-8 h-8 mx-auto text-green-500" />
+                              <p className="text-sm text-green-600">
+                                {kycData.cnhSocioControlado.name}
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              <Upload className="w-8 h-8 mx-auto text-gray-400" />
+                              <p className="text-sm text-gray-500">
+                                Clique para enviar a CNH do sócio controlado em PDF
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                        <input
+                          type="file"
+                          accept="application/pdf"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleFileSelect("cnhSocioControlado", file);
+                          }}
+                          className="hidden"
+                          id="cnh-upload"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            document.getElementById("cnh-upload")?.click()
+                          }
+                          className="w-full mt-2"
+                        >
+                          <Upload className="w-4 h-4 mr-2" />
+                          Enviar CNH do Sócio
+                        </Button>
+                      </div>
+                    </>
+                  );
+                }
+              })()}
+            </div>
               <div>
                 <Label>Frente do Documento (RG/Passaporte)</Label>
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
@@ -643,6 +809,10 @@ const SignupWithMandatoryKYC = () => {
                   Enviar Selfie
                 </Button>
               </div>
+                    </>
+                  );
+                }
+              })()}
             </div>
 
             <div className="flex space-x-2">
@@ -657,10 +827,25 @@ const SignupWithMandatoryKYC = () => {
               <Button
                 onClick={handleKYCSubmit}
                 disabled={
-                  !kycData?.documentFront ||
-                  !kycData?.documentBack ||
-                  !kycData?.documentSelfie ||
-                  uploading
+                  (() => {
+                    const cleanDoc = userData?.cpf?.replace(/\D/g, "") || "";
+                    const isCNPJ = cleanDoc.length === 14;
+                    if (isCNPJ) {
+                      return (
+                        !kycData?.contratoSocial ||
+                        !kycData?.cartaoCNPJ ||
+                        !kycData?.cnhSocioControlado ||
+                        uploading
+                      );
+                    } else {
+                      return (
+                        !kycData?.documentFront ||
+                        !kycData?.documentBack ||
+                        !kycData?.documentSelfie ||
+                        uploading
+                      );
+                    }
+                  })()
                 }
                 className="flex-1"
               >
