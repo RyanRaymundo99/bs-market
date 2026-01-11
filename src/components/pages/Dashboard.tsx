@@ -283,19 +283,26 @@ export default function Dashboard() {
     checkAndLogoutIfRejected();
   }, [userStatus, language]);
 
-  // Fetch user data
+  // Fetch user data - OPTIMIZED: parallel API calls
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch user status
-        const userStatusResponse = await fetch("/api/user/status");
+        // Fetch all data in parallel for faster loading
+        const [userStatusResponse, balanceResponse, transactionResponse] = await Promise.all([
+          fetch("/api/user/status"),
+          fetch("/api/balance"),
+          fetch("/api/transactions?limit=50"),
+        ]);
+
+        // Process user status
+        let currentUserStatus = null;
         if (userStatusResponse.ok) {
           const userStatusData = await userStatusResponse.json();
-          setUserStatus(userStatusData.user);
+          currentUserStatus = userStatusData.user;
+          setUserStatus(currentUserStatus);
         }
 
-        // Fetch balances
-        const balanceResponse = await fetch("/api/balance");
+        // Process balances
         let currentUsdtBalance = 0;
         if (balanceResponse.ok) {
           const balanceData = await balanceResponse.json();
@@ -315,8 +322,7 @@ export default function Dashboard() {
               ?.amount || 0;
         }
 
-        // Fetch transactions
-        const transactionResponse = await fetch("/api/transactions?limit=50");
+        // Process transactions
         let allTransactions: Transaction[] = [];
         if (transactionResponse.ok) {
           const transactionData = await transactionResponse.json();
@@ -527,9 +533,67 @@ export default function Dashboard() {
       <div className="min-h-screen bg-background text-foreground">
         <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
         <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl">
-          <div className="flex items-center justify-center h-64">
-            <RefreshCw className="w-8 h-8 animate-spin text-brand-300" />
+          {/* Skeleton loader for balance section */}
+          <div className="mb-6 sm:mb-8">
+            <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-6 shadow-xl animate-pulse">
+              <div className="text-center">
+                <div className="h-4 w-32 bg-gray-700 rounded mx-auto mb-4"></div>
+                <div className="h-12 w-48 bg-gray-700 rounded mx-auto mb-2"></div>
+                <div className="h-3 w-24 bg-gray-700 rounded mx-auto"></div>
+              </div>
+            </div>
           </div>
+
+          {/* Skeleton loader for cards grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="bg-gray-900 border-gray-800 animate-pulse">
+                <CardHeader className="pb-2">
+                  <div className="h-4 w-24 bg-gray-700 rounded"></div>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-8 w-32 bg-gray-700 rounded mb-2"></div>
+                  <div className="h-3 w-20 bg-gray-700 rounded"></div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Skeleton for chart */}
+          <Card className="bg-gray-900 border-gray-800 mb-6 animate-pulse">
+            <CardHeader>
+              <div className="h-5 w-40 bg-gray-700 rounded"></div>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64 bg-gray-800 rounded"></div>
+            </CardContent>
+          </Card>
+
+          {/* Skeleton for transactions */}
+          <Card className="bg-gray-900 border-gray-800 animate-pulse">
+            <CardHeader>
+              <div className="h-5 w-48 bg-gray-700 rounded"></div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-gray-700 rounded-full"></div>
+                      <div>
+                        <div className="h-4 w-24 bg-gray-700 rounded mb-1"></div>
+                        <div className="h-3 w-16 bg-gray-700 rounded"></div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="h-4 w-20 bg-gray-700 rounded mb-1"></div>
+                      <div className="h-3 w-12 bg-gray-700 rounded"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );

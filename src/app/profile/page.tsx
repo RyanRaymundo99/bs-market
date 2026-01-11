@@ -98,9 +98,14 @@ export default function ProfilePage() {
     }
   }, []);
 
+  // Fetch all data in parallel for faster loading
   useEffect(() => {
-    fetchUserProfile();
-    fetchKycDocuments();
+    const loadData = async () => {
+      setLoading(true);
+      await Promise.all([fetchUserProfile(), fetchKycDocuments()]);
+      setLoading(false);
+    };
+    loadData();
   }, []);
 
   // Auto-enable editing mode when user is PENDING

@@ -270,10 +270,12 @@ const TradePage = () => {
     checkUserStatus();
   }, [language]);
 
-  // Fetch USDT rate and transaction history on mount
+  // Fetch USDT rate and transaction history on mount - PARALLEL
   useEffect(() => {
-    fetchUSDTRate();
-    fetchTransactionHistory();
+    const loadData = async () => {
+      await Promise.all([fetchUSDTRate(), fetchTransactionHistory()]);
+    };
+    loadData();
   }, []);
 
   const fetchUSDTRate = async () => {
