@@ -315,43 +315,20 @@ export default function AdminDashboard() {
     try {
       setStatsLoading(true);
 
-      // Fetch user stats and KYC stats in parallel
-      const [usersResponse, kycResponse] = await Promise.all([
-        fetch("/api/admin/users"),
-        fetch("/api/admin/kyc"),
-      ]);
+      // Use optimized stats endpoint that uses COUNT queries instead of fetching all records
+      const response = await fetch("/api/admin/stats", { cache: "no-store" });
 
-      const usersData = usersResponse.ok
-        ? await usersResponse.json()
-        : { users: [] };
-      const users = usersData.users || [];
+      if (!response.ok) {
+        throw new Error("Failed to fetch stats");
+      }
 
-      const kycData = kycResponse.ok ? await kycResponse.json() : { users: [] };
-      const kycUsers = kycData.users || [];
+      const data = await response.json();
 
-      const newStats: DashboardStats = {
-        totalUsers: users.length,
-        pendingApprovals: users.filter(
-          (u: { approvalStatus: string }) => u.approvalStatus === "PENDING"
-        ).length,
-        approvedUsers: users.filter(
-          (u: { approvalStatus: string }) => u.approvalStatus === "APPROVED"
-        ).length,
-        rejectedUsers: users.filter(
-          (u: { approvalStatus: string }) => u.approvalStatus === "REJECTED"
-        ).length,
-        pendingKYC: kycUsers.filter(
-          (u: { kycStatus: string }) => u.kycStatus === "PENDING"
-        ).length,
-        approvedKYC: kycUsers.filter(
-          (u: { kycStatus: string }) => u.kycStatus === "APPROVED"
-        ).length,
-        rejectedKYC: kycUsers.filter(
-          (u: { kycStatus: string }) => u.kycStatus === "REJECTED"
-        ).length,
-      };
-
-      setStats(newStats);
+      if (data.success && data.stats) {
+        setStats(data.stats);
+      } else {
+        throw new Error(data.error || "Unknown error");
+      }
     } catch (error) {
       console.error("Error fetching stats:", error);
       toast({

@@ -31,10 +31,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { ZoomIn } from "lucide-react";
+import { ZoomIn, ChevronLeft, ChevronRight } from "lucide-react";
 import ImageAnalysisPanel from "@/components/admin/ImageAnalysisPanel";
 import NotificationBell from "@/components/admin/NotificationBell";
 import BackToDashboardButton from "@/components/admin/BackToDashboardButton";
+import KYCImage from "@/components/admin/KYCImage";
 
 interface KYCUser {
   id: string;
@@ -67,6 +68,10 @@ const AdminKYCPage = () => {
     alt: string;
     title: string;
   } | null>(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const { toast } = useToast();
 
@@ -124,7 +129,14 @@ const AdminKYCPage = () => {
 
   useEffect(() => {
     filterUsers();
+    setCurrentPage(1); // Reset to first page when filters change
   }, [filterUsers]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
 
   const handleApprove = async (userId: string) => {
     try {
@@ -396,7 +408,7 @@ const AdminKYCPage = () => {
               </CardContent>
             </Card>
           ) : (
-            filteredUsers.map((user) => (
+            paginatedUsers.map((user) => (
               <Card
                 key={user.id}
                 className="hover:shadow-md transition-shadow bg-gray-900 border-gray-800"
@@ -509,93 +521,54 @@ const AdminKYCPage = () => {
                                     Frente do Documento
                                     <ZoomIn className="w-4 h-4 text-gray-400" />
                                   </h4>
-                                  {user.documentFront ? (
-                                    <div
-                                      className="relative cursor-pointer group"
-                                      onClick={() =>
-                                        handleImageClick(
-                                          user.documentFront!,
-                                          "Frente do Documento",
-                                          "Frente do Documento"
-                                        )
-                                      }
-                                    >
-                                      <img
-                                        src={user.documentFront}
-                                        alt="Frente do Documento"
-                                        className="w-full h-48 object-cover rounded-lg border border-gray-600 group-hover:border-blue-500 transition-colors"
-                                      />
-                                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-lg flex items-center justify-center">
-                                        <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <div className="w-full h-48 bg-gray-700 rounded-lg border border-gray-600 flex items-center justify-center">
-                                      <p className="text-gray-400">Nenhum documento enviado</p>
-                                    </div>
-                                  )}
+                                  <KYCImage
+                                    src={user.documentFront}
+                                    alt="Frente do Documento"
+                                    className="w-full h-48"
+                                    onClick={user.documentFront ? () =>
+                                      handleImageClick(
+                                        user.documentFront!,
+                                        "Frente do Documento",
+                                        "Frente do Documento"
+                                      )
+                                    : undefined}
+                                  />
                                 </div>
                                 <div>
                                   <h4 className="font-medium text-white mb-2 flex items-center gap-2">
                                     Verso do Documento
                                     <ZoomIn className="w-4 h-4 text-gray-400" />
                                   </h4>
-                                  {user.documentBack ? (
-                                    <div
-                                      className="relative cursor-pointer group"
-                                      onClick={() =>
-                                        handleImageClick(
-                                          user.documentBack!,
-                                          "Verso do Documento",
-                                          "Verso do Documento"
-                                        )
-                                      }
-                                    >
-                                      <img
-                                        src={user.documentBack}
-                                        alt="Verso do Documento"
-                                        className="w-full h-48 object-cover rounded-lg border border-gray-600 group-hover:border-blue-500 transition-colors"
-                                    />
-                                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-lg flex items-center justify-center">
-                                      <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    </div>
-                                  </div>
-                                  ) : (
-                                    <div className="w-full h-48 bg-gray-700 rounded-lg border border-gray-600 flex items-center justify-center">
-                                      <p className="text-gray-400">Nenhum documento enviado</p>
-                                    </div>
-                                  )}
+                                  <KYCImage
+                                    src={user.documentBack}
+                                    alt="Verso do Documento"
+                                    className="w-full h-48"
+                                    onClick={user.documentBack ? () =>
+                                      handleImageClick(
+                                        user.documentBack!,
+                                        "Verso do Documento",
+                                        "Verso do Documento"
+                                      )
+                                    : undefined}
+                                  />
                                 </div>
                                 <div>
                                   <h4 className="font-medium text-white mb-2 flex items-center gap-2">
                                     Selfie com Documento
                                     <ZoomIn className="w-4 h-4 text-gray-400" />
                                   </h4>
-                                  {user.documentSelfie ? (
-                                    <div
-                                      className="relative cursor-pointer group"
-                                      onClick={() =>
-                                        handleImageClick(
-                                          user.documentSelfie!,
-                                          "Selfie com Documento",
-                                          "Selfie com Documento"
-                                        )
-                                      }
-                                    >
-                                      <img
-                                        src={user.documentSelfie}
-                                      alt="Selfie com Documento"
-                                      className="w-full h-48 object-cover rounded-lg border border-gray-600 group-hover:border-blue-500 transition-colors"
-                                    />
-                                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-lg flex items-center justify-center">
-                                      <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    </div>
-                                  </div>
-                                  ) : (
-                                    <div className="w-full h-48 bg-gray-700 rounded-lg border border-gray-600 flex items-center justify-center">
-                                      <p className="text-gray-400">Nenhum documento enviado</p>
-                                    </div>
-                                  )}
+                                  <KYCImage
+                                    src={user.documentSelfie}
+                                    alt="Selfie com Documento"
+                                    className="w-full h-48"
+                                    onClick={user.documentSelfie ? () =>
+                                      handleImageClick(
+                                        user.documentSelfie!,
+                                        "Selfie com Documento",
+                                        "Selfie com Documento"
+                                      )
+                                    : undefined}
+                                  />
                                 </div>
                               </div>
 
@@ -790,6 +763,56 @@ const AdminKYCPage = () => {
             ))
           )}
         </div>
+
+        {/* Pagination Controls */}
+        {filteredUsers.length > itemsPerPage && (
+          <div className="flex items-center justify-between mt-6 px-4 py-3 bg-gray-900 border border-gray-800 rounded-lg">
+            <div className="text-sm text-gray-400">
+              Mostrando {startIndex + 1} a {Math.min(endIndex, filteredUsers.length)} de {filteredUsers.length} usuários
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                className="border-gray-700 text-white hover:bg-gray-800 disabled:opacity-50"
+              >
+                Primeiro
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="border-gray-700 text-white hover:bg-gray-800 disabled:opacity-50"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <span className="text-white px-3">
+                Página {currentPage} de {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="border-gray-700 text-white hover:bg-gray-800 disabled:opacity-50"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+                className="border-gray-700 text-white hover:bg-gray-800 disabled:opacity-50"
+              >
+                Último
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Full-size Image Modal */}

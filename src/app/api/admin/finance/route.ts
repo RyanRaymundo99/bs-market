@@ -292,61 +292,88 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // Get chart data for the last 30 days
-    const chartData = [];
-    for (let i = 29; i >= 0; i--) {
-      const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-      const nextDate = new Date(date.getTime() + 24 * 60 * 60 * 1000);
-
-      const dayDeposits = await prisma.deposit.aggregate({
+    // Get chart data for the last 30 days using batch queries instead of 90 individual queries
+    const [deposits30Days, withdrawals30Days, trades30Days] = await Promise.all([
+      prisma.deposit.findMany({
         where: {
           status: "CONFIRMED",
           currency: "BRL",
-          createdAt: {
-            gte: date,
-            lt: nextDate,
-          },
+          createdAt: { gte: thirtyDaysAgo },
         },
-        _sum: {
+        select: {
           amount: true,
+          createdAt: true,
         },
-      });
-
-      const dayWithdrawals = await prisma.withdrawal.aggregate({
+      }),
+      prisma.withdrawal.findMany({
         where: {
           status: "COMPLETED",
           currency: "BRL",
-          createdAt: {
-            gte: date,
-            lt: nextDate,
-          },
+          createdAt: { gte: thirtyDaysAgo },
         },
-        _sum: {
+        select: {
           amount: true,
+          createdAt: true,
         },
-      });
-
-      // Calculate daily trade volume (from orders)
-      const dayTrades = await prisma.order.aggregate({
+      }),
+      prisma.order.findMany({
         where: {
           status: "COMPLETED",
-          createdAt: {
-            gte: date,
-            lt: nextDate,
-          },
+          createdAt: { gte: thirtyDaysAgo },
         },
-        _sum: {
+        select: {
           total: true,
+          createdAt: true,
         },
-      });
+      }),
+    ]);
 
-      chartData.push({
-        date: date.toISOString().split("T")[0],
-        deposits: Number(dayDeposits._sum.amount || 0),
-        withdrawals: Number(dayWithdrawals._sum.amount || 0),
-        trades: Number(dayTrades._sum.total || 0),
-      });
+    // Group by date in memory (much faster than 90 DB queries)
+    const chartDataMap = new Map<string, { deposits: number; withdrawals: number; trades: number }>();
+    
+    // Initialize all 30 days
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+      const dateKey = date.toISOString().split("T")[0];
+      chartDataMap.set(dateKey, { deposits: 0, withdrawals: 0, trades: 0 });
     }
+
+    // Aggregate deposits
+    for (const deposit of deposits30Days) {
+      const dateKey = deposit.createdAt.toISOString().split("T")[0];
+      const existing = chartDataMap.get(dateKey);
+      if (existing) {
+        existing.deposits += Number(deposit.amount);
+      }
+    }
+
+    // Aggregate withdrawals
+    for (const withdrawal of withdrawals30Days) {
+      const dateKey = withdrawal.createdAt.toISOString().split("T")[0];
+      const existing = chartDataMap.get(dateKey);
+      if (existing) {
+        existing.withdrawals += Number(withdrawal.amount);
+      }
+    }
+
+    // Aggregate trades
+    for (const trade of trades30Days) {
+      const dateKey = trade.createdAt.toISOString().split("T")[0];
+      const existing = chartDataMap.get(dateKey);
+      if (existing) {
+        existing.trades += Number(trade.total);
+      }
+    }
+
+    // Convert to array
+    const chartData = Array.from(chartDataMap.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, data]) => ({
+        date,
+        deposits: data.deposits,
+        withdrawals: data.withdrawals,
+        trades: data.trades,
+      }));
 
     const financeStats = {
       totalDeposits: Number(totalDeposits._sum.amount || 0),
