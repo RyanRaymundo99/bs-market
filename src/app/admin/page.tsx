@@ -35,7 +35,17 @@ import {
   Plus,
   Minus,
   Wallet,
+  FileDown,
+  Calendar,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -203,6 +213,9 @@ export default function AdminDashboard() {
   >([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [processingBalance, setProcessingBalance] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [downloadingReport, setDownloadingReport] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -689,6 +702,43 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleDownloadReport = async (format: "pdf" | "excel") => {
+    try {
+      setDownloadingReport(true);
+      const url = `/api/admin/reports/monthly-${format}?month=${selectedMonth}&year=${selectedYear}`;
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to generate ${format.toUpperCase()} report`);
+      }
+
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = `transactions-${selectedMonth}-${selectedYear}.${format === "pdf" ? "pdf" : "xlsx"}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+
+      toast({
+        title: "✅ Download Iniciado",
+        description: `Relatório ${format.toUpperCase()} gerado com sucesso!`,
+      });
+    } catch (error) {
+      console.error(`Error downloading ${format} report:`, error);
+      toast({
+        variant: "destructive",
+        title: "❌ Erro",
+        description: `Falha ao gerar relatório ${format.toUpperCase()}`,
+      });
+    } finally {
+      setDownloadingReport(false);
+    }
+  };
+
   // Load all initial data in parallel for faster page load
   useEffect(() => {
     setLoading(true);
@@ -753,6 +803,88 @@ export default function AdminDashboard() {
               <TrendingUp className="w-4 h-4 mr-2" />
               Refresh
             </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="border-gray-700 text-white hover:bg-gray-800"
+                  disabled={downloadingReport}
+                >
+                  <FileDown className="w-4 h-4 mr-2" />
+                  {downloadingReport ? "Gerando..." : "Relatórios"}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 bg-gray-900 border-gray-700">
+                <DropdownMenuLabel className="text-white">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    Selecionar Período
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator className="bg-gray-700" />
+                <div className="p-2 space-y-2">
+                  <div className="flex gap-2">
+                    <Select
+                      value={String(selectedMonth)}
+                      onValueChange={(value) => setSelectedMonth(parseInt(value))}
+                    >
+                      <SelectTrigger className="w-24 h-8 bg-gray-800 border-gray-700 text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-gray-900 border-gray-700">
+                        {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                          <SelectItem
+                            key={m}
+                            value={String(m)}
+                            className="text-white hover:bg-gray-800"
+                          >
+                            {m.toString().padStart(2, "0")}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={String(selectedYear)}
+                      onValueChange={(value) => setSelectedYear(parseInt(value))}
+                    >
+                      <SelectTrigger className="w-28 h-8 bg-gray-800 border-gray-700 text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-gray-900 border-gray-700">
+                        {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i).map(
+                          (y) => (
+                            <SelectItem
+                              key={y}
+                              value={String(y)}
+                              className="text-white hover:bg-gray-800"
+                            >
+                              {y}
+                            </SelectItem>
+                          )
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <DropdownMenuSeparator className="bg-gray-700" />
+                <DropdownMenuItem
+                  onClick={() => handleDownloadReport("pdf")}
+                  className="text-white hover:bg-gray-800 cursor-pointer"
+                  disabled={downloadingReport}
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  Download PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => handleDownloadReport("excel")}
+                  className="text-white hover:bg-gray-800 cursor-pointer"
+                  disabled={downloadingReport}
+                >
+                  <FileDown className="w-4 h-4 mr-2" />
+                  Download Excel
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               onClick={handleResetFinance}
               variant="outline"
