@@ -177,9 +177,9 @@ const SignupWithMandatoryKYC = () => {
         if (cnhFile) formData.append("cnhSocioControlado", cnhFile);
       } else {
         // CPF documents
-        formData.append("documentType", "RG"); // Default document type
-        formData.append("documentNumber", ""); // Optional field
-        formData.append("cpf", userData.cpf);
+      formData.append("documentType", "RG"); // Default document type
+      formData.append("documentNumber", ""); // Optional field
+      formData.append("cpf", userData.cpf);
         if (kycData.documentFront) formData.append("documentFront", kycData.documentFront);
         if (kycData.documentBack) formData.append("documentBack", kycData.documentBack);
         if (kycData.documentSelfie) formData.append("documentSelfie", kycData.documentSelfie);
@@ -686,9 +686,9 @@ const SignupWithMandatoryKYC = () => {
                   // CPF documents
                   return (
                     <>
-                      {/* Document Front */}
-                      <div>
-                        <Label>Frente do Documento (RG/Passaporte)</Label>
+              {/* Document Front */}
+              <div>
+                <Label>Frente do Documento (RG/Passaporte)</Label>
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
                   {kycData?.documentFront ? (
                     <div className="space-y-2">
@@ -813,7 +813,7 @@ const SignupWithMandatoryKYC = () => {
                   <Camera className="w-4 h-4 mr-2" />
                   Enviar Selfie
                 </Button>
-                      </div>
+              </div>
                     </>
                   );
                 }
@@ -844,10 +844,10 @@ const SignupWithMandatoryKYC = () => {
                       );
                     } else {
                       return (
-                        !kycData?.documentFront ||
-                        !kycData?.documentBack ||
-                        !kycData?.documentSelfie ||
-                        uploading
+                  !kycData?.documentFront ||
+                  !kycData?.documentBack ||
+                  !kycData?.documentSelfie ||
+                  uploading
                       );
                     }
                   })()

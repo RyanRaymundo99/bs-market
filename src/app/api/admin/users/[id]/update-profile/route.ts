@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { validateAdminSession } from "@/lib/admin-session";
 
-export async function PATCH(
+// Support both PATCH and POST methods
+async function handleUpdate(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -105,4 +106,19 @@ export async function PATCH(
       { status: 500 }
     );
   }
+}
+
+// Export both PATCH and POST methods
+export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  return handleUpdate(request, context);
+}
+
+export async function POST(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  return handleUpdate(request, context);
 }

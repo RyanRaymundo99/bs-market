@@ -8,12 +8,107 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const include = searchParams.get("include");
 
     // Validate admin session
     const adminSession = await validateAdminSession(request);
 
     if (!adminSession) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Handle balance request
+    if (include === "balance") {
+      const balances = await prisma.balance.findMany({
+        where: { userId: id },
+        select: {
+          currency: true,
+          amount: true,
+          locked: true,
+        },
+      });
+      return NextResponse.json({ success: true, balances });
+    }
+
+    // Handle transactions request - fetch from multiple sources
+    if (include === "transactions") {
+      // Fetch orders (crypto purchases) and withdrawals
+      const [orders, withdrawals, deposits] = await Promise.all([
+        prisma.order.findMany({
+          where: { userId: id },
+          orderBy: { createdAt: "desc" },
+          take: 25,
+          select: {
+            id: true,
+            type: true,
+            total: true,
+            baseCurrency: true,
+            status: true,
+            createdAt: true,
+            externalOrderId: true,
+          },
+        }),
+        prisma.withdrawal.findMany({
+          where: { userId: id },
+          orderBy: { createdAt: "desc" },
+          take: 25,
+          select: {
+            id: true,
+            type: true,
+            amount: true,
+            status: true,
+            createdAt: true,
+            externalId: true,
+          },
+        }),
+        prisma.deposit.findMany({
+          where: { userId: id },
+          orderBy: { createdAt: "desc" },
+          take: 25,
+          select: {
+            id: true,
+            amount: true,
+            currency: true,
+            status: true,
+            createdAt: true,
+          },
+        }),
+      ]);
+
+      // Combine and format transactions
+      const transactions = [
+        ...orders.map((o) => ({
+          id: o.id,
+          type: o.type === "BUY" ? "BUY_CRYPTO" : "SELL_CRYPTO",
+          amount: Number(o.total),
+          currency: o.baseCurrency,
+          status: o.status,
+          createdAt: o.createdAt,
+          externalId: o.externalOrderId,
+        })),
+        ...withdrawals.map((w) => ({
+          id: w.id,
+          type: "WITHDRAWAL",
+          amount: Number(w.amount),
+          currency: w.type || "USDT",
+          status: w.status,
+          createdAt: w.createdAt,
+          externalId: w.externalId,
+        })),
+        ...deposits.map((d) => ({
+          id: d.id,
+          type: "DEPOSIT",
+          amount: Number(d.amount),
+          currency: d.currency,
+          status: d.status,
+          createdAt: d.createdAt,
+          externalId: null,
+        })),
+      ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 50);
+
+      return NextResponse.json({ success: true, transactions });
     }
 
     // First try with explicit select

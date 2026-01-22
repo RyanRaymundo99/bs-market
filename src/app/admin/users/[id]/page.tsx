@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import BackToDashboardButton from "@/components/admin/BackToDashboardButton";
 import {
@@ -19,12 +21,22 @@ import {
   Calendar,
   ZoomIn,
   ArrowLeft,
+  Wallet,
+  TrendingUp,
+  TrendingDown,
+  Edit,
+  Save,
+  X,
+  DollarSign,
+  ArrowUpRight,
+  ArrowDownRight,
 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 
 interface UserDetails {
@@ -47,6 +59,22 @@ interface UserDetails {
   updatedAt: string;
 }
 
+interface UserBalance {
+  currency: string;
+  amount: number;
+  locked: number;
+}
+
+interface UserTransaction {
+  id: string;
+  type: string;
+  amount: number;
+  currency: string;
+  status: string;
+  createdAt: string;
+  externalId?: string;
+}
+
 export default function AdminUserDetailsPage({
   params,
 }: {
@@ -54,36 +82,69 @@ export default function AdminUserDetailsPage({
 }) {
   const [user, setUser] = useState<UserDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const [balances, setBalances] = useState<UserBalance[]>([]);
+  const [transactions, setTransactions] = useState<UserTransaction[]>([]);
+  const [transactionsLoading, setTransactionsLoading] = useState(true);
+  const [usdtToBrlRate, setUsdtToBrlRate] = useState<number | null>(null);
   const [selectedImage, setSelectedImage] = useState<{
     src: string;
     alt: string;
     title: string;
   } | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({ name: "", phone: "", cpf: "" });
+  const [saving, setSaving] = useState(false);
+  const [showBalanceDialog, setShowBalanceDialog] = useState(false);
+  const [balanceAdjustment, setBalanceAdjustment] = useState({ amount: "", reason: "" });
+  const [adjustingBalance, setAdjustingBalance] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const { toast } = useToast();
   const router = useRouter();
 
   useEffect(() => {
-    const fetchUserDetails = async () => {
+    const fetchAllData = async () => {
       try {
         const { id } = await params;
-        const response = await fetch(`/api/admin/users/${id}`);
-        if (response.ok) {
-          const data = await response.json();
-          console.log("User details fetched:", {
-            hasDocumentFront: !!data.user?.documentFront,
-            hasDocumentBack: !!data.user?.documentBack,
-            hasDocumentSelfie: !!data.user?.documentSelfie,
-            documentFront: data.user?.documentFront,
-            documentBack: data.user?.documentBack,
-            documentSelfie: data.user?.documentSelfie,
-          });
+        setUserId(id);
+        
+        // Fetch all data in parallel (including exchange rate)
+        const [userResponse, balanceResponse, transactionsResponse, rateResponse] = await Promise.all([
+          fetch(`/api/admin/users/${id}`),
+          fetch(`/api/admin/users/${id}?include=balance`),
+          fetch(`/api/admin/users/${id}?include=transactions`),
+          fetch("/api/crypto/usdt-rate"),
+        ]);
+        
+        // Set exchange rate
+        if (rateResponse.ok) {
+          const rateData = await rateResponse.json();
+          setUsdtToBrlRate(rateData.rate || null);
+        }
+
+        if (userResponse.ok) {
+          const data = await userResponse.json();
           setUser(data.user);
+          setEditForm({
+            name: data.user?.name || "",
+            phone: data.user?.phone || "",
+            cpf: data.user?.cpf || "",
+          });
         } else {
           toast({
             variant: "destructive",
             title: "Error",
             description: "Failed to load user details",
           });
+        }
+
+        if (balanceResponse.ok) {
+          const balanceData = await balanceResponse.json();
+          setBalances(balanceData.balances || []);
+        }
+
+        if (transactionsResponse.ok) {
+          const txData = await transactionsResponse.json();
+          setTransactions(txData.transactions || []);
         }
       } catch (error) {
         console.error("Error fetching user details:", error);
@@ -94,11 +155,118 @@ export default function AdminUserDetailsPage({
         });
       } finally {
         setLoading(false);
+        setTransactionsLoading(false);
       }
     };
 
-    fetchUserDetails();
+    fetchAllData();
   }, [params, toast]);
+
+  const handleSaveProfile = async () => {
+    if (!userId) return;
+    setSaving(true);
+    try {
+      const response = await fetch(`/api/admin/users/${userId}/update-profile`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data.user);
+        setIsEditing(false);
+        toast({
+          title: "Success",
+          description: "User profile updated successfully",
+        });
+      } else {
+        throw new Error("Failed to update profile");
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to update user profile",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAdjustBalance = async () => {
+    if (!userId || !balanceAdjustment.amount) return;
+    setAdjustingBalance(true);
+    try {
+      const response = await fetch("/api/admin/balance/adjust", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          amount: parseFloat(balanceAdjustment.amount),
+          reason: balanceAdjustment.reason || "Admin adjustment",
+          currency: "USDT",
+        }),
+      });
+
+      if (response.ok) {
+        // Refresh balance and exchange rate
+        const [balanceResponse, rateResponse] = await Promise.all([
+          fetch(`/api/admin/users/${userId}?include=balance`),
+          fetch("/api/crypto/usdt-rate"),
+        ]);
+        
+        if (balanceResponse.ok) {
+          const balanceData = await balanceResponse.json();
+          setBalances(balanceData.balances || []);
+        }
+        
+        if (rateResponse.ok) {
+          const rateData = await rateResponse.json();
+          setUsdtToBrlRate(rateData.rate || null);
+        }
+        
+        setShowBalanceDialog(false);
+        setBalanceAdjustment({ amount: "", reason: "" });
+        toast({
+          title: "Success",
+          description: "Balance adjusted successfully",
+        });
+      } else {
+        throw new Error("Failed to adjust balance");
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to adjust balance",
+      });
+    } finally {
+      setAdjustingBalance(false);
+    }
+  };
+
+  const getTransactionIcon = (type: string) => {
+    if (type.includes("DEPOSIT") || type.includes("BUY")) {
+      return <ArrowDownRight className="h-4 w-4 text-green-500" />;
+    }
+    return <ArrowUpRight className="h-4 w-4 text-red-500" />;
+  };
+
+  const getTransactionColor = (type: string) => {
+    if (type.includes("DEPOSIT") || type.includes("BUY")) {
+      return "text-green-500";
+    }
+    return "text-red-500";
+  };
+
+  const formatCurrency = (amount: number | string, currency: string = "USDT") => {
+    const numAmount = Number(amount);
+    if (currency === "BRL") {
+      return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(numAmount);
+    }
+    return `${numAmount.toFixed(4)} USDT`;
+  };
 
   const handleImageClick = (src: string, title: string, alt: string) => {
     setSelectedImage({ src, alt, title });
@@ -184,56 +352,124 @@ export default function AdminUserDetailsPage({
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-300">
-                    Full Name
-                  </label>
-                  <p className="text-white">{user.name}</p>
-                </div>
+                {isEditing ? (
+                  <>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-300">Nome Completo</Label>
+                      <Input
+                        value={editForm.name}
+                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                        className="mt-1 bg-gray-700 border-gray-600 text-white"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-300">Telefone</Label>
+                      <Input
+                        value={editForm.phone}
+                        onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                        className="mt-1 bg-gray-700 border-gray-600 text-white"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium text-gray-300">CPF/CNPJ</Label>
+                      <Input
+                        value={editForm.cpf}
+                        onChange={(e) => setEditForm({ ...editForm, cpf: e.target.value })}
+                        className="mt-1 bg-gray-700 border-gray-600 text-white"
+                      />
+                    </div>
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        size="sm"
+                        onClick={handleSaveProfile}
+                        disabled={saving}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <Save className="w-4 h-4 mr-1" />
+                        {saving ? "Salvando..." : "Salvar"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setIsEditing(false);
+                          setEditForm({
+                            name: user.name || "",
+                            phone: user.phone || "",
+                            cpf: user.cpf || "",
+                          });
+                        }}
+                        className="border-gray-600"
+                      >
+                        <X className="w-4 h-4 mr-1" />
+                        Cancelar
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <label className="text-sm font-medium text-gray-300">
+                        Full Name
+                      </label>
+                      <p className="text-white">{user.name}</p>
+                    </div>
 
-                <div>
-                  <label className="text-sm font-medium text-gray-300">
-                    Email
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <Mail className="w-4 h-4 text-gray-400" />
-                    <span className="text-white">{user.email}</span>
-                    {user.emailVerified ? (
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                    ) : (
-                      <XCircle className="w-4 h-4 text-red-500" />
-                    )}
-                  </div>
-                </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-300">
+                        Email
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <Mail className="w-4 h-4 text-gray-400" />
+                        <span className="text-white">{user.email}</span>
+                        {user.emailVerified ? (
+                          <CheckCircle className="w-4 h-4 text-green-500" />
+                        ) : (
+                          <XCircle className="w-4 h-4 text-red-500" />
+                        )}
+                      </div>
+                    </div>
 
-                <div>
-                  <label className="text-sm font-medium text-gray-300">
-                    Phone
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-gray-400" />
-                    <span className="text-white">
-                      {user.phone || "Not provided"}
-                    </span>
-                    {user.phoneVerified ? (
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                    ) : (
-                      <XCircle className="w-4 h-4 text-red-500" />
-                    )}
-                  </div>
-                </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-300">
+                        Phone
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <Phone className="w-4 h-4 text-gray-400" />
+                        <span className="text-white">
+                          {user.phone || "Not provided"}
+                        </span>
+                        {user.phoneVerified ? (
+                          <CheckCircle className="w-4 h-4 text-green-500" />
+                        ) : (
+                          <XCircle className="w-4 h-4 text-red-500" />
+                        )}
+                      </div>
+                    </div>
 
-                <div>
-                  <label className="text-sm font-medium text-gray-300">
-                    CPF
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <CreditCard className="w-4 h-4 text-gray-400" />
-                    <span className="text-white">
-                      {user.cpf || "Not provided"}
-                    </span>
-                  </div>
-                </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-300">
+                        CPF/CNPJ
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <CreditCard className="w-4 h-4 text-gray-400" />
+                        <span className="text-white">
+                          {user.cpf || "Not provided"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setIsEditing(true)}
+                      className="mt-2 border-gray-600 text-gray-300 hover:bg-gray-700"
+                    >
+                      <Edit className="w-4 h-4 mr-1" />
+                      Editar Dados
+                    </Button>
+                  </>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -303,6 +539,218 @@ export default function AdminUserDetailsPage({
             </CardContent>
           </Card>
         </div>
+
+        {/* User Balance & Quick Actions */}
+        <Card className="bg-gray-900 border-gray-800 mt-6">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-white">
+                <Wallet className="w-5 h-5 text-green-500" />
+                Saldo do Usuário
+              </CardTitle>
+              <Button
+                size="sm"
+                onClick={() => setShowBalanceDialog(true)}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <DollarSign className="w-4 h-4 mr-1" />
+                Ajustar Saldo
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {balances.length > 0 ? (
+                balances.map((balance) => {
+                  // For BRL, calculate from USDT with 2% discount
+                  if (balance.currency === "BRL") {
+                    const usdtBalance = balances.find(b => b.currency === "USDT");
+                    if (usdtBalance && usdtToBrlRate) {
+                      // Calculate BRL = USDT * rate * 0.98 (2% discount)
+                      const calculatedBrl = Number(usdtBalance.amount) * usdtToBrlRate * 0.98;
+                      return (
+                        <div
+                          key={balance.currency}
+                          className="bg-gray-800 rounded-lg p-4 border border-gray-700"
+                        >
+                          <div className="text-sm text-gray-400 mb-1">
+                            {balance.currency} <span className="text-xs text-gray-500">(calculado)</span>
+                          </div>
+                          <div className="text-2xl font-bold text-white">
+                            {formatCurrency(calculatedBrl, "BRL")}
+                          </div>
+                          {balance.locked > 0 && (
+                            <div className="text-xs text-yellow-500 mt-1">
+                              Bloqueado: {formatCurrency(balance.locked, balance.currency)}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+                    // Fallback to actual BRL balance if rate not available
+                    return (
+                      <div
+                        key={balance.currency}
+                        className="bg-gray-800 rounded-lg p-4 border border-gray-700"
+                      >
+                        <div className="text-sm text-gray-400 mb-1">{balance.currency}</div>
+                        <div className="text-2xl font-bold text-white">
+                          {formatCurrency(balance.amount, "BRL")}
+                        </div>
+                        {balance.locked > 0 && (
+                          <div className="text-xs text-yellow-500 mt-1">
+                            Bloqueado: {formatCurrency(balance.locked, balance.currency)}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+                  // For USDT, show normally
+                  return (
+                    <div
+                      key={balance.currency}
+                      className="bg-gray-800 rounded-lg p-4 border border-gray-700"
+                    >
+                      <div className="text-sm text-gray-400 mb-1">{balance.currency}</div>
+                      <div className="text-2xl font-bold text-white">
+                        {formatCurrency(balance.amount, "USDT")}
+                      </div>
+                      {balance.locked > 0 && (
+                        <div className="text-xs text-yellow-500 mt-1">
+                          Bloqueado: {formatCurrency(balance.locked, balance.currency)}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="col-span-3 text-center text-gray-400 py-4">
+                  Nenhum saldo encontrado
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Transaction History */}
+        <Card className="bg-gray-900 border-gray-800 mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-white">
+              <TrendingUp className="w-5 h-5 text-blue-500" />
+              Histórico de Transações
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {transactionsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+              </div>
+            ) : transactions.length > 0 ? (
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {transactions.map((tx) => (
+                  <div
+                    key={tx.id}
+                    className="flex items-center justify-between p-3 bg-gray-800 rounded-lg border border-gray-700"
+                  >
+                    <div className="flex items-center gap-3">
+                      {getTransactionIcon(tx.type)}
+                      <div>
+                        <div className="text-sm font-medium text-white">
+                          {tx.type.replace(/_/g, " ")}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {new Date(tx.createdAt).toLocaleDateString("pt-BR", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className={`font-medium ${getTransactionColor(tx.type)}`}>
+                        {tx.type.includes("DEPOSIT") || tx.type.includes("BUY") ? "+" : "-"}
+                        {formatCurrency(tx.amount, tx.currency)}
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={`text-xs ${
+                          tx.status === "COMPLETED"
+                            ? "border-green-500 text-green-500"
+                            : tx.status === "PENDING"
+                            ? "border-yellow-500 text-yellow-500"
+                            : "border-red-500 text-red-500"
+                        }`}
+                      >
+                        {tx.status}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-gray-400 py-8">
+                Nenhuma transação encontrada
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Balance Adjustment Dialog */}
+        <Dialog open={showBalanceDialog} onOpenChange={setShowBalanceDialog}>
+          <DialogContent className="bg-gray-900 border-gray-700">
+            <DialogHeader>
+              <DialogTitle className="text-white">Ajustar Saldo do Usuário</DialogTitle>
+              <DialogDescription className="text-gray-400">
+                Adicione ou remova saldo da conta de {user.name}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 pt-4">
+              <div>
+                <Label className="text-gray-300">Valor (use negativo para remover)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="Ex: 100.00 ou -50.00"
+                  value={balanceAdjustment.amount}
+                  onChange={(e) =>
+                    setBalanceAdjustment({ ...balanceAdjustment, amount: e.target.value })
+                  }
+                  className="mt-1 bg-gray-800 border-gray-600 text-white"
+                />
+              </div>
+              <div>
+                <Label className="text-gray-300">Motivo</Label>
+                <Input
+                  placeholder="Motivo do ajuste..."
+                  value={balanceAdjustment.reason}
+                  onChange={(e) =>
+                    setBalanceAdjustment({ ...balanceAdjustment, reason: e.target.value })
+                  }
+                  className="mt-1 bg-gray-800 border-gray-600 text-white"
+                />
+              </div>
+              <div className="flex gap-2 justify-end pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowBalanceDialog(false)}
+                  className="border-gray-600"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleAdjustBalance}
+                  disabled={adjustingBalance || !balanceAdjustment.amount}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {adjustingBalance ? "Ajustando..." : "Confirmar Ajuste"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* KYC Documents */}
         {(() => {

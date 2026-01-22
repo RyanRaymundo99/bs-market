@@ -540,7 +540,7 @@ export default function Dashboard() {
                 <div className="h-4 w-32 bg-gray-700 rounded mx-auto mb-4"></div>
                 <div className="h-12 w-48 bg-gray-700 rounded mx-auto mb-2"></div>
                 <div className="h-3 w-24 bg-gray-700 rounded mx-auto"></div>
-              </div>
+          </div>
             </div>
           </div>
 

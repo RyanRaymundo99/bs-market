@@ -55,13 +55,17 @@ interface WalletData {
 
 interface WithdrawalHistory {
   id: string;
-  type: "USDT";
+  type: "USDT" | "PIX";
   amount: number;
   status: "PENDING" | "PROCESSING" | "COMPLETED" | "REJECTED";
   createdAt: string;
   hash?: string;
   walletAddress?: string;
   network?: string;
+  pixKey?: string;
+  protocol?: string;
+  fee?: number;
+  netAmount?: number;
 }
 
 export default function WithdrawPage() {
@@ -79,6 +83,14 @@ export default function WithdrawPage() {
   const [usdtAmount, setUsdtAmount] = useState("");
   const [walletAddress, setWalletAddress] = useState("");
   const [selectedNetwork, setSelectedNetwork] = useState("TRC20");
+  
+  // PIX Form States
+  const [withdrawalType, setWithdrawalType] = useState<"USDT" | "PIX">("USDT");
+  const [pixAmount, setPixAmount] = useState("");
+  const [pixKey, setPixKey] = useState("");
+  const [pixPassword, setPixPassword] = useState("");
+  const [processingPix, setProcessingPix] = useState(false);
+  const [usdtToBrlRate, setUsdtToBrlRate] = useState<number | null>(null);
 
   const { toast } = useToast();
   const { t, language } = useLanguage();
@@ -182,15 +194,24 @@ export default function WithdrawPage() {
     checkUserStatus();
   }, [language]);
 
-  // Fetch wallet data
+  // Fetch wallet data and exchange rate
   const fetchWalletData = useCallback(async () => {
     try {
-      const response = await fetch("/api/crypto/wallet");
-      if (response.ok) {
-        const data = await response.json();
+      const [walletResponse, rateResponse] = await Promise.all([
+        fetch("/api/crypto/wallet"),
+        fetch("/api/crypto/usdt-rate"),
+      ]);
+      
+      if (walletResponse.ok) {
+        const data = await walletResponse.json();
         setWalletData(data.data);
       } else {
         throw new Error("Failed to fetch wallet data");
+      }
+      
+      if (rateResponse.ok) {
+        const rateData = await rateResponse.json();
+        setUsdtToBrlRate(rateData.rate || null);
       }
     } catch (error) {
       console.error("Error fetching wallet data:", error);
@@ -292,6 +313,104 @@ export default function WithdrawPage() {
     return isNaN(netAmount) || netAmount < 0 ? 0 : netAmount;
   };
 
+  // Calculate PIX fee (3%) and net amount
+  const PIX_FEE_RATE = 0.03;
+  const calculatePixFee = () => {
+    if (!pixAmount || parseFloat(pixAmount) <= 0) return 0;
+    const amount = parseFloat(pixAmount);
+    if (isNaN(amount)) return 0;
+    return amount * PIX_FEE_RATE;
+  };
+
+  const calculatePixNetAmount = () => {
+    if (!pixAmount || parseFloat(pixAmount) <= 0) return 0;
+    const amount = parseFloat(pixAmount);
+    if (isNaN(amount)) return 0;
+    return amount - (amount * PIX_FEE_RATE);
+  };
+
+  // Handle PIX withdrawal
+  const handlePIXWithdrawal = async () => {
+    if (!pixAmount || parseFloat(pixAmount) <= 0) {
+      toast({
+        title: language === "pt" ? "Valor inválido" : "Invalid amount",
+        description: language === "pt" ? "Digite um valor válido para saque" : "Enter a valid withdrawal amount",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!pixKey.trim()) {
+      toast({
+        title: language === "pt" ? "Chave PIX obrigatória" : "PIX key required",
+        description: language === "pt" ? "Digite sua chave PIX" : "Enter your PIX key",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!pixPassword) {
+      toast({
+        title: language === "pt" ? "Senha obrigatória" : "Password required",
+        description: language === "pt" ? "Digite sua senha para confirmar" : "Enter your password to confirm",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setProcessingPix(true);
+      const response = await fetch("/api/withdraw/pix", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: parseFloat(pixAmount),
+          pixKey: pixKey.trim(),
+          password: pixPassword,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSuccessMessage(
+          language === "pt" 
+            ? `Saque PIX de R$ ${parseFloat(pixAmount).toFixed(2)} solicitado com sucesso! Protocolo: ${data.withdrawal.protocol}` 
+            : `PIX withdrawal of R$ ${parseFloat(pixAmount).toFixed(2)} requested successfully! Protocol: ${data.withdrawal.protocol}`
+        );
+        setShowSuccessModal(true);
+        setPixAmount("");
+        setPixKey("");
+        setPixPassword("");
+        fetchWalletData();
+        fetchWithdrawalHistory();
+      } else {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to process PIX withdrawal");
+      }
+    } catch (error) {
+      toast({
+        title: language === "pt" ? "Erro no saque" : "Withdrawal error",
+        description: error instanceof Error ? error.message : (language === "pt" ? "Não foi possível processar o saque" : "Failed to process withdrawal"),
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingPix(false);
+    }
+  };
+
+  // Get BRL balance - calculated from USDT with 2% discount
+  const getBrlBalance = () => {
+    if (!walletData || !usdtToBrlRate) return 0;
+    
+    // Find USDT balance
+    const usdtBalance = walletData.balances.find((b) => b.currency === "USDT");
+    if (!usdtBalance) return 0;
+    
+    // Calculate BRL = USDT * rate * 0.98 (2% discount)
+    const usdtAmount = Number(usdtBalance.amount);
+    return usdtAmount * usdtToBrlRate * 0.98;
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "PENDING":
@@ -383,174 +502,298 @@ export default function WithdrawPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="max-w-4xl mx-auto">
           {/* Main Withdrawal Form */}
-          <div className="lg:col-span-2">
+          <div>
             <Card className="rounded-xl sm:rounded-2xl border-gray-800 bg-gray-900/50 backdrop-blur-sm">
               <CardHeader>
+                {/* Withdrawal Type Tabs */}
+                <div className="flex gap-2 mb-4">
+                  <Button
+                    variant={withdrawalType === "USDT" ? "default" : "outline"}
+                    onClick={() => setWithdrawalType("USDT")}
+                    className={`flex-1 ${withdrawalType === "USDT" 
+                      ? "bg-brand-500 hover:bg-brand-600 text-white" 
+                      : "bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-700 hover:text-white"
+                    }`}
+                  >
+                    <Coins className="h-4 w-4 mr-2" />
+                    USDT
+                  </Button>
+                  <Button
+                    variant={withdrawalType === "PIX" ? "default" : "outline"}
+                    onClick={() => setWithdrawalType("PIX")}
+                    className={`flex-1 ${withdrawalType === "PIX" 
+                      ? "bg-green-600 hover:bg-green-700 text-white" 
+                      : "bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-700 hover:text-white"
+                    }`}
+                  >
+                    <Wallet className="h-4 w-4 mr-2" />
+                    PIX (BRL)
+                  </Button>
+                </div>
                 <CardTitle className="flex items-center gap-2 text-white">
-                  <Coins className="h-5 w-5" />
-                  {t("withdrawViaUSDT")}
+                  {withdrawalType === "USDT" ? (
+                    <>
+                      <Coins className="h-5 w-5" />
+                      {t("withdrawViaUSDT")}
+                    </>
+                  ) : (
+                    <>
+                      <Wallet className="h-5 w-5 text-green-500" />
+                      {language === "pt" ? "Saque via PIX" : "Withdraw via PIX"}
+                    </>
+                  )}
                 </CardTitle>
                 <CardDescription className="text-gray-400">
-                  {t("sendUSDTToWallet")}
+                  {withdrawalType === "USDT" 
+                    ? t("sendUSDTToWallet")
+                    : (language === "pt" ? "Receba em reais na sua chave PIX" : "Receive in BRL to your PIX key")
+                  }
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4 sm:space-y-6">
-                {/* USDT Balance */}
-                <div className="p-4 sm:p-6 bg-gradient-to-br from-brand-500/20 to-blue-500/20 rounded-xl border border-brand-500/30">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Coins className="h-5 w-5 text-brand-400" />
-                    <span className="text-sm font-medium text-gray-300">
-                      {t("availableBalance")}
-                    </span>
-                  </div>
-                  <p className="text-2xl sm:text-3xl font-bold text-brand-400">
-                    {usdtBalance && typeof usdtBalance.amount === "number"
-                      ? usdtBalance.amount.toFixed(2)
-                      : "0.00"}{" "}
-                    USDT
-                  </p>
-                </div>
-
-                {/* USDT Form */}
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="usdt-amount" className="text-gray-300">
-                      {t("amountToWithdraw")}
-                    </Label>
-                    <Input
-                      id="usdt-amount"
-                      type="number"
-                      placeholder="0.00"
-                      value={usdtAmount}
-                      onChange={(e) => setUsdtAmount(e.target.value)}
-                      min="0"
-                      step="0.01"
-                      max={usdtBalance ? usdtBalance.amount : undefined}
-                      className="bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 rounded-xl"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="wallet-address" className="text-gray-300">
-                      {t("walletAddress")}
-                    </Label>
-                    <Input
-                      id="wallet-address"
-                      type="text"
-                      placeholder={t("enterWalletAddress")}
-                      value={walletAddress}
-                      onChange={(e) => setWalletAddress(e.target.value)}
-                      className="bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 rounded-xl"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="network" className="text-gray-300">
-                      {t("network")}
-                    </Label>
-                    <Select
-                      value={selectedNetwork}
-                      onValueChange={setSelectedNetwork}
-                    >
-                      <SelectTrigger className="bg-gray-800/50 border-gray-700 text-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 rounded-xl">
-                        <SelectValue placeholder={t("selectNetwork")} />
-                      </SelectTrigger>
-                      <SelectContent className="bg-gray-800 border-gray-700">
-                        <SelectItem
-                          value="TRC20"
-                          className="text-white hover:bg-gray-700"
-                        >
-                          {t("trc20Option")}
-                        </SelectItem>
-                        <SelectItem
-                          value="ERC20"
-                          className="text-white hover:bg-gray-700"
-                        >
-                          {t("erc20Option")}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Fee Calculation */}
-                  <div className="p-4 sm:p-6 bg-gray-800/30 rounded-xl border border-gray-700/50">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-gray-400">
-                        {t("networkFee")}
-                      </span>
-                      <span className="text-sm font-medium text-red-400">
-                        -{getNetworkFee().toFixed(2)} USDT
-                      </span>
+                {withdrawalType === "USDT" ? (
+                  <>
+                    {/* USDT Balance */}
+                    <div className="p-4 sm:p-6 bg-gradient-to-br from-brand-500/20 to-blue-500/20 rounded-xl border border-brand-500/30">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Coins className="h-5 w-5 text-brand-400" />
+                        <span className="text-sm font-medium text-gray-300">
+                          {t("availableBalance")}
+                        </span>
+                      </div>
+                      <p className="text-2xl sm:text-3xl font-bold text-brand-400">
+                        {usdtBalance && typeof usdtBalance.amount === "number"
+                          ? usdtBalance.amount.toFixed(2)
+                          : "0.00"}{" "}
+                        USDT
+                      </p>
                     </div>
-                    <div className="flex items-center justify-between pt-2 border-t border-gray-700">
-                      <span className="text-sm font-medium text-gray-300">
-                        {t("netTotal")}
-                      </span>
-                      <span className="text-lg sm:text-xl font-bold text-brand-400">
-                        {(calculateUSDTNetAmount() || 0).toFixed(2)} USDT
-                      </span>
+
+                    {/* USDT Form */}
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="usdt-amount" className="text-gray-300">
+                          {t("amountToWithdraw")}
+                        </Label>
+                        <Input
+                          id="usdt-amount"
+                          type="number"
+                          placeholder="0.00"
+                          value={usdtAmount}
+                          onChange={(e) => setUsdtAmount(e.target.value)}
+                          min="0"
+                          step="0.01"
+                          max={usdtBalance ? usdtBalance.amount : undefined}
+                          className="bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 rounded-xl"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="wallet-address" className="text-gray-300">
+                          {t("walletAddress")}
+                        </Label>
+                        <Input
+                          id="wallet-address"
+                          type="text"
+                          placeholder={t("enterWalletAddress")}
+                          value={walletAddress}
+                          onChange={(e) => setWalletAddress(e.target.value)}
+                          className="bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 rounded-xl"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="network" className="text-gray-300">
+                          {t("network")}
+                        </Label>
+                        <Select
+                          value={selectedNetwork}
+                          onValueChange={setSelectedNetwork}
+                        >
+                          <SelectTrigger className="bg-gray-800/50 border-gray-700 text-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 rounded-xl">
+                            <SelectValue placeholder={t("selectNetwork")} />
+                          </SelectTrigger>
+                          <SelectContent className="bg-gray-800 border-gray-700">
+                            <SelectItem
+                              value="TRC20"
+                              className="text-white hover:bg-gray-700"
+                            >
+                              {t("trc20Option")}
+                            </SelectItem>
+                            <SelectItem
+                              value="ERC20"
+                              className="text-white hover:bg-gray-700"
+                            >
+                              {t("erc20Option")}
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Fee Calculation */}
+                      <div className="p-4 sm:p-6 bg-gray-800/30 rounded-xl border border-gray-700/50">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm text-gray-400">
+                            {t("networkFee")}
+                          </span>
+                          <span className="text-sm font-medium text-red-400">
+                            -{getNetworkFee().toFixed(2)} USDT
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between pt-2 border-t border-gray-700">
+                          <span className="text-sm font-medium text-gray-300">
+                            {t("netTotal")}
+                          </span>
+                          <span className="text-lg sm:text-xl font-bold text-brand-400">
+                            {(calculateUSDTNetAmount() || 0).toFixed(2)} USDT
+                          </span>
+                        </div>
+                      </div>
+
+                      <Button
+                        onClick={handleUSDTWithdrawal}
+                        disabled={
+                          processing ||
+                          !usdtAmount ||
+                          !walletAddress ||
+                          parseFloat(usdtAmount) <= 0
+                        }
+                        className="w-full h-12 sm:h-14 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors text-base sm:text-lg"
+                      >
+                        {processing ? (
+                          <>
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                            {t("processing")}
+                          </>
+                        ) : (
+                          t("sendUSDT")
+                        )}
+                      </Button>
                     </div>
-                  </div>
+                  </>
+                ) : (
+                  <>
+                    {/* PIX / BRL Balance */}
+                    <div className="p-4 sm:p-6 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-xl border border-green-500/30">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Wallet className="h-5 w-5 text-green-400" />
+                        <span className="text-sm font-medium text-gray-300">
+                          {language === "pt" ? "Saldo Disponível em BRL" : "Available BRL Balance"}
+                        </span>
+                      </div>
+                      <p className="text-2xl sm:text-3xl font-bold text-green-400">
+                        R$ {getBrlBalance().toFixed(2)}
+                      </p>
+                    </div>
 
-                  <Button
-                    onClick={handleUSDTWithdrawal}
-                    disabled={
-                      processing ||
-                      !usdtAmount ||
-                      !walletAddress ||
-                      parseFloat(usdtAmount) <= 0
-                    }
-                    className="w-full h-12 sm:h-14 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors text-base sm:text-lg"
-                  >
-                    {processing ? (
-                      <>
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                        {t("processing")}
-                      </>
-                    ) : (
-                      t("sendUSDT")
-                    )}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                    {/* PIX Form */}
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="pix-amount" className="text-gray-300">
+                          {language === "pt" ? "Valor a Sacar (R$)" : "Amount to Withdraw (R$)"}
+                        </Label>
+                        <Input
+                          id="pix-amount"
+                          type="number"
+                          placeholder="0.00"
+                          value={pixAmount}
+                          onChange={(e) => setPixAmount(e.target.value)}
+                          min="0"
+                          step="0.01"
+                          max={getBrlBalance()}
+                          className="bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 rounded-xl"
+                        />
+                      </div>
 
-          {/* Sidebar */}
-          <div className="space-y-4 sm:space-y-6">
-            {/* Portfolio Summary */}
-            <Card className="rounded-xl sm:rounded-2xl border-gray-800 bg-gray-900/50 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-white">
-                  <Wallet className="h-5 w-5" />
-                  {t("portfolioSummary")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="text-center p-4 bg-gray-800/30 rounded-xl border border-gray-700/50">
-                  <p className="text-sm text-gray-400 mb-1">
-                    {t("totalPortfolioValue")}
-                  </p>
-                  <p className="text-2xl font-bold text-white">
-                    {walletData &&
-                    typeof walletData.totalPortfolioValue === "number"
-                      ? walletData.totalPortfolioValue.toFixed(2)
-                      : "0.00"}{" "}
-                    USDT
-                  </p>
-                </div>
-                <div className="text-center p-4 bg-gray-800/30 rounded-xl border border-gray-700/50">
-                  <p className="text-sm text-gray-400 mb-1">
-                    {t("lastUpdated")}
-                  </p>
-                  <p className="text-lg font-semibold text-gray-300">
-                    {walletData
-                      ? new Date(walletData.lastUpdated).toLocaleTimeString()
-                      : "N/A"}
-                  </p>
-                </div>
+                      <div>
+                        <Label htmlFor="pix-key" className="text-gray-300">
+                          {language === "pt" ? "Chave PIX" : "PIX Key"}
+                        </Label>
+                        <Input
+                          id="pix-key"
+                          type="text"
+                          placeholder={language === "pt" ? "CPF, CNPJ, email, telefone ou chave aleatória" : "CPF, CNPJ, email, phone or random key"}
+                          value={pixKey}
+                          onChange={(e) => setPixKey(e.target.value)}
+                          className="bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 rounded-xl"
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor="pix-password" className="text-gray-300">
+                          {language === "pt" ? "Confirmar Senha" : "Confirm Password"}
+                        </Label>
+                        <Input
+                          id="pix-password"
+                          type="password"
+                          placeholder={language === "pt" ? "Digite sua senha para confirmar" : "Enter your password to confirm"}
+                          value={pixPassword}
+                          onChange={(e) => setPixPassword(e.target.value)}
+                          className="bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 rounded-xl"
+                        />
+                      </div>
+
+                      {/* Fee Calculation */}
+                      <div className="p-4 sm:p-6 bg-gray-800/30 rounded-xl border border-gray-700/50">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm text-gray-400">
+                            {language === "pt" ? "Valor do Saque" : "Withdrawal Amount"}
+                          </span>
+                          <span className="text-sm font-medium text-white">
+                            R$ {pixAmount ? parseFloat(pixAmount).toFixed(2) : "0.00"}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm text-gray-400">
+                            {language === "pt" ? "Taxa (3%)" : "Fee (3%)"}
+                          </span>
+                          <span className="text-sm font-medium text-red-400">
+                            -R$ {calculatePixFee().toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between pt-2 border-t border-gray-700">
+                          <span className="text-sm font-medium text-gray-300">
+                            {language === "pt" ? "Valor Líquido" : "Net Amount"}
+                          </span>
+                          <span className="text-lg sm:text-xl font-bold text-green-400">
+                            R$ {calculatePixNetAmount().toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <Button
+                        onClick={handlePIXWithdrawal}
+                        disabled={
+                          processingPix ||
+                          !pixAmount ||
+                          !pixKey ||
+                          !pixPassword ||
+                          parseFloat(pixAmount) <= 0 ||
+                          parseFloat(pixAmount) > getBrlBalance()
+                        }
+                        className="w-full h-12 sm:h-14 bg-green-600 hover:bg-green-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors text-base sm:text-lg"
+                      >
+                        {processingPix ? (
+                          <>
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                            {t("processing")}
+                          </>
+                        ) : (
+                          language === "pt" ? "Sacar via PIX" : "Withdraw via PIX"
+                        )}
+                      </Button>
+
+                      <p className="text-xs text-gray-500 text-center">
+                        {language === "pt" 
+                          ? "O saque PIX é processado manualmente. Prazo de até 24 horas úteis."
+                          : "PIX withdrawal is processed manually. Up to 24 business hours."
+                        }
+                      </p>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -603,16 +846,20 @@ export default function WithdrawPage() {
                         <td className="py-3 px-4">
                           <Badge
                             variant="secondary"
-                            className="bg-brand-500/20 text-brand-400 border-brand-500/30"
+                            className={withdrawal.type === "PIX" 
+                              ? "bg-green-500/20 text-green-400 border-green-500/30"
+                              : "bg-brand-500/20 text-brand-400 border-brand-500/30"
+                            }
                           >
-                            USDT
+                            {withdrawal.type === "PIX" ? "PIX" : "USDT"}
                           </Badge>
                         </td>
                         <td className="py-3 px-4 font-medium text-white">
+                          {withdrawal.type === "PIX" ? "R$ " : ""}
                           {typeof withdrawal.amount === "number"
                             ? withdrawal.amount.toFixed(2)
                             : "0.00"}{" "}
-                          USDT
+                          {withdrawal.type !== "PIX" && "USDT"}
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
@@ -621,7 +868,11 @@ export default function WithdrawPage() {
                           </div>
                         </td>
                         <td className="py-3 px-4">
-                          {withdrawal.hash ? (
+                          {withdrawal.type === "PIX" && withdrawal.protocol ? (
+                            <code className="text-xs bg-gray-800 px-2 py-1 rounded text-gray-300">
+                              {withdrawal.protocol}
+                            </code>
+                          ) : withdrawal.hash ? (
                             <div className="flex items-center gap-2">
                               <code className="text-xs bg-gray-800 px-2 py-1 rounded text-gray-300">
                                 {withdrawal.hash.slice(0, 8)}...
