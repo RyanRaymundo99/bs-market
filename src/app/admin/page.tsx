@@ -629,6 +629,8 @@ export default function AdminDashboard() {
       PENDING: "Pendente",
       APPROVED: "Aprovado",
       REJECTED: "Rejeitado",
+      COMPLETED: "Aprovado", // Map COMPLETED to Aprovado for consistency
+      CONFIRMED: "Aprovado", // Map CONFIRMED to Aprovado for consistency
     };
     return labels[status as keyof typeof labels] || status;
   };
@@ -1956,11 +1958,11 @@ export default function AdminDashboard() {
                                 {Number(tx.amount).toFixed(2)} {tx.currency}
                               </span>
                               <span className={`ml-2 text-xs px-1.5 py-0.5 rounded ${
-                                tx.status === "COMPLETED" ? "bg-green-900/50 text-green-400" :
+                                tx.status === "COMPLETED" || tx.status === "APPROVED" || tx.status === "CONFIRMED" ? "bg-green-900/50 text-green-400" :
                                 tx.status === "PENDING" ? "bg-yellow-900/50 text-yellow-400" :
                                 "bg-red-900/50 text-red-400"
                               }`}>
-                                {tx.status}
+                                {getStatusLabel(tx.status)}
                               </span>
                             </div>
                           </div>
@@ -2143,12 +2145,17 @@ export default function AdminDashboard() {
                             : "N/A"}
                         </td>
                         <td className="py-3 px-4 text-white font-medium">
-                          {formatCurrency(transaction.value)}
+                          {transaction.value && !isNaN(transaction.value) 
+                            ? formatCurrency(transaction.value)
+                            : transaction.currency === "USDT"
+                            ? `${Math.abs(transaction.amount || 0).toFixed(4)} USDT`
+                            : formatCurrency(0)
+                          }
                         </td>
                         <td className="py-3 px-4">
                           <span
                             className={`px-2 py-1 rounded text-xs font-medium ${
-                              transaction.status === "APPROVED"
+                              transaction.status === "APPROVED" || transaction.status === "COMPLETED" || transaction.status === "CONFIRMED"
                                 ? "bg-green-900 text-green-300"
                                 : transaction.status === "PENDING"
                                 ? "bg-yellow-900 text-yellow-300"

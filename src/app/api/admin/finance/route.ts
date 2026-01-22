@@ -277,13 +277,32 @@ export async function GET(request: NextRequest) {
             : "PENDING";
       }
 
+      // Calculate value: prefer fiat amount from related entity, otherwise use transaction amount
+      let value = 0;
+      if (transaction.deposit) {
+        value = Number(transaction.deposit.amount || 0);
+      } else if (transaction.withdrawal) {
+        value = Number(transaction.withdrawal.amount || 0);
+      } else if (transaction.order) {
+        value = Number(transaction.order.total || 0);
+      } else {
+        // Fallback to transaction amount (absolute value for display)
+        const amount = Number(transaction.amount || 0);
+        value = Math.abs(amount);
+      }
+
+      // Ensure value is never NaN
+      if (isNaN(value)) {
+        value = 0;
+      }
+
       return {
         id: transaction.id,
         date: transaction.createdAt.toISOString(),
         type: type,
         user: transaction.user.name || transaction.user.email,
         userId: transaction.userId,
-        value: Number(transaction.amount),
+        value: value,
         status: status,
         metadata: transaction.metadata,
         orderId: transaction.order?.id || null,

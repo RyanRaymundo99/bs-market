@@ -103,16 +103,34 @@ export async function GET(request: NextRequest) {
 
       if (tx.deposit) {
         fiatAmount = Number(tx.deposit.amount || 0);
-        status = tx.deposit.status || "PENDING";
+        status = tx.deposit.status === "CONFIRMED" ? "COMPLETED" : tx.deposit.status === "REJECTED" ? "REJECTED" : "PENDING";
         relatedId = tx.deposit.externalId;
       } else if (tx.withdrawal) {
         fiatAmount = Number(tx.withdrawal.amount || 0);
-        status = tx.withdrawal.status || "PENDING";
+        status = tx.withdrawal.status === "COMPLETED" ? "COMPLETED" : tx.withdrawal.status === "REJECTED" ? "REJECTED" : "PENDING";
         relatedId = tx.withdrawal.protocol || tx.withdrawal.hash;
       } else if (tx.order) {
         fiatAmount = Number(tx.order.total || 0);
-        status = tx.order.status || "PENDING";
+        status = tx.order.status === "COMPLETED" ? "COMPLETED" : tx.order.status === "FAILED" ? "REJECTED" : "PENDING";
         relatedId = tx.order.externalOrderId || tx.order.id;
+      }
+
+      // Calculate value: use fiatAmount if valid, otherwise use absolute amount
+      // For transactions in BRL, use the amount directly; for USDT, we'd need conversion
+      let value = 0;
+      if (fiatAmount && !isNaN(fiatAmount) && fiatAmount > 0) {
+        value = fiatAmount;
+      } else if (tx.currency === "BRL") {
+        // If currency is BRL, use the absolute transaction amount
+        value = Math.abs(amount);
+      } else {
+        // For USDT or other currencies, use absolute amount (will need conversion on frontend if needed)
+        value = Math.abs(amount);
+      }
+
+      // Ensure value is never NaN
+      if (isNaN(value)) {
+        value = 0;
       }
 
       return {
@@ -123,10 +141,15 @@ export async function GET(request: NextRequest) {
         balance: balance,
         description: tx.description,
         date: tx.createdAt.toISOString(),
-        user: tx.user ? tx.user.name || tx.user.email || "Unknown" : "Unknown",
-        fiatAmount: fiatAmount,
+        user: tx.user ? { name: tx.user.name || "", email: tx.user.email || "" } : null,
+        userId: tx.userId,
+        value: value,
         status: status,
         relatedId: relatedId,
+        metadata: tx.metadata,
+        orderId: tx.order?.id || null,
+        depositId: tx.deposit ? tx.id : null,
+        withdrawalId: tx.withdrawal ? tx.id : null,
       };
     });
 
