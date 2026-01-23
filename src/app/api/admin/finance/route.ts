@@ -249,33 +249,45 @@ export async function GET(request: NextRequest) {
 
     // Format transactions for the frontend
     const formattedTransactions = recentTransactions.map((transaction) => {
-      let status = "PENDING";
+      let status = "PENDING"; // Default to PENDING
       const type = transaction.type;
 
       // Determine status based on related entity
       if (transaction.deposit) {
-        status =
-          transaction.deposit.status === "CONFIRMED"
-            ? "APPROVED"
-            : transaction.deposit.status === "REJECTED"
-            ? "REJECTED"
-            : "PENDING";
+        // Deposit statuses: PENDING, CONFIRMED, REJECTED, CANCELLED
+        const depositStatus = transaction.deposit.status;
+        if (depositStatus === "CONFIRMED") {
+          status = "APPROVED";
+        } else if (depositStatus === "REJECTED" || depositStatus === "CANCELLED") {
+          status = "REJECTED";
+        } else {
+          // PENDING or any other status (explicitly set to PENDING)
+          status = "PENDING";
+        }
       } else if (transaction.withdrawal) {
-        status =
-          transaction.withdrawal.status === "COMPLETED"
-            ? "APPROVED"
-            : transaction.withdrawal.status === "FAILED"
-            ? "REJECTED"
-            : "PENDING";
+        // Withdrawal statuses: PENDING, PROCESSING, COMPLETED, FAILED, CANCELLED
+        const withdrawalStatus = transaction.withdrawal.status;
+        if (withdrawalStatus === "COMPLETED") {
+          status = "APPROVED";
+        } else if (withdrawalStatus === "FAILED" || withdrawalStatus === "CANCELLED") {
+          status = "REJECTED";
+        } else {
+          // PENDING, PROCESSING, or any other status (explicitly set to PENDING)
+          status = "PENDING";
+        }
       } else if (transaction.order) {
-        // For BUY_CRYPTO and SELL_CRYPTO, use order status
-        status =
-          transaction.order.status === "COMPLETED"
-            ? "APPROVED"
-            : transaction.order.status === "FAILED"
-            ? "REJECTED"
-            : "PENDING";
+        // Order statuses: PENDING, EXECUTING, COMPLETED, FAILED, CANCELLED
+        const orderStatus = transaction.order.status;
+        if (orderStatus === "COMPLETED") {
+          status = "APPROVED";
+        } else if (orderStatus === "FAILED" || orderStatus === "CANCELLED") {
+          status = "REJECTED";
+        } else {
+          // PENDING, EXECUTING, or any other status (explicitly set to PENDING)
+          status = "PENDING";
+        }
       }
+      // If no related entity, status remains "PENDING" (default)
 
       // Calculate value: prefer fiat amount from related entity, otherwise use transaction amount
       let value = 0;

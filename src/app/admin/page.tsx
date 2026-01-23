@@ -633,6 +633,10 @@ export default function AdminDashboard() {
       REJECTED: "Rejeitado",
       COMPLETED: "Aprovado", // Map COMPLETED to Aprovado for consistency
       CONFIRMED: "Aprovado", // Map CONFIRMED to Aprovado for consistency
+      FAILED: "Falhou",
+      CANCELLED: "Cancelado",
+      PROCESSING: "Processando",
+      EXECUTING: "Executando",
     };
     return labels[status as keyof typeof labels] || status;
   };
@@ -2176,11 +2180,19 @@ export default function AdminDashboard() {
                         <td className="py-3 px-4">
                           <span
                             className={`px-2 py-1 rounded text-xs font-medium ${
-                              transaction.status === "APPROVED" || transaction.status === "COMPLETED" || transaction.status === "CONFIRMED"
+                              transaction.status === "APPROVED" || 
+                              transaction.status === "COMPLETED" || 
+                              transaction.status === "CONFIRMED"
                                 ? "bg-green-900 text-green-300"
-                                : transaction.status === "PENDING"
+                                : transaction.status === "PENDING" ||
+                                  transaction.status === "PROCESSING" ||
+                                  transaction.status === "EXECUTING"
                                 ? "bg-yellow-900 text-yellow-300"
-                                : "bg-red-900 text-red-300"
+                                : transaction.status === "REJECTED" ||
+                                  transaction.status === "FAILED" ||
+                                  transaction.status === "CANCELLED"
+                                ? "bg-red-900 text-red-300"
+                                : "bg-gray-900 text-gray-300"
                             }`}
                           >
                             {getStatusLabel(transaction.status)}

@@ -99,20 +99,44 @@ export async function GET(request: NextRequest) {
       const balance = Number(tx.balance);
 
       let fiatAmount = 0;
-      let status = "COMPLETED";
+      let status = "PENDING"; // Default to PENDING (not COMPLETED)
       let relatedId = null;
 
       if (tx.deposit) {
         fiatAmount = Number(tx.deposit.amount || 0);
-        status = tx.deposit.status === "CONFIRMED" ? "COMPLETED" : tx.deposit.status === "REJECTED" ? "REJECTED" : "PENDING";
+        const depositStatus = tx.deposit.status;
+        if (depositStatus === "CONFIRMED") {
+          status = "COMPLETED";
+        } else if (depositStatus === "REJECTED" || depositStatus === "CANCELLED") {
+          status = "REJECTED";
+        } else {
+          // PENDING or any other status
+          status = "PENDING";
+        }
         relatedId = tx.deposit.externalId;
       } else if (tx.withdrawal) {
         fiatAmount = Number(tx.withdrawal.amount || 0);
-        status = tx.withdrawal.status === "COMPLETED" ? "COMPLETED" : tx.withdrawal.status === "FAILED" || tx.withdrawal.status === "CANCELLED" ? "REJECTED" : "PENDING";
+        const withdrawalStatus = tx.withdrawal.status;
+        if (withdrawalStatus === "COMPLETED") {
+          status = "COMPLETED";
+        } else if (withdrawalStatus === "FAILED" || withdrawalStatus === "CANCELLED") {
+          status = "REJECTED";
+        } else {
+          // PENDING, PROCESSING, or any other status
+          status = "PENDING";
+        }
         relatedId = tx.withdrawal.protocol || tx.withdrawal.hash;
       } else if (tx.order) {
         fiatAmount = Number(tx.order.total || 0);
-        status = tx.order.status === "COMPLETED" ? "COMPLETED" : tx.order.status === "FAILED" ? "REJECTED" : "PENDING";
+        const orderStatus = tx.order.status;
+        if (orderStatus === "COMPLETED") {
+          status = "COMPLETED";
+        } else if (orderStatus === "FAILED" || orderStatus === "CANCELLED") {
+          status = "REJECTED";
+        } else {
+          // PENDING, EXECUTING, or any other status
+          status = "PENDING";
+        }
         relatedId = tx.order.externalOrderId || tx.order.id;
       }
 
