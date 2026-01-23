@@ -1235,7 +1235,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="bg-gray-900 border-gray-800">
             <CardHeader>
               <CardTitle className="text-white">User Management</CardTitle>
@@ -1270,6 +1270,25 @@ export default function AdminDashboard() {
                   <Button className="bg-green-600 hover:bg-green-700 text-white">
                     <FileText className="w-4 h-4 mr-2" />
                     Review Documents
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gray-900 border-gray-800">
+            <CardHeader>
+              <CardTitle className="text-white">Notification Center</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-gray-300">
+                Send notifications and emails to users, view notification history.
+              </p>
+              <div className="flex space-x-2">
+                <Link href="/admin/notification-center">
+                  <Button className="bg-purple-600 hover:bg-purple-700 text-white">
+                    <Mail className="w-4 h-4 mr-2" />
+                    Notification Center
                   </Button>
                 </Link>
               </div>
