@@ -108,7 +108,7 @@ interface Transaction {
   value: number;
   currency?: string;
   amount?: number;
-  status: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED" | "CONFIRMED";
+  status: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED" | "CONFIRMED" | "PROCESSING" | "EXECUTING" | "FAILED" | "CANCELLED";
   metadata?: Record<string, unknown> | null;
   orderId?: string | null;
   depositId?: string | null;
@@ -2180,17 +2180,17 @@ export default function AdminDashboard() {
                         <td className="py-3 px-4">
                           <span
                             className={`px-2 py-1 rounded text-xs font-medium ${
-                              transaction.status === "APPROVED" || 
+                              (transaction.status === "APPROVED" || 
                               transaction.status === "COMPLETED" || 
-                              transaction.status === "CONFIRMED"
+                              transaction.status === "CONFIRMED")
                                 ? "bg-green-900 text-green-300"
-                                : transaction.status === "PENDING" ||
+                                : (transaction.status === "PENDING" ||
                                   transaction.status === "PROCESSING" ||
-                                  transaction.status === "EXECUTING"
+                                  transaction.status === "EXECUTING")
                                 ? "bg-yellow-900 text-yellow-300"
-                                : transaction.status === "REJECTED" ||
+                                : (transaction.status === "REJECTED" ||
                                   transaction.status === "FAILED" ||
-                                  transaction.status === "CANCELLED"
+                                  transaction.status === "CANCELLED")
                                 ? "bg-red-900 text-red-300"
                                 : "bg-gray-900 text-gray-300"
                             }`}
