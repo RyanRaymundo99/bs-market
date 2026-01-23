@@ -52,6 +52,7 @@ export async function GET(request: NextRequest) {
         description: true,
         createdAt: true,
         userId: true,
+        metadata: true,
         user: {
           select: {
             name: true,
@@ -107,7 +108,7 @@ export async function GET(request: NextRequest) {
         relatedId = tx.deposit.externalId;
       } else if (tx.withdrawal) {
         fiatAmount = Number(tx.withdrawal.amount || 0);
-        status = tx.withdrawal.status === "COMPLETED" ? "COMPLETED" : tx.withdrawal.status === "REJECTED" ? "REJECTED" : "PENDING";
+        status = tx.withdrawal.status === "COMPLETED" ? "COMPLETED" : tx.withdrawal.status === "FAILED" || tx.withdrawal.status === "CANCELLED" ? "REJECTED" : "PENDING";
         relatedId = tx.withdrawal.protocol || tx.withdrawal.hash;
       } else if (tx.order) {
         fiatAmount = Number(tx.order.total || 0);
