@@ -1072,9 +1072,46 @@ export default function Dashboard() {
                             {formattedAmount}
                           </p>
                         </div>
-                        <p className="text-[10px] sm:text-xs text-gray-500">
-                          {dateStr} {language === "pt" ? "às" : "at"} {time}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-[10px] sm:text-xs text-gray-500">
+                            {dateStr} {language === "pt" ? "às" : "at"} {time}
+                          </p>
+                          {transaction.status && (
+                            <span
+                              className={`text-[10px] sm:text-xs px-1.5 py-0.5 rounded ${
+                                transaction.status === "COMPLETED" ||
+                                transaction.status === "APPROVED" ||
+                                transaction.status === "CONFIRMED"
+                                  ? "bg-green-500/20 text-green-400"
+                                  : transaction.status === "PENDING" ||
+                                    transaction.status === "Pendente"
+                                  ? "bg-yellow-500/20 text-yellow-400"
+                                  : transaction.status === "FAILED" ||
+                                    transaction.status === "REJECTED"
+                                  ? "bg-red-500/20 text-red-400"
+                                  : "bg-gray-500/20 text-gray-400"
+                              }`}
+                            >
+                              {transaction.status === "PENDING"
+                                ? language === "pt"
+                                  ? "Pendente"
+                                  : "Pending"
+                                : transaction.status === "COMPLETED"
+                                ? language === "pt"
+                                  ? "Concluído"
+                                  : "Completed"
+                                : transaction.status === "APPROVED"
+                                ? language === "pt"
+                                  ? "Aprovado"
+                                  : "Approved"
+                                : transaction.status === "FAILED"
+                                ? language === "pt"
+                                  ? "Falhou"
+                                  : "Failed"
+                                : transaction.status}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );

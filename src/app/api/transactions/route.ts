@@ -44,6 +44,23 @@ export async function GET(request: NextRequest) {
 
     const transactions = await prisma.transaction.findMany({
       where,
+      include: {
+        deposit: {
+          select: {
+            status: true,
+          },
+        },
+        withdrawal: {
+          select: {
+            status: true,
+          },
+        },
+        order: {
+          select: {
+            status: true,
+          },
+        },
+      },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * limit,
       take: limit,
@@ -51,11 +68,42 @@ export async function GET(request: NextRequest) {
 
     const total = await prisma.transaction.count({ where });
 
-    // Convert Decimal amounts to numbers for frontend compatibility
-    const formattedTransactions = transactions.map((transaction) => ({
-      ...transaction,
-      amount: Number(transaction.amount),
-    }));
+    // Convert Decimal amounts to numbers and determine status
+    const formattedTransactions = transactions.map((transaction) => {
+      let status = "COMPLETED"; // Default status
+
+      // Determine status from related entities
+      if (transaction.deposit) {
+        status =
+          transaction.deposit.status === "CONFIRMED"
+            ? "COMPLETED"
+            : transaction.deposit.status === "REJECTED"
+            ? "REJECTED"
+            : "PENDING";
+      } else if (transaction.withdrawal) {
+        status =
+          transaction.withdrawal.status === "COMPLETED"
+            ? "COMPLETED"
+            : transaction.withdrawal.status === "FAILED" ||
+              transaction.withdrawal.status === "CANCELLED"
+            ? "FAILED"
+            : "PENDING";
+      } else if (transaction.order) {
+        status =
+          transaction.order.status === "COMPLETED"
+            ? "COMPLETED"
+            : transaction.order.status === "FAILED"
+            ? "FAILED"
+            : "PENDING";
+      }
+
+      return {
+        ...transaction,
+        amount: Number(transaction.amount),
+        balance: Number(transaction.balance),
+        status,
+      };
+    });
 
     return NextResponse.json({
       transactions: formattedTransactions,
