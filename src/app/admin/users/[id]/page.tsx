@@ -30,6 +30,7 @@ import {
   DollarSign,
   ArrowUpRight,
   ArrowDownRight,
+  LogIn,
 } from "lucide-react";
 import {
   Dialog,
@@ -98,6 +99,7 @@ export default function AdminUserDetailsPage({
   const [balanceAdjustment, setBalanceAdjustment] = useState({ amount: "", reason: "" });
   const [adjustingBalance, setAdjustingBalance] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [loggingInAsUser, setLoggingInAsUser] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -258,6 +260,53 @@ export default function AdminUserDetailsPage({
       return "text-green-500";
     }
     return "text-red-500";
+  };
+
+  const handleLoginAsUser = async () => {
+    if (!userId) return;
+
+    setLoggingInAsUser(true);
+    try {
+      const response = await fetch(`/api/admin/users/${userId}/login-as`, {
+        method: "POST",
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast({
+          title: "Sucesso",
+          description: `Logado como ${data.user.name}`,
+        });
+
+        // Store session in localStorage (required by Dashboard component)
+        localStorage.setItem("auth-session", data.user.id);
+        sessionStorage.setItem("just-logged-in", "true");
+        
+        // Store in sessionStorage to indicate we're impersonating
+        sessionStorage.setItem("admin-impersonating", "true");
+
+        // Redirect to dashboard after a short delay
+        setTimeout(() => {
+          window.location.href = data.redirectUrl || "/dashboard";
+        }, 500);
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: data.error || "Falha ao fazer login como usuário",
+        });
+      }
+    } catch (error) {
+      console.error("Error logging in as user:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Falha ao fazer login como usuário",
+      });
+    } finally {
+      setLoggingInAsUser(false);
+    }
   };
 
   const formatPhone = (phone: string | null) => {
@@ -522,10 +571,30 @@ export default function AdminUserDetailsPage({
           {/* Account Status */}
           <Card className="bg-gray-900 border-gray-800">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
-                <FileText className="w-5 h-5" />
-                Account Status
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-white">
+                  <FileText className="w-5 h-5" />
+                  Account Status
+                </CardTitle>
+                <Button
+                  size="sm"
+                  onClick={handleLoginAsUser}
+                  disabled={loggingInAsUser}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  {loggingInAsUser ? (
+                    <>
+                      <LogIn className="w-4 h-4 mr-2 animate-spin" />
+                      Entrando...
+                    </>
+                  ) : (
+                    <>
+                      <LogIn className="w-4 h-4 mr-2" />
+                      Entrar como Usuário
+                    </>
+                  )}
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-3">

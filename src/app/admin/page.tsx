@@ -38,6 +38,7 @@ import {
   FileDown,
   Calendar,
   Webhook,
+  RefreshCw,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -200,6 +201,7 @@ export default function AdminDashboard() {
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [resendingReceipt, setResendingReceipt] = useState(false);
+  const [syncingStatus, setSyncingStatus] = useState(false);
   const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
   const [isPolling, setIsPolling] = useState(false);
   const [showBalanceDialog, setShowBalanceDialog] = useState(false);
@@ -738,6 +740,54 @@ export default function AdminDashboard() {
       EXECUTING: "Executando",
     };
     return labels[status as keyof typeof labels] || status;
+  };
+
+  const handleSyncStatus = async () => {
+    if (!transactionDetails) return;
+
+    setSyncingStatus(true);
+    try {
+      const response = await fetch(
+        `/api/admin/transactions/${transactionDetails.id}/sync-status`,
+        {
+          method: "POST",
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast({
+          title: "Status Sincronizado",
+          description: data.message || "Status atualizado com sucesso",
+        });
+        // Refresh transaction details by fetching from API
+        const detailsResponse = await fetch(
+          `/api/admin/transactions/${transactionDetails.id}`
+        );
+        if (detailsResponse.ok) {
+          const detailsData = await detailsResponse.json();
+          if (detailsData.success) {
+            setTransactionDetails(detailsData.transaction);
+          }
+        }
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: data.message || data.error || "Falha ao sincronizar status",
+        });
+      }
+    } catch (error) {
+      console.error("Error syncing status:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Falha ao sincronizar status",
+      });
+    } finally {
+      setSyncingStatus(false);
+    }
   };
 
   const handleResendReceipt = async () => {
@@ -2748,9 +2798,33 @@ export default function AdminDashboard() {
                 {/* Withdrawal Details */}
                 {transactionDetails.withdrawal && (
                   <div className="border-t border-gray-800 pt-4">
-                    <h3 className="text-lg font-semibold mb-3">
-                      Detalhes do Saque
-                    </h3>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-lg font-semibold">
+                        Detalhes do Saque
+                      </h3>
+                      {transactionDetails.withdrawal.status === "PENDING" ||
+                      transactionDetails.withdrawal.status === "PROCESSING" ? (
+                        <Button
+                          onClick={handleSyncStatus}
+                          disabled={syncingStatus}
+                          variant="outline"
+                          size="sm"
+                          className="border-blue-600 text-blue-400 hover:bg-blue-900 hover:text-blue-300"
+                        >
+                          {syncingStatus ? (
+                            <>
+                              <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                              Sincronizando...
+                            </>
+                          ) : (
+                            <>
+                              <RefreshCw className="w-4 h-4 mr-2" />
+                              Sincronizar Status
+                            </>
+                          )}
+                        </Button>
+                      ) : null}
+                    </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <p className="text-sm text-gray-400">Status</p>
