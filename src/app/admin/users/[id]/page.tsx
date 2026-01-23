@@ -260,12 +260,57 @@ export default function AdminUserDetailsPage({
     return "text-red-500";
   };
 
+  const formatPhone = (phone: string | null) => {
+    if (!phone) return "Not provided";
+    // Remove all non-digit characters
+    const digits = phone.replace(/\D/g, "");
+    // Format Brazilian phone: +55 (XX) XXXXX-XXXX
+    if (digits.length === 13 && digits.startsWith("55")) {
+      return `+${digits.slice(0, 2)} (${digits.slice(2, 4)}) ${digits.slice(4, 9)}-${digits.slice(9)}`;
+    }
+    // Format if it starts with +55
+    if (phone.startsWith("+55") && digits.length === 13) {
+      return `+${digits.slice(0, 2)} (${digits.slice(2, 4)}) ${digits.slice(4, 9)}-${digits.slice(9)}`;
+    }
+    // Return original if can't format
+    return phone;
+  };
+
+  const formatCPF = (cpf: string | null) => {
+    if (!cpf) return "Not provided";
+    // Remove all non-digit characters
+    const digits = cpf.replace(/\D/g, "");
+    // Format CPF: XXX.XXX.XXX-XX
+    if (digits.length === 11) {
+      return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+    }
+    // Format CNPJ: XX.XXX.XXX/XXXX-XX
+    if (digits.length === 14) {
+      return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12)}`;
+    }
+    // Return original if can't format
+    return cpf;
+  };
+
   const formatCurrency = (amount: number | string, currency: string = "USDT") => {
     const numAmount = Number(amount);
     if (currency === "BRL") {
       return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(numAmount);
     }
-    return `${numAmount.toFixed(4)} USDT`;
+    // Format USDT with thousands separator
+    return `${numAmount.toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 })} USDT`;
+  };
+
+  const formatTransactionAmount = (amount: number | string, currency: string) => {
+    const numAmount = Number(amount);
+    const absAmount = Math.abs(numAmount);
+    
+    if (currency === "BRL") {
+      // Use Brazilian format: period for thousands, comma for decimals
+      return `${numAmount >= 0 ? "+" : "-"}${absAmount.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} BRL`;
+    }
+    // Format USDT with thousands separator
+    return `${numAmount >= 0 ? "+" : "-"}${absAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT`;
   };
 
   const handleImageClick = (src: string, title: string, alt: string) => {
@@ -437,7 +482,7 @@ export default function AdminUserDetailsPage({
                       <div className="flex items-center gap-2">
                         <Phone className="w-4 h-4 text-gray-400" />
                         <span className="text-white">
-                          {user.phone || "Not provided"}
+                          {formatPhone(user.phone)}
                         </span>
                         {user.phoneVerified ? (
                           <CheckCircle className="w-4 h-4 text-green-500" />
@@ -454,7 +499,7 @@ export default function AdminUserDetailsPage({
                       <div className="flex items-center gap-2">
                         <CreditCard className="w-4 h-4 text-gray-400" />
                         <span className="text-white">
-                          {user.cpf || "Not provided"}
+                          {formatCPF(user.cpf)}
                         </span>
                       </div>
                     </div>
@@ -671,8 +716,7 @@ export default function AdminUserDetailsPage({
                     </div>
                     <div className="text-right">
                       <div className={`font-medium ${getTransactionColor(tx.type)}`}>
-                        {tx.type.includes("DEPOSIT") || tx.type.includes("BUY") ? "+" : "-"}
-                        {formatCurrency(tx.amount, tx.currency)}
+                        {formatTransactionAmount(tx.amount, tx.currency)}
                       </div>
                       <Badge
                         variant="outline"
