@@ -426,12 +426,15 @@ export default function NotificationCenterPage() {
                                         <span>
                                           {formatDate(notification.createdAt)}
                                         </span>
-                                        {notification.metadata?.emailSent && (
-                                          <span className="flex items-center gap-1 text-green-400">
-                                            <Mail className="w-3 h-3" />
-                                            Email enviado
-                                          </span>
-                                        )}
+                                        {notification.metadata &&
+                                          typeof notification.metadata === "object" &&
+                                          "emailSent" in notification.metadata &&
+                                          Boolean(notification.metadata.emailSent) && (
+                                            <span className="flex items-center gap-1 text-green-400">
+                                              <Mail className="w-3 h-3" />
+                                              Email enviado
+                                            </span>
+                                          )}
                                       </div>
                                     </div>
                                   </div>
@@ -504,7 +507,7 @@ export default function NotificationCenterPage() {
                     <Checkbox
                       id="send-email"
                       checked={sendEmail}
-                      onCheckedChange={setSendEmail}
+                      onCheckedChange={(checked) => setSendEmail(checked === true)}
                     />
                     <Label htmlFor="send-email" className="text-white cursor-pointer">
                       Enviar também por email

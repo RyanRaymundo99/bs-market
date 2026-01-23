@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { Providers } from "@/components/providers";
+import { GlobalKYCBanner } from "@/components/GlobalKYCBanner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -99,7 +100,10 @@ export default function RootLayout({
         />
       </head>
       <body className={`${geistSans.className} antialiased`}>
-        <Providers>{children}</Providers>
+        <Providers>
+          <GlobalKYCBanner />
+          {children}
+        </Providers>
         <Toaster />
         <Analytics />
         <SpeedInsights />
