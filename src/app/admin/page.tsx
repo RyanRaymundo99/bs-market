@@ -69,6 +69,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { Tooltip as CustomTooltip } from "@/components/ui/tooltip";
 
 interface DashboardStats {
   totalUsers: number;
@@ -247,6 +248,10 @@ export default function AdminDashboard() {
   const [userEditForm, setUserEditForm] = useState({ name: "", phone: "", cpf: "" });
   const [savingUserData, setSavingUserData] = useState(false);
   const [inlineBalanceAmount, setInlineBalanceAmount] = useState("");
+  
+  // Historical data states for hover tooltips
+  const [historyData, setHistoryData] = useState<Record<string, Array<{ date: string; value: number }>>>({});
+  const [loadingHistory, setLoadingHistory] = useState<Record<string, boolean>>({});
   const [inlineBalanceReason, setInlineBalanceReason] = useState("");
   const [adjustingInlineBalance, setAdjustingInlineBalance] = useState(false);
   const [searchResults, setSearchResults] = useState<Array<{ id: string; name: string; email: string; cpf: string | null }>>([]);
@@ -587,6 +592,99 @@ export default function AdminDashboard() {
   const formatPercentage = (value: number) => {
     const sign = value >= 0 ? "+" : "";
     return `${sign}${value.toFixed(1)}%`;
+  };
+
+  const fetchHistory = useCallback(async (metric: string, days: number = 7) => {
+    if (historyData[metric] && historyData[metric].length > 0) {
+      return; // Already loaded
+    }
+
+    setLoadingHistory((prev) => ({ ...prev, [metric]: true }));
+    try {
+      const response = await fetch(
+        `/api/admin/finance/history?metric=${metric}&days=${days}`,
+        { cache: "no-store" }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch history");
+      }
+
+      const data = await response.json();
+
+      if (data.success && data.history) {
+        setHistoryData((prev) => ({ ...prev, [metric]: data.history }));
+      }
+    } catch (error) {
+      console.error(`Error fetching ${metric} history:`, error);
+    } finally {
+      setLoadingHistory((prev) => ({ ...prev, [metric]: false }));
+    }
+  }, [historyData]);
+
+  const HistoryTooltipContent = ({ metric, title }: { metric: string; title: string }) => {
+    const data = historyData[metric] || [];
+    const loading = loadingHistory[metric];
+
+    if (loading) {
+      return (
+        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-xl min-w-[280px]">
+          <div className="text-sm font-semibold text-white mb-2">{title}</div>
+          <div className="text-xs text-gray-400">Carregando...</div>
+        </div>
+      );
+    }
+
+    if (!data || data.length === 0) {
+      return (
+        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-xl min-w-[280px]">
+          <div className="text-sm font-semibold text-white mb-2">{title}</div>
+          <div className="text-xs text-gray-400">Sem dados históricos</div>
+        </div>
+      );
+    }
+
+    const maxValue = Math.max(...data.map((d) => d.value), 1);
+    const total = data.reduce((sum, d) => sum + d.value, 0);
+    const avg = total / data.length;
+
+    return (
+      <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-xl min-w-[280px] max-w-[320px]">
+        <div className="text-sm font-semibold text-white mb-3">{title} - Últimos {data.length} dias</div>
+        <div className="space-y-2 mb-3">
+          <div className="flex justify-between text-xs">
+            <span className="text-gray-400">Total:</span>
+            <span className="text-white font-medium">{formatCurrency(total)}</span>
+          </div>
+          <div className="flex justify-between text-xs">
+            <span className="text-gray-400">Média diária:</span>
+            <span className="text-white font-medium">{formatCurrency(avg)}</span>
+          </div>
+        </div>
+        <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
+          {data.slice().reverse().map((item, index) => {
+            const date = new Date(item.date);
+            const dateStr = `${date.getDate().toString().padStart(2, "0")}/${(date.getMonth() + 1).toString().padStart(2, "0")}`;
+            const percentage = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
+            
+            return (
+              <div key={index} className="flex items-center gap-2">
+                <div className="text-xs text-gray-400 w-12">{dateStr}</div>
+                <div className="flex-1 bg-gray-700 rounded-full h-2 relative overflow-hidden">
+                  <div
+                    className="bg-green-500 h-full rounded-full transition-all"
+                    style={{ width: `${percentage}%` }}
+                  />
+                </div>
+                <div className="text-xs text-white font-medium w-20 text-right">
+                  {formatCurrency(item.value)}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
   };
 
   const getTransactionTypeLabel = (type: string) => {
@@ -1312,7 +1410,14 @@ export default function AdminDashboard() {
           {/* Finance Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
             {/* Total Deposits */}
-            <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-green-500 transition-all duration-200">
+            <CustomTooltip
+              content={<HistoryTooltipContent metric="deposits" title="Histórico de Depósitos" />}
+              side="top"
+            >
+              <Card
+                className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-green-500 transition-all duration-200 cursor-pointer"
+                onMouseEnter={() => fetchHistory("deposits", 7)}
+              >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-300">
                   💰 Total de Depósitos
@@ -1350,9 +1455,17 @@ export default function AdminDashboard() {
                 )}
               </CardContent>
             </Card>
+            </CustomTooltip>
 
             {/* Total Withdrawals */}
-            <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-red-500 transition-all duration-200">
+            <CustomTooltip
+              content={<HistoryTooltipContent metric="withdrawals" title="Histórico de Saques" />}
+              side="top"
+            >
+              <Card
+                className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-red-500 transition-all duration-200 cursor-pointer"
+                onMouseEnter={() => fetchHistory("withdrawals", 7)}
+              >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-300">
                   💸 Total de Saques
@@ -1390,10 +1503,18 @@ export default function AdminDashboard() {
                 )}
               </CardContent>
             </Card>
+            </CustomTooltip>
 
             {/* Total Trades */}
-            <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-blue-500 transition-all duration-200">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CustomTooltip
+              content={<HistoryTooltipContent metric="trades" title="Histórico de Trades" />}
+              side="top"
+            >
+              <Card
+                className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-blue-500 transition-all duration-200 cursor-pointer"
+                onMouseEnter={() => fetchHistory("trades", 7)}
+              >
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-300">
                   🔁 Volume de Trades
                 </CardTitle>
@@ -1430,10 +1551,18 @@ export default function AdminDashboard() {
                 )}
               </CardContent>
             </Card>
+            </CustomTooltip>
 
             {/* Total Commissions */}
-            <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-purple-500 transition-all duration-200">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CustomTooltip
+              content={<HistoryTooltipContent metric="commissions" title="Histórico de Comissões" />}
+              side="top"
+            >
+              <Card
+                className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-purple-500 transition-all duration-200 cursor-pointer"
+                onMouseEnter={() => fetchHistory("commissions", 7)}
+              >
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-300">
                   🧾 Comissões
                 </CardTitle>
@@ -1470,10 +1599,18 @@ export default function AdminDashboard() {
                 )}
               </CardContent>
             </Card>
+            </CustomTooltip>
 
             {/* Average User Balance */}
-            <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-yellow-500 transition-all duration-200">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CustomTooltip
+              content={<HistoryTooltipContent metric="balance" title="Histórico de Saldo Médio" />}
+              side="top"
+            >
+              <Card
+                className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-yellow-500 transition-all duration-200 cursor-pointer"
+                onMouseEnter={() => fetchHistory("balance", 7)}
+              >
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-300">
                   🧍‍♂️ Saldo Médio dos Usuários
                 </CardTitle>
@@ -1510,6 +1647,7 @@ export default function AdminDashboard() {
                 )}
               </CardContent>
             </Card>
+            </CustomTooltip>
           </div>
 
           {/* Charts Section */}
@@ -1973,7 +2111,14 @@ export default function AdminDashboard() {
                               <div>
                                 <span className="text-white">{tx.type.replace(/_/g, " ")}</span>
                                 <span className="text-gray-500 text-xs ml-2">
-                                  {new Date(tx.createdAt).toLocaleDateString("pt-BR")}
+                                  {new Date(tx.createdAt).toLocaleString("pt-BR", {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    second: "2-digit",
+                                  })}
                                 </span>
                               </div>
                             </div>
@@ -2137,9 +2282,14 @@ export default function AdminDashboard() {
                         onClick={() => handleTransactionClick(transaction)}
                       >
                         <td className="py-3 px-4 text-gray-300">
-                          {new Date(transaction.date).toLocaleDateString(
-                            "pt-BR"
-                          )}
+                          {new Date(transaction.date).toLocaleString("pt-BR", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                          })}
                         </td>
                         <td className="py-3 px-4">
                           <span
@@ -2459,6 +2609,76 @@ export default function AdminDashboard() {
                         </p>
                       </div>
                     </div>
+                  </div>
+                )}
+
+                {/* Calculation Breakdown (for BUY_CRYPTO orders) */}
+                {transactionDetails.order && transactionDetails.type === "BUY_CRYPTO" && (
+                  <div className="border-t border-gray-800 pt-4 mt-4">
+                    <Card className="bg-gray-800 border-gray-700">
+                      <CardHeader>
+                        <CardTitle className="text-white text-lg">
+                          📊 Cálculo do Valor Total
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between py-2 border-b border-gray-700">
+                            <span className="text-gray-400">Quantidade USDT:</span>
+                            <span className="text-white font-semibold">
+                              {Number(transactionDetails.order.amount).toLocaleString("pt-BR", {
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 8,
+                              })}{" "}
+                              USDT
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between py-2 border-b border-gray-700">
+                            <span className="text-gray-400">Taxa de Câmbio:</span>
+                            <span className="text-white font-semibold">
+                              {formatCurrency(
+                                Number(transactionDetails.order.total) /
+                                  Number(transactionDetails.order.amount)
+                              )}{" "}
+                              BRL/USDT
+                            </span>
+                          </div>
+                          <div className="bg-gray-900 rounded-lg p-4 my-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-gray-300 text-sm">Cálculo:</span>
+                            </div>
+                            <div className="text-white font-mono text-sm space-y-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-gray-400">=</span>
+                                <span>
+                                  {Number(transactionDetails.order.amount).toLocaleString("pt-BR", {
+                                    minimumFractionDigits: 0,
+                                    maximumFractionDigits: 8,
+                                  })}{" "}
+                                  USDT
+                                </span>
+                                <span className="text-gray-500">×</span>
+                                <span>
+                                  {formatCurrency(
+                                    Number(transactionDetails.order.total) /
+                                      Number(transactionDetails.order.amount)
+                                  )}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 pt-2 border-t border-gray-700">
+                                <span className="text-gray-400">=</span>
+                                <span className="text-green-400 font-bold">
+                                  {formatCurrency(Number(transactionDetails.order.total))}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-xs text-gray-500 italic">
+                            * A taxa de câmbio já inclui todas as taxas e comissões aplicadas
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
                   </div>
                 )}
 
