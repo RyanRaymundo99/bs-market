@@ -37,6 +37,7 @@ import {
   Wallet,
   FileDown,
   Calendar,
+  Webhook,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -1391,6 +1392,25 @@ export default function AdminDashboard() {
                   <Button className="bg-purple-600 hover:bg-purple-700 text-white">
                     <Mail className="w-4 h-4 mr-2" />
                     Notification Center
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gray-900 border-gray-800">
+            <CardHeader>
+              <CardTitle className="text-white">Webhook Logs</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-gray-300">
+                Monitor all webhook events received from NutzPay and other sources.
+              </p>
+              <div className="flex space-x-2">
+                <Link href="/admin/webhook-logs">
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                    <Webhook className="w-4 h-4 mr-2" />
+                    View Webhook Logs
                   </Button>
                 </Link>
               </div>
