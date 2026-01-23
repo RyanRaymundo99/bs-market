@@ -106,7 +106,9 @@ interface Transaction {
   user: string | { name: string; email: string } | null; // Can be string or object for backward compatibility
   userId?: string;
   value: number;
-  status: "PENDING" | "APPROVED" | "REJECTED";
+  currency?: string;
+  amount?: number;
+  status: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED" | "CONFIRMED";
   metadata?: Record<string, unknown> | null;
   orderId?: string | null;
   depositId?: string | null;
