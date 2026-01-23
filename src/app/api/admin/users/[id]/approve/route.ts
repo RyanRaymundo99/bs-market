@@ -54,6 +54,36 @@ export async function PATCH(
       },
     });
 
+    // Create in-app notification if user was approved (non-blocking)
+    if (action === "approve") {
+      try {
+        const formattedDate = new Intl.DateTimeFormat("pt-BR", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(new Date());
+
+        await prisma.notification.create({
+          data: {
+            userId: userId,
+            type: "account_approved",
+            title: "Conta Aprovada com Sucesso!",
+            message: `Sua conta foi aprovada em ${formattedDate}. Agora você pode começar a usar todas as funcionalidades da plataforma BS Market.`,
+            metadata: {
+              approvalStatus: "APPROVED",
+              approvedAt: new Date().toISOString(),
+              approvedBy: adminSession.userId,
+            },
+          },
+        });
+      } catch (notificationError) {
+        // Log notification error but don't fail the approval
+        console.error("Failed to create account approval notification:", notificationError);
+      }
+    }
+
     // Send approval confirmation email if user was approved
     if (action === "approve" && updatedUser.email) {
       try {

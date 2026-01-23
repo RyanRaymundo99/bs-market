@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,10 +24,7 @@ import {
   ChevronDown,
   ChevronRight,
   Clock,
-  CheckCircle,
-  XCircle,
   RefreshCw,
-  MessageSquare,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import BackToDashboardButton from "@/components/admin/BackToDashboardButton";
@@ -72,10 +68,10 @@ export default function NotificationCenterPage() {
   const [notificationMessage, setNotificationMessage] = useState("");
   const [sendEmail, setSendEmail] = useState(true);
   const { toast } = useToast();
-  const router = useRouter();
 
   useEffect(() => {
     fetchUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm]);
 
   const fetchUsers = useCallback(async () => {
@@ -237,18 +233,19 @@ export default function NotificationCenterPage() {
   };
 
   const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { label: string; variant: string }> = {
+    const statusMap: Record<
+      string,
+      { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
+    > = {
       APPROVED: { label: "Aprovado", variant: "default" },
       PENDING: { label: "Pendente", variant: "secondary" },
       REJECTED: { label: "Rejeitado", variant: "destructive" },
     };
     const statusInfo = statusMap[status] || {
       label: status,
-      variant: "secondary",
+      variant: "secondary" as const,
     };
-    return (
-      <Badge variant={statusInfo.variant as any}>{statusInfo.label}</Badge>
-    );
+    return <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>;
   };
 
   return (

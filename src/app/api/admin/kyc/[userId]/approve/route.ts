@@ -27,6 +27,34 @@ export async function POST(
       },
     });
 
+    // Create in-app notification for the user (non-blocking)
+    try {
+      const formattedDate = new Intl.DateTimeFormat("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(new Date());
+
+      await prisma.notification.create({
+        data: {
+          userId: userId,
+          type: "kyc_approved",
+          title: "KYC Aprovado com Sucesso!",
+          message: `Sua verificação de identidade (KYC) foi aprovada em ${formattedDate}. Agora você tem acesso completo a todas as funcionalidades da plataforma, incluindo compra e venda de criptomoedas, depósitos e saques.`,
+          metadata: {
+            kycStatus: "APPROVED",
+            approvedAt: new Date().toISOString(),
+            approvedBy: adminSession.userId,
+          },
+        },
+      });
+    } catch (notificationError) {
+      // Log notification error but don't fail the approval
+      console.error("Failed to create KYC approval notification:", notificationError);
+    }
+
     // Send approval confirmation email
     if (user.email) {
       try {
