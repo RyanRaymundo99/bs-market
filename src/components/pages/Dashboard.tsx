@@ -164,8 +164,11 @@ export default function Dashboard() {
       } else {
         setShowKYCBanner(true);
       }
+    } else if (userStatus?.kycStatus === "PENDING") {
+      // For PENDING, always show banner (permanent)
+      setShowKYCBanner(true);
     } else if (userStatus?.kycStatus && userStatus.kycStatus !== "APPROVED") {
-      // For PENDING and REJECTED, show banner normally
+      // For REJECTED, show banner normally
       setShowKYCBanner(true);
     }
   }, [userStatus]);
@@ -177,8 +180,11 @@ export default function Dashboard() {
       const dismissedKey = `kyc-approved-banner-dismissed-${userStatus.id}`;
       localStorage.setItem(dismissedKey, "true");
       setShowKYCBanner(false);
+    } else if (userStatus?.kycStatus === "PENDING") {
+      // For PENDING status, do not allow dismissal (permanent banner)
+      return;
     } else {
-      // For other statuses, just hide temporarily
+      // For other statuses (REJECTED), just hide temporarily
       setShowKYCBanner(false);
     }
   };

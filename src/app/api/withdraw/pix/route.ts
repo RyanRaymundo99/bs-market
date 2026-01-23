@@ -46,6 +46,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if KYC is pending
+    if (user.kycStatus === "PENDING") {
+      return NextResponse.json(
+        {
+          error:
+            "Sua verificação KYC está pendente. Complete o upload dos documentos KYC para realizar saques.",
+        },
+        { status: 403 }
+      );
+    }
+
     // Parse request body
     const { amount, pixKey, password } = await request.json();
 

@@ -19,7 +19,7 @@ const translations = {
   pt: {
     // Navigation
     dashboard: "Dashboard",
-    trade: "Comprar",
+    trade: "Depositar",
     withdraw: "Sacar",
     profile: "Perfil",
     logout: "Sair",
@@ -27,7 +27,7 @@ const translations = {
     menu: "Menu",
 
     // Dashboard
-    buyUSDT: "Comprar USDT",
+    buyUSDT: "Depositar USDT",
     withdrawFunds: "Sacar",
     totalTransactions: "Total Transações",
     successRate: "Taxa Sucesso",
@@ -44,7 +44,7 @@ const translations = {
     makeFirstPurchase: "Fazer primeira compra",
 
     // Trade
-    buyUSDTViaPIX: "Comprar USDT via PIX",
+    buyUSDTViaPIX: "Depositar USDT via PIX",
     enterAmount: "Digite o valor em BRL",
     fee: "Taxa de 3% sobre o valor",
     confirmPurchase: "Confirmar Compra",

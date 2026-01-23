@@ -254,7 +254,7 @@ const TradePage = () => {
                 title: language === "pt" ? "Conta Pendente" : "Account Pending",
                 description:
                   language === "pt"
-                    ? "Sua conta está pendente de aprovação. Complete seu cadastro no perfil antes de comprar."
+                    ? "Sua conta está pendente de aprovação. Complete seu cadastro no perfil antes de depositar."
                     : "Your account is pending approval. Complete your profile before purchasing.",
                 variant: "destructive",
               });
