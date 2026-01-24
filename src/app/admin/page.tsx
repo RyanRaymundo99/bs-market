@@ -72,6 +72,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Tooltip as CustomTooltip } from "@/components/ui/tooltip";
+import { formatUSDT, formatBRL } from "@/lib/format-currency";
 
 interface DashboardStats {
   totalUsers: number;
@@ -436,8 +437,8 @@ export default function AdminDashboard() {
         toast({
           title: "Sucesso",
           description: operation === "CREDIT" 
-            ? `${absoluteAmount.toFixed(2)} USDT creditado com sucesso`
-            : `${absoluteAmount.toFixed(2)} USDT debitado com sucesso`,
+            ? `${formatUSDT(absoluteAmount)} creditado com sucesso`
+            : `${formatUSDT(absoluteAmount)} debitado com sucesso`,
         });
       } else {
         const errorData = await response.json();
@@ -2150,7 +2151,7 @@ export default function AdminDashboard() {
                                     <div key={bal.currency} className="flex items-center justify-between">
                                       <span className="text-gray-400">{bal.currency} <span className="text-xs text-gray-500">(calculado)</span></span>
                                       <span className="text-white font-medium">
-                                        {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(calculatedBrl)}
+                                        {formatBRL(calculatedBrl)}
                                       </span>
                                     </div>
                                   );
@@ -2160,7 +2161,7 @@ export default function AdminDashboard() {
                                   <div key={bal.currency} className="flex items-center justify-between">
                                     <span className="text-gray-400">{bal.currency}</span>
                                     <span className="text-white font-medium">
-                                      {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(bal.amount))}
+                                      {formatBRL(Number(bal.amount))}
                                     </span>
                                   </div>
                                 );
@@ -2170,7 +2171,7 @@ export default function AdminDashboard() {
                                 <div key={bal.currency} className="flex items-center justify-between">
                                   <span className="text-gray-400">{bal.currency}</span>
                                   <span className="text-white font-medium">
-                                    {`${Number(bal.amount).toFixed(4)} USDT`}
+                                    {formatUSDT(Number(bal.amount))}
                                   </span>
                                 </div>
                               );
@@ -2250,7 +2251,9 @@ export default function AdminDashboard() {
                             <div className="text-right">
                               <span className={tx.type.includes("DEPOSIT") || tx.type.includes("BUY") ? "text-green-500" : "text-red-500"}>
                                 {tx.type.includes("DEPOSIT") || tx.type.includes("BUY") ? "+" : "-"}
-                                {Number(tx.amount).toFixed(2)} {tx.currency}
+                                {tx.currency === "BRL" 
+                                  ? formatBRL(Number(tx.amount)).replace("R$ ", "")
+                                  : formatUSDT(Number(tx.amount)).replace(" USDT", "")} {tx.currency}
                               </span>
                               <span className={`ml-2 text-xs px-1.5 py-0.5 rounded ${
                                 tx.status === "COMPLETED" || tx.status === "APPROVED" || tx.status === "CONFIRMED" ? "bg-green-900/50 text-green-400" :
@@ -2448,7 +2451,7 @@ export default function AdminDashboard() {
                           {transaction.value && !isNaN(transaction.value) 
                             ? formatCurrency(transaction.value)
                             : transaction.currency === "USDT"
-                            ? `${Math.abs(transaction.amount || 0).toFixed(4)} USDT`
+                            ? formatUSDT(Math.abs(transaction.amount || 0))
                             : formatCurrency(0)
                           }
                         </td>

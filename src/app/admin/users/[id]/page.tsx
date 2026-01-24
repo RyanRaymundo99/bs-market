@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import BackToDashboardButton from "@/components/admin/BackToDashboardButton";
+import { formatUSDT, formatBRL } from "@/lib/format-currency";
 import {
   User,
   Mail,
@@ -342,24 +343,21 @@ export default function AdminUserDetailsPage({
   };
 
   const formatCurrency = (amount: number | string, currency: string = "USDT") => {
-    const numAmount = Number(amount);
     if (currency === "BRL") {
-      return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(numAmount);
+      return formatBRL(amount);
     }
-    // Format USDT with thousands separator
-    return `${numAmount.toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 })} USDT`;
+    return formatUSDT(amount);
   };
 
   const formatTransactionAmount = (amount: number | string, currency: string) => {
     const numAmount = Number(amount);
+    const sign = numAmount >= 0 ? "+" : "-";
     const absAmount = Math.abs(numAmount);
     
     if (currency === "BRL") {
-      // Use Brazilian format: period for thousands, comma for decimals
-      return `${numAmount >= 0 ? "+" : "-"}${absAmount.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} BRL`;
+      return `${sign}${formatBRL(absAmount).replace("R$ ", "")} BRL`;
     }
-    // Format USDT with thousands separator
-    return `${numAmount >= 0 ? "+" : "-"}${absAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT`;
+    return `${sign}${formatUSDT(absAmount).replace(" USDT", "")} USDT`;
   };
 
   const handleImageClick = (src: string, title: string, alt: string) => {
