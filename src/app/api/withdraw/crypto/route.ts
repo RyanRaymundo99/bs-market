@@ -243,8 +243,15 @@ export async function POST(request: NextRequest) {
           description: `USDT withdrawal to ${walletAddress} (${network}) - Taxa de rede: ${responseFee.toFixed(
             2
           )} USDT (informativa)`,
+          metadata: { withdrawalId: withdrawal.id },
           createdAt: new Date(),
         },
+      });
+
+      // Link withdrawal to transaction
+      await prisma.withdrawal.update({
+        where: { id: withdrawal.id },
+        data: { transactionId: withdrawalTransaction.id },
       });
 
       // Send withdrawal receipt email (don't await to avoid blocking response)

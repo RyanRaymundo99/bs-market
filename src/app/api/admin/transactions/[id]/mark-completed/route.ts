@@ -120,13 +120,59 @@ export async function POST(
           },
         });
       } else {
-        return NextResponse.json(
-          { 
-            error: "Withdrawal record not found for this transaction",
-            details: "Transaction type is WITHDRAWAL but no matching withdrawal record could be found. The withdrawal may not have been created or linked properly."
+        // Withdrawal record doesn't exist - create it based on transaction data
+        // Extract information from transaction description or metadata
+        const metadata = transaction.metadata as Record<string, unknown> | null;
+        const description = transaction.description || "";
+        
+        // Try to determine payment method and type from description
+        let paymentMethod = "UNKNOWN";
+        let withdrawalType: string | null = null;
+        let walletAddress: string | null = null;
+        let network: string | null = null;
+        let hash: string | null = null;
+        let pixKey: string | null = null;
+        let protocol: string | null = null;
+        
+        // Parse description for USDT withdrawals
+        if (description.includes("USDT withdrawal") || description.includes("wallet")) {
+          paymentMethod = "USDT";
+          withdrawalType = "USDT";
+          // Try to extract wallet address and network from description
+          const walletMatch = description.match(/to\s+([A-Za-z0-9]+)/);
+          const networkMatch = description.match(/\(([A-Z0-9]+)\)/);
+          if (walletMatch) walletAddress = walletMatch[1];
+          if (networkMatch) network = networkMatch[1];
+        } else if (description.includes("PIX") || description.includes("pix")) {
+          paymentMethod = "PIX";
+          withdrawalType = "PIX";
+          // Try to extract PIX key from description
+          const pixMatch = description.match(/to\s+([^\s]+)/);
+          if (pixMatch) pixKey = pixMatch[1];
+        }
+        
+        // Create withdrawal record
+        const newWithdrawal = await prisma.withdrawal.create({
+          data: {
+            userId: transaction.userId,
+            amount: Math.abs(Number(transaction.amount)), // Use absolute value
+            currency: transaction.currency,
+            status: "COMPLETED",
+            paymentMethod: paymentMethod,
+            type: withdrawalType,
+            walletAddress: walletAddress,
+            network: network,
+            hash: hash,
+            pixKey: pixKey,
+            protocol: protocol,
+            transactionId: transaction.id,
+            processedAt: new Date(),
+            createdAt: transaction.createdAt,
+            updatedAt: new Date(),
           },
-          { status: 404 }
-        );
+        });
+        
+        console.log(`Created missing withdrawal record ${newWithdrawal.id} for transaction ${transaction.id}`);
       }
     } else {
       return NextResponse.json(
