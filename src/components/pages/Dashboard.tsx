@@ -28,6 +28,7 @@ import { useToast } from "@/hooks/use-toast";
 import NavbarNew from "@/components/ui/navbar-new";
 import KYCBanner from "@/components/ui/kyc-banner";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { formatUSDT } from "@/lib/format-currency";
 import {
   LineChart,
   Line,
@@ -634,7 +635,7 @@ export default function Dashboard() {
               return (
                 <div className="flex items-center justify-center gap-2 mb-6">
                   <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white">
-                    {showBalances ? `U$ ${usdtAmount.toFixed(2)}` : "U$ ••••••"}
+                    {showBalances ? `U$ ${formatUSDT(usdtAmount).replace(" USDT", "")}` : "U$ ••••••"}
                   </h2>
                   <Button
                     variant="ghost"
@@ -710,7 +711,7 @@ export default function Dashboard() {
                               Saldo
                             </div>
                             <div className="text-base text-brand-300 font-bold">
-                              U$ {lastDataPoint.USDT.toFixed(2)}
+                              U$ {formatUSDT(lastDataPoint.USDT).replace(" USDT", "")}
                             </div>
                             <div className="text-xs text-gray-500 mt-1">
                               USDT
@@ -820,7 +821,7 @@ export default function Dashboard() {
                                     Saldo
                                   </div>
                                   <div className="text-base text-brand-300 font-bold">
-                                    U$ {value.toFixed(2)}
+                                    U$ {formatUSDT(value).replace(" USDT", "")}
                                   </div>
                                   <div className="text-xs text-gray-500 mt-1">
                                     USDT
@@ -1012,9 +1013,7 @@ export default function Dashboard() {
                   const formattedAmount =
                     transaction.currency === "BRL"
                       ? formatCurrency(transaction.amount)
-                      : `${transaction.amount.toFixed(8)} ${
-                          transaction.currency || "USDT"
-                        }`;
+                      : formatUSDT(transaction.amount).replace(" USDT", ` ${transaction.currency || "USDT"}`);
 
                   if (
                     transaction.type === "DEPOSIT" ||

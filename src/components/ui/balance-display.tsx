@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { Wallet } from "lucide-react";
+import { formatUSDT, formatBRL } from "@/lib/format-currency";
 
 interface Balance {
   currency: string;
@@ -55,15 +56,10 @@ export function BalanceDisplay({ className }: BalanceDisplayProps) {
 
   const formatBalance = (amount: number, currency: string) => {
     if (currency === "BRL") {
-      return new Intl.NumberFormat("pt-BR", {
-        style: "currency",
-        currency: "BRL",
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }).format(amount);
+      return formatBRL(amount);
     } else {
-      // For USDT and other cryptos, show with more decimal places
-      return `${amount.toFixed(2)} ${currency}`;
+      // For USDT and other cryptos
+      return formatUSDT(amount);
     }
   };
 

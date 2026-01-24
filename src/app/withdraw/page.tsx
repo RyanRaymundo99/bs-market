@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import NavbarNew from "@/components/ui/navbar-new";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { formatUSDT, formatBRL } from "@/lib/format-currency";
 
 interface CryptoBalance {
   currency: string;
@@ -374,8 +375,8 @@ export default function WithdrawPage() {
         const data = await response.json();
         setSuccessMessage(
           language === "pt" 
-            ? `Saque PIX de R$ ${parseFloat(pixAmount).toFixed(2)} solicitado com sucesso! Protocolo: ${data.withdrawal.protocol}` 
-            : `PIX withdrawal of R$ ${parseFloat(pixAmount).toFixed(2)} requested successfully! Protocol: ${data.withdrawal.protocol}`
+            ? `Saque PIX de ${formatBRL(parseFloat(pixAmount))} solicitado com sucesso! Protocolo: ${data.withdrawal.protocol}` 
+            : `PIX withdrawal of ${formatBRL(parseFloat(pixAmount))} requested successfully! Protocol: ${data.withdrawal.protocol}`
         );
         setShowSuccessModal(true);
         setPixAmount("");
@@ -565,9 +566,8 @@ export default function WithdrawPage() {
                       </div>
                       <p className="text-2xl sm:text-3xl font-bold text-brand-400">
                         {usdtBalance && typeof usdtBalance.amount === "number"
-                          ? usdtBalance.amount.toFixed(2)
-                          : "0.00"}{" "}
-                        USDT
+                          ? formatUSDT(usdtBalance.amount)
+                          : "0 USDT"}
                       </p>
                     </div>
 
@@ -639,7 +639,7 @@ export default function WithdrawPage() {
                             {t("networkFee")}
                           </span>
                           <span className="text-sm font-medium text-red-400">
-                            -{getNetworkFee().toFixed(2)} USDT
+                            -{formatUSDT(getNetworkFee())}
                           </span>
                         </div>
                         <div className="flex items-center justify-between pt-2 border-t border-gray-700">
@@ -647,7 +647,7 @@ export default function WithdrawPage() {
                             {t("netTotal")}
                           </span>
                           <span className="text-lg sm:text-xl font-bold text-brand-400">
-                            {(calculateUSDTNetAmount() || 0).toFixed(2)} USDT
+                            {formatUSDT(calculateUSDTNetAmount() || 0)}
                           </span>
                         </div>
                       </div>
@@ -684,7 +684,7 @@ export default function WithdrawPage() {
                         </span>
                       </div>
                       <p className="text-2xl sm:text-3xl font-bold text-green-400">
-                        R$ {getBrlBalance().toFixed(2)}
+                        {formatBRL(getBrlBalance())}
                       </p>
                     </div>
 
@@ -742,7 +742,7 @@ export default function WithdrawPage() {
                             {language === "pt" ? "Valor do Saque" : "Withdrawal Amount"}
                           </span>
                           <span className="text-sm font-medium text-white">
-                            R$ {pixAmount ? parseFloat(pixAmount).toFixed(2) : "0.00"}
+                            {formatBRL(pixAmount ? parseFloat(pixAmount) : 0)}
                           </span>
                         </div>
                         <div className="flex items-center justify-between mb-2">
@@ -750,7 +750,7 @@ export default function WithdrawPage() {
                             {language === "pt" ? "Taxa (3%)" : "Fee (3%)"}
                           </span>
                           <span className="text-sm font-medium text-red-400">
-                            -R$ {calculatePixFee().toFixed(2)}
+                            -{formatBRL(calculatePixFee())}
                           </span>
                         </div>
                         <div className="flex items-center justify-between pt-2 border-t border-gray-700">
@@ -758,7 +758,7 @@ export default function WithdrawPage() {
                             {language === "pt" ? "Valor Líquido" : "Net Amount"}
                           </span>
                           <span className="text-lg sm:text-xl font-bold text-green-400">
-                            R$ {calculatePixNetAmount().toFixed(2)}
+                            {formatBRL(calculatePixNetAmount())}
                           </span>
                         </div>
                       </div>
@@ -855,11 +855,9 @@ export default function WithdrawPage() {
                           </Badge>
                         </td>
                         <td className="py-3 px-4 font-medium text-white">
-                          {withdrawal.type === "PIX" ? "R$ " : ""}
-                          {typeof withdrawal.amount === "number"
-                            ? withdrawal.amount.toFixed(2)
-                            : "0.00"}{" "}
-                          {withdrawal.type !== "PIX" && "USDT"}
+                          {withdrawal.type === "PIX"
+                            ? formatBRL(withdrawal.amount)
+                            : formatUSDT(withdrawal.amount)}
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
