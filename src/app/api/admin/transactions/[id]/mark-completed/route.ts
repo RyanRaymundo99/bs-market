@@ -121,8 +121,7 @@ export async function POST(
         });
       } else {
         // Withdrawal record doesn't exist - create it based on transaction data
-        // Extract information from transaction description or metadata
-        const metadata = transaction.metadata as Record<string, unknown> | null;
+        // Extract information from transaction description
         const description = transaction.description || "";
         
         // Try to determine payment method and type from description
@@ -130,9 +129,9 @@ export async function POST(
         let withdrawalType: string | null = null;
         let walletAddress: string | null = null;
         let network: string | null = null;
-        let hash: string | null = null;
+        const hash: string | null = null;
         let pixKey: string | null = null;
-        let protocol: string | null = null;
+        const protocol: string | null = null;
         
         // Parse description for USDT withdrawals
         if (description.includes("USDT withdrawal") || description.includes("wallet")) {
