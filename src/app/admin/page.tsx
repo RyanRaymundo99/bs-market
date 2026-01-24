@@ -202,6 +202,7 @@ export default function AdminDashboard() {
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [resendingReceipt, setResendingReceipt] = useState(false);
   const [syncingStatus, setSyncingStatus] = useState(false);
+  const [markingCompleted, setMarkingCompleted] = useState(false);
   const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
   const [isPolling, setIsPolling] = useState(false);
   const [showBalanceDialog, setShowBalanceDialog] = useState(false);
@@ -834,6 +835,60 @@ export default function AdminDashboard() {
       });
     } finally {
       setResendingReceipt(false);
+    }
+  };
+
+  const handleMarkAsCompleted = async () => {
+    if (!transactionDetails) return;
+
+    // Confirm action
+    if (!confirm("Tem certeza que deseja marcar esta transação como concluída?")) {
+      return;
+    }
+
+    setMarkingCompleted(true);
+    try {
+      const response = await fetch(
+        `/api/admin/transactions/${transactionDetails.id}/mark-completed`,
+        {
+          method: "POST",
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast({
+          title: "Sucesso",
+          description: "Transação marcada como concluída com sucesso!",
+          variant: "default",
+        });
+
+        // Refresh transaction details
+        const detailsResponse = await fetch(
+          `/api/admin/transactions/${transactionDetails.id}`
+        );
+        if (detailsResponse.ok) {
+          const detailsData = await detailsResponse.json();
+          if (detailsData.success) {
+            setTransactionDetails(detailsData.transaction);
+            // Also refresh the transactions list
+            fetchRealtimeTransactions();
+          }
+        }
+      } else {
+        throw new Error(data.error || "Failed to mark transaction as completed");
+      }
+    } catch (error) {
+      console.error("Error marking transaction as completed:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description:
+          error instanceof Error ? error.message : "Falha ao marcar transação como concluída",
+      });
+    } finally {
+      setMarkingCompleted(false);
     }
   };
 
@@ -2460,18 +2515,49 @@ export default function AdminDashboard() {
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-400">Status</p>
-                    <span
-                      className={`px-2 py-1 rounded text-xs font-medium inline-block ${
-                        transactionDetails.status === "APPROVED"
-                          ? "bg-green-900 text-green-300"
-                          : transactionDetails.status === "PENDING"
-                          ? "bg-yellow-900 text-yellow-300"
-                          : "bg-red-900 text-red-300"
-                      }`}
-                    >
-                      {getStatusLabel(transactionDetails.status)}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <div>
+                        <p className="text-sm text-gray-400">Status</p>
+                        <span
+                          className={`px-2 py-1 rounded text-xs font-medium inline-block ${
+                            transactionDetails.status === "APPROVED" ||
+                            transactionDetails.status === "COMPLETED" ||
+                            transactionDetails.status === "CONFIRMED"
+                              ? "bg-green-900 text-green-300"
+                              : transactionDetails.status === "PENDING" ||
+                                transactionDetails.status === "PROCESSING" ||
+                                transactionDetails.status === "EXECUTING"
+                              ? "bg-yellow-900 text-yellow-300"
+                              : "bg-red-900 text-red-300"
+                          }`}
+                        >
+                          {getStatusLabel(transactionDetails.status)}
+                        </span>
+                      </div>
+                      {(transactionDetails.status === "PENDING" ||
+                        transactionDetails.status === "PROCESSING" ||
+                        transactionDetails.status === "EXECUTING") && (
+                        <Button
+                          onClick={handleMarkAsCompleted}
+                          disabled={markingCompleted}
+                          variant="outline"
+                          size="sm"
+                          className="border-green-600 text-green-400 hover:bg-green-900 hover:text-green-300 mt-5"
+                        >
+                          {markingCompleted ? (
+                            <>
+                              <Clock className="w-4 h-4 mr-2 animate-spin" />
+                              Marcando...
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className="w-4 h-4 mr-2" />
+                              Marcar como Concluída
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   <div>
                     <p className="text-sm text-gray-400">Data</p>
@@ -2755,9 +2841,32 @@ export default function AdminDashboard() {
                 {/* Deposit Details */}
                 {transactionDetails.deposit && (
                   <div className="border-t border-gray-800 pt-4">
-                    <h3 className="text-lg font-semibold mb-3">
-                      Detalhes do Depósito
-                    </h3>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-lg font-semibold">
+                        Detalhes do Depósito
+                      </h3>
+                      {transactionDetails.deposit.status === "PENDING" && (
+                        <Button
+                          onClick={handleMarkAsCompleted}
+                          disabled={markingCompleted}
+                          variant="outline"
+                          size="sm"
+                          className="border-green-600 text-green-400 hover:bg-green-900 hover:text-green-300"
+                        >
+                          {markingCompleted ? (
+                            <>
+                              <Clock className="w-4 h-4 mr-2 animate-spin" />
+                              Marcando...
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className="w-4 h-4 mr-2" />
+                              Marcar como Concluída
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <p className="text-sm text-gray-400">Status</p>
@@ -2802,28 +2911,51 @@ export default function AdminDashboard() {
                       <h3 className="text-lg font-semibold">
                         Detalhes do Saque
                       </h3>
-                      {transactionDetails.withdrawal.status === "PENDING" ||
-                      transactionDetails.withdrawal.status === "PROCESSING" ? (
-                        <Button
-                          onClick={handleSyncStatus}
-                          disabled={syncingStatus}
-                          variant="outline"
-                          size="sm"
-                          className="border-blue-600 text-blue-400 hover:bg-blue-900 hover:text-blue-300"
-                        >
-                          {syncingStatus ? (
-                            <>
-                              <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                              Sincronizando...
-                            </>
-                          ) : (
-                            <>
-                              <RefreshCw className="w-4 h-4 mr-2" />
-                              Sincronizar Status
-                            </>
-                          )}
-                        </Button>
-                      ) : null}
+                      <div className="flex gap-2">
+                        {transactionDetails.withdrawal.status === "PENDING" ||
+                        transactionDetails.withdrawal.status === "PROCESSING" ? (
+                          <>
+                            <Button
+                              onClick={handleSyncStatus}
+                              disabled={syncingStatus}
+                              variant="outline"
+                              size="sm"
+                              className="border-blue-600 text-blue-400 hover:bg-blue-900 hover:text-blue-300"
+                            >
+                              {syncingStatus ? (
+                                <>
+                                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                                  Sincronizando...
+                                </>
+                              ) : (
+                                <>
+                                  <RefreshCw className="w-4 h-4 mr-2" />
+                                  Sincronizar Status
+                                </>
+                              )}
+                            </Button>
+                            <Button
+                              onClick={handleMarkAsCompleted}
+                              disabled={markingCompleted}
+                              variant="outline"
+                              size="sm"
+                              className="border-green-600 text-green-400 hover:bg-green-900 hover:text-green-300"
+                            >
+                              {markingCompleted ? (
+                                <>
+                                  <Clock className="w-4 h-4 mr-2 animate-spin" />
+                                  Marcando...
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle className="w-4 h-4 mr-2" />
+                                  Marcar como Concluída
+                                </>
+                              )}
+                            </Button>
+                          </>
+                        ) : null}
+                      </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
