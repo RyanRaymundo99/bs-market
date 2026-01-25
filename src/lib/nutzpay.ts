@@ -293,6 +293,114 @@ export class NutzPayService {
   }
 
   /**
+   * Get withdrawal status by transaction_id (from API response)
+   * Based on API docs: POST /api/v1/usdt/withdrawal returns transaction_id
+   * @param transactionId - The transaction_id from the withdrawal response
+   * @returns Withdrawal status and details
+   */
+  async getWithdrawalStatusByTransactionId(transactionId: string) {
+    try {
+      const headers = this.getAuthHeaders();
+
+      console.log(
+        "🔍 Fetching withdrawal status by transaction_id from NutzPay:",
+        transactionId
+      );
+
+      // Try multiple possible endpoints for withdrawal status
+      const endpoints = [
+        `${this.baseUrl}/usdt/withdrawal/${transactionId}`,
+        `${this.baseUrl}/usdt/transaction/${transactionId}`,
+        `${this.baseUrl}/transaction/${transactionId}`,
+      ];
+
+      let lastError: Error | null = null;
+
+      for (const endpoint of endpoints) {
+        try {
+          console.log(`Trying withdrawal endpoint: ${endpoint}`);
+          const response = await axios.get(endpoint, {
+            headers,
+            validateStatus: () => true, // Don't throw on any status
+          });
+
+          console.log("📡 NutzPay withdrawal API Response Status:", response.status);
+
+          if (response.status === 200 || response.status === 201) {
+            const responseData = response.data?.data || response.data;
+            console.log(
+              "✅ NutzPay withdrawal status response:",
+              JSON.stringify(responseData, null, 2)
+            );
+            return responseData;
+          }
+
+          if (response.status === 404) {
+            console.log(
+              `❌ Withdrawal not found at ${endpoint}, trying next...`
+            );
+            continue; // Try next endpoint
+          }
+
+          // Handle 500 errors gracefully
+          if (response.status >= 500) {
+            console.log(
+              `⚠️ NutzPay API server error (${response.status}) at ${endpoint}, trying next endpoint...`
+            );
+            lastError = new Error(`NutzPay API server error: ${response.status}`);
+            continue;
+          }
+
+          // If we get here, we got a response but not 200/201/404/5xx
+          const responseData = response.data?.data || response.data;
+          return responseData;
+        } catch (error) {
+          if (axios.isAxiosError(error) && error.response) {
+            if (error.response.status >= 500) {
+              console.log(
+                `⚠️ NutzPay API server error (${error.response.status}), trying next endpoint...`
+              );
+              lastError = error instanceof Error ? error : new Error(String(error));
+              continue;
+            }
+            if (error.response.status === 404) {
+              console.log(`❌ 404 at ${endpoint}, trying next endpoint...`);
+              continue;
+            }
+          }
+          lastError = error instanceof Error ? error : new Error(String(error));
+          console.log(
+            `❌ Error at ${endpoint}:`,
+            error instanceof Error ? error.message : error
+          );
+          continue;
+        }
+      }
+
+      // If all endpoints failed with server errors, return null (don't throw)
+      if (lastError) {
+        const isServerError = lastError.message.includes("500") || 
+                             lastError.message.includes("server error") ||
+                             lastError.message.includes("502") ||
+                             lastError.message.includes("503") ||
+                             lastError.message.includes("504");
+        
+        if (isServerError) {
+          console.log("⚠️ NutzPay API server errors on all endpoints - withdrawal status will remain unchanged");
+          return null;
+        }
+        
+        throw lastError;
+      }
+
+      throw new Error("All withdrawal endpoints failed");
+    } catch (error) {
+      console.error("❌ NutzPay withdrawal status fetch error:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Get transaction status from NutzPay API
    * @param transactionId - The transaction ID from NutzPay
    * @returns Transaction status and details

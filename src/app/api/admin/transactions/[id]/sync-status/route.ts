@@ -41,32 +41,63 @@ export async function POST(
 
     const withdrawal = transaction.withdrawal;
 
-    // Try to get status from NutzPay using externalId or hash
+    // Try to get status from NutzPay using transaction_id (hash), externalId, or other methods
     let nutzPayStatus = null;
     let statusUpdate = null;
 
     try {
-      // Try with externalId first
-      if (withdrawal.externalId) {
+      // Method 1: Try with transaction_id (hash) - this is the transaction_id from API response
+      // Based on API docs: POST /api/v1/usdt/withdrawal returns transaction_id
+      if (withdrawal.hash) {
+        try {
+          nutzPayStatus = await nutzPayService.getWithdrawalStatusByTransactionId(
+            withdrawal.hash
+          );
+          if (nutzPayStatus) {
+            console.log("✅ Found withdrawal status using transaction_id (hash)");
+          }
+        } catch (error) {
+          console.error("Error fetching withdrawal status with transaction_id (hash):", error);
+        }
+      }
+
+      // Method 2: Try with externalId
+      if (!nutzPayStatus && withdrawal.externalId) {
         try {
           nutzPayStatus = await nutzPayService.getWithdrawalStatus(
             withdrawal.externalId
           );
+          if (nutzPayStatus) {
+            console.log("✅ Found withdrawal status using externalId");
+          }
         } catch (error) {
           console.error("Error fetching withdrawal status with externalId:", error);
         }
       }
 
-      // If that failed and we have a hash, try with hash
+      // Method 3: If hash exists but previous methods failed, try as transaction status
       if (!nutzPayStatus && withdrawal.hash) {
         try {
           nutzPayStatus = await nutzPayService.getTransactionStatus(
             withdrawal.hash
           );
+          if (nutzPayStatus) {
+            console.log("✅ Found withdrawal status using transaction status endpoint");
+          }
         } catch (error) {
-          console.error("Error fetching withdrawal status with hash:", error);
+          console.error("Error fetching withdrawal status with transaction status:", error);
         }
       }
+
+      // Log what we have available for debugging
+      console.log("Withdrawal sync attempt - Available data:", {
+        hasHash: !!withdrawal.hash,
+        hasExternalId: !!withdrawal.externalId,
+        hash: withdrawal.hash,
+        externalId: withdrawal.externalId,
+        type: withdrawal.type,
+        status: withdrawal.status,
+      });
 
       // Determine new status from NutzPay response
       if (nutzPayStatus) {
@@ -146,11 +177,30 @@ export async function POST(
         nutzPayStatus: nutzPayStatus,
       });
     } else {
+      // Provide helpful error message based on what data is available
+      const missingData = [];
+      if (!withdrawal.hash && !withdrawal.externalId) {
+        missingData.push("transaction_id (hash) or externalId");
+      }
+      
+      let errorMessage = "Could not determine status from NutzPay API";
+      if (missingData.length > 0) {
+        errorMessage += `. Missing required data: ${missingData.join(", ")}. `;
+        errorMessage += "The withdrawal may have been created before these fields were properly stored, or it may be a PIX withdrawal (which doesn't use NutzPay API).";
+      } else {
+        errorMessage += ". The API may not have returned a valid status, or the withdrawal may not exist in NutzPay's system.";
+      }
+
       return NextResponse.json({
         success: false,
-        message: "Could not determine status from NutzPay API",
+        message: errorMessage,
         currentStatus: withdrawal.status,
         nutzPayStatus: nutzPayStatus,
+        availableData: {
+          hasHash: !!withdrawal.hash,
+          hasExternalId: !!withdrawal.externalId,
+          type: withdrawal.type,
+        },
       });
     }
   } catch (error) {
