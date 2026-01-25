@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import NavbarNew from "@/components/ui/navbar-new";
 import {
   Dialog,
@@ -21,13 +22,68 @@ import {
   QrCode,
   Loader2,
   Wallet,
+  Coins,
+  Home,
+  TrendingDown,
+  Plus,
+  Minus,
 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const TradePage = () => {
+  const router = useRouter();
+  const pathname = usePathname();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { toast } = useToast();
   const { t, language } = useLanguage();
+
+  // Swipe gesture state for mobile navigation
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const minSwipeDistance = 50;
+
+  // Detect mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent
+        ) || window.innerWidth <= 768
+      );
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  // Swipe gesture handlers
+  const onTouchStart = (e: React.TouchEvent) => {
+    if (!isMobile) return;
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (!isMobile) return;
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!isMobile || !touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe) {
+      // Swipe left -> go to withdraw
+      router.push("/withdraw");
+    } else if (isRightSwipe) {
+      // Swipe right -> go to dashboard
+      router.push("/dashboard");
+    }
+  };
 
   const handleLogout = useCallback(async () => {
     setIsLoggingOut(true);
@@ -58,10 +114,19 @@ const TradePage = () => {
     }
   }, []);
 
+  // Deposit method toggle (PIX or Crypto)
+  const [depositMethod, setDepositMethod] = useState<"PIX" | "CRYPTO">("PIX");
+  
   // Estados para compra
   const [buyUSDT, setBuyUSDT] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [showPixModal, setShowPixModal] = useState(false);
+  
+  // Crypto deposit states
+  const [selectedNetwork, setSelectedNetwork] = useState("TRC20");
+  const [depositAddress, setDepositAddress] = useState<string | null>(null);
+  const [loadingAddress, setLoadingAddress] = useState(false);
+  const [addressCopied, setAddressCopied] = useState(false);
   const [pixData, setPixData] = useState<{
     qrCode: string;
     qrCodeBase64: string | null;
@@ -641,40 +706,157 @@ const TradePage = () => {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-background text-foreground">
-      <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
-      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl">
-        {/* Header */}
-        <div className="text-center mb-6 sm:mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-brand-500 via-purple-600 to-brand-600 bg-clip-text text-transparent mb-2">
-            {t("buyUSDT")}
-          </h1>
-          <p className="text-muted-foreground text-sm sm:text-base">
-            {t("buyUSDTViaPIX")} • {t("fee")}
-          </p>
-        </div>
+  // Fetch crypto deposit address
+  const fetchCryptoDepositAddress = async () => {
+    setLoadingAddress(true);
+    try {
+      const response = await fetch("/api/deposit/crypto/address", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          network: selectedNetwork,
+        }),
+      });
 
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.address) {
+          setDepositAddress(data.address);
+        } else {
+          throw new Error(data.error || "Failed to get deposit address");
+        }
+      } else {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to get deposit address");
+      }
+    } catch (error) {
+      console.error("Error fetching deposit address:", error);
+      toast({
+        title: language === "pt" ? "Erro" : "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : language === "pt"
+            ? "Falha ao obter endereço de depósito"
+            : "Failed to get deposit address",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingAddress(false);
+    }
+  };
+
+  // Copy crypto deposit address
+  const copyCryptoAddress = async () => {
+    if (depositAddress) {
+      try {
+        await navigator.clipboard.writeText(depositAddress);
+        setAddressCopied(true);
+        toast({
+          title: language === "pt" ? "Copiado!" : "Copied!",
+          description:
+            language === "pt"
+              ? "Endereço copiado para a área de transferência"
+              : "Address copied to clipboard",
+        });
+        setTimeout(() => setAddressCopied(false), 2000);
+      } catch (error) {
+        console.error("Failed to copy:", error);
+      }
+    }
+  };
+
+  // Prevent switching to CRYPTO mode (disabled for now)
+  useEffect(() => {
+    if (depositMethod === "CRYPTO") {
+      setDepositMethod("PIX");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [depositMethod]);
+
+  return (
+    <div 
+      className="min-h-screen bg-background text-foreground"
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
+      <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
+      <div 
+        className={`container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl ${isMobile ? "pb-16" : ""}`}
+        style={isMobile ? { paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' } : undefined}
+      >
         {/* Purchase Card */}
         <Card className="rounded-xl sm:rounded-2xl border-gray-800 bg-gray-900/50 backdrop-blur-sm mb-6 sm:mb-8">
           <CardHeader className="pb-4">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <CardTitle className="text-lg sm:text-xl text-white">
-                {t("buyUSDTViaPIX")}
-              </CardTitle>
-              <Badge
-                variant="secondary"
-                className="bg-brand-500/20 text-brand-400 border-brand-500/30"
-              >
-                {priceLoading
-                  ? language === "pt"
-                    ? "Carregando..."
-                    : "Loading..."
-                  : `1 USDT = ${formatBRL(usdtPrice)}`}
-              </Badge>
+            {/* Header inside card */}
+            <div className="text-center mb-6">
+              <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+                {language === "pt" ? "Depositar USDT" : "Deposit USDT"}
+              </h1>
+              <p className="text-gray-400 text-sm sm:text-base">
+                {depositMethod === "PIX"
+                  ? `${t("buyUSDTViaPIX")} • ${t("fee")}`
+                  : language === "pt"
+                  ? "Depositar USDT via Cripto"
+                  : "Deposit USDT via Crypto"}
+              </p>
             </div>
+
+            {/* Toggle Button for Deposit Method */}
+            <div className="mb-4 flex justify-center">
+              <div className="relative inline-flex items-center bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-1 shadow-lg">
+                <button
+                  onClick={() => setDepositMethod("PIX")}
+                  className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                    depositMethod === "PIX"
+                      ? "bg-green-600 text-white shadow-md"
+                      : "text-gray-400 hover:text-white hover:bg-gray-700/50"
+                  }`}
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <Wallet className="h-4 w-4" />
+                    <span>PIX</span>
+                  </div>
+                </button>
+                <div className="h-6 w-px bg-gray-700 mx-1"></div>
+                <button
+                  onClick={() => setDepositMethod("CRYPTO")}
+                  disabled
+                  className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all opacity-50 cursor-not-allowed ${
+                    depositMethod === "CRYPTO"
+                      ? "bg-gray-700 text-gray-500"
+                      : "text-gray-500 hover:text-gray-500"
+                  }`}
+                  title={language === "pt" ? "Em breve" : "Coming soon"}
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <Coins className="h-4 w-4" />
+                    <span>{language === "pt" ? "Cripto" : "Crypto"}</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+            
+            {/* Price badge for PIX method */}
+            {depositMethod === "PIX" && (
+              <div className="flex justify-center mb-4">
+                <Badge
+                  variant="secondary"
+                  className="bg-brand-500/20 text-brand-400 border-brand-500/30"
+                >
+                  {priceLoading
+                    ? language === "pt"
+                      ? "Carregando..."
+                      : "Loading..."
+                    : `1 USDT = ${formatBRL(usdtPrice)}`}
+                </Badge>
+              </div>
+            )}
           </CardHeader>
           <CardContent className="space-y-4 sm:space-y-6">
+            {depositMethod === "PIX" ? (
+              <>
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 {language === "pt" ? "Quantidade de USDT:" : "USDT Amount:"}
@@ -746,6 +928,37 @@ const TradePage = () => {
                 t("confirmPurchase")
               )}
             </Button>
+              </>
+            ) : (
+              <>
+                {/* Crypto Deposit Form - Temporarily Unavailable */}
+                <div className="p-8 sm:p-12 bg-gray-800/30 rounded-xl border border-gray-700/50 text-center">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="p-4 bg-gray-700/50 rounded-full">
+                      <Coins className="h-8 w-8 text-gray-500" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white mb-2">
+                        {language === "pt" ? "Em Breve" : "Coming Soon"}
+                      </h3>
+                      <p className="text-sm text-gray-400 max-w-md">
+                        {language === "pt"
+                          ? "A funcionalidade de depósito via cripto está em desenvolvimento e estará disponível em breve."
+                          : "Crypto deposit functionality is under development and will be available soon."}
+                      </p>
+                    </div>
+                    <div className="mt-4">
+                      <Button
+                        onClick={() => setDepositMethod("PIX")}
+                        className="bg-brand-500 hover:bg-brand-600 text-white"
+                      >
+                        {language === "pt" ? "Usar PIX" : "Use PIX"}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -1059,6 +1272,54 @@ const TradePage = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Mobile Page Indicator - Bottom Navigation */}
+      {isMobile && (
+        <div className="fixed bottom-0 left-0 right-0 z-50" style={{ paddingBottom: 'env(safe-area-inset-bottom, 8px)' }}>
+          <div className="flex justify-center pb-2 px-4">
+            <div className="relative inline-flex items-center bg-black/90 backdrop-blur-sm border border-gray-800 rounded-full px-1 py-1.5 shadow-lg">
+              {/* Deposit */}
+              <button
+                onClick={() => router.push("/trade")}
+                className={`relative px-3 sm:px-4 py-1.5 rounded-full text-xs font-medium transition-all touch-manipulation ${
+                  pathname === "/trade" || pathname === "/deposit"
+                    ? "bg-green-500 text-white"
+                    : "text-gray-400 hover:text-white active:bg-gray-700/50"
+                }`}
+                style={{ minWidth: '44px', minHeight: '44px' }}
+              >
+                <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              </button>
+
+              {/* Dashboard */}
+              <button
+                onClick={() => router.push("/dashboard")}
+                className={`relative px-3 sm:px-4 py-1.5 rounded-full text-xs font-medium transition-all touch-manipulation ${
+                  pathname === "/dashboard"
+                    ? "bg-brand-500 text-white"
+                    : "text-gray-400 hover:text-white active:bg-gray-700/50"
+                }`}
+                style={{ minWidth: '44px', minHeight: '44px' }}
+              >
+                <Home className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              </button>
+
+              {/* Withdraw */}
+              <button
+                onClick={() => router.push("/withdraw")}
+                className={`relative px-3 sm:px-4 py-1.5 rounded-full text-xs font-medium transition-all touch-manipulation ${
+                  pathname === "/withdraw"
+                    ? "bg-red-500 text-white"
+                    : "text-gray-400 hover:text-white active:bg-gray-700/50"
+                }`}
+                style={{ minWidth: '44px', minHeight: '44px' }}
+              >
+                <Minus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -185,6 +185,179 @@ export async function POST(request: NextRequest) {
 
     // Check if this is a withdrawal webhook (external_id starts with "withdrawal_")
     const isWithdrawalWebhook = external_id?.startsWith("withdrawal_") || false;
+    
+    // Check if this is a crypto deposit webhook (external_id starts with "deposit_" or eventType indicates deposit)
+    const isCryptoDepositWebhook = 
+      external_id?.startsWith("deposit_") || 
+      eventType?.includes("deposit") ||
+      eventType?.includes("crypto.received") ||
+      false;
+
+    // Handle crypto deposit webhooks first (before withdrawals)
+    if (isCryptoDepositWebhook && !isWithdrawalWebhook) {
+      // Find deposit by externalId
+      let foundDeposit = await prisma.deposit.findFirst({
+        where: {
+          externalId: external_id,
+        },
+        include: {
+          user: true,
+          transaction: true,
+        },
+      });
+
+      // If not found by externalId, try to find by paymentId (deposit address)
+      if (!foundDeposit && transaction_id) {
+        foundDeposit = await prisma.deposit.findFirst({
+          where: {
+            paymentMethod: "USDT",
+            status: "PENDING",
+            paymentId: transaction_id, // Match by address if stored
+          },
+          include: {
+            user: true,
+            transaction: true,
+          },
+        });
+      }
+
+      if (foundDeposit) {
+        const depositUser = foundDeposit.user;
+        
+        // Extract network from externalId or webhook data
+        const networkMatch = external_id?.match(/deposit_.*_(TRC20|ERC20|BSC)_/);
+        const network = networkMatch ? networkMatch[1] : 
+          webhookData.network || body.network || "TRC20";
+        
+        // Determine deposit status from webhook
+        let depositStatus: "PENDING" | "CONFIRMED" | "REJECTED" | "CANCELLED" = 
+          foundDeposit.status as "PENDING" | "CONFIRMED" | "REJECTED" | "CANCELLED";
+
+        if (
+          eventType === "transaction.completed" ||
+          eventType === "deposit.completed" ||
+          eventType === "crypto.received" ||
+          status === "completed" ||
+          status === "COMPLETED"
+        ) {
+          depositStatus = "CONFIRMED";
+        } else if (
+          eventType === "transaction.failed" ||
+          eventType === "deposit.failed" ||
+          status === "failed" ||
+          status === "FAILED"
+        ) {
+          depositStatus = "REJECTED";
+        }
+
+        // Extract amount from webhook (if provided)
+        const depositAmount = amount || usdt_amount || Number(foundDeposit.amount);
+        
+        // Update deposit with webhook data
+        const updatedDeposit = await prisma.deposit.update({
+          where: { id: foundDeposit.id },
+          data: {
+            status: depositStatus,
+            amount: depositAmount > 0 ? new Decimal(depositAmount) : foundDeposit.amount, // Update with actual received amount if provided
+            confirmedAt: depositStatus === "CONFIRMED" ? new Date() : foundDeposit.confirmedAt,
+            paymentId: transaction_id || foundDeposit.paymentId, // Store transaction hash
+            paymentStatus: status?.toUpperCase() || foundDeposit.paymentStatus,
+            paymentAmount: amount ? new Decimal(amount) : foundDeposit.paymentAmount,
+          },
+        });
+
+        // If deposit is confirmed, credit user balance
+        if (depositStatus === "CONFIRMED" && !foundDeposit.transaction) {
+          // Update USDT balance
+          const usdtBalance = await prisma.balance.findFirst({
+            where: {
+              userId: depositUser.id,
+              currency: "USDT",
+            },
+          });
+
+          const finalAmount = depositAmount > 0 ? depositAmount : Number(foundDeposit.amount);
+
+          if (usdtBalance) {
+            await prisma.balance.update({
+              where: { id: usdtBalance.id },
+              data: {
+                amount: Number(usdtBalance.amount) + finalAmount,
+                updatedAt: new Date(),
+              },
+            });
+          } else {
+            // Create USDT balance if it doesn't exist
+            await prisma.balance.create({
+              data: {
+                userId: depositUser.id,
+                currency: "USDT",
+                amount: finalAmount,
+                locked: 0,
+              },
+            });
+          }
+
+          // Create transaction record
+          const depositTransaction = await prisma.transaction.create({
+            data: {
+              userId: depositUser.id,
+              type: "DEPOSIT",
+              amount: finalAmount,
+              currency: "USDT",
+              balance: (usdtBalance ? Number(usdtBalance.amount) : 0) + finalAmount,
+              description: `USDT deposit via ${network} - ${finalAmount} USDT`,
+              metadata: {
+                depositId: foundDeposit.id,
+                network: network,
+                transactionHash: transaction_id,
+                externalId: external_id,
+              },
+              createdAt: new Date(),
+            },
+          });
+
+          // Link deposit to transaction
+          await prisma.deposit.update({
+            where: { id: foundDeposit.id },
+            data: { transactionId: depositTransaction.id },
+          });
+
+          // Send deposit confirmation email (don't await to avoid blocking)
+          if (depositUser.email && depositUser.name) {
+            // TODO: Implement sendDepositConfirmationEmail function
+            console.log(`Deposit confirmed for user ${depositUser.email}: ${finalAmount} USDT`);
+          }
+        }
+
+        // Mark webhook as processed
+        if (webhookEventId) {
+          try {
+            await prisma.webhookEvent.update({
+              where: { id: webhookEventId },
+              data: {
+                processed: true,
+                error: null,
+              },
+            });
+          } catch (dbError) {
+            // Ignore if model doesn't exist
+          }
+        }
+
+        return NextResponse.json({
+          success: true,
+          message: "Crypto deposit webhook processed",
+          depositId: foundDeposit.id,
+          depositStatus: depositStatus,
+        });
+      } else {
+        console.log("Crypto deposit not found, continuing to other handlers", {
+          external_id,
+          transaction_id,
+        });
+      }
+    }
 
     if (isWithdrawalWebhook) {
       // Handle withdrawal webhook - try to find by externalId first

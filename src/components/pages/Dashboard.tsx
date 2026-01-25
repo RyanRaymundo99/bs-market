@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import {
   TrendingDown,
   Bitcoin,
@@ -21,6 +21,10 @@ import {
   Users,
   Receipt,
   RotateCcw,
+  Home,
+  Coins,
+  Plus,
+  Minus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -97,6 +101,7 @@ interface Withdrawal {
 
 export default function Dashboard() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const { t, language } = useLanguage();
@@ -116,6 +121,56 @@ export default function Dashboard() {
   const [chartData, setChartData] = useState<
     Array<{ date: string; BRL: number; USDT: number }>
   >([]);
+
+  // Swipe gesture state for mobile navigation
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Minimum swipe distance (in pixels)
+  const minSwipeDistance = 50;
+
+  // Detect mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent
+        ) || window.innerWidth <= 768
+      );
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  // Swipe gesture handlers
+  const onTouchStart = (e: React.TouchEvent) => {
+    if (!isMobile) return;
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (!isMobile) return;
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!isMobile || !touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe) {
+      // Swipe left -> go to withdraw
+      router.push("/withdraw");
+    } else if (isRightSwipe) {
+      // Swipe right -> go to deposit (trade page)
+      router.push("/trade");
+    }
+  };
 
   // Check if user is authenticated
   useEffect(() => {
@@ -607,10 +662,18 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div 
+      className="min-h-screen bg-background text-foreground"
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
       <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
 
-      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl">
+      <div 
+        className={`container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl ${isMobile ? "pb-16" : ""}`}
+        style={isMobile ? { paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' } : undefined}
+      >
         {/* KYC Status Banner */}
         {showKYCBanner && userStatus && (
           <KYCBanner
@@ -663,7 +726,7 @@ export default function Dashboard() {
               </button>
               <div className="h-6 w-px bg-white/10 mx-1"></div>
               <button
-                onClick={() => router.push("/trade")}
+                onClick={() => router.push("/deposit")}
                 className="px-6 py-2 rounded-lg text-sm font-medium transition-all text-gray-400 hover:text-white hover:bg-white/5"
               >
                 {t("deposit")}
@@ -1133,6 +1196,54 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Mobile Page Indicator - Bottom Navigation */}
+      {isMobile && (
+        <div className="fixed bottom-0 left-0 right-0 z-50" style={{ paddingBottom: 'env(safe-area-inset-bottom, 8px)' }}>
+          <div className="flex justify-center pb-2 px-4">
+            <div className="relative inline-flex items-center bg-black/90 backdrop-blur-sm border border-gray-800 rounded-full px-1 py-1.5 shadow-lg">
+              {/* Deposit */}
+              <button
+                onClick={() => router.push("/trade")}
+                className={`relative px-3 sm:px-4 py-1.5 rounded-full text-xs font-medium transition-all touch-manipulation ${
+                  pathname === "/trade" || pathname === "/deposit"
+                    ? "bg-green-500 text-white"
+                    : "text-gray-400 hover:text-white active:bg-gray-700/50"
+                }`}
+                style={{ minWidth: '44px', minHeight: '44px' }}
+              >
+                <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              </button>
+
+              {/* Dashboard */}
+              <button
+                onClick={() => router.push("/dashboard")}
+                className={`relative px-3 sm:px-4 py-1.5 rounded-full text-xs font-medium transition-all touch-manipulation ${
+                  pathname === "/dashboard"
+                    ? "bg-brand-500 text-white"
+                    : "text-gray-400 hover:text-white active:bg-gray-700/50"
+                }`}
+                style={{ minWidth: '44px', minHeight: '44px' }}
+              >
+                <Home className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              </button>
+
+              {/* Withdraw */}
+              <button
+                onClick={() => router.push("/withdraw")}
+                className={`relative px-3 sm:px-4 py-1.5 rounded-full text-xs font-medium transition-all touch-manipulation ${
+                  pathname === "/withdraw"
+                    ? "bg-red-500 text-white"
+                    : "text-gray-400 hover:text-white active:bg-gray-700/50"
+                }`}
+                style={{ minWidth: '44px', minHeight: '44px' }}
+              >
+                <Minus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

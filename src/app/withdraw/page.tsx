@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -35,6 +36,11 @@ import {
   Clock,
   XCircle,
   ExternalLink,
+  Home,
+  TrendingUp,
+  TrendingDown,
+  Plus,
+  Minus,
 } from "lucide-react";
 import NavbarNew from "@/components/ui/navbar-new";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -70,9 +76,59 @@ interface WithdrawalHistory {
 }
 
 export default function WithdrawPage() {
+  const router = useRouter();
+  const pathname = usePathname();
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [loading, setLoading] = useState(true);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  // Swipe gesture state for mobile navigation
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const minSwipeDistance = 50;
+
+  // Detect mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent
+        ) || window.innerWidth <= 768
+      );
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  // Swipe gesture handlers
+  const onTouchStart = (e: React.TouchEvent) => {
+    if (!isMobile) return;
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (!isMobile) return;
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!isMobile || !touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe) {
+      // Swipe left -> go to dashboard (wrap around)
+      router.push("/dashboard");
+    } else if (isRightSwipe) {
+      // Swipe right -> go to deposit (trade page)
+      router.push("/trade");
+    }
+  };
   const [processing, setProcessing] = useState(false);
   const [withdrawalHistory, setWithdrawalHistory] = useState<
     WithdrawalHistory[]
@@ -490,48 +546,63 @@ export default function WithdrawPage() {
   const usdtBalance = walletData?.balances.find((b) => b.currency === "USDT");
 
   return (
-    <div className="min-h-screen bg-background">
+    <div 
+      className="min-h-screen bg-background"
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
       <NavbarNew isLoggingOut={false} handleLogout={() => {}} />
-      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl">
-        {/* Header */}
-        <div className="text-center mb-6 sm:mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-brand-500 via-purple-600 to-brand-600 bg-clip-text text-transparent mb-2">
-            {t("withdrawUSDT")}
-          </h1>
-          <p className="text-muted-foreground text-sm sm:text-base">
-            {t("chooseWithdrawalMethod")}
-          </p>
-        </div>
-
+      <div 
+        className={`container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl ${isMobile ? "pb-16" : ""}`}
+        style={isMobile ? { paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' } : undefined}
+      >
         <div className="max-w-4xl mx-auto">
           {/* Main Withdrawal Form */}
           <div>
             <Card className="rounded-xl sm:rounded-2xl border-gray-800 bg-gray-900/50 backdrop-blur-sm">
               <CardHeader>
+                {/* Header inside card */}
+                <div className="text-center mb-6">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+                    {t("withdrawUSDT")}
+                  </h1>
+                  <p className="text-gray-400 text-sm sm:text-base">
+                    {t("chooseWithdrawalMethod")}
+                  </p>
+                </div>
+
                 {/* Withdrawal Type Tabs */}
-                <div className="flex gap-2 mb-4">
-                  <Button
-                    variant={withdrawalType === "USDT" ? "default" : "outline"}
-                    onClick={() => setWithdrawalType("USDT")}
-                    className={`flex-1 ${withdrawalType === "USDT" 
-                      ? "bg-brand-500 hover:bg-brand-600 text-white" 
-                      : "bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-700 hover:text-white"
-                    }`}
-                  >
-                    <Coins className="h-4 w-4 mr-2" />
-                    USDT
-                  </Button>
-                  <Button
-                    variant={withdrawalType === "PIX" ? "default" : "outline"}
-                    onClick={() => setWithdrawalType("PIX")}
-                    className={`flex-1 ${withdrawalType === "PIX" 
-                      ? "bg-green-600 hover:bg-green-700 text-white" 
-                      : "bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-700 hover:text-white"
-                    }`}
-                  >
-                    <Wallet className="h-4 w-4 mr-2" />
-                    PIX (BRL)
-                  </Button>
+                <div className="mb-4 flex justify-center">
+                  <div className="relative inline-flex items-center bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-1 shadow-lg">
+                    <button
+                      onClick={() => setWithdrawalType("USDT")}
+                      className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                        withdrawalType === "USDT"
+                          ? "bg-brand-500 text-white shadow-md"
+                          : "text-gray-400 hover:text-white hover:bg-gray-700/50"
+                      }`}
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        <Coins className="h-4 w-4" />
+                        <span>USDT</span>
+                      </div>
+                    </button>
+                    <div className="h-6 w-px bg-gray-700 mx-1"></div>
+                    <button
+                      onClick={() => setWithdrawalType("PIX")}
+                      className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                        withdrawalType === "PIX"
+                          ? "bg-green-600 text-white shadow-md"
+                          : "text-gray-400 hover:text-white hover:bg-gray-700/50"
+                      }`}
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        <Wallet className="h-4 w-4" />
+                        <span>PIX (BRL)</span>
+                      </div>
+                    </button>
+                  </div>
                 </div>
                 <CardTitle className="flex items-center gap-2 text-white">
                   {withdrawalType === "USDT" ? (
@@ -912,6 +983,54 @@ export default function WithdrawPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Mobile Page Indicator - Bottom Navigation */}
+      {isMobile && (
+        <div className="fixed bottom-0 left-0 right-0 z-50" style={{ paddingBottom: 'env(safe-area-inset-bottom, 8px)' }}>
+          <div className="flex justify-center pb-2 px-4">
+            <div className="relative inline-flex items-center bg-black/90 backdrop-blur-sm border border-gray-800 rounded-full px-1 py-1.5 shadow-lg">
+              {/* Deposit */}
+              <button
+                onClick={() => router.push("/trade")}
+                className={`relative px-3 sm:px-4 py-1.5 rounded-full text-xs font-medium transition-all touch-manipulation ${
+                  pathname === "/trade" || pathname === "/deposit"
+                    ? "bg-green-500 text-white"
+                    : "text-gray-400 hover:text-white active:bg-gray-700/50"
+                }`}
+                style={{ minWidth: '44px', minHeight: '44px' }}
+              >
+                <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              </button>
+
+              {/* Dashboard */}
+              <button
+                onClick={() => router.push("/dashboard")}
+                className={`relative px-3 sm:px-4 py-1.5 rounded-full text-xs font-medium transition-all touch-manipulation ${
+                  pathname === "/dashboard"
+                    ? "bg-brand-500 text-white"
+                    : "text-gray-400 hover:text-white active:bg-gray-700/50"
+                }`}
+                style={{ minWidth: '44px', minHeight: '44px' }}
+              >
+                <Home className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              </button>
+
+              {/* Withdraw */}
+              <button
+                onClick={() => router.push("/withdraw")}
+                className={`relative px-3 sm:px-4 py-1.5 rounded-full text-xs font-medium transition-all touch-manipulation ${
+                  pathname === "/withdraw"
+                    ? "bg-red-500 text-white"
+                    : "text-gray-400 hover:text-white active:bg-gray-700/50"
+                }`}
+                style={{ minWidth: '44px', minHeight: '44px' }}
+              >
+                <Minus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
