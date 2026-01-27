@@ -38,7 +38,6 @@ const TradePage = () => {
   const { t, language } = useLanguage();
 
   // Admin-controlled switch to disable deposits/withdrawals
-  const [moneyStatusLoading, setMoneyStatusLoading] = useState(true);
   const [moneyDisabled, setMoneyDisabled] = useState(false);
   const [moneyDisabledMessage, setMoneyDisabledMessage] = useState<string>("");
 
@@ -64,7 +63,6 @@ const TradePage = () => {
 
   useEffect(() => {
     const loadMoneyStatus = async () => {
-      setMoneyStatusLoading(true);
       try {
         const response = await fetch("/api/site-status");
         if (!response.ok) return;
@@ -75,8 +73,6 @@ const TradePage = () => {
         }
       } catch (error) {
         console.error("Failed to load site status:", error);
-      } finally {
-        setMoneyStatusLoading(false);
       }
     };
     loadMoneyStatus();

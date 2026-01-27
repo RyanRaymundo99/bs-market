@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
         if (balanceInfo.depositAddress || balanceInfo.address) {
           depositAddress = balanceInfo.depositAddress || balanceInfo.address;
         }
-      } catch (error) {
+      } catch {
         console.log("Could not get address from balance endpoint, using fallback");
       }
     }

@@ -196,7 +196,7 @@ export default function AdminDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<keyof Transaction>("date");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [, setSelectedTransaction] = useState<Transaction | null>(null);
   const [transactionDetails, setTransactionDetails] =
     useState<TransactionDetails | null>(null);
@@ -463,7 +463,7 @@ export default function AdminDashboard() {
       } else {
         throw new Error("Failed to update");
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Erro",
         description: "Não foi possível atualizar os dados",
