@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { nutzPayService } from "@/lib/nutzpay";
 import { Decimal } from "@prisma/client/runtime/library";
+import { getMoneyControls } from "@/lib/money-controls";
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,6 +43,18 @@ export async function POST(request: NextRequest) {
             "Sua conta está pendente de aprovação. Complete seu cadastro e aguarde a aprovação.",
         },
         { status: 403 }
+      );
+    }
+
+    // Admin-controlled global switch to disable money functions (deposits/withdrawals)
+    const moneyControls = await getMoneyControls();
+    if (moneyControls.moneyDisabled) {
+      return NextResponse.json(
+        {
+          error: moneyControls.moneyDisabledMessage,
+          code: "MONEY_DISABLED",
+        },
+        { status: 503 }
       );
     }
 

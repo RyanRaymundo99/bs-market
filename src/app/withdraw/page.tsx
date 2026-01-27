@@ -82,6 +82,11 @@ export default function WithdrawPage() {
   const [loading, setLoading] = useState(true);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
+  // Admin-controlled switch to disable deposits/withdrawals
+  const [moneyStatusLoading, setMoneyStatusLoading] = useState(true);
+  const [moneyDisabled, setMoneyDisabled] = useState(false);
+  const [moneyDisabledMessage, setMoneyDisabledMessage] = useState<string>("");
+
   // Swipe gesture state for mobile navigation
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
@@ -151,6 +156,26 @@ export default function WithdrawPage() {
 
   const { toast } = useToast();
   const { t, language } = useLanguage();
+
+  useEffect(() => {
+    const loadMoneyStatus = async () => {
+      setMoneyStatusLoading(true);
+      try {
+        const response = await fetch("/api/site-status");
+        if (!response.ok) return;
+        const data = await response.json();
+        if (data?.success) {
+          setMoneyDisabled(Boolean(data.moneyDisabled));
+          setMoneyDisabledMessage(String(data.moneyDisabledMessage || ""));
+        }
+      } catch (error) {
+        console.error("Failed to load site status:", error);
+      } finally {
+        setMoneyStatusLoading(false);
+      }
+    };
+    loadMoneyStatus();
+  }, []);
 
   const handleLogout = useCallback(async () => {
     setIsLoggingOut(true);
@@ -295,6 +320,18 @@ export default function WithdrawPage() {
 
   // Handle USDT withdrawal
   const handleUSDTWithdrawal = async () => {
+    if (moneyDisabled) {
+      toast({
+        title: language === "pt" ? "Indisponível" : "Unavailable",
+        description:
+          moneyDisabledMessage ||
+          (language === "pt"
+            ? "Saques temporariamente desativados."
+            : "Withdrawals are temporarily disabled."),
+        variant: "destructive",
+      });
+      return;
+    }
     if (!usdtAmount || parseFloat(usdtAmount) <= 0) {
       toast({
         title: t("invalidAmount"),
@@ -388,6 +425,18 @@ export default function WithdrawPage() {
 
   // Handle PIX withdrawal
   const handlePIXWithdrawal = async () => {
+    if (moneyDisabled) {
+      toast({
+        title: language === "pt" ? "Indisponível" : "Unavailable",
+        description:
+          moneyDisabledMessage ||
+          (language === "pt"
+            ? "Saques temporariamente desativados."
+            : "Withdrawals are temporarily disabled."),
+        variant: "destructive",
+      });
+      return;
+    }
     if (!pixAmount || parseFloat(pixAmount) <= 0) {
       toast({
         title: language === "pt" ? "Valor inválido" : "Invalid amount",
@@ -572,6 +621,22 @@ export default function WithdrawPage() {
                   </p>
                 </div>
 
+                {moneyDisabled ? (
+                  <div className="mb-4 rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4">
+                    <p className="text-sm font-medium text-yellow-200">
+                      {language === "pt"
+                        ? "Atualização da plataforma"
+                        : "Platform update"}
+                    </p>
+                    <p className="text-xs text-yellow-100/80 mt-1">
+                      {moneyDisabledMessage ||
+                        (language === "pt"
+                          ? "Depósitos e saques estão temporariamente desativados."
+                          : "Deposits and withdrawals are temporarily disabled.")}
+                    </p>
+                  </div>
+                ) : null}
+
                 {/* Withdrawal Type Tabs */}
                 <div className="mb-4 flex justify-center">
                   <div className="relative inline-flex items-center bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-1 shadow-lg">
@@ -726,6 +791,7 @@ export default function WithdrawPage() {
                       <Button
                         onClick={handleUSDTWithdrawal}
                         disabled={
+                          moneyDisabled ||
                           processing ||
                           !usdtAmount ||
                           !walletAddress ||
@@ -837,6 +903,7 @@ export default function WithdrawPage() {
                       <Button
                         onClick={handlePIXWithdrawal}
                         disabled={
+                          moneyDisabled ||
                           processingPix ||
                           !pixAmount ||
                           !pixKey ||

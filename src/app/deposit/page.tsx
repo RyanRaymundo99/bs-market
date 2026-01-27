@@ -77,6 +77,11 @@ export default function DepositPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
 
+  // Admin-controlled switch to disable deposits/withdrawals
+  const [moneyStatusLoading, setMoneyStatusLoading] = useState(true);
+  const [moneyDisabled, setMoneyDisabled] = useState(false);
+  const [moneyDisabledMessage, setMoneyDisabledMessage] = useState<string>("");
+
   // Deposit Type
   const [depositType, setDepositType] = useState<"USDT" | "PIX">("USDT");
   
@@ -89,6 +94,26 @@ export default function DepositPage() {
 
   const { toast } = useToast();
   const { t, language } = useLanguage();
+
+  useEffect(() => {
+    const loadMoneyStatus = async () => {
+      setMoneyStatusLoading(true);
+      try {
+        const response = await fetch("/api/site-status");
+        if (!response.ok) return;
+        const data = await response.json();
+        if (data?.success) {
+          setMoneyDisabled(Boolean(data.moneyDisabled));
+          setMoneyDisabledMessage(String(data.moneyDisabledMessage || ""));
+        }
+      } catch (error) {
+        console.error("Failed to load site status:", error);
+      } finally {
+        setMoneyStatusLoading(false);
+      }
+    };
+    loadMoneyStatus();
+  }, []);
 
   const handleLogout = useCallback(async () => {
     setIsLoggingOut(true);
@@ -189,6 +214,18 @@ export default function DepositPage() {
 
   // Fetch deposit address
   const fetchDepositAddress = async () => {
+    if (moneyDisabled) {
+      toast({
+        title: language === "pt" ? "Indisponível" : "Unavailable",
+        description:
+          moneyDisabledMessage ||
+          (language === "pt"
+            ? "Depósitos temporariamente desativados."
+            : "Deposits are temporarily disabled."),
+        variant: "destructive",
+      });
+      return;
+    }
     setLoadingAddress(true);
     try {
       const response = await fetch("/api/deposit/crypto/address", {
@@ -309,10 +346,10 @@ export default function DepositPage() {
 
   // Fetch address when network changes
   useEffect(() => {
-    if (depositType === "USDT") {
+    if (!moneyStatusLoading && depositType === "USDT" && !moneyDisabled) {
       fetchDepositAddress();
     }
-  }, [selectedNetwork, depositType]);
+  }, [selectedNetwork, depositType, moneyDisabled, moneyStatusLoading]);
 
   if (loading) {
     return (
@@ -353,6 +390,24 @@ export default function DepositPage() {
         </div>
 
         <div className="max-w-4xl mx-auto">
+          {moneyDisabled ? (
+            <Card className="mb-6 rounded-xl border-yellow-500/30 bg-yellow-500/10">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-yellow-200 text-base">
+                  {language === "pt"
+                    ? "Atualização da plataforma"
+                    : "Platform update"}
+                </CardTitle>
+                <CardDescription className="text-yellow-100/80">
+                  {moneyDisabledMessage ||
+                    (language === "pt"
+                      ? "Depósitos e saques estão temporariamente desativados."
+                      : "Deposits and withdrawals are temporarily disabled.")}
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          ) : null}
+
           {/* Main Deposit Form */}
           <Card className="rounded-xl sm:rounded-2xl border-gray-800 bg-gray-900/50 backdrop-blur-sm">
             <CardHeader>
@@ -512,6 +567,7 @@ export default function DepositPage() {
                       <Button
                         onClick={fetchDepositAddress}
                         variant="outline"
+                        disabled={moneyDisabled}
                         className="border-brand-500 text-brand-400 hover:bg-brand-900"
                       >
                         {language === "pt"
@@ -566,8 +622,23 @@ export default function DepositPage() {
                         : "Buy USDT with BRL using PIX"}
                     </p>
                     <Button
-                      onClick={() => (window.location.href = "/trade")}
-                      className="bg-green-600 hover:bg-green-700 text-white"
+                      onClick={() => {
+                        if (moneyDisabled) {
+                          toast({
+                            title: language === "pt" ? "Indisponível" : "Unavailable",
+                            description:
+                              moneyDisabledMessage ||
+                              (language === "pt"
+                                ? "Depósitos temporariamente desativados."
+                                : "Deposits are temporarily disabled."),
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        window.location.href = "/trade";
+                      }}
+                      disabled={moneyDisabled}
+                      className="bg-green-600 hover:bg-green-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white"
                     >
                       {language === "pt" ? "Ir para Comprar USDT" : "Go to Buy USDT"}
                     </Button>

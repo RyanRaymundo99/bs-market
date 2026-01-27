@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { nutzPayService } from "@/lib/nutzpay";
 import { sendWithdrawalReceipt } from "@/lib/receipt-email";
+import { getMoneyControls } from "@/lib/money-controls";
 
 export async function POST(request: NextRequest) {
   try {
@@ -54,6 +55,18 @@ export async function POST(request: NextRequest) {
             "Sua verificação KYC está pendente. Complete o upload dos documentos KYC para realizar saques.",
         },
         { status: 403 }
+      );
+    }
+
+    // Admin-controlled global switch to disable money functions (deposits/withdrawals)
+    const moneyControls = await getMoneyControls();
+    if (moneyControls.moneyDisabled) {
+      return NextResponse.json(
+        {
+          error: moneyControls.moneyDisabledMessage,
+          code: "MONEY_DISABLED",
+        },
+        { status: 503 }
       );
     }
 

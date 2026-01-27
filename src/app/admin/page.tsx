@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -253,6 +254,16 @@ export default function AdminDashboard() {
   const [userEditForm, setUserEditForm] = useState({ name: "", phone: "", cpf: "" });
   const [savingUserData, setSavingUserData] = useState(false);
   const [inlineBalanceAmount, setInlineBalanceAmount] = useState("");
+
+  // Global switch: disable deposits/withdrawals + show maintenance message
+  const [moneyControlsLoading, setMoneyControlsLoading] = useState(true);
+  const [moneyDisabled, setMoneyDisabled] = useState(false);
+  const [moneyDisabledMessage, setMoneyDisabledMessage] = useState("");
+  const [savingMoneyControls, setSavingMoneyControls] = useState(false);
+  const [moneyControlsMeta, setMoneyControlsMeta] = useState<{
+    updatedAt: string;
+    updatedBy: string | null;
+  } | null>(null);
   
   // Historical data states for hover tooltips
   const [historyData, setHistoryData] = useState<Record<string, Array<{ date: string; value: number }>>>({});
@@ -263,6 +274,86 @@ export default function AdminDashboard() {
   
   const { toast } = useToast();
   const router = useRouter();
+
+  useEffect(() => {
+    const loadMoneyControls = async () => {
+      setMoneyControlsLoading(true);
+      try {
+        const response = await fetch("/api/admin/site-settings/money", {
+          method: "GET",
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const data = await response.json();
+        if (data?.moneyControls) {
+          setMoneyDisabled(Boolean(data.moneyControls.moneyDisabled));
+          setMoneyDisabledMessage(String(data.moneyControls.moneyDisabledMessage || ""));
+          setMoneyControlsMeta({
+            updatedAt: String(data.moneyControls.updatedAt),
+            updatedBy: data.moneyControls.updatedBy ?? null,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to load money controls:", error);
+      } finally {
+        setMoneyControlsLoading(false);
+      }
+    };
+
+    loadMoneyControls();
+  }, []);
+
+  const saveMoneyControls = async () => {
+    setSavingMoneyControls(true);
+    try {
+      const response = await fetch("/api/admin/site-settings/money", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          moneyDisabled,
+          moneyDisabledMessage,
+          notifyUsers: true,
+        }),
+      });
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(data?.error || "Failed to update settings");
+      }
+
+      if (data?.moneyControls) {
+        setMoneyDisabled(Boolean(data.moneyControls.moneyDisabled));
+        setMoneyDisabledMessage(String(data.moneyControls.moneyDisabledMessage || ""));
+        setMoneyControlsMeta({
+          updatedAt: String(data.moneyControls.updatedAt),
+          updatedBy: data.moneyControls.updatedBy ?? null,
+        });
+      }
+
+      toast({
+        title: "Atualizado",
+        description: `Configuração salva. Usuários notificados: ${Number(
+          data?.notifiedUsers || 0
+        )}.`,
+      });
+    } catch (error) {
+      console.error("Failed to save money controls:", error);
+      toast({
+        title: "Erro",
+        description:
+          error instanceof Error ? error.message : "Falha ao salvar configuração",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingMoneyControls(false);
+    }
+  };
   
   // Search for users inline
   const handleUserSearch = async () => {
@@ -1520,6 +1611,73 @@ export default function AdminDashboard() {
                   </Button>
                 </Link>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Money Functions / Maintenance */}
+          <Card className="bg-gray-900 border-gray-800">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center justify-between">
+                Money Functions
+                {moneyDisabled ? (
+                  <WifiOff className="h-4 w-4 text-red-400" />
+                ) : (
+                  <Wifi className="h-4 w-4 text-green-400" />
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  checked={moneyDisabled}
+                  onCheckedChange={(checked) => setMoneyDisabled(checked === true)}
+                  disabled={moneyControlsLoading || savingMoneyControls}
+                  className="mt-1 border-gray-600 data-[state=checked]:bg-red-600"
+                />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-gray-200">
+                    Disable deposits & withdrawals
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    Blocks deposit/withdraw APIs and shows the message to users.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-gray-300">Message shown to users</Label>
+                <Textarea
+                  value={moneyDisabledMessage}
+                  onChange={(e) => setMoneyDisabledMessage(e.target.value)}
+                  placeholder="The site is being updated..."
+                  className="bg-gray-800/50 border-gray-700 text-white placeholder-gray-500"
+                  rows={4}
+                  disabled={moneyControlsLoading || savingMoneyControls}
+                />
+              </div>
+
+              <Button
+                onClick={saveMoneyControls}
+                disabled={moneyControlsLoading || savingMoneyControls}
+                className={`w-full ${
+                  moneyDisabled
+                    ? "bg-red-600 hover:bg-red-700"
+                    : "bg-green-600 hover:bg-green-700"
+                } text-white`}
+              >
+                <Send className="w-4 h-4 mr-2" />
+                {savingMoneyControls ? "Saving..." : "Save & Notify Users"}
+              </Button>
+
+              {moneyControlsMeta?.updatedAt ? (
+                <p className="text-xs text-gray-500">
+                  Last update:{" "}
+                  {new Date(moneyControlsMeta.updatedAt).toLocaleString()}{" "}
+                  {moneyControlsMeta.updatedBy
+                    ? `(${moneyControlsMeta.updatedBy})`
+                    : ""}
+                </p>
+              ) : null}
             </CardContent>
           </Card>
         </div>

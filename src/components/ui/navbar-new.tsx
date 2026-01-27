@@ -30,11 +30,30 @@ interface NavbarProps {
 export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [moneyDisabled, setMoneyDisabled] = useState(false);
+  const [moneyDisabledMessage, setMoneyDisabledMessage] = useState<string>("");
   const { language, setLanguage, t } = useLanguage();
 
   // Prevent hydration mismatch by only rendering translated content after mount
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const loadSiteStatus = async () => {
+      try {
+        const response = await fetch("/api/site-status");
+        if (!response.ok) return;
+        const data = await response.json();
+        if (data?.success) {
+          setMoneyDisabled(Boolean(data.moneyDisabled));
+          setMoneyDisabledMessage(String(data.moneyDisabledMessage || ""));
+        }
+      } catch (error) {
+        console.error("Failed to load site status:", error);
+      }
+    };
+    loadSiteStatus();
   }, []);
 
   useEffect(() => {
@@ -195,6 +214,19 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
           </Button>
         </div>
       </header>
+
+      {moneyDisabled ? (
+        <div className="w-full border-b border-yellow-500/30 bg-yellow-500/10 px-4 py-2">
+          <p className="text-xs text-yellow-200">
+            {moneyDisabledMessage ||
+              (mounted
+                ? language === "pt"
+                  ? "A plataforma está em atualização. Depósitos e saques estão temporariamente desativados."
+                  : "The platform is being updated. Deposits and withdrawals are temporarily disabled."
+                : "Platform update in progress.")}
+          </p>
+        </div>
+      ) : null}
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
