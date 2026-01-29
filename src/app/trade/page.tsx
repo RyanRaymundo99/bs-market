@@ -39,7 +39,8 @@ const TradePage = () => {
 
   // Admin-controlled switch to disable deposits
   const [depositsDisabled, setDepositsDisabled] = useState(false);
-  const [depositsDisabledMessage, setDepositsDisabledMessage] = useState<string>("");
+  const [depositsDisabledMessage, setDepositsDisabledMessage] =
+    useState<string>("");
 
   // Swipe gesture state for mobile navigation
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -52,8 +53,8 @@ const TradePage = () => {
     const checkMobile = () => {
       setIsMobile(
         /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-          navigator.userAgent
-        ) || window.innerWidth <= 768
+          navigator.userAgent,
+        ) || window.innerWidth <= 768,
       );
     };
     checkMobile();
@@ -69,7 +70,9 @@ const TradePage = () => {
         const data = await response.json();
         if (data?.success) {
           setDepositsDisabled(Boolean(data.depositsDisabled));
-          setDepositsDisabledMessage(String(data.depositsDisabledMessage || ""));
+          setDepositsDisabledMessage(
+            String(data.depositsDisabledMessage || ""),
+          );
         }
       } catch (error) {
         console.error("Failed to load site status:", error);
@@ -92,7 +95,7 @@ const TradePage = () => {
 
   const onTouchEnd = () => {
     if (!isMobile || !touchStart || !touchEnd) return;
-    
+
     const distance = touchStart - touchEnd;
     const isLeftSwipe = distance > minSwipeDistance;
     const isRightSwipe = distance < -minSwipeDistance;
@@ -137,12 +140,12 @@ const TradePage = () => {
 
   // Deposit method toggle (PIX or Crypto)
   const [depositMethod, setDepositMethod] = useState<"PIX" | "CRYPTO">("PIX");
-  
+
   // Estados para compra
   const [buyUSDT, setBuyUSDT] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [showPixModal, setShowPixModal] = useState(false);
-  
+
   // Crypto deposit states
   const [selectedNetwork, setSelectedNetwork] = useState("TRC20");
   const [depositAddress, setDepositAddress] = useState<string | null>(null);
@@ -184,7 +187,7 @@ const TradePage = () => {
 
   // Track which transactions are in loading state (recently created, status being determined)
   const [loadingTransactions, setLoadingTransactions] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
 
   // Store PIX data by transaction ID so we can reopen the modal for pending payments
@@ -327,7 +330,7 @@ const TradePage = () => {
                   "rejectionMessage",
                   language === "pt"
                     ? "Sua conta foi rejeitada. Entre em contato com o suporte."
-                    : "Your account has been rejected. Please contact support."
+                    : "Your account has been rejected. Please contact support.",
                 );
                 window.location.href = "/";
               }
@@ -408,7 +411,7 @@ const TradePage = () => {
           }
           const buyOrders = (data.orders as OrderResponse[])
             .filter(
-              (order) => order.type === "BUY" && order.baseCurrency === "USDT"
+              (order) => order.type === "BUY" && order.baseCurrency === "USDT",
             )
             .map((order) => {
               const total = parseFloat(order.total.toString());
@@ -481,7 +484,7 @@ const TradePage = () => {
               } catch (error) {
                 console.error(
                   "Error updating PIX data in localStorage:",
-                  error
+                  error,
                 );
               }
             }
@@ -578,12 +581,12 @@ const TradePage = () => {
                       0,
                       0,
                       canvas.width,
-                      canvas.height
+                      canvas.height,
                     );
                     const code = jsQR(
                       imageData.data,
                       imageData.width,
-                      imageData.height
+                      imageData.height,
                     );
                     resolve(code?.data || null);
                   } else {
@@ -610,7 +613,7 @@ const TradePage = () => {
               console.log("✅ Successfully decoded PIX code from QR image!");
               console.log(
                 "Decoded PIX code:",
-                decodedCode.substring(0, 50) + "..."
+                decodedCode.substring(0, 50) + "...",
               );
               pixCode = decodedCode;
             } else {
@@ -782,8 +785,8 @@ const TradePage = () => {
           error instanceof Error
             ? error.message
             : language === "pt"
-            ? "Falha ao obter endereço de depósito"
-            : "Failed to get deposit address",
+              ? "Falha ao obter endereço de depósito"
+              : "Failed to get deposit address",
         variant: "destructive",
       });
     } finally {
@@ -820,21 +823,27 @@ const TradePage = () => {
   }, [depositMethod]);
 
   return (
-    <div 
+    <div
       className="min-h-screen bg-background text-foreground"
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
       <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
-      <div 
+      <div
         className={`container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl ${isMobile ? "pb-16" : ""}`}
-        style={isMobile ? { paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' } : undefined}
+        style={
+          isMobile
+            ? { paddingBottom: "calc(64px + env(safe-area-inset-bottom, 0px))" }
+            : undefined
+        }
       >
         {depositsDisabled ? (
           <div className="max-w-4xl mx-auto mb-6 rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4">
             <p className="text-sm font-medium text-yellow-200">
-              {language === "pt" ? "Atualização da plataforma" : "Platform update"}
+              {language === "pt"
+                ? "Atualização da plataforma"
+                : "Platform update"}
             </p>
             <p className="text-xs text-yellow-100/80 mt-1">
               {depositsDisabledMessage ||
@@ -857,8 +866,8 @@ const TradePage = () => {
                 {depositMethod === "PIX"
                   ? `${t("buyUSDTViaPIX")} • ${t("fee")}`
                   : language === "pt"
-                  ? "Depositar USDT via Cripto"
-                  : "Deposit USDT via Crypto"}
+                    ? "Depositar USDT via Cripto"
+                    : "Deposit USDT via Crypto"}
               </p>
             </div>
 
@@ -896,7 +905,7 @@ const TradePage = () => {
                 </button>
               </div>
             </div>
-            
+
             {/* Price badge for PIX method */}
             {depositMethod === "PIX" && (
               <div className="flex justify-center mb-4">
@@ -916,77 +925,81 @@ const TradePage = () => {
           <CardContent className="space-y-4 sm:space-y-6">
             {depositMethod === "PIX" ? (
               <>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                {language === "pt" ? "Quantidade de USDT:" : "USDT Amount:"}
-              </label>
-              <input
-                type="text"
-                value={buyUSDT}
-                onChange={handleUSDTInputChange}
-                placeholder="0,00"
-                inputMode="decimal"
-                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition-all"
-              />
-            </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    {language === "pt" ? "Quantidade de USDT:" : "USDT Amount:"}
+                  </label>
+                  <input
+                    type="text"
+                    value={buyUSDT}
+                    onChange={handleUSDTInputChange}
+                    placeholder="0,00"
+                    inputMode="decimal"
+                    className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition-all"
+                  />
+                </div>
 
-            {/* Total BRL to pay with PIX icon */}
-            {buyUSDTAmount > 0 && (
-              <div className="bg-gradient-to-br from-green-500/20 to-brand-500/20 rounded-xl p-4 sm:p-6 border border-green-500/30">
-                <div className="flex items-center gap-2 mb-2">
-                  <QrCode className="w-5 h-5 text-green-400" />
-                  <div className="text-sm text-gray-300">
-                    {language === "pt"
-                      ? "Total a pagar via PIX:"
-                      : "Total to pay via PIX:"}
+                {/* Total BRL to pay with PIX icon */}
+                {buyUSDTAmount > 0 && (
+                  <div className="bg-gradient-to-br from-green-500/20 to-brand-500/20 rounded-xl p-4 sm:p-6 border border-green-500/30">
+                    <div className="flex items-center gap-2 mb-2">
+                      <QrCode className="w-5 h-5 text-green-400" />
+                      <div className="text-sm text-gray-300">
+                        {language === "pt"
+                          ? "Total a pagar via PIX:"
+                          : "Total to pay via PIX:"}
+                      </div>
+                    </div>
+                    <div className="text-2xl sm:text-3xl font-bold text-green-400 flex items-center gap-2">
+                      {formatBRL(buyTotalBRL)}
+                      <span className="text-sm font-normal text-gray-400">
+                        BRL
+                      </span>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-gray-700/50 space-y-1.5">
+                      <div className="flex justify-between text-xs text-gray-400">
+                        <span>
+                          {language === "pt" ? "Valor base:" : "Base amount:"}
+                        </span>
+                        <span className="text-gray-300">
+                          {formatBRL(buyBaseBRL)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-xs text-gray-400">
+                        <span>
+                          {language === "pt" ? "Taxa (3%):" : "Fee (3%):"}
+                        </span>
+                        <span className="text-red-400">
+                          {formatBRL(buyFeeBRL)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-gradient-to-br from-brand-500/20 to-green-500/20 rounded-xl p-4 sm:p-6 border border-brand-500/30">
+                  <div className="text-sm text-gray-300 mb-2">
+                    {language === "pt" ? "Você receberá:" : "You will receive:"}
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-bold text-brand-400">
+                    {formatUSDT(buyUSDTAmount)} USDT
                   </div>
                 </div>
-                <div className="text-2xl sm:text-3xl font-bold text-green-400 flex items-center gap-2">
-                  {formatBRL(buyTotalBRL)}
-                  <span className="text-sm font-normal text-gray-400">BRL</span>
-                </div>
-                <div className="mt-3 pt-3 border-t border-gray-700/50 space-y-1.5">
-                  <div className="flex justify-between text-xs text-gray-400">
-                    <span>
-                      {language === "pt" ? "Valor base:" : "Base amount:"}
-                    </span>
-                    <span className="text-gray-300">
-                      {formatBRL(buyBaseBRL)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-xs text-gray-400">
-                    <span>
-                      {language === "pt" ? "Taxa (3%):" : "Fee (3%):"}
-                    </span>
-                    <span className="text-red-400">{formatBRL(buyFeeBRL)}</span>
-                  </div>
-                </div>
-              </div>
-            )}
 
-            <div className="bg-gradient-to-br from-brand-500/20 to-green-500/20 rounded-xl p-4 sm:p-6 border border-brand-500/30">
-              <div className="text-sm text-gray-300 mb-2">
-                {language === "pt" ? "Você receberá:" : "You will receive:"}
-              </div>
-              <div className="text-2xl sm:text-3xl font-bold text-brand-400">
-                {formatUSDT(buyUSDTAmount)} USDT
-              </div>
-            </div>
-
-            <Button
-              onClick={handleBuyConfirm}
-              disabled={buyUSDTAmount <= 0 || loading || depositsDisabled}
-              className="w-full h-12 sm:h-14 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors text-base sm:text-lg"
-            >
-              {loading ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                  {language === "pt" ? "Processando..." : "Processing..."}
-                </>
-              ) : (
-                t("confirmPurchase")
-              )}
-            </Button>
+                <Button
+                  onClick={handleBuyConfirm}
+                  disabled={buyUSDTAmount <= 0 || loading || depositsDisabled}
+                  className="w-full h-12 sm:h-14 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors text-base sm:text-lg"
+                >
+                  {loading ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                      {language === "pt" ? "Processando..." : "Processing..."}
+                    </>
+                  ) : (
+                    t("confirmPurchase")
+                  )}
+                </Button>
               </>
             ) : (
               <>
@@ -1080,20 +1093,20 @@ const TradePage = () => {
                                   transaction.status === "COMPLETED"
                                     ? "bg-green-500/20 text-green-400 border-green-500/30"
                                     : transaction.status === "PENDING"
-                                    ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
-                                    : "bg-red-500/20 text-red-400 border-red-500/30"
+                                      ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
+                                      : "bg-red-500/20 text-red-400 border-red-500/30"
                                 }
                               >
                                 {transaction.status === "COMPLETED"
                                   ? t("completed")
                                   : transaction.status === "PENDING"
-                                  ? t("pending")
-                                  : t("failed")}
+                                    ? t("pending")
+                                    : t("failed")}
                               </Badge>
                             )}
                             <span className="text-xs text-gray-400">
                               {transaction.date.toLocaleDateString(
-                                language === "pt" ? "pt-BR" : "en-US"
+                                language === "pt" ? "pt-BR" : "en-US",
                               )}{" "}
                               {language === "pt" ? "às" : "at"}{" "}
                               {transaction.date.toLocaleTimeString(
@@ -1101,7 +1114,7 @@ const TradePage = () => {
                                 {
                                   hour: "2-digit",
                                   minute: "2-digit",
-                                }
+                                },
                               )}
                             </span>
                             {isPending && hasPixData && (
@@ -1175,7 +1188,7 @@ const TradePage = () => {
           if (!open && pixData) {
             // Mark transaction as loading when modal closes
             setLoadingTransactions((prev) =>
-              new Set(prev).add(pixData.transactionId)
+              new Set(prev).add(pixData.transactionId),
             );
 
             // Remove from loading after 8 seconds and refetch
@@ -1334,18 +1347,21 @@ const TradePage = () => {
 
       {/* Mobile Page Indicator - Bottom Navigation */}
       {isMobile && (
-        <div className="fixed bottom-0 left-0 right-0 z-50" style={{ paddingBottom: 'env(safe-area-inset-bottom, 8px)' }}>
+        <div
+          className="fixed bottom-0 left-0 right-0 z-50"
+          style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}
+        >
           <div className="flex justify-center pb-2 px-4">
             <div className="relative inline-flex items-center bg-black/90 backdrop-blur-sm border border-gray-800 rounded-full px-1 py-1.5 shadow-lg">
               {/* Deposit */}
               <button
                 onClick={() => router.push("/trade")}
                 className={`relative px-3 sm:px-4 py-1.5 rounded-full text-xs font-medium transition-all touch-manipulation ${
-                  pathname === "/trade" || pathname === "/deposit"
+                  pathname === "/trade"
                     ? "bg-green-500 text-white"
                     : "text-gray-400 hover:text-white active:bg-gray-700/50"
                 }`}
-                style={{ minWidth: '44px', minHeight: '44px' }}
+                style={{ minWidth: "44px", minHeight: "44px" }}
               >
                 <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </button>
@@ -1358,7 +1374,7 @@ const TradePage = () => {
                     ? "bg-brand-500 text-white"
                     : "text-gray-400 hover:text-white active:bg-gray-700/50"
                 }`}
-                style={{ minWidth: '44px', minHeight: '44px' }}
+                style={{ minWidth: "44px", minHeight: "44px" }}
               >
                 <Home className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </button>
@@ -1371,7 +1387,7 @@ const TradePage = () => {
                     ? "bg-red-500 text-white"
                     : "text-gray-400 hover:text-white active:bg-gray-700/50"
                 }`}
-                style={{ minWidth: '44px', minHeight: '44px' }}
+                style={{ minWidth: "44px", minHeight: "44px" }}
               >
                 <Minus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </button>

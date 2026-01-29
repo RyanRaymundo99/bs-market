@@ -84,7 +84,8 @@ export default function WithdrawPage() {
 
   // Admin-controlled switch to disable withdrawals
   const [withdrawalsDisabled, setWithdrawalsDisabled] = useState(false);
-  const [withdrawalsDisabledMessage, setWithdrawalsDisabledMessage] = useState<string>("");
+  const [withdrawalsDisabledMessage, setWithdrawalsDisabledMessage] =
+    useState<string>("");
 
   // Swipe gesture state for mobile navigation
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -97,8 +98,8 @@ export default function WithdrawPage() {
     const checkMobile = () => {
       setIsMobile(
         /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-          navigator.userAgent
-        ) || window.innerWidth <= 768
+          navigator.userAgent,
+        ) || window.innerWidth <= 768,
       );
     };
     checkMobile();
@@ -120,7 +121,7 @@ export default function WithdrawPage() {
 
   const onTouchEnd = () => {
     if (!isMobile || !touchStart || !touchEnd) return;
-    
+
     const distance = touchStart - touchEnd;
     const isLeftSwipe = distance > minSwipeDistance;
     const isRightSwipe = distance < -minSwipeDistance;
@@ -144,7 +145,7 @@ export default function WithdrawPage() {
   const [usdtAmount, setUsdtAmount] = useState("");
   const [walletAddress, setWalletAddress] = useState("");
   const [selectedNetwork, setSelectedNetwork] = useState("TRC20");
-  
+
   // PIX Form States
   const [withdrawalType, setWithdrawalType] = useState<"USDT" | "PIX">("USDT");
   const [pixAmount, setPixAmount] = useState("");
@@ -164,7 +165,9 @@ export default function WithdrawPage() {
         const data = await response.json();
         if (data?.success) {
           setWithdrawalsDisabled(Boolean(data.withdrawalsDisabled));
-          setWithdrawalsDisabledMessage(String(data.withdrawalsDisabledMessage || ""));
+          setWithdrawalsDisabledMessage(
+            String(data.withdrawalsDisabledMessage || ""),
+          );
         }
       } catch (error) {
         console.error("Failed to load site status:", error);
@@ -243,7 +246,7 @@ export default function WithdrawPage() {
                   "rejectionMessage",
                   language === "pt"
                     ? "Sua conta foi rejeitada. Entre em contato com o suporte."
-                    : "Your account has been rejected. Please contact support."
+                    : "Your account has been rejected. Please contact support.",
                 );
                 window.location.href = "/";
               }
@@ -279,14 +282,14 @@ export default function WithdrawPage() {
         fetch("/api/crypto/wallet"),
         fetch("/api/crypto/usdt-rate"),
       ]);
-      
+
       if (walletResponse.ok) {
         const data = await walletResponse.json();
         setWalletData(data.data);
       } else {
         throw new Error("Failed to fetch wallet data");
       }
-      
+
       if (rateResponse.ok) {
         const rateData = await rateResponse.json();
         setUsdtToBrlRate(rateData.rate || null);
@@ -416,7 +419,7 @@ export default function WithdrawPage() {
     if (!pixAmount || parseFloat(pixAmount) <= 0) return 0;
     const amount = parseFloat(pixAmount);
     if (isNaN(amount)) return 0;
-    return amount - (amount * PIX_FEE_RATE);
+    return amount - amount * PIX_FEE_RATE;
   };
 
   // Handle PIX withdrawal
@@ -436,7 +439,10 @@ export default function WithdrawPage() {
     if (!pixAmount || parseFloat(pixAmount) <= 0) {
       toast({
         title: language === "pt" ? "Valor inválido" : "Invalid amount",
-        description: language === "pt" ? "Digite um valor válido para saque" : "Enter a valid withdrawal amount",
+        description:
+          language === "pt"
+            ? "Digite um valor válido para saque"
+            : "Enter a valid withdrawal amount",
         variant: "destructive",
       });
       return;
@@ -445,7 +451,8 @@ export default function WithdrawPage() {
     if (!pixKey.trim()) {
       toast({
         title: language === "pt" ? "Chave PIX obrigatória" : "PIX key required",
-        description: language === "pt" ? "Digite sua chave PIX" : "Enter your PIX key",
+        description:
+          language === "pt" ? "Digite sua chave PIX" : "Enter your PIX key",
         variant: "destructive",
       });
       return;
@@ -454,7 +461,10 @@ export default function WithdrawPage() {
     if (!pixPassword) {
       toast({
         title: language === "pt" ? "Senha obrigatória" : "Password required",
-        description: language === "pt" ? "Digite sua senha para confirmar" : "Enter your password to confirm",
+        description:
+          language === "pt"
+            ? "Digite sua senha para confirmar"
+            : "Enter your password to confirm",
         variant: "destructive",
       });
       return;
@@ -475,9 +485,9 @@ export default function WithdrawPage() {
       if (response.ok) {
         const data = await response.json();
         setSuccessMessage(
-          language === "pt" 
-            ? `Saque PIX de ${formatBRL(parseFloat(pixAmount))} solicitado com sucesso! Protocolo: ${data.withdrawal.protocol}` 
-            : `PIX withdrawal of ${formatBRL(parseFloat(pixAmount))} requested successfully! Protocol: ${data.withdrawal.protocol}`
+          language === "pt"
+            ? `Saque PIX de ${formatBRL(parseFloat(pixAmount))} solicitado com sucesso! Protocolo: ${data.withdrawal.protocol}`
+            : `PIX withdrawal of ${formatBRL(parseFloat(pixAmount))} requested successfully! Protocol: ${data.withdrawal.protocol}`,
         );
         setShowSuccessModal(true);
         setPixAmount("");
@@ -492,7 +502,12 @@ export default function WithdrawPage() {
     } catch (error) {
       toast({
         title: language === "pt" ? "Erro no saque" : "Withdrawal error",
-        description: error instanceof Error ? error.message : (language === "pt" ? "Não foi possível processar o saque" : "Failed to process withdrawal"),
+        description:
+          error instanceof Error
+            ? error.message
+            : language === "pt"
+              ? "Não foi possível processar o saque"
+              : "Failed to process withdrawal",
         variant: "destructive",
       });
     } finally {
@@ -503,11 +518,11 @@ export default function WithdrawPage() {
   // Get BRL balance - calculated from USDT with 2% discount
   const getBrlBalance = () => {
     if (!walletData || !usdtToBrlRate) return 0;
-    
+
     // Find USDT balance
     const usdtBalance = walletData.balances.find((b) => b.currency === "USDT");
     if (!usdtBalance) return 0;
-    
+
     // Calculate BRL = USDT * rate * 0.98 (2% discount)
     const usdtAmount = Number(usdtBalance.amount);
     return usdtAmount * usdtToBrlRate * 0.98;
@@ -591,16 +606,20 @@ export default function WithdrawPage() {
   const usdtBalance = walletData?.balances.find((b) => b.currency === "USDT");
 
   return (
-    <div 
+    <div
       className="min-h-screen bg-background"
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
       <NavbarNew isLoggingOut={false} handleLogout={() => {}} />
-      <div 
+      <div
         className={`container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl ${isMobile ? "pb-16" : ""}`}
-        style={isMobile ? { paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' } : undefined}
+        style={
+          isMobile
+            ? { paddingBottom: "calc(64px + env(safe-area-inset-bottom, 0px))" }
+            : undefined
+        }
       >
         <div className="max-w-4xl mx-auto">
           {/* Main Withdrawal Form */}
@@ -679,10 +698,11 @@ export default function WithdrawPage() {
                   )}
                 </CardTitle>
                 <CardDescription className="text-gray-400">
-                  {withdrawalType === "USDT" 
+                  {withdrawalType === "USDT"
                     ? t("sendUSDTToWallet")
-                    : (language === "pt" ? "Receba em reais na sua chave PIX" : "Receive in BRL to your PIX key")
-                  }
+                    : language === "pt"
+                      ? "Receba em reais na sua chave PIX"
+                      : "Receive in BRL to your PIX key"}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4 sm:space-y-6">
@@ -723,7 +743,10 @@ export default function WithdrawPage() {
                       </div>
 
                       <div>
-                        <Label htmlFor="wallet-address" className="text-gray-300">
+                        <Label
+                          htmlFor="wallet-address"
+                          className="text-gray-300"
+                        >
                           {t("walletAddress")}
                         </Label>
                         <Input
@@ -813,7 +836,9 @@ export default function WithdrawPage() {
                       <div className="flex items-center gap-2 mb-2">
                         <Wallet className="h-5 w-5 text-green-400" />
                         <span className="text-sm font-medium text-gray-300">
-                          {language === "pt" ? "Saldo Disponível em BRL" : "Available BRL Balance"}
+                          {language === "pt"
+                            ? "Saldo Disponível em BRL"
+                            : "Available BRL Balance"}
                         </span>
                       </div>
                       <p className="text-2xl sm:text-3xl font-bold text-green-400">
@@ -825,7 +850,9 @@ export default function WithdrawPage() {
                     <div className="space-y-4">
                       <div>
                         <Label htmlFor="pix-amount" className="text-gray-300">
-                          {language === "pt" ? "Valor a Sacar (R$)" : "Amount to Withdraw (R$)"}
+                          {language === "pt"
+                            ? "Valor a Sacar (R$)"
+                            : "Amount to Withdraw (R$)"}
                         </Label>
                         <Input
                           id="pix-amount"
@@ -847,7 +874,11 @@ export default function WithdrawPage() {
                         <Input
                           id="pix-key"
                           type="text"
-                          placeholder={language === "pt" ? "CPF, CNPJ, email, telefone ou chave aleatória" : "CPF, CNPJ, email, phone or random key"}
+                          placeholder={
+                            language === "pt"
+                              ? "CPF, CNPJ, email, telefone ou chave aleatória"
+                              : "CPF, CNPJ, email, phone or random key"
+                          }
                           value={pixKey}
                           onChange={(e) => setPixKey(e.target.value)}
                           className="bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 rounded-xl"
@@ -856,12 +887,18 @@ export default function WithdrawPage() {
 
                       <div>
                         <Label htmlFor="pix-password" className="text-gray-300">
-                          {language === "pt" ? "Confirmar Senha" : "Confirm Password"}
+                          {language === "pt"
+                            ? "Confirmar Senha"
+                            : "Confirm Password"}
                         </Label>
                         <Input
                           id="pix-password"
                           type="password"
-                          placeholder={language === "pt" ? "Digite sua senha para confirmar" : "Enter your password to confirm"}
+                          placeholder={
+                            language === "pt"
+                              ? "Digite sua senha para confirmar"
+                              : "Enter your password to confirm"
+                          }
                           value={pixPassword}
                           onChange={(e) => setPixPassword(e.target.value)}
                           className="bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 rounded-xl"
@@ -872,7 +909,9 @@ export default function WithdrawPage() {
                       <div className="p-4 sm:p-6 bg-gray-800/30 rounded-xl border border-gray-700/50">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-sm text-gray-400">
-                            {language === "pt" ? "Valor do Saque" : "Withdrawal Amount"}
+                            {language === "pt"
+                              ? "Valor do Saque"
+                              : "Withdrawal Amount"}
                           </span>
                           <span className="text-sm font-medium text-white">
                             {formatBRL(pixAmount ? parseFloat(pixAmount) : 0)}
@@ -914,16 +953,17 @@ export default function WithdrawPage() {
                             <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                             {t("processing")}
                           </>
+                        ) : language === "pt" ? (
+                          "Sacar via PIX"
                         ) : (
-                          language === "pt" ? "Sacar via PIX" : "Withdraw via PIX"
+                          "Withdraw via PIX"
                         )}
                       </Button>
 
                       <p className="text-xs text-gray-500 text-center">
-                        {language === "pt" 
+                        {language === "pt"
                           ? "O saque PIX é processado manualmente. Prazo de até 24 horas úteis."
-                          : "PIX withdrawal is processed manually. Up to 24 business hours."
-                        }
+                          : "PIX withdrawal is processed manually. Up to 24 business hours."}
                       </p>
                     </div>
                   </>
@@ -974,15 +1014,16 @@ export default function WithdrawPage() {
                               year: "numeric",
                               hour: "2-digit",
                               minute: "2-digit",
-                            }
+                            },
                           )}
                         </td>
                         <td className="py-3 px-4">
                           <Badge
                             variant="secondary"
-                            className={withdrawal.type === "PIX" 
-                              ? "bg-green-500/20 text-green-400 border-green-500/30"
-                              : "bg-brand-500/20 text-brand-400 border-brand-500/30"
+                            className={
+                              withdrawal.type === "PIX"
+                                ? "bg-green-500/20 text-green-400 border-green-500/30"
+                                : "bg-brand-500/20 text-brand-400 border-brand-500/30"
                             }
                           >
                             {withdrawal.type === "PIX" ? "PIX" : "USDT"}
@@ -1049,18 +1090,21 @@ export default function WithdrawPage() {
 
       {/* Mobile Page Indicator - Bottom Navigation */}
       {isMobile && (
-        <div className="fixed bottom-0 left-0 right-0 z-50" style={{ paddingBottom: 'env(safe-area-inset-bottom, 8px)' }}>
+        <div
+          className="fixed bottom-0 left-0 right-0 z-50"
+          style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}
+        >
           <div className="flex justify-center pb-2 px-4">
             <div className="relative inline-flex items-center bg-black/90 backdrop-blur-sm border border-gray-800 rounded-full px-1 py-1.5 shadow-lg">
               {/* Deposit */}
               <button
                 onClick={() => router.push("/trade")}
                 className={`relative px-3 sm:px-4 py-1.5 rounded-full text-xs font-medium transition-all touch-manipulation ${
-                  pathname === "/trade" || pathname === "/deposit"
+                  pathname === "/trade"
                     ? "bg-green-500 text-white"
                     : "text-gray-400 hover:text-white active:bg-gray-700/50"
                 }`}
-                style={{ minWidth: '44px', minHeight: '44px' }}
+                style={{ minWidth: "44px", minHeight: "44px" }}
               >
                 <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </button>
@@ -1073,7 +1117,7 @@ export default function WithdrawPage() {
                     ? "bg-brand-500 text-white"
                     : "text-gray-400 hover:text-white active:bg-gray-700/50"
                 }`}
-                style={{ minWidth: '44px', minHeight: '44px' }}
+                style={{ minWidth: "44px", minHeight: "44px" }}
               >
                 <Home className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </button>
@@ -1086,7 +1130,7 @@ export default function WithdrawPage() {
                     ? "bg-red-500 text-white"
                     : "text-gray-400 hover:text-white active:bg-gray-700/50"
                 }`}
-                style={{ minWidth: '44px', minHeight: '44px' }}
+                style={{ minWidth: "44px", minHeight: "44px" }}
               >
                 <Minus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </button>
