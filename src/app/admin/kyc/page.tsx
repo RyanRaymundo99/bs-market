@@ -394,7 +394,7 @@ const AdminKYCPage = () => {
     }
   };
 
-  const formatDate = (dateString: string | null) => {
+  const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return "N/A";
     return new Date(dateString).toLocaleDateString("pt-BR", {
       year: "numeric",
