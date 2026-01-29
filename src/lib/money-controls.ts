@@ -18,7 +18,7 @@ async function ensureMoneyControlsTable(): Promise<void> {
   // This project checks in a generated Prisma client and doesn't keep migrations in-repo.
   // To keep this feature deployable without regenerating Prisma, we store settings in a
   // dedicated Postgres table using raw SQL, created on-demand.
-  
+
   // First, check if the table exists and what columns it has
   const tableExists = await prisma.$queryRaw<Array<{ exists: boolean }>>`
     SELECT EXISTS (
@@ -61,13 +61,13 @@ async function ensureMoneyControlsTable(): Promise<void> {
 
     if (hasOldColumns[0]?.exists) {
       // Migrate from old schema
-      await prisma.$executeRaw`
+      await prisma.$executeRawUnsafe(`
         ALTER TABLE "site_settings"
         ADD COLUMN IF NOT EXISTS "depositsDisabled" boolean NOT NULL DEFAULT false,
         ADD COLUMN IF NOT EXISTS "withdrawalsDisabled" boolean NOT NULL DEFAULT false,
-        ADD COLUMN IF NOT EXISTS "depositsDisabledMessage" text NOT NULL DEFAULT ${DEFAULT_DEPOSITS_MESSAGE},
-        ADD COLUMN IF NOT EXISTS "withdrawalsDisabledMessage" text NOT NULL DEFAULT ${DEFAULT_WITHDRAWALS_MESSAGE};
-      `;
+        ADD COLUMN IF NOT EXISTS "depositsDisabledMessage" text NOT NULL DEFAULT '${DEFAULT_DEPOSITS_MESSAGE.replace(/'/g, "''")}',
+        ADD COLUMN IF NOT EXISTS "withdrawalsDisabledMessage" text NOT NULL DEFAULT '${DEFAULT_WITHDRAWALS_MESSAGE.replace(/'/g, "''")}';
+      `);
 
       // Migrate data: if moneyDisabled was true, set both to true
       await prisma.$executeRaw`
@@ -81,13 +81,13 @@ async function ensureMoneyControlsTable(): Promise<void> {
       `;
     } else {
       // Ensure new columns exist (in case migration was partial)
-      await prisma.$executeRaw`
+      await prisma.$executeRawUnsafe(`
         ALTER TABLE "site_settings"
         ADD COLUMN IF NOT EXISTS "depositsDisabled" boolean NOT NULL DEFAULT false,
         ADD COLUMN IF NOT EXISTS "withdrawalsDisabled" boolean NOT NULL DEFAULT false,
-        ADD COLUMN IF NOT EXISTS "depositsDisabledMessage" text NOT NULL DEFAULT ${DEFAULT_DEPOSITS_MESSAGE},
-        ADD COLUMN IF NOT EXISTS "withdrawalsDisabledMessage" text NOT NULL DEFAULT ${DEFAULT_WITHDRAWALS_MESSAGE};
-      `;
+        ADD COLUMN IF NOT EXISTS "depositsDisabledMessage" text NOT NULL DEFAULT '${DEFAULT_DEPOSITS_MESSAGE.replace(/'/g, "''")}',
+        ADD COLUMN IF NOT EXISTS "withdrawalsDisabledMessage" text NOT NULL DEFAULT '${DEFAULT_WITHDRAWALS_MESSAGE.replace(/'/g, "''")}';
+      `);
 
       await prisma.$executeRaw`
         INSERT INTO "site_settings" ("id")
@@ -176,13 +176,17 @@ export async function setMoneyControls(params: {
         changes.push("withdrawals");
       }
 
-      const title = changes.length > 0
-        ? "Platform update in progress"
-        : "Platform is back online";
+      const title =
+        changes.length > 0
+          ? "Platform update in progress"
+          : "Platform is back online";
 
       let message = "";
       if (changes.length === 2) {
-        message = next.depositsDisabledMessage || next.withdrawalsDisabledMessage || "Deposits and withdrawals are temporarily disabled.";
+        message =
+          next.depositsDisabledMessage ||
+          next.withdrawalsDisabledMessage ||
+          "Deposits and withdrawals are temporarily disabled.";
       } else if (next.depositsDisabled) {
         message = next.depositsDisabledMessage;
       } else if (next.withdrawalsDisabled) {
@@ -217,4 +221,3 @@ export async function setMoneyControls(params: {
 
   return { moneyControls: next, notifiedUsers };
 }
-

@@ -13,7 +13,7 @@ export class NutzPayService {
 
     if (!this.publicKey || !this.secretKey) {
       throw new Error(
-        "NutzPay credentials not configured. Set PUBLIC_KEY and SECRET_KEY environment variables."
+        "NutzPay credentials not configured. Set PUBLIC_KEY and SECRET_KEY environment variables.",
       );
     }
   }
@@ -30,7 +30,7 @@ export class NutzPayService {
       headers["X-Public-Key"] = this.publicKey;
     } else if (authMethod === "basic") {
       const credentials = Buffer.from(
-        `${this.publicKey}:${this.secretKey}`
+        `${this.publicKey}:${this.secretKey}`,
       ).toString("base64");
       headers["Authorization"] = `Basic ${credentials}`;
     } else {
@@ -76,7 +76,7 @@ export class NutzPayService {
       const response = await axios.post(
         `${this.baseUrl}/usdt/withdrawal`,
         withdrawalPayload,
-        { headers }
+        { headers },
       );
 
       return response.data;
@@ -166,7 +166,7 @@ export class NutzPayService {
       // Prepare the purchase payload according to NutzPay API
       // Mercado Pago requires amounts as numbers with exactly 2 decimal places
       // We need to ensure no floating point precision issues
-      const purchasePayload = {
+      const purchasePayload: any = {
         // Convert to string with fixed decimals, then back to number to ensure clean format
         // This ensures we have exactly 2 decimal places without floating point artifacts
         amount: formattedAmount, // Number with exactly 2 decimal places for BRL
@@ -185,12 +185,19 @@ export class NutzPayService {
           }/api/webhooks/nutzpay`,
       };
 
+      // Add acquirer if configured (to override account default)
+      // Common values: "mercadopago", "gerencianet", etc.
+      // If not set, NutzPay will use account default (which may be unsupported)
+      if (process.env.NUTZPAY_ACQUIRER) {
+        purchasePayload.acquirer = process.env.NUTZPAY_ACQUIRER;
+      }
+
       const headers = this.getAuthHeaders();
 
       const response = await axios.post(
         `${this.baseUrl}/usdt/purchase`,
         purchasePayload,
-        { headers }
+        { headers },
       );
 
       // Log full response for debugging
@@ -201,6 +208,29 @@ export class NutzPayService {
       console.error("NutzPay purchase creation error:", error);
 
       if (axios.isAxiosError(error)) {
+        // Handle acquirer-related errors (500 with "Unsupported acquirer" message)
+        const errorMessage =
+          error.response?.data?.message || error.response?.data?.error || "";
+        if (
+          error.response?.status === 500 &&
+          (errorMessage.includes("Unsupported acquirer") ||
+            errorMessage.includes("acquirer"))
+        ) {
+          console.error("=== NUTZPAY ACQUIRER ERROR ===");
+          console.error("Status:", error.response.status);
+          console.error("Error:", errorMessage);
+          console.error(
+            "Full response:",
+            JSON.stringify(error.response.data, null, 2),
+          );
+          console.error(
+            "Solution: Set NUTZPAY_ACQUIRER environment variable to a supported acquirer (e.g., 'mercadopago')",
+          );
+          throw new Error(
+            `NutzPay acquirer error: ${errorMessage}. Please configure NUTZPAY_ACQUIRER environment variable with a supported acquirer value. Contact NutzPay support to find out which acquirers are supported for your account.`,
+          );
+        }
+
         // Handle 401 authentication errors specifically
         if (error.response?.status === 401) {
           const errorData = error.response.data;
@@ -209,16 +239,16 @@ export class NutzPayService {
           console.error("Response Data:", JSON.stringify(errorData, null, 2));
           console.error(
             "Request Headers Sent:",
-            JSON.stringify(error.config?.headers, null, 2)
+            JSON.stringify(error.config?.headers, null, 2),
           );
           console.error(
             "Auth Method Used:",
-            process.env.NUTZPAY_AUTH_METHOD || "headers (default)"
+            process.env.NUTZPAY_AUTH_METHOD || "headers (default)",
           );
           console.error("Base URL:", this.baseUrl);
           console.error(
             "Public Key (first 10 chars):",
-            this.publicKey?.substring(0, 10) + "..."
+            this.publicKey?.substring(0, 10) + "...",
           );
           console.error("Secret Key exists:", !!this.secretKey);
           console.error("=========================================");
@@ -248,7 +278,7 @@ export class NutzPayService {
         if (error.response?.data) {
           console.error(
             "NutzPay API error response:",
-            JSON.stringify(error.response.data, null, 2)
+            JSON.stringify(error.response.data, null, 2),
           );
           console.error("Request payload that caused error:", {
             amount: formattedAmount ?? data.amount,
@@ -265,7 +295,7 @@ export class NutzPayService {
           error.response?.data?.message?.includes("Invalid transaction_amount")
         ) {
           const helpfulError = new Error(
-            `Invalid transaction amount format. Amount: ${formattedAmount ?? data.amount}, USDT: ${formattedUsdtAmount ?? data.usdt_amount}. Mercado Pago requires BRL amounts with exactly 2 decimal places.`
+            `Invalid transaction amount format. Amount: ${formattedAmount ?? data.amount}, USDT: ${formattedUsdtAmount ?? data.usdt_amount}. Mercado Pago requires BRL amounts with exactly 2 decimal places.`,
           );
           helpfulError.name = "InvalidTransactionAmountFormat";
           throw helpfulError;
@@ -282,7 +312,7 @@ export class NutzPayService {
 
       const response = await axios.get(
         `${this.baseUrl}/usdt/withdrawal/${externalId}`,
-        { headers }
+        { headers },
       );
 
       return response.data;
@@ -304,7 +334,7 @@ export class NutzPayService {
 
       console.log(
         "🔍 Fetching withdrawal status by transaction_id from NutzPay:",
-        transactionId
+        transactionId,
       );
 
       // Try multiple possible endpoints for withdrawal status
@@ -324,20 +354,23 @@ export class NutzPayService {
             validateStatus: () => true, // Don't throw on any status
           });
 
-          console.log("📡 NutzPay withdrawal API Response Status:", response.status);
+          console.log(
+            "📡 NutzPay withdrawal API Response Status:",
+            response.status,
+          );
 
           if (response.status === 200 || response.status === 201) {
             const responseData = response.data?.data || response.data;
             console.log(
               "✅ NutzPay withdrawal status response:",
-              JSON.stringify(responseData, null, 2)
+              JSON.stringify(responseData, null, 2),
             );
             return responseData;
           }
 
           if (response.status === 404) {
             console.log(
-              `❌ Withdrawal not found at ${endpoint}, trying next...`
+              `❌ Withdrawal not found at ${endpoint}, trying next...`,
             );
             continue; // Try next endpoint
           }
@@ -345,9 +378,11 @@ export class NutzPayService {
           // Handle 500 errors gracefully
           if (response.status >= 500) {
             console.log(
-              `⚠️ NutzPay API server error (${response.status}) at ${endpoint}, trying next endpoint...`
+              `⚠️ NutzPay API server error (${response.status}) at ${endpoint}, trying next endpoint...`,
             );
-            lastError = new Error(`NutzPay API server error: ${response.status}`);
+            lastError = new Error(
+              `NutzPay API server error: ${response.status}`,
+            );
             continue;
           }
 
@@ -358,9 +393,10 @@ export class NutzPayService {
           if (axios.isAxiosError(error) && error.response) {
             if (error.response.status >= 500) {
               console.log(
-                `⚠️ NutzPay API server error (${error.response.status}), trying next endpoint...`
+                `⚠️ NutzPay API server error (${error.response.status}), trying next endpoint...`,
               );
-              lastError = error instanceof Error ? error : new Error(String(error));
+              lastError =
+                error instanceof Error ? error : new Error(String(error));
               continue;
             }
             if (error.response.status === 404) {
@@ -371,7 +407,7 @@ export class NutzPayService {
           lastError = error instanceof Error ? error : new Error(String(error));
           console.log(
             `❌ Error at ${endpoint}:`,
-            error instanceof Error ? error.message : error
+            error instanceof Error ? error.message : error,
           );
           continue;
         }
@@ -379,17 +415,20 @@ export class NutzPayService {
 
       // If all endpoints failed with server errors, return null (don't throw)
       if (lastError) {
-        const isServerError = lastError.message.includes("500") || 
-                             lastError.message.includes("server error") ||
-                             lastError.message.includes("502") ||
-                             lastError.message.includes("503") ||
-                             lastError.message.includes("504");
-        
+        const isServerError =
+          lastError.message.includes("500") ||
+          lastError.message.includes("server error") ||
+          lastError.message.includes("502") ||
+          lastError.message.includes("503") ||
+          lastError.message.includes("504");
+
         if (isServerError) {
-          console.log("⚠️ NutzPay API server errors on all endpoints - withdrawal status will remain unchanged");
+          console.log(
+            "⚠️ NutzPay API server errors on all endpoints - withdrawal status will remain unchanged",
+          );
           return null;
         }
-        
+
         throw lastError;
       }
 
@@ -411,7 +450,7 @@ export class NutzPayService {
 
       console.log(
         "🔍 Fetching transaction status from NutzPay:",
-        transactionId
+        transactionId,
       );
       console.log("Base URL:", this.baseUrl);
 
@@ -439,14 +478,14 @@ export class NutzPayService {
             const responseData = response.data?.data || response.data;
             console.log(
               "✅ NutzPay transaction status response:",
-              JSON.stringify(responseData, null, 2)
+              JSON.stringify(responseData, null, 2),
             );
             return responseData;
           }
 
           if (response.status === 404) {
             console.log(
-              `❌ Transaction not found at ${endpoint}, trying next...`
+              `❌ Transaction not found at ${endpoint}, trying next...`,
             );
             continue; // Try next endpoint
           }
@@ -454,17 +493,19 @@ export class NutzPayService {
           // Handle 500 errors gracefully - don't throw, just log and try next endpoint
           if (response.status >= 500) {
             console.log(
-              `⚠️ NutzPay API server error (${response.status}) at ${endpoint}, trying next endpoint...`
+              `⚠️ NutzPay API server error (${response.status}) at ${endpoint}, trying next endpoint...`,
             );
             console.log("Response data:", response.data);
-            lastError = new Error(`NutzPay API server error: ${response.status}`);
+            lastError = new Error(
+              `NutzPay API server error: ${response.status}`,
+            );
             continue; // Try next endpoint
           }
 
           // If we get here, we got a response but not 200/201/404/5xx
           const responseData = response.data?.data || response.data;
           console.log(
-            `⚠️ Got status ${response.status} from ${endpoint}, but continuing...`
+            `⚠️ Got status ${response.status} from ${endpoint}, but continuing...`,
           );
           return responseData;
         } catch (error) {
@@ -474,9 +515,10 @@ export class NutzPayService {
             // But if we get here, it means validateStatus didn't work as expected
             if (error.response.status >= 500) {
               console.log(
-                `⚠️ NutzPay API server error (${error.response.status}), trying next endpoint...`
+                `⚠️ NutzPay API server error (${error.response.status}), trying next endpoint...`,
               );
-              lastError = error instanceof Error ? error : new Error(String(error));
+              lastError =
+                error instanceof Error ? error : new Error(String(error));
               continue;
             }
           }
@@ -488,7 +530,7 @@ export class NutzPayService {
             }
             if (error.response?.status === 500) {
               console.log(
-                `❌ 500 error at ${endpoint}, trying next endpoint...`
+                `❌ 500 error at ${endpoint}, trying next endpoint...`,
               );
               continue; // Try next endpoint
             }
@@ -496,7 +538,7 @@ export class NutzPayService {
           // For other errors, continue to next endpoint
           console.log(
             `❌ Error at ${endpoint}:`,
-            error instanceof Error ? error.message : error
+            error instanceof Error ? error.message : error,
           );
           continue;
         }
@@ -505,18 +547,23 @@ export class NutzPayService {
       // If all endpoints failed, check if it was a server error (5xx)
       // For server errors, don't throw - just return null so order stays PENDING
       if (lastError) {
-        const isServerError = lastError.message.includes("500") || 
-                             lastError.message.includes("server error") ||
-                             lastError.message.includes("502") ||
-                             lastError.message.includes("503") ||
-                             lastError.message.includes("504");
-        
+        const isServerError =
+          lastError.message.includes("500") ||
+          lastError.message.includes("server error") ||
+          lastError.message.includes("502") ||
+          lastError.message.includes("503") ||
+          lastError.message.includes("504");
+
         if (isServerError) {
-          console.log("⚠️ NutzPay API server errors on all endpoints - order will remain PENDING");
-          console.log("This is likely a temporary NutzPay issue. Webhook will update order when payment is confirmed.");
+          console.log(
+            "⚠️ NutzPay API server errors on all endpoints - order will remain PENDING",
+          );
+          console.log(
+            "This is likely a temporary NutzPay issue. Webhook will update order when payment is confirmed.",
+          );
           return null; // Return null instead of throwing - order stays PENDING
         }
-        
+
         // For other errors (4xx, network, etc.), throw
         throw lastError;
       }
@@ -569,7 +616,7 @@ export class NutzPayService {
       const response = await axios.post(
         `${this.baseUrl}/usdt/balance`,
         {}, // Empty body as per Postman collection
-        { headers }
+        { headers },
       );
 
       // Handle different response formats
@@ -628,7 +675,7 @@ export class NutzPayService {
    */
   async verifyWebhookSignature(
     request: Request,
-    body: string
+    body: string,
   ): Promise<boolean> {
     try {
       // Get webhook secret - required for signature validation
@@ -638,14 +685,14 @@ export class NutzPayService {
 
       if (!webhookSecret) {
         console.error(
-          "No webhook secret configured. Set NUTZPAY_WEBHOOK_SECRET or SECRET_KEY."
+          "No webhook secret configured. Set NUTZPAY_WEBHOOK_SECRET or SECRET_KEY.",
         );
         return false; // Fail closed - require secret for security
       }
 
       // Get signature from header - NutzPay may send it as x-signature or x-webhook-signature
       // Try different header names and case variations
-      const signature = 
+      const signature =
         request.headers.get("x-signature") ||
         request.headers.get("X-Signature") ||
         request.headers.get("X-SIGNATURE") ||
@@ -655,17 +702,23 @@ export class NutzPayService {
 
       if (!signature) {
         console.error(
-          "Missing signature header. NutzPay requires signature validation."
+          "Missing signature header. NutzPay requires signature validation.",
         );
-        const relevantHeaders = Array.from(request.headers.keys()).filter(h => 
-          h.toLowerCase().includes("signature") || h.toLowerCase().includes("webhook") || h.toLowerCase().includes("x-")
+        const relevantHeaders = Array.from(request.headers.keys()).filter(
+          (h) =>
+            h.toLowerCase().includes("signature") ||
+            h.toLowerCase().includes("webhook") ||
+            h.toLowerCase().includes("x-"),
         );
         console.error("Available headers:", relevantHeaders);
         console.error("All headers:", Array.from(request.headers.keys()));
         return false; // Fail closed - require signature
       }
-      
-      console.log("✅ Found signature header:", signature.substring(0, 20) + "...");
+
+      console.log(
+        "✅ Found signature header:",
+        signature.substring(0, 20) + "...",
+      );
 
       // Calculate expected signature using HMAC-SHA256
       // IMPORTANT: Use the raw body string (not parsed JSON) for signature verification
@@ -678,18 +731,18 @@ export class NutzPayService {
       // Use constant-time comparison to prevent timing attacks
       const isValid = crypto.timingSafeEqual(
         Buffer.from(signature),
-        Buffer.from(expectedSignature)
+        Buffer.from(expectedSignature),
       );
 
       if (!isValid) {
         console.error("Webhook signature verification failed");
         console.error(
           "Expected (first 20 chars):",
-          expectedSignature.substring(0, 20) + "..."
+          expectedSignature.substring(0, 20) + "...",
         );
         console.error(
           "Received (first 20 chars):",
-          signature.substring(0, 20) + "..."
+          signature.substring(0, 20) + "...",
         );
         return false;
       }
