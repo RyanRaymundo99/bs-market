@@ -1520,7 +1520,7 @@ export default function AdminUsersPage() {
                   <br /><br />
                   Você confirma que deseja editar as informações do usuário <strong className="text-white">{editingUser?.name}</strong>?
                   <br /><br />
-                  Clique em "Confirmar" novamente para prosseguir.
+                  Clique em &quot;Confirmar&quot; novamente para prosseguir.
                 </>
               )}
             </DialogDescription>

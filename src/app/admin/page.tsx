@@ -53,6 +53,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -2903,7 +2904,7 @@ export default function AdminDashboard() {
                   <br /><br />
                   <strong>Motivo:</strong> {balanceReason || "Não especificado"}
                   <br /><br />
-                  Clique em "Confirmar" novamente para prosseguir.
+                  Clique em &quot;Confirmar&quot; novamente para prosseguir.
                 </>
               )}
             </DialogDescription>

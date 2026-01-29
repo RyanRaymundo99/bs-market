@@ -39,6 +39,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 
 interface UserDetails {
@@ -929,7 +930,7 @@ export default function AdminUserDetailsPage({
                     <br /><br />
                     <strong>Valor:</strong> {balanceAdjustment.amount.startsWith("-") ? "Remover" : "Adicionar"} {Math.abs(parseFloat(balanceAdjustment.amount) || 0).toFixed(2)} USDT
                     <br /><br />
-                    Clique em "Confirmar" novamente para prosseguir.
+                    Clique em &quot;Confirmar&quot; novamente para prosseguir.
                   </>
                 )}
               </DialogDescription>
@@ -980,7 +981,7 @@ export default function AdminUserDetailsPage({
                     <br /><br />
                     Você confirma que deseja editar as informações do usuário <strong className="text-white">{user?.name}</strong>?
                     <br /><br />
-                    Clique em "Confirmar" novamente para prosseguir.
+                    Clique em &quot;Confirmar&quot; novamente para prosseguir.
                   </>
                 )}
               </DialogDescription>
