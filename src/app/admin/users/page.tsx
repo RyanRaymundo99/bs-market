@@ -28,6 +28,7 @@ import {
   X,
   TrendingUp,
   TrendingDown,
+  MessageSquare,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
@@ -51,6 +52,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -118,8 +120,8 @@ export default function AdminUsersPage() {
   const [editConfirmStep, setEditConfirmStep] = useState(1);
   const [emailSubject, setEmailSubject] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
-  const [emailRecipients, setEmailRecipients] = useState<"all" | "filtered" | "selected">("filtered");
-  const [selectedUsers] = useState<Set<string>>(new Set());
+  const [emailRecipients, setEmailRecipients] = useState<"all" | "filtered" | "selected" | "individual">("filtered");
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
   const [sendingEmails, setSendingEmails] = useState(false);
   const [showTransactionsDialog, setShowTransactionsDialog] = useState(false);
   const [viewingUserTransactions, setViewingUserTransactions] = useState<UserWithDetails | null>(null);
@@ -492,6 +494,16 @@ export default function AdminUsersPage() {
         });
         return;
       }
+    } else if (emailRecipients === "individual") {
+      recipients = usersWithDetails.filter((u) => selectedUsers.has(u.id));
+      if (recipients.length === 0) {
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "Selecione pelo menos um usuário",
+        });
+        return;
+      }
     }
 
     if (recipients.length === 0) {
@@ -560,7 +572,35 @@ export default function AdminUsersPage() {
   const getRecipientCount = () => {
     if (emailRecipients === "all") return usersWithDetails.length;
     if (emailRecipients === "filtered") return filteredUsers.length;
-    return selectedUsers.size;
+    if (emailRecipients === "selected") return selectedUsers.size;
+    if (emailRecipients === "individual") return selectedUsers.size;
+    return 0;
+  };
+
+  const handleToggleUserSelection = (userId: string) => {
+    setSelectedUsers((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) {
+        next.delete(userId);
+      } else {
+        next.add(userId);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAllUsers = () => {
+    if (selectedUsers.size === filteredUsers.length) {
+      setSelectedUsers(new Set());
+    } else {
+      setSelectedUsers(new Set(filteredUsers.map((u) => u.id)));
+    }
+  };
+
+  const handleOpenEmailForUser = (user: UserWithDetails) => {
+    setSelectedUsers(new Set([user.id]));
+    setEmailRecipients("individual");
+    setEmailDialogOpen(true);
   };
 
   const handleViewTransactions = async (user: UserWithDetails) => {
@@ -628,6 +668,55 @@ export default function AdminUsersPage() {
       SELL: "Venda",
     };
     return typeMap[type] || type.replace(/_/g, " ");
+  };
+
+  const formatPhoneForWhatsApp = (phone: string | null | undefined): string | null => {
+    if (!phone) return null;
+    // Remove all non-digit characters
+    const cleaned = phone.replace(/\D/g, "");
+    
+    // If it's a Brazilian number without country code, add it
+    if (cleaned.length === 10 || cleaned.length === 11) {
+      return `55${cleaned}`;
+    }
+    
+    // If it already has country code
+    if (cleaned.startsWith("55") && (cleaned.length === 12 || cleaned.length === 13)) {
+      return cleaned;
+    }
+    
+    // Return cleaned number if format is unclear
+    return cleaned.length >= 10 ? cleaned : null;
+  };
+
+  const hasWhatsApp = (phone: string | null | undefined): boolean => {
+    if (!phone) return false;
+    const formatted = formatPhoneForWhatsApp(phone);
+    // Basic validation: if we can format it, assume WhatsApp might be available
+    // In a real scenario, you'd want to check via WhatsApp Business API
+    return formatted !== null && formatted.length >= 10;
+  };
+
+  const getWhatsAppLink = (phone: string | null | undefined): string | null => {
+    const formatted = formatPhoneForWhatsApp(phone);
+    return formatted ? `https://wa.me/${formatted}` : null;
+  };
+
+  const handleContactPhone = (phone: string) => {
+    window.location.href = `tel:${phone}`;
+  };
+
+  const handleContactWhatsApp = (phone: string | null | undefined) => {
+    const link = getWhatsAppLink(phone);
+    if (link) {
+      window.open(link, "_blank");
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Número de telefone inválido para WhatsApp",
+      });
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -951,6 +1040,34 @@ export default function AdminUsersPage() {
                           </DropdownMenuItem>
                           <DropdownMenuSeparator className="bg-gray-700" />
                           <DropdownMenuItem
+                            onClick={() => handleOpenEmailForUser(user)}
+                            className="text-white hover:bg-gray-800 focus:bg-gray-800"
+                          >
+                            <Mail className="mr-2 h-4 w-4 text-blue-400" />
+                            Enviar Email
+                          </DropdownMenuItem>
+                          {user.phone && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => handleContactPhone(user.phone!)}
+                                className="text-white hover:bg-gray-800 focus:bg-gray-800"
+                              >
+                                <Phone className="mr-2 h-4 w-4 text-blue-400" />
+                                Ligar
+                              </DropdownMenuItem>
+                              {hasWhatsApp(user.phone) && (
+                                <DropdownMenuItem
+                                  onClick={() => handleContactWhatsApp(user.phone)}
+                                  className="text-white hover:bg-gray-800 focus:bg-gray-800"
+                                >
+                                  <MessageSquare className="mr-2 h-4 w-4 text-green-500" />
+                                  Abrir WhatsApp
+                                </DropdownMenuItem>
+                              )}
+                            </>
+                          )}
+                          <DropdownMenuSeparator className="bg-gray-700" />
+                          <DropdownMenuItem
                             className="text-red-400 hover:bg-red-900/20 focus:bg-red-900/20"
                             onClick={() => openDeleteDialog(user)}
                           >
@@ -963,14 +1080,54 @@ export default function AdminUsersPage() {
 
                     {/* User Info */}
                     <div className="space-y-2 mb-4 text-sm">
-                      <div className="flex items-center gap-2 text-gray-400">
-                        <Mail className="w-4 h-4" />
-                        <span className="truncate">{user.email}</span>
+                      <div className="flex items-center justify-between gap-2 text-gray-400 group">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <Mail className="w-4 h-4 flex-shrink-0" />
+                          <span className="truncate">{user.email}</span>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleOpenEmailForUser(user)}
+                          className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-gray-800"
+                          title="Enviar Email"
+                        >
+                          <Mail className="w-3 h-3 text-blue-400" />
+                        </Button>
                       </div>
                       {user.phone && (
-                        <div className="flex items-center gap-2 text-gray-400">
-                          <Phone className="w-4 h-4" />
-                          <span>{user.phone}</span>
+                        <div className="flex items-center justify-between gap-2 text-gray-400 group">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <Phone className="w-4 h-4 flex-shrink-0" />
+                            <span className="truncate">{user.phone}</span>
+                            {hasWhatsApp(user.phone) && (
+                              <span title="Tem WhatsApp">
+                                <MessageSquare className="w-3 h-3 text-green-500 flex-shrink-0" />
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleContactPhone(user.phone!)}
+                              className="h-6 w-6 p-0 hover:bg-gray-800"
+                              title="Ligar"
+                            >
+                              <Phone className="w-3 h-3 text-blue-400" />
+                            </Button>
+                            {hasWhatsApp(user.phone) && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleContactWhatsApp(user.phone)}
+                                className="h-6 w-6 p-0 hover:bg-gray-800"
+                                title="Abrir WhatsApp"
+                              >
+                                <MessageSquare className="w-3 h-3 text-green-500" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       )}
                       {user.cpf && (
@@ -1096,6 +1253,16 @@ export default function AdminUsersPage() {
 
                             {/* Action Buttons */}
                             <div className="flex flex-col gap-2 pt-2">
+                              {/* Send Email Button */}
+                              <Button
+                                size="sm"
+                                onClick={() => handleOpenEmailForUser(user)}
+                                className="bg-blue-600 hover:bg-blue-700 text-white w-full"
+                              >
+                                <Mail className="w-4 h-4 mr-2" />
+                                Enviar Email para {user.name.split(" ")[0]}
+                              </Button>
+                              
                               {user.approvalStatus === "PENDING" && (
                                 <>
                                   <Button
@@ -1249,6 +1416,16 @@ export default function AdminUsersPage() {
 
                       {/* Action Buttons */}
                       <div className="flex items-center space-x-2 ml-4">
+                        {/* Send Email Button */}
+                        <Button
+                          size="sm"
+                          onClick={() => handleOpenEmailForUser(user)}
+                          className="bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                          <Mail className="w-4 h-4 mr-1" />
+                          Email
+                        </Button>
+                        
                         {user.approvalStatus === "PENDING" && (
                           <>
                             <Button
@@ -1567,7 +1744,7 @@ export default function AdminUsersPage() {
               </Label>
               <Select
                 value={emailRecipients}
-                onValueChange={(value: "all" | "filtered" | "selected") =>
+                onValueChange={(value: "all" | "filtered" | "selected" | "individual") =>
                   setEmailRecipients(value)
                 }
               >
@@ -1581,6 +1758,9 @@ export default function AdminUsersPage() {
                   <SelectItem value="all">
                     Todos os Usuários ({usersWithDetails.length})
                   </SelectItem>
+                  <SelectItem value="individual">
+                    Selecionar Individualmente ({selectedUsers.size})
+                  </SelectItem>
                   <SelectItem value="selected">
                     Usuários Selecionados ({selectedUsers.size})
                   </SelectItem>
@@ -1589,9 +1769,55 @@ export default function AdminUsersPage() {
               <p className="text-xs text-gray-500">
                 {emailRecipients === "all" && `Enviando para todos os ${usersWithDetails.length} usuários`}
                 {emailRecipients === "filtered" && `Enviando para ${filteredUsers.length} usuário(s) filtrado(s)`}
+                {emailRecipients === "individual" && selectedUsers.size === 0 && "Selecione os usuários abaixo"}
+                {emailRecipients === "individual" && selectedUsers.size > 0 && `Enviando para ${selectedUsers.size} usuário(s) selecionado(s)`}
                 {emailRecipients === "selected" && selectedUsers.size === 0 && "Nenhum usuário selecionado"}
                 {emailRecipients === "selected" && selectedUsers.size > 0 && `Enviando para ${selectedUsers.size} usuário(s) selecionado(s)`}
               </p>
+              
+              {/* Individual User Selection */}
+              {emailRecipients === "individual" && (
+                <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700 max-h-64 overflow-y-auto">
+                  <div className="flex items-center justify-between mb-3">
+                    <Label className="text-gray-300 text-sm font-semibold">
+                      Selecionar Usuários
+                    </Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSelectAllUsers}
+                      className="text-xs text-blue-400 hover:text-blue-300"
+                    >
+                      {selectedUsers.size === filteredUsers.length ? "Desmarcar Todos" : "Selecionar Todos"}
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    {filteredUsers.map((user) => (
+                      <div
+                        key={user.id}
+                        className="flex items-center gap-3 p-2 hover:bg-gray-700/50 rounded cursor-pointer"
+                        onClick={() => handleToggleUserSelection(user.id)}
+                      >
+                        <Checkbox
+                          checked={selectedUsers.has(user.id)}
+                          onCheckedChange={() => handleToggleUserSelection(user.id)}
+                          className="border-gray-600"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-white truncate">{user.name}</p>
+                          <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                        </div>
+                      </div>
+                    ))}
+                    {filteredUsers.length === 0 && (
+                      <p className="text-sm text-gray-400 text-center py-4">
+                        Nenhum usuário disponível para seleção
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Subject */}
@@ -1637,6 +1863,8 @@ export default function AdminUsersPage() {
                     ? usersWithDetails
                     : emailRecipients === "filtered"
                     ? filteredUsers
+                    : emailRecipients === "individual"
+                    ? usersWithDetails.filter((u) => selectedUsers.has(u.id))
                     : usersWithDetails.filter((u) => selectedUsers.has(u.id))
                   )
                     .slice(0, 10)
@@ -1674,7 +1902,7 @@ export default function AdminUsersPage() {
             </Button>
             <Button
               onClick={handleSendEmails}
-              disabled={sendingEmails || !emailSubject.trim() || !emailMessage.trim() || getRecipientCount() === 0}
+              disabled={sendingEmails || !emailSubject.trim() || !emailMessage.trim() || getRecipientCount() === 0 || (emailRecipients === "individual" && selectedUsers.size === 0)}
               className="bg-blue-600 hover:bg-blue-700"
             >
               {sendingEmails ? (
