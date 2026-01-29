@@ -29,6 +29,8 @@ import {
   TrendingUp,
   TrendingDown,
   MessageSquare,
+  Eye,
+  CheckCircle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
@@ -49,6 +51,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -61,6 +64,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatUSDT, formatBRL } from "@/lib/format-currency";
+import KYCImage from "@/components/admin/KYCImage";
+import ImageAnalysisPanel from "@/components/admin/ImageAnalysisPanel";
+import { ZoomIn } from "lucide-react";
 
 interface User {
   id: string;
@@ -91,14 +97,27 @@ interface UserWithDetails extends User {
     createdAt: string;
     externalId?: string | null;
   }>;
+  // KYC fields
+  documentType?: string | null;
+  documentNumber?: string | null;
+  documentFront?: string | null;
+  documentBack?: string | null;
+  documentSelfie?: string | null;
+  kycSubmittedAt?: string | null;
+  kycReviewedAt?: string | null;
+  kycRejectionReason?: string | null;
 }
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
-  const [usersWithDetails, setUsersWithDetails] = useState<UserWithDetails[]>([]);
+  const [usersWithDetails, setUsersWithDetails] = useState<UserWithDetails[]>(
+    [],
+  );
   const [filteredUsers, setFilteredUsers] = useState<UserWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingDetails, setLoadingDetails] = useState<Record<string, boolean>>({});
+  const [loadingDetails, setLoadingDetails] = useState<Record<string, boolean>>(
+    {},
+  );
   const [processingUser, setProcessingUser] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
@@ -120,12 +139,27 @@ export default function AdminUsersPage() {
   const [editConfirmStep, setEditConfirmStep] = useState(1);
   const [emailSubject, setEmailSubject] = useState("");
   const [emailMessage, setEmailMessage] = useState("");
-  const [emailRecipients, setEmailRecipients] = useState<"all" | "filtered" | "selected" | "individual">("filtered");
+  const [emailRecipients, setEmailRecipients] = useState<
+    "all" | "filtered" | "selected" | "individual"
+  >("filtered");
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
   const [sendingEmails, setSendingEmails] = useState(false);
   const [showTransactionsDialog, setShowTransactionsDialog] = useState(false);
-  const [viewingUserTransactions, setViewingUserTransactions] = useState<UserWithDetails | null>(null);
+  const [viewingUserTransactions, setViewingUserTransactions] =
+    useState<UserWithDetails | null>(null);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
+  const [showKYCDialog, setShowKYCDialog] = useState(false);
+  const [viewingKYCUser, setViewingKYCUser] = useState<UserWithDetails | null>(
+    null,
+  );
+  const [loadingKYCDocuments, setLoadingKYCDocuments] = useState(false);
+  const [kycRejectionReason, setKycRejectionReason] = useState("");
+  const [kycActionLoading, setKycActionLoading] = useState<string | null>(null);
+  const [selectedKYCImage, setSelectedKYCImage] = useState<{
+    src: string;
+    alt: string;
+    title: string;
+  } | null>(null);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -133,8 +167,12 @@ export default function AdminUsersPage() {
   const stats = useMemo(() => {
     const total = users.length;
     const pending = users.filter((u) => u.approvalStatus === "PENDING").length;
-    const approved = users.filter((u) => u.approvalStatus === "APPROVED").length;
-    const rejected = users.filter((u) => u.approvalStatus === "REJECTED").length;
+    const approved = users.filter(
+      (u) => u.approvalStatus === "APPROVED",
+    ).length;
+    const rejected = users.filter(
+      (u) => u.approvalStatus === "REJECTED",
+    ).length;
     const kycPending = users.filter((u) => u.kycStatus === "PENDING").length;
     const kycApproved = users.filter((u) => u.kycStatus === "APPROVED").length;
     return { total, pending, approved, rejected, kycPending, kycApproved };
@@ -171,13 +209,13 @@ export default function AdminUsersPage() {
         setLoading(false);
       }
     },
-    [toast]
+    [toast],
   );
 
   const fetchUserDetails = useCallback(
     async (userId: string) => {
       if (loadingDetails[userId]) return;
-      
+
       setLoadingDetails((prev) => ({ ...prev, [userId]: true }));
       try {
         const [balanceResponse, transactionsResponse] = await Promise.all([
@@ -185,8 +223,12 @@ export default function AdminUsersPage() {
           fetch(`/api/admin/users/${userId}?include=transactions`),
         ]);
 
-        const balanceData = balanceResponse.ok ? await balanceResponse.json() : null;
-        const txData = transactionsResponse.ok ? await transactionsResponse.json() : null;
+        const balanceData = balanceResponse.ok
+          ? await balanceResponse.json()
+          : null;
+        const txData = transactionsResponse.ok
+          ? await transactionsResponse.json()
+          : null;
 
         setUsersWithDetails((prev) => {
           const existing = prev.find((u) => u.id === userId);
@@ -201,7 +243,7 @@ export default function AdminUsersPage() {
                       txData?.transactions?.[0]?.createdAt || undefined,
                     transactions: txData?.transactions || [],
                   }
-                : u
+                : u,
             );
           }
           return prev;
@@ -209,32 +251,35 @@ export default function AdminUsersPage() {
       } catch (error) {
         console.error(`Error fetching details for user ${userId}:`, error);
       } finally {
-        setLoadingDetails((prev => {
+        setLoadingDetails((prev) => {
           const next = { ...prev };
           delete next[userId];
           return next;
-        }));
+        });
       }
     },
-    [loadingDetails]
+    [loadingDetails],
   );
 
-  const toggleUserExpansion = useCallback((userId: string) => {
-    setExpandedUsers((prev) => {
-      const next = new Set(prev);
-      if (next.has(userId)) {
-        next.delete(userId);
-      } else {
-        next.add(userId);
-        // Fetch details when expanding
-        const user = usersWithDetails.find((u) => u.id === userId);
-        if (!user?.balance && !loadingDetails[userId]) {
-          fetchUserDetails(userId);
+  const toggleUserExpansion = useCallback(
+    (userId: string) => {
+      setExpandedUsers((prev) => {
+        const next = new Set(prev);
+        if (next.has(userId)) {
+          next.delete(userId);
+        } else {
+          next.add(userId);
+          // Fetch details when expanding
+          const user = usersWithDetails.find((u) => u.id === userId);
+          if (!user?.balance && !loadingDetails[userId]) {
+            fetchUserDetails(userId);
+          }
         }
-      }
-      return next;
-    });
-  }, [usersWithDetails, loadingDetails, fetchUserDetails]);
+        return next;
+      });
+    },
+    [usersWithDetails, loadingDetails, fetchUserDetails],
+  );
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -257,9 +302,13 @@ export default function AdminUsersPage() {
           ...u,
           balance: prev.find((p) => p.id === u.id)?.balance,
           transactionCount: prev.find((p) => p.id === u.id)?.transactionCount,
-          lastTransactionDate: prev.find((p) => p.id === u.id)?.lastTransactionDate,
+          lastTransactionDate: prev.find((p) => p.id === u.id)
+            ?.lastTransactionDate,
         }));
-      return [...prev.filter((u) => users.some((nu) => nu.id === u.id)), ...newUsers];
+      return [
+        ...prev.filter((u) => users.some((nu) => nu.id === u.id)),
+        ...newUsers,
+      ];
     });
   }, [users]);
 
@@ -268,7 +317,9 @@ export default function AdminUsersPage() {
 
     // Apply status filter
     if (statusFilter !== "ALL") {
-      filtered = filtered.filter((user) => user.approvalStatus === statusFilter);
+      filtered = filtered.filter(
+        (user) => user.approvalStatus === statusFilter,
+      );
     }
 
     // Apply search filter
@@ -279,7 +330,7 @@ export default function AdminUsersPage() {
           user.name.toLowerCase().includes(query) ||
           user.email.toLowerCase().includes(query) ||
           user.cpf?.toLowerCase().includes(query) ||
-          user.phone?.toLowerCase().includes(query)
+          user.phone?.toLowerCase().includes(query),
       );
     }
 
@@ -288,7 +339,7 @@ export default function AdminUsersPage() {
 
   const handleApproval = async (
     userId: string,
-    action: "approve" | "reject"
+    action: "approve" | "reject",
   ) => {
     setProcessingUser(userId);
     try {
@@ -389,7 +440,7 @@ export default function AdminUsersPage() {
 
   const openDeleteDialog = (user: User) => {
     const confirmed = window.confirm(
-      `Tem certeza que deseja deletar permanentemente o usuário ${user.name} (${user.email})?\n\nEsta ação não pode ser desfeita e irá deletar todos os dados do usuário.`
+      `Tem certeza que deseja deletar permanentemente o usuário ${user.name} (${user.email})?\n\nEsta ação não pode ser desfeita e irá deletar todos os dados do usuário.`,
     );
     if (confirmed) {
       handleDeleteUser(user.id);
@@ -441,7 +492,7 @@ export default function AdminUsersPage() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify(editFormData),
-        }
+        },
       );
 
       if (response.ok) {
@@ -606,12 +657,14 @@ export default function AdminUsersPage() {
   const handleViewTransactions = async (user: UserWithDetails) => {
     setViewingUserTransactions(user);
     setShowTransactionsDialog(true);
-    
+
     // If transactions not loaded, fetch them
     if (!user.transactions || user.transactions.length === 0) {
       setLoadingTransactions(true);
       try {
-        const response = await fetch(`/api/admin/users/${user.id}?include=transactions`);
+        const response = await fetch(
+          `/api/admin/users/${user.id}?include=transactions`,
+        );
         if (response.ok) {
           const data = await response.json();
           setViewingUserTransactions({
@@ -633,6 +686,178 @@ export default function AdminUsersPage() {
     }
   };
 
+  const handleViewKYC = async (user: UserWithDetails) => {
+    setViewingKYCUser(user);
+    setShowKYCDialog(true);
+
+    // If KYC documents not loaded, fetch them
+    if (!user.documentFront && !user.documentBack && !user.documentSelfie) {
+      setLoadingKYCDocuments(true);
+      try {
+        const response = await fetch(`/api/admin/users/${user.id}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.user) {
+            setViewingKYCUser({
+              ...user,
+              documentType: data.user.documentType,
+              documentNumber: data.user.documentNumber,
+              documentFront: data.user.documentFront,
+              documentBack: data.user.documentBack,
+              documentSelfie: data.user.documentSelfie,
+              kycSubmittedAt: data.user.kycSubmittedAt,
+              kycReviewedAt: data.user.kycReviewedAt,
+              kycRejectionReason: data.user.kycRejectionReason,
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching KYC documents:", error);
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "Falha ao carregar documentos KYC",
+        });
+      } finally {
+        setLoadingKYCDocuments(false);
+      }
+    }
+  };
+
+  const handleKYCApprove = async (userId: string) => {
+    try {
+      setKycActionLoading(userId);
+      const response = await fetch(`/api/admin/kyc/${userId}/approve`, {
+        method: "POST",
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: "Sucesso",
+          description: "KYC do usuário aprovado com sucesso",
+        });
+        fetchUsers();
+        // Update the viewing user if dialog is open
+        if (viewingKYCUser && viewingKYCUser.id === userId) {
+          setViewingKYCUser({
+            ...viewingKYCUser,
+            kycStatus: "APPROVED",
+            kycReviewedAt: new Date().toISOString(),
+          });
+        }
+      } else {
+        throw new Error(data.error || "Failed to approve KYC");
+      }
+    } catch (error) {
+      console.error("Error approving KYC:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Falha ao aprovar KYC",
+      });
+    } finally {
+      setKycActionLoading(null);
+    }
+  };
+
+  const handleKYCReject = async (userId: string) => {
+    if (!kycRejectionReason.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Motivo da rejeição obrigatório",
+        description: "Por favor, forneça um motivo para a rejeição",
+      });
+      return;
+    }
+
+    try {
+      setKycActionLoading(userId);
+      const response = await fetch(`/api/admin/kyc/${userId}/reject`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ reason: kycRejectionReason }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: "Sucesso",
+          description: "KYC do usuário rejeitado com sucesso",
+        });
+        fetchUsers();
+        setKycRejectionReason("");
+        // Update the viewing user if dialog is open
+        if (viewingKYCUser && viewingKYCUser.id === userId) {
+          setViewingKYCUser({
+            ...viewingKYCUser,
+            kycStatus: "REJECTED",
+            kycReviewedAt: new Date().toISOString(),
+            kycRejectionReason: kycRejectionReason,
+          });
+        }
+      } else {
+        throw new Error(data.error || "Failed to reject KYC");
+      }
+    } catch (error) {
+      console.error("Error rejecting KYC:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Falha ao rejeitar KYC",
+      });
+    } finally {
+      setKycActionLoading(null);
+    }
+  };
+
+  const handleKYCReset = async (userId: string) => {
+    try {
+      setKycActionLoading(userId);
+      const response = await fetch(`/api/admin/kyc/${userId}/reset`, {
+        method: "POST",
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: "Sucesso",
+          description: "Status KYC redefinido para pendente para nova revisão",
+        });
+        fetchUsers();
+        // Update the viewing user if dialog is open
+        if (viewingKYCUser && viewingKYCUser.id === userId) {
+          setViewingKYCUser({
+            ...viewingKYCUser,
+            kycStatus: "PENDING",
+            kycReviewedAt: null,
+            kycRejectionReason: null,
+          });
+        }
+      } else {
+        throw new Error(data.error || "Failed to reset KYC status");
+      }
+    } catch (error) {
+      console.error("Error resetting KYC:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Falha ao redefinir status KYC",
+      });
+    } finally {
+      setKycActionLoading(null);
+    }
+  };
+
+  const handleKYCImageClick = (src: string, alt: string, title: string) => {
+    setSelectedKYCImage({ src, alt, title });
+  };
+
   const getStatusLabel = (status: string) => {
     const statusMap: Record<string, string> = {
       COMPLETED: "Concluída",
@@ -649,10 +874,18 @@ export default function AdminUsersPage() {
   };
 
   const getStatusColor = (status: string) => {
-    if (status === "COMPLETED" || status === "APPROVED" || status === "CONFIRMED") {
+    if (
+      status === "COMPLETED" ||
+      status === "APPROVED" ||
+      status === "CONFIRMED"
+    ) {
       return "bg-green-900/50 text-green-400 border border-green-500/30";
     }
-    if (status === "PENDING" || status === "PROCESSING" || status === "EXECUTING") {
+    if (
+      status === "PENDING" ||
+      status === "PROCESSING" ||
+      status === "EXECUTING"
+    ) {
       return "bg-yellow-900/50 text-yellow-400 border border-yellow-500/30";
     }
     return "bg-red-900/50 text-red-400 border border-red-500/30";
@@ -670,21 +903,26 @@ export default function AdminUsersPage() {
     return typeMap[type] || type.replace(/_/g, " ");
   };
 
-  const formatPhoneForWhatsApp = (phone: string | null | undefined): string | null => {
+  const formatPhoneForWhatsApp = (
+    phone: string | null | undefined,
+  ): string | null => {
     if (!phone) return null;
     // Remove all non-digit characters
     const cleaned = phone.replace(/\D/g, "");
-    
+
     // If it's a Brazilian number without country code, add it
     if (cleaned.length === 10 || cleaned.length === 11) {
       return `55${cleaned}`;
     }
-    
+
     // If it already has country code
-    if (cleaned.startsWith("55") && (cleaned.length === 12 || cleaned.length === 13)) {
+    if (
+      cleaned.startsWith("55") &&
+      (cleaned.length === 12 || cleaned.length === 13)
+    ) {
       return cleaned;
     }
-    
+
     // Return cleaned number if format is unclear
     return cleaned.length >= 10 ? cleaned : null;
   };
@@ -733,14 +971,20 @@ export default function AdminUsersPage() {
         );
       case "APPROVED":
         return (
-          <Badge variant="secondary" className="bg-green-500/20 text-green-600 border-green-500/30">
+          <Badge
+            variant="secondary"
+            className="bg-green-500/20 text-green-600 border-green-500/30"
+          >
             <CheckCircle2 className="w-3 h-3 mr-1" />
             Aprovado
           </Badge>
         );
       case "REJECTED":
         return (
-          <Badge variant="secondary" className="bg-red-500/20 text-red-600 border-red-500/30">
+          <Badge
+            variant="secondary"
+            className="bg-red-500/20 text-red-600 border-red-500/30"
+          >
             <XCircle className="w-3 h-3 mr-1" />
             Rejeitado
           </Badge>
@@ -760,7 +1004,9 @@ export default function AdminUsersPage() {
     });
   };
 
-  const getTotalBalance = (balances: { currency: string; amount: number }[] = []) => {
+  const getTotalBalance = (
+    balances: { currency: string; amount: number }[] = [],
+  ) => {
     const usdtBalance = balances.find((b) => b.currency === "USDT");
     return usdtBalance ? Number(usdtBalance.amount) : 0;
   };
@@ -783,7 +1029,7 @@ export default function AdminUsersPage() {
       <div className="max-w-[1920px] mx-auto space-y-6">
         {/* Back to Dashboard Button */}
         <BackToDashboardButton />
-        
+
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
@@ -793,21 +1039,19 @@ export default function AdminUsersPage() {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <Button 
-              onClick={() => setEmailDialogOpen(true)} 
+            <Button
+              onClick={() => setEmailDialogOpen(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               <Mail className="w-4 h-4 mr-2" />
               Enviar Email
             </Button>
             <NotificationBell />
-            <Link href="/admin/kyc">
-              <Button variant="outline" className="border-gray-700 hover:bg-gray-800">
-                <FileText className="w-4 h-4 mr-2" />
-                KYC Verification
-              </Button>
-            </Link>
-            <Button onClick={() => fetchUsers()} variant="outline" className="border-gray-700 hover:bg-gray-800">
+            <Button
+              onClick={() => fetchUsers()}
+              variant="outline"
+              className="border-gray-700 hover:bg-gray-800"
+            >
               <RefreshCw className="w-4 h-4 mr-2" />
               Atualizar
             </Button>
@@ -832,7 +1076,9 @@ export default function AdminUsersPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-gray-400">Pending</p>
-                  <p className="text-2xl font-bold text-yellow-400">{stats.pending}</p>
+                  <p className="text-2xl font-bold text-yellow-400">
+                    {stats.pending}
+                  </p>
                 </div>
                 <Clock className="w-8 h-8 text-yellow-400 opacity-50" />
               </div>
@@ -843,7 +1089,9 @@ export default function AdminUsersPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-gray-400">Approved</p>
-                  <p className="text-2xl font-bold text-green-400">{stats.approved}</p>
+                  <p className="text-2xl font-bold text-green-400">
+                    {stats.approved}
+                  </p>
                 </div>
                 <CheckCircle2 className="w-8 h-8 text-green-400 opacity-50" />
               </div>
@@ -854,7 +1102,9 @@ export default function AdminUsersPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-gray-400">Rejected</p>
-                  <p className="text-2xl font-bold text-red-400">{stats.rejected}</p>
+                  <p className="text-2xl font-bold text-red-400">
+                    {stats.rejected}
+                  </p>
                 </div>
                 <XCircle className="w-8 h-8 text-red-400 opacity-50" />
               </div>
@@ -865,7 +1115,9 @@ export default function AdminUsersPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-gray-400">KYC Pending</p>
-                  <p className="text-2xl font-bold text-yellow-400">{stats.kycPending}</p>
+                  <p className="text-2xl font-bold text-yellow-400">
+                    {stats.kycPending}
+                  </p>
                 </div>
                 <Shield className="w-8 h-8 text-yellow-400 opacity-50" />
               </div>
@@ -876,7 +1128,9 @@ export default function AdminUsersPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-gray-400">KYC Approved</p>
-                  <p className="text-2xl font-bold text-green-400">{stats.kycApproved}</p>
+                  <p className="text-2xl font-bold text-green-400">
+                    {stats.kycApproved}
+                  </p>
                 </div>
                 <Shield className="w-8 h-8 text-green-400 opacity-50" />
               </div>
@@ -939,7 +1193,11 @@ export default function AdminUsersPage() {
             variant={statusFilter === "PENDING" ? "default" : "outline"}
             onClick={() => setStatusFilter("PENDING")}
             size="sm"
-            className={statusFilter === "PENDING" ? "bg-yellow-600 hover:bg-yellow-700" : "border-gray-700"}
+            className={
+              statusFilter === "PENDING"
+                ? "bg-yellow-600 hover:bg-yellow-700"
+                : "border-gray-700"
+            }
           >
             Pending ({stats.pending})
           </Button>
@@ -947,7 +1205,11 @@ export default function AdminUsersPage() {
             variant={statusFilter === "APPROVED" ? "default" : "outline"}
             onClick={() => setStatusFilter("APPROVED")}
             size="sm"
-            className={statusFilter === "APPROVED" ? "bg-green-600 hover:bg-green-700" : "border-gray-700"}
+            className={
+              statusFilter === "APPROVED"
+                ? "bg-green-600 hover:bg-green-700"
+                : "border-gray-700"
+            }
           >
             Approved ({stats.approved})
           </Button>
@@ -955,7 +1217,11 @@ export default function AdminUsersPage() {
             variant={statusFilter === "REJECTED" ? "default" : "outline"}
             onClick={() => setStatusFilter("REJECTED")}
             size="sm"
-            className={statusFilter === "REJECTED" ? "bg-red-600 hover:bg-red-700" : "border-gray-700"}
+            className={
+              statusFilter === "REJECTED"
+                ? "bg-red-600 hover:bg-red-700"
+                : "border-gray-700"
+            }
           >
             Rejected ({stats.rejected})
           </Button>
@@ -970,15 +1236,15 @@ export default function AdminUsersPage() {
                 {searchQuery
                   ? "Nenhum usuário encontrado"
                   : statusFilter === "ALL"
-                  ? "Nenhum usuário encontrado"
-                  : `Nenhum usuário ${statusFilter.toLowerCase()} encontrado`}
+                    ? "Nenhum usuário encontrado"
+                    : `Nenhum usuário ${statusFilter.toLowerCase()} encontrado`}
               </h3>
               <p className="text-gray-400">
                 {searchQuery
                   ? "Tente ajustar sua busca"
                   : statusFilter === "ALL"
-                  ? "Não há usuários para exibir no momento."
-                  : `Não há usuários com status ${statusFilter.toLowerCase()} no momento.`}
+                    ? "Não há usuários para exibir no momento."
+                    : `Não há usuários com status ${statusFilter.toLowerCase()} no momento.`}
               </p>
             </CardContent>
           </Card>
@@ -1007,7 +1273,9 @@ export default function AdminUsersPage() {
                           <h3 className="text-lg font-semibold truncate">
                             {user.name}
                           </h3>
-                          <div className="mt-1">{getStatusBadge(user.approvalStatus)}</div>
+                          <div className="mt-1">
+                            {getStatusBadge(user.approvalStatus)}
+                          </div>
                         </div>
                       </div>
                       <DropdownMenu>
@@ -1038,6 +1306,20 @@ export default function AdminUsersPage() {
                             <ExternalLink className="mr-2 h-4 w-4 text-green-400" />
                             Ver Perfil Completo
                           </DropdownMenuItem>
+                          {(user.kycStatus === "PENDING" ||
+                            user.kycStatus === "APPROVED" ||
+                            user.kycStatus === "REJECTED" ||
+                            user.documentFront ||
+                            user.documentBack ||
+                            user.documentSelfie) && (
+                            <DropdownMenuItem
+                              onClick={() => handleViewKYC(user)}
+                              className="text-white hover:bg-gray-800 focus:bg-gray-800"
+                            >
+                              <Shield className="mr-2 h-4 w-4 text-yellow-400" />
+                              Verificar KYC
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuSeparator className="bg-gray-700" />
                           <DropdownMenuItem
                             onClick={() => handleOpenEmailForUser(user)}
@@ -1057,7 +1339,9 @@ export default function AdminUsersPage() {
                               </DropdownMenuItem>
                               {hasWhatsApp(user.phone) && (
                                 <DropdownMenuItem
-                                  onClick={() => handleContactWhatsApp(user.phone)}
+                                  onClick={() =>
+                                    handleContactWhatsApp(user.phone)
+                                  }
                                   className="text-white hover:bg-gray-800 focus:bg-gray-800"
                                 >
                                   <MessageSquare className="mr-2 h-4 w-4 text-green-500" />
@@ -1120,7 +1404,9 @@ export default function AdminUsersPage() {
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                onClick={() => handleContactWhatsApp(user.phone)}
+                                onClick={() =>
+                                  handleContactWhatsApp(user.phone)
+                                }
                                 className="h-6 w-6 p-0 hover:bg-gray-800"
                                 title="Abrir WhatsApp"
                               >
@@ -1160,10 +1446,28 @@ export default function AdminUsersPage() {
 
                     {/* KYC Status */}
                     <div className="mb-4">
-                      <div className="flex items-center gap-2">
-                        <Shield className="w-4 h-4 text-gray-400" />
-                        <span className="text-xs text-gray-400">KYC:</span>
-                        {getStatusBadge(user.kycStatus)}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Shield className="w-4 h-4 text-gray-400" />
+                          <span className="text-xs text-gray-400">KYC:</span>
+                          {getStatusBadge(user.kycStatus)}
+                        </div>
+                        {(user.kycStatus === "PENDING" ||
+                          user.kycStatus === "APPROVED" ||
+                          user.kycStatus === "REJECTED" ||
+                          user.documentFront ||
+                          user.documentBack ||
+                          user.documentSelfie) && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleViewKYC(user)}
+                            className="h-7 text-xs border-gray-600 text-gray-300 hover:bg-gray-700"
+                          >
+                            <Eye className="w-3 h-3 mr-1" />
+                            Verificar KYC
+                          </Button>
+                        )}
                       </div>
                     </div>
 
@@ -1193,7 +1497,9 @@ export default function AdminUsersPage() {
                         {isLoadingDetails ? (
                           <div className="text-center py-4">
                             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mx-auto"></div>
-                            <p className="text-xs text-gray-400 mt-2">Carregando...</p>
+                            <p className="text-xs text-gray-400 mt-2">
+                              Carregando...
+                            </p>
                           </div>
                         ) : (
                           <>
@@ -1210,7 +1516,9 @@ export default function AdminUsersPage() {
                                       key={bal.currency}
                                       className="flex items-center justify-between text-sm bg-gray-800/50 rounded p-2"
                                     >
-                                      <span className="text-gray-400">{bal.currency}</span>
+                                      <span className="text-gray-400">
+                                        {bal.currency}
+                                      </span>
                                       <span className="text-white font-medium">
                                         {bal.currency === "BRL"
                                           ? formatBRL(Number(bal.amount))
@@ -1230,10 +1538,13 @@ export default function AdminUsersPage() {
                                   Resumo
                                 </h4>
                                 <div className="text-sm text-gray-300">
-                                  <p>Total de transações: {user.transactionCount}</p>
+                                  <p>
+                                    Total de transações: {user.transactionCount}
+                                  </p>
                                   {user.lastTransactionDate && (
                                     <p className="text-xs text-gray-400 mt-1">
-                                      Última: {formatDate(user.lastTransactionDate)}
+                                      Última:{" "}
+                                      {formatDate(user.lastTransactionDate)}
                                     </p>
                                   )}
                                 </div>
@@ -1262,12 +1573,31 @@ export default function AdminUsersPage() {
                                 <Mail className="w-4 h-4 mr-2" />
                                 Enviar Email para {user.name.split(" ")[0]}
                               </Button>
-                              
+
+                              {/* KYC Review Button */}
+                              {(user.kycStatus === "PENDING" ||
+                                user.kycStatus === "APPROVED" ||
+                                user.kycStatus === "REJECTED" ||
+                                user.documentFront ||
+                                user.documentBack ||
+                                user.documentSelfie) && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleViewKYC(user)}
+                                  className="bg-yellow-600 hover:bg-yellow-700 text-white w-full"
+                                >
+                                  <Shield className="w-4 h-4 mr-2" />
+                                  Verificar KYC
+                                </Button>
+                              )}
+
                               {user.approvalStatus === "PENDING" && (
                                 <>
                                   <Button
                                     size="sm"
-                                    onClick={() => handleApproval(user.id, "approve")}
+                                    onClick={() =>
+                                      handleApproval(user.id, "approve")
+                                    }
                                     disabled={processingUser === user.id}
                                     className="bg-green-600 hover:bg-green-700 text-white w-full"
                                   >
@@ -1283,7 +1613,9 @@ export default function AdminUsersPage() {
                                   <Button
                                     size="sm"
                                     variant="destructive"
-                                    onClick={() => handleApproval(user.id, "reject")}
+                                    onClick={() =>
+                                      handleApproval(user.id, "reject")
+                                    }
                                     disabled={processingUser === user.id}
                                     className="bg-red-600 hover:bg-red-700 w-full"
                                   >
@@ -1304,7 +1636,9 @@ export default function AdminUsersPage() {
                                 <div className="flex gap-2">
                                   <Button
                                     size="sm"
-                                    onClick={() => handleResetToPending(user.id)}
+                                    onClick={() =>
+                                      handleResetToPending(user.id)
+                                    }
                                     disabled={processingUser === user.id}
                                     className="bg-orange-600 hover:bg-orange-700 text-white flex-1"
                                   >
@@ -1319,7 +1653,9 @@ export default function AdminUsersPage() {
                                   </Button>
                                   <Button
                                     size="sm"
-                                    onClick={() => handleApproval(user.id, "approve")}
+                                    onClick={() =>
+                                      handleApproval(user.id, "approve")
+                                    }
                                     disabled={processingUser === user.id}
                                     className="bg-green-600 hover:bg-green-700 text-white flex-1"
                                   >
@@ -1392,11 +1728,15 @@ export default function AdminUsersPage() {
                             <div className="mb-1">
                               <span className="text-gray-500">Saldo: </span>
                               <span className="text-white font-medium">
-                                {userBalance > 0 ? formatUSDT(userBalance) : "0 USDT"}
+                                {userBalance > 0
+                                  ? formatUSDT(userBalance)
+                                  : "0 USDT"}
                               </span>
                             </div>
                             <div>
-                              <span className="text-gray-500">Transações: </span>
+                              <span className="text-gray-500">
+                                Transações:{" "}
+                              </span>
                               <span className="text-white font-medium">
                                 {user.transactionCount || 0}
                               </span>
@@ -1404,11 +1744,31 @@ export default function AdminUsersPage() {
                           </div>
                           <div className="text-sm text-gray-400">
                             <div className="mb-1">
-                              <span>Criado em {formatDate(user.createdAt)}</span>
+                              <span>
+                                Criado em {formatDate(user.createdAt)}
+                              </span>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Shield className="w-4 h-4" />
-                              {getStatusBadge(user.kycStatus)}
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <Shield className="w-4 h-4" />
+                                {getStatusBadge(user.kycStatus)}
+                              </div>
+                              {(user.kycStatus === "PENDING" ||
+                                user.kycStatus === "APPROVED" ||
+                                user.kycStatus === "REJECTED" ||
+                                user.documentFront ||
+                                user.documentBack ||
+                                user.documentSelfie) && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleViewKYC(user)}
+                                  className="h-7 text-xs border-gray-600 text-gray-300 hover:bg-gray-700"
+                                >
+                                  <Eye className="w-3 h-3 mr-1" />
+                                  Verificar KYC
+                                </Button>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -1425,7 +1785,7 @@ export default function AdminUsersPage() {
                           <Mail className="w-4 h-4 mr-1" />
                           Email
                         </Button>
-                        
+
                         {user.approvalStatus === "PENDING" && (
                           <>
                             <Button
@@ -1526,6 +1886,20 @@ export default function AdminUsersPage() {
                               <ExternalLink className="mr-2 h-4 w-4 text-green-400" />
                               Ver Perfil Completo
                             </DropdownMenuItem>
+                            {(user.kycStatus === "PENDING" ||
+                              user.kycStatus === "APPROVED" ||
+                              user.kycStatus === "REJECTED" ||
+                              user.documentFront ||
+                              user.documentBack ||
+                              user.documentSelfie) && (
+                              <DropdownMenuItem
+                                onClick={() => handleViewKYC(user)}
+                                className="text-white hover:bg-gray-800 focus:bg-gray-800"
+                              >
+                                <Shield className="mr-2 h-4 w-4 text-yellow-400" />
+                                Verificar KYC
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuSeparator className="bg-gray-700" />
                             <DropdownMenuItem
                               className="text-red-400 hover:bg-red-900/20 focus:bg-red-900/20"
@@ -1550,7 +1924,9 @@ export default function AdminUsersPage() {
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="max-w-2xl bg-gray-900 border-gray-800">
           <DialogHeader>
-            <DialogTitle className="text-white">Edit User: {editingUser?.name}</DialogTitle>
+            <DialogTitle className="text-white">
+              Edit User: {editingUser?.name}
+            </DialogTitle>
             <DialogDescription className="text-gray-400">
               Update user information and status. Changes will be applied
               immediately.
@@ -1560,7 +1936,9 @@ export default function AdminUsersPage() {
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-name" className="text-gray-300">Full Name</Label>
+                <Label htmlFor="edit-name" className="text-gray-300">
+                  Full Name
+                </Label>
                 <Input
                   id="edit-name"
                   value={editFormData.name}
@@ -1571,7 +1949,9 @@ export default function AdminUsersPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-email" className="text-gray-300">Email</Label>
+                <Label htmlFor="edit-email" className="text-gray-300">
+                  Email
+                </Label>
                 <Input
                   id="edit-email"
                   type="email"
@@ -1586,7 +1966,9 @@ export default function AdminUsersPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-phone" className="text-gray-300">Phone</Label>
+                <Label htmlFor="edit-phone" className="text-gray-300">
+                  Phone
+                </Label>
                 <Input
                   id="edit-phone"
                   value={editFormData.phone}
@@ -1597,7 +1979,9 @@ export default function AdminUsersPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-cpf" className="text-gray-300">CPF</Label>
+                <Label htmlFor="edit-cpf" className="text-gray-300">
+                  CPF
+                </Label>
                 <Input
                   id="edit-cpf"
                   value={editFormData.cpf}
@@ -1611,7 +1995,9 @@ export default function AdminUsersPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-approval-status" className="text-gray-300">Approval Status</Label>
+                <Label htmlFor="edit-approval-status" className="text-gray-300">
+                  Approval Status
+                </Label>
                 <Select
                   value={editFormData.approvalStatus}
                   onValueChange={(value: "PENDING" | "APPROVED" | "REJECTED") =>
@@ -1629,7 +2015,9 @@ export default function AdminUsersPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-kyc-status" className="text-gray-300">KYC Status</Label>
+                <Label htmlFor="edit-kyc-status" className="text-gray-300">
+                  KYC Status
+                </Label>
                 <Select
                   value={editFormData.kycStatus}
                   onValueChange={(value: "PENDING" | "APPROVED" | "REJECTED") =>
@@ -1658,7 +2046,11 @@ export default function AdminUsersPage() {
             >
               Cancel
             </Button>
-            <Button onClick={handleSaveUserClick} disabled={saving} className="bg-blue-600 hover:bg-blue-700">
+            <Button
+              onClick={handleSaveUserClick}
+              disabled={saving}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
               {saving ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
@@ -1673,12 +2065,15 @@ export default function AdminUsersPage() {
       </Dialog>
 
       {/* Edit User Confirmation Dialog */}
-      <Dialog open={showEditConfirmDialog} onOpenChange={(open) => {
-        if (!open) {
-          setShowEditConfirmDialog(false);
-          setEditConfirmStep(1);
-        }
-      }}>
+      <Dialog
+        open={showEditConfirmDialog}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowEditConfirmDialog(false);
+            setEditConfirmStep(1);
+          }
+        }}
+      >
         <DialogContent className="bg-gray-900 border-gray-800">
           <DialogHeader>
             <DialogTitle className="text-white">
@@ -1687,16 +2082,22 @@ export default function AdminUsersPage() {
             <DialogDescription className="text-gray-400">
               {editConfirmStep === 1 ? (
                 <>
-                  Você está prestes a editar as informações do usuário <strong className="text-white">{editingUser?.name}</strong>.
-                  <br /><br />
+                  Você está prestes a editar as informações do usuário{" "}
+                  <strong className="text-white">{editingUser?.name}</strong>.
+                  <br />
+                  <br />
                   Esta ação alterará os dados do usuário. Deseja continuar?
                 </>
               ) : (
                 <>
-                  <strong className="text-red-400">ATENÇÃO:</strong> Esta é a confirmação final.
-                  <br /><br />
-                  Você confirma que deseja editar as informações do usuário <strong className="text-white">{editingUser?.name}</strong>?
-                  <br /><br />
+                  <strong className="text-red-400">ATENÇÃO:</strong> Esta é a
+                  confirmação final.
+                  <br />
+                  <br />
+                  Você confirma que deseja editar as informações do usuário{" "}
+                  <strong className="text-white">{editingUser?.name}</strong>?
+                  <br />
+                  <br />
                   Clique em &quot;Confirmar&quot; novamente para prosseguir.
                 </>
               )}
@@ -1715,7 +2116,11 @@ export default function AdminUsersPage() {
             </Button>
             <Button
               onClick={handleEditConfirm}
-              className={editConfirmStep === 1 ? "bg-yellow-600 hover:bg-yellow-700" : "bg-red-600 hover:bg-red-700"}
+              className={
+                editConfirmStep === 1
+                  ? "bg-yellow-600 hover:bg-yellow-700"
+                  : "bg-red-600 hover:bg-red-700"
+              }
             >
               {editConfirmStep === 1 ? "Sim, Continuar" : "Confirmar Edição"}
             </Button>
@@ -1732,7 +2137,8 @@ export default function AdminUsersPage() {
               Enviar Email Rápido
             </DialogTitle>
             <DialogDescription className="text-gray-400">
-              Envie um email para os usuários selecionados. O email também criará uma notificação na plataforma.
+              Envie um email para os usuários selecionados. O email também
+              criará uma notificação na plataforma.
             </DialogDescription>
           </DialogHeader>
 
@@ -1744,9 +2150,9 @@ export default function AdminUsersPage() {
               </Label>
               <Select
                 value={emailRecipients}
-                onValueChange={(value: "all" | "filtered" | "selected" | "individual") =>
-                  setEmailRecipients(value)
-                }
+                onValueChange={(
+                  value: "all" | "filtered" | "selected" | "individual",
+                ) => setEmailRecipients(value)}
               >
                 <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
                   <SelectValue />
@@ -1767,14 +2173,24 @@ export default function AdminUsersPage() {
                 </SelectContent>
               </Select>
               <p className="text-xs text-gray-500">
-                {emailRecipients === "all" && `Enviando para todos os ${usersWithDetails.length} usuários`}
-                {emailRecipients === "filtered" && `Enviando para ${filteredUsers.length} usuário(s) filtrado(s)`}
-                {emailRecipients === "individual" && selectedUsers.size === 0 && "Selecione os usuários abaixo"}
-                {emailRecipients === "individual" && selectedUsers.size > 0 && `Enviando para ${selectedUsers.size} usuário(s) selecionado(s)`}
-                {emailRecipients === "selected" && selectedUsers.size === 0 && "Nenhum usuário selecionado"}
-                {emailRecipients === "selected" && selectedUsers.size > 0 && `Enviando para ${selectedUsers.size} usuário(s) selecionado(s)`}
+                {emailRecipients === "all" &&
+                  `Enviando para todos os ${usersWithDetails.length} usuários`}
+                {emailRecipients === "filtered" &&
+                  `Enviando para ${filteredUsers.length} usuário(s) filtrado(s)`}
+                {emailRecipients === "individual" &&
+                  selectedUsers.size === 0 &&
+                  "Selecione os usuários abaixo"}
+                {emailRecipients === "individual" &&
+                  selectedUsers.size > 0 &&
+                  `Enviando para ${selectedUsers.size} usuário(s) selecionado(s)`}
+                {emailRecipients === "selected" &&
+                  selectedUsers.size === 0 &&
+                  "Nenhum usuário selecionado"}
+                {emailRecipients === "selected" &&
+                  selectedUsers.size > 0 &&
+                  `Enviando para ${selectedUsers.size} usuário(s) selecionado(s)`}
               </p>
-              
+
               {/* Individual User Selection */}
               {emailRecipients === "individual" && (
                 <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700 max-h-64 overflow-y-auto">
@@ -1789,7 +2205,9 @@ export default function AdminUsersPage() {
                       onClick={handleSelectAllUsers}
                       className="text-xs text-blue-400 hover:text-blue-300"
                     >
-                      {selectedUsers.size === filteredUsers.length ? "Desmarcar Todos" : "Selecionar Todos"}
+                      {selectedUsers.size === filteredUsers.length
+                        ? "Desmarcar Todos"
+                        : "Selecionar Todos"}
                     </Button>
                   </div>
                   <div className="space-y-2">
@@ -1801,12 +2219,18 @@ export default function AdminUsersPage() {
                       >
                         <Checkbox
                           checked={selectedUsers.has(user.id)}
-                          onCheckedChange={() => handleToggleUserSelection(user.id)}
+                          onCheckedChange={() =>
+                            handleToggleUserSelection(user.id)
+                          }
                           className="border-gray-600"
                         />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm text-white truncate">{user.name}</p>
-                          <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                          <p className="text-sm text-white truncate">
+                            {user.name}
+                          </p>
+                          <p className="text-xs text-gray-400 truncate">
+                            {user.email}
+                          </p>
                         </div>
                       </div>
                     ))}
@@ -1848,7 +2272,8 @@ export default function AdminUsersPage() {
                 rows={8}
               />
               <p className="text-xs text-gray-500">
-                A mensagem será enviada por email e também aparecerá como notificação na plataforma.
+                A mensagem será enviada por email e também aparecerá como
+                notificação na plataforma.
               </p>
             </div>
 
@@ -1862,10 +2287,14 @@ export default function AdminUsersPage() {
                   {(emailRecipients === "all"
                     ? usersWithDetails
                     : emailRecipients === "filtered"
-                    ? filteredUsers
-                    : emailRecipients === "individual"
-                    ? usersWithDetails.filter((u) => selectedUsers.has(u.id))
-                    : usersWithDetails.filter((u) => selectedUsers.has(u.id))
+                      ? filteredUsers
+                      : emailRecipients === "individual"
+                        ? usersWithDetails.filter((u) =>
+                            selectedUsers.has(u.id),
+                          )
+                        : usersWithDetails.filter((u) =>
+                            selectedUsers.has(u.id),
+                          )
                   )
                     .slice(0, 10)
                     .map((user) => (
@@ -1902,7 +2331,13 @@ export default function AdminUsersPage() {
             </Button>
             <Button
               onClick={handleSendEmails}
-              disabled={sendingEmails || !emailSubject.trim() || !emailMessage.trim() || getRecipientCount() === 0 || (emailRecipients === "individual" && selectedUsers.size === 0)}
+              disabled={
+                sendingEmails ||
+                !emailSubject.trim() ||
+                !emailMessage.trim() ||
+                getRecipientCount() === 0 ||
+                (emailRecipients === "individual" && selectedUsers.size === 0)
+              }
               className="bg-blue-600 hover:bg-blue-700"
             >
               {sendingEmails ? (
@@ -1918,11 +2353,14 @@ export default function AdminUsersPage() {
               )}
             </Button>
           </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        </DialogContent>
+      </Dialog>
 
       {/* Transactions Dialog */}
-      <Dialog open={showTransactionsDialog} onOpenChange={setShowTransactionsDialog}>
+      <Dialog
+        open={showTransactionsDialog}
+        onOpenChange={setShowTransactionsDialog}
+      >
         <DialogContent className="max-w-4xl bg-gray-900 border-gray-800 max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="text-white flex items-center gap-2">
@@ -1940,7 +2378,8 @@ export default function AdminUsersPage() {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
                 <p className="ml-3 text-gray-400">Carregando transações...</p>
               </div>
-            ) : viewingUserTransactions?.transactions && viewingUserTransactions.transactions.length > 0 ? (
+            ) : viewingUserTransactions?.transactions &&
+              viewingUserTransactions.transactions.length > 0 ? (
               <div className="space-y-2">
                 {viewingUserTransactions.transactions.map((tx) => (
                   <div
@@ -1949,12 +2388,16 @@ export default function AdminUsersPage() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 flex-1">
-                        <div className={`p-2 rounded ${
-                          tx.type.includes("DEPOSIT") || tx.type.includes("BUY")
-                            ? "bg-green-900/30 text-green-400"
-                            : "bg-red-900/30 text-red-400"
-                        }`}>
-                          {tx.type.includes("DEPOSIT") || tx.type.includes("BUY") ? (
+                        <div
+                          className={`p-2 rounded ${
+                            tx.type.includes("DEPOSIT") ||
+                            tx.type.includes("BUY")
+                              ? "bg-green-900/30 text-green-400"
+                              : "bg-red-900/30 text-red-400"
+                          }`}
+                        >
+                          {tx.type.includes("DEPOSIT") ||
+                          tx.type.includes("BUY") ? (
                             <TrendingUp className="w-4 h-4" />
                           ) : (
                             <TrendingDown className="w-4 h-4" />
@@ -1965,29 +2408,44 @@ export default function AdminUsersPage() {
                             <span className="text-white font-medium">
                               {getTransactionTypeLabel(tx.type)}
                             </span>
-                            <span className={`text-xs px-2 py-0.5 rounded ${getStatusColor(tx.status)}`}>
+                            <span
+                              className={`text-xs px-2 py-0.5 rounded ${getStatusColor(tx.status)}`}
+                            >
                               {getStatusLabel(tx.status)}
                             </span>
                           </div>
                           <div className="text-sm text-gray-400">
                             {formatDate(tx.createdAt)}
                             {tx.externalId && (
-                              <span className="ml-2 text-xs">ID: {tx.externalId}</span>
+                              <span className="ml-2 text-xs">
+                                ID: {tx.externalId}
+                              </span>
                             )}
                           </div>
                         </div>
                         <div className="text-right">
-                          <span className={`text-lg font-semibold ${
-                            tx.type.includes("DEPOSIT") || tx.type.includes("BUY")
-                              ? "text-green-400"
-                              : "text-red-400"
-                          }`}>
-                            {tx.type.includes("DEPOSIT") || tx.type.includes("BUY") ? "+" : "-"}
+                          <span
+                            className={`text-lg font-semibold ${
+                              tx.type.includes("DEPOSIT") ||
+                              tx.type.includes("BUY")
+                                ? "text-green-400"
+                                : "text-red-400"
+                            }`}
+                          >
+                            {tx.type.includes("DEPOSIT") ||
+                            tx.type.includes("BUY")
+                              ? "+"
+                              : "-"}
                             {tx.currency === "BRL"
                               ? formatBRL(Number(tx.amount)).replace("R$ ", "")
-                              : formatUSDT(Number(tx.amount)).replace(" USDT", "")}
+                              : formatUSDT(Number(tx.amount)).replace(
+                                  " USDT",
+                                  "",
+                                )}
                           </span>
-                          <p className="text-xs text-gray-400 mt-1">{tx.currency}</p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            {tx.currency}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -2028,6 +2486,369 @@ export default function AdminUsersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* KYC Review Dialog */}
+      <Dialog open={showKYCDialog} onOpenChange={setShowKYCDialog}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto bg-gray-900 border-gray-800">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <Shield className="w-5 h-5 text-blue-400" />
+              Revisão de Documentos KYC - {viewingKYCUser?.name}
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Revise os documentos de identidade e verifique o KYC do usuário
+            </DialogDescription>
+          </DialogHeader>
+
+          {loadingKYCDocuments ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              <p className="ml-3 text-gray-400">Carregando documentos...</p>
+            </div>
+          ) : viewingKYCUser ? (
+            <div className="space-y-6">
+              {/* User Info */}
+              <div className="grid grid-cols-2 gap-4 p-4 bg-gray-800 rounded-lg">
+                <div>
+                  <label className="text-sm font-medium text-gray-300">
+                    Nome
+                  </label>
+                  <p className="text-sm text-white">{viewingKYCUser.name}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-300">
+                    Email
+                  </label>
+                  <p className="text-sm text-white">{viewingKYCUser.email}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-300">
+                    CPF
+                  </label>
+                  <p className="text-sm text-white">
+                    {viewingKYCUser.cpf || "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-300">
+                    Tipo de Documento
+                  </label>
+                  <p className="text-sm text-white">
+                    {viewingKYCUser.documentType || "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-300">
+                    Número do Documento
+                  </label>
+                  <p className="text-sm text-white">
+                    {viewingKYCUser.documentNumber || "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-300">
+                    Status KYC
+                  </label>
+                  <div className="mt-1">
+                    {getStatusBadge(viewingKYCUser.kycStatus)}
+                  </div>
+                </div>
+                {viewingKYCUser.kycSubmittedAt && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-300">
+                      Enviado em
+                    </label>
+                    <p className="text-sm text-white">
+                      {formatDate(viewingKYCUser.kycSubmittedAt)}
+                    </p>
+                  </div>
+                )}
+                {viewingKYCUser.kycReviewedAt && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-300">
+                      Revisado em
+                    </label>
+                    <p className="text-sm text-white">
+                      {formatDate(viewingKYCUser.kycReviewedAt)}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Documents */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <h4 className="font-medium text-white mb-2 flex items-center gap-2">
+                    Frente do Documento
+                    <ZoomIn className="w-4 h-4 text-gray-400" />
+                  </h4>
+                  <KYCImage
+                    src={viewingKYCUser.documentFront}
+                    alt="Frente do Documento"
+                    className="w-full h-48"
+                    onClick={
+                      viewingKYCUser.documentFront
+                        ? () =>
+                            handleKYCImageClick(
+                              viewingKYCUser.documentFront!,
+                              "Frente do Documento",
+                              "Frente do Documento",
+                            )
+                        : undefined
+                    }
+                  />
+                </div>
+                <div>
+                  <h4 className="font-medium text-white mb-2 flex items-center gap-2">
+                    Verso do Documento
+                    <ZoomIn className="w-4 h-4 text-gray-400" />
+                  </h4>
+                  <KYCImage
+                    src={viewingKYCUser.documentBack}
+                    alt="Verso do Documento"
+                    className="w-full h-48"
+                    onClick={
+                      viewingKYCUser.documentBack
+                        ? () =>
+                            handleKYCImageClick(
+                              viewingKYCUser.documentBack!,
+                              "Verso do Documento",
+                              "Verso do Documento",
+                            )
+                        : undefined
+                    }
+                  />
+                </div>
+                <div>
+                  <h4 className="font-medium text-white mb-2 flex items-center gap-2">
+                    Selfie com Documento
+                    <ZoomIn className="w-4 h-4 text-gray-400" />
+                  </h4>
+                  <KYCImage
+                    src={viewingKYCUser.documentSelfie}
+                    alt="Selfie com Documento"
+                    className="w-full h-48"
+                    onClick={
+                      viewingKYCUser.documentSelfie
+                        ? () =>
+                            handleKYCImageClick(
+                              viewingKYCUser.documentSelfie!,
+                              "Selfie com Documento",
+                              "Selfie com Documento",
+                            )
+                        : undefined
+                    }
+                  />
+                </div>
+              </div>
+
+              {/* Image Analysis */}
+              {viewingKYCUser.documentFront &&
+                viewingKYCUser.documentBack &&
+                viewingKYCUser.documentSelfie && (
+                  <div className="mt-6">
+                    <h4 className="font-medium text-white mb-4 flex items-center gap-2">
+                      <Shield className="w-5 h-5" />
+                      Análise de Detecção de Fraude
+                    </h4>
+                    <ImageAnalysisPanel
+                      documentFront={viewingKYCUser.documentFront || ""}
+                      documentBack={viewingKYCUser.documentBack || ""}
+                      selfie={viewingKYCUser.documentSelfie || ""}
+                      onAnalysisComplete={(result) => {
+                        console.log("Analysis complete:", result);
+                      }}
+                    />
+                  </div>
+                )}
+
+              {/* Rejection Reason Display */}
+              {viewingKYCUser.kycStatus === "REJECTED" &&
+                viewingKYCUser.kycRejectionReason && (
+                  <div className="p-4 bg-red-900/20 border border-red-500/30 rounded-lg">
+                    <h4 className="font-medium text-red-400 mb-2">
+                      Motivo da Rejeição
+                    </h4>
+                    <p className="text-sm text-red-300">
+                      {viewingKYCUser.kycRejectionReason}
+                    </p>
+                  </div>
+                )}
+
+              {/* Actions */}
+              <div className="flex flex-wrap gap-4 pt-4 border-t border-gray-700">
+                {viewingKYCUser.kycStatus === "PENDING" && (
+                  <>
+                    <Button
+                      onClick={() => handleKYCApprove(viewingKYCUser.id)}
+                      disabled={kycActionLoading === viewingKYCUser.id}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Aprovar KYC
+                    </Button>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="destructive">
+                          <XCircle className="w-4 h-4 mr-2" />
+                          Rejeitar KYC
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="bg-gray-800 border-gray-700">
+                        <DialogHeader>
+                          <DialogTitle className="text-white">
+                            Rejeitar Verificação KYC
+                          </DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label className="text-sm font-medium text-gray-300">
+                              Motivo da Rejeição{" "}
+                              <span className="text-red-400">*</span>
+                            </Label>
+                            <Textarea
+                              value={kycRejectionReason}
+                              onChange={(e) =>
+                                setKycRejectionReason(e.target.value)
+                              }
+                              placeholder="Por favor, forneça um motivo para a rejeição..."
+                              className="w-full mt-1 p-3 border border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-700 text-white placeholder:text-gray-400"
+                              rows={4}
+                            />
+                          </div>
+                          <div className="flex justify-end space-x-2">
+                            <Button
+                              variant="outline"
+                              onClick={() => setKycRejectionReason("")}
+                              className="border-gray-600 text-white hover:bg-gray-700"
+                            >
+                              Cancelar
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              onClick={() => handleKYCReject(viewingKYCUser.id)}
+                              disabled={
+                                kycActionLoading === viewingKYCUser.id ||
+                                !kycRejectionReason.trim()
+                              }
+                            >
+                              Rejeitar KYC
+                            </Button>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </>
+                )}
+
+                {/* Actions for approved/rejected users */}
+                {(viewingKYCUser.kycStatus === "APPROVED" ||
+                  viewingKYCUser.kycStatus === "REJECTED") && (
+                  <>
+                    <Button
+                      onClick={() => handleKYCReset(viewingKYCUser.id)}
+                      disabled={kycActionLoading === viewingKYCUser.id}
+                      className="bg-orange-600 hover:bg-orange-700"
+                    >
+                      <Clock className="w-4 h-4 mr-2" />
+                      Redefinir para Pendente
+                    </Button>
+                    <Button
+                      onClick={() => handleKYCApprove(viewingKYCUser.id)}
+                      disabled={kycActionLoading === viewingKYCUser.id}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Reaprovar
+                    </Button>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button variant="destructive">
+                          <XCircle className="w-4 h-4 mr-2" />
+                          Rejeitar
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="bg-gray-800 border-gray-700">
+                        <DialogHeader>
+                          <DialogTitle className="text-white">
+                            Rejeitar Verificação KYC
+                          </DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label className="text-sm font-medium text-gray-300">
+                              Motivo da Rejeição{" "}
+                              <span className="text-red-400">*</span>
+                            </Label>
+                            <Textarea
+                              value={kycRejectionReason}
+                              onChange={(e) =>
+                                setKycRejectionReason(e.target.value)
+                              }
+                              placeholder="Por favor, forneça um motivo para a rejeição..."
+                              className="w-full mt-1 p-3 border border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-700 text-white placeholder:text-gray-400"
+                              rows={4}
+                            />
+                          </div>
+                          <div className="flex justify-end space-x-2">
+                            <Button
+                              variant="outline"
+                              onClick={() => setKycRejectionReason("")}
+                              className="border-gray-600 text-white hover:bg-gray-700"
+                            >
+                              Cancelar
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              onClick={() => handleKYCReject(viewingKYCUser.id)}
+                              disabled={
+                                kycActionLoading === viewingKYCUser.id ||
+                                !kycRejectionReason.trim()
+                              }
+                            >
+                              Rejeitar KYC
+                            </Button>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-400">Nenhum usuário selecionado</p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Full-size KYC Image Modal */}
+      {selectedKYCImage && (
+        <Dialog
+          open={!!selectedKYCImage}
+          onOpenChange={() => setSelectedKYCImage(null)}
+        >
+          <DialogContent className="max-w-7xl max-h-[95vh] p-0 bg-gray-900 border-gray-700">
+            <DialogHeader className="p-6 pb-0">
+              <DialogTitle className="text-white text-xl">
+                {selectedKYCImage.title}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="p-6 pt-4">
+              <div className="relative">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={selectedKYCImage.src}
+                  alt={selectedKYCImage.alt}
+                  className="w-full h-auto max-h-[80vh] object-contain rounded-lg border border-gray-600"
+                />
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

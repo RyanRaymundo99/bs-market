@@ -66,12 +66,15 @@ import {
   Line,
   BarChart,
   Bar,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   Legend,
   ResponsiveContainer,
+  ReferenceLine,
 } from "recharts";
 import { Tooltip as CustomTooltip } from "@/components/ui/tooltip";
 import { formatUSDT } from "@/lib/format-currency";
@@ -114,7 +117,16 @@ interface Transaction {
   value: number;
   currency?: string;
   amount?: number;
-  status: "PENDING" | "APPROVED" | "REJECTED" | "COMPLETED" | "CONFIRMED" | "PROCESSING" | "EXECUTING" | "FAILED" | "CANCELLED";
+  status:
+    | "PENDING"
+    | "APPROVED"
+    | "REJECTED"
+    | "COMPLETED"
+    | "CONFIRMED"
+    | "PROCESSING"
+    | "EXECUTING"
+    | "FAILED"
+    | "CANCELLED";
   metadata?: Record<string, unknown> | null;
   orderId?: string | null;
   depositId?: string | null;
@@ -209,15 +221,16 @@ export default function AdminDashboard() {
   const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
   const [isPolling, setIsPolling] = useState(false);
   const [showBalanceDialog, setShowBalanceDialog] = useState(false);
-  const [showBalanceConfirmDialog, setShowBalanceConfirmDialog] = useState(false);
+  const [showBalanceConfirmDialog, setShowBalanceConfirmDialog] =
+    useState(false);
   const [balanceConfirmStep, setBalanceConfirmStep] = useState(1);
   const [balanceUserId, setBalanceUserId] = useState("");
   const [balanceCurrency, setBalanceCurrency] = useState<"USDT" | "BRL">(
-    "USDT"
+    "USDT",
   );
   const [balanceAmount, setBalanceAmount] = useState("");
   const [balanceOperation, setBalanceOperation] = useState<"CREDIT" | "DEDUCT">(
-    "CREDIT"
+    "CREDIT",
   );
   const [balanceReason, setBalanceReason] = useState("");
   const [usersList, setUsersList] = useState<
@@ -234,17 +247,22 @@ export default function AdminDashboard() {
   const [depositsDisabled, setDepositsDisabled] = useState(false);
   const [withdrawalsDisabled, setWithdrawalsDisabled] = useState(false);
   const [depositsDisabledMessage, setDepositsDisabledMessage] = useState("");
-  const [withdrawalsDisabledMessage, setWithdrawalsDisabledMessage] = useState("");
+  const [withdrawalsDisabledMessage, setWithdrawalsDisabledMessage] =
+    useState("");
   const [savingMoneyControls, setSavingMoneyControls] = useState(false);
   const [moneyControlsMeta, setMoneyControlsMeta] = useState<{
     updatedAt: string;
     updatedBy: string | null;
   } | null>(null);
-  
+
   // Historical data states for hover tooltips
-  const [historyData, setHistoryData] = useState<Record<string, Array<{ date: string; value: number }>>>({});
-  const [loadingHistory, setLoadingHistory] = useState<Record<string, boolean>>({});
-  
+  const [historyData, setHistoryData] = useState<
+    Record<string, Array<{ date: string; value: number }>>
+  >({});
+  const [loadingHistory, setLoadingHistory] = useState<Record<string, boolean>>(
+    {},
+  );
+
   const { toast } = useToast();
   const router = useRouter();
 
@@ -264,9 +282,15 @@ export default function AdminDashboard() {
         const data = await response.json();
         if (data?.moneyControls) {
           setDepositsDisabled(Boolean(data.moneyControls.depositsDisabled));
-          setWithdrawalsDisabled(Boolean(data.moneyControls.withdrawalsDisabled));
-          setDepositsDisabledMessage(String(data.moneyControls.depositsDisabledMessage || ""));
-          setWithdrawalsDisabledMessage(String(data.moneyControls.withdrawalsDisabledMessage || ""));
+          setWithdrawalsDisabled(
+            Boolean(data.moneyControls.withdrawalsDisabled),
+          );
+          setDepositsDisabledMessage(
+            String(data.moneyControls.depositsDisabledMessage || ""),
+          );
+          setWithdrawalsDisabledMessage(
+            String(data.moneyControls.withdrawalsDisabledMessage || ""),
+          );
           setMoneyControlsMeta({
             updatedAt: String(data.moneyControls.updatedAt),
             updatedBy: data.moneyControls.updatedBy ?? null,
@@ -307,8 +331,12 @@ export default function AdminDashboard() {
       if (data?.moneyControls) {
         setDepositsDisabled(Boolean(data.moneyControls.depositsDisabled));
         setWithdrawalsDisabled(Boolean(data.moneyControls.withdrawalsDisabled));
-        setDepositsDisabledMessage(String(data.moneyControls.depositsDisabledMessage || ""));
-        setWithdrawalsDisabledMessage(String(data.moneyControls.withdrawalsDisabledMessage || ""));
+        setDepositsDisabledMessage(
+          String(data.moneyControls.depositsDisabledMessage || ""),
+        );
+        setWithdrawalsDisabledMessage(
+          String(data.moneyControls.withdrawalsDisabledMessage || ""),
+        );
         setMoneyControlsMeta({
           updatedAt: String(data.moneyControls.updatedAt),
           updatedBy: data.moneyControls.updatedBy ?? null,
@@ -318,7 +346,7 @@ export default function AdminDashboard() {
       toast({
         title: "Atualizado",
         description: `Configuração salva. Usuários notificados: ${Number(
-          data?.notifiedUsers || 0
+          data?.notifiedUsers || 0,
         )}.`,
       });
     } catch (error) {
@@ -326,7 +354,9 @@ export default function AdminDashboard() {
       toast({
         title: "Erro",
         description:
-          error instanceof Error ? error.message : "Falha ao salvar configuração",
+          error instanceof Error
+            ? error.message
+            : "Falha ao salvar configuração",
         variant: "destructive",
       });
     } finally {
@@ -340,10 +370,10 @@ export default function AdminDashboard() {
       if (!since) {
         setTransactionsLoading(true);
       }
-      
+
       const url = new URL(
         "/api/admin/transactions/realtime",
-        window.location.origin
+        window.location.origin,
       );
       url.searchParams.set("limit", "50");
       if (since) {
@@ -366,7 +396,7 @@ export default function AdminDashboard() {
           setTransactions((prev) => {
             const existingIds = new Set(prev.map((t) => t.id));
             const newTransactions = data.transactions.filter(
-              (t: Transaction) => !existingIds.has(t.id)
+              (t: Transaction) => !existingIds.has(t.id),
             );
             return [...newTransactions, ...prev].slice(0, 100); // Keep max 100
           });
@@ -468,35 +498,44 @@ export default function AdminDashboard() {
     return `${sign}${value.toFixed(1)}%`;
   };
 
-  const fetchHistory = useCallback(async (metric: string, days: number = 7) => {
-    if (historyData[metric] && historyData[metric].length > 0) {
-      return; // Already loaded
-    }
-
-    setLoadingHistory((prev) => ({ ...prev, [metric]: true }));
-    try {
-      const response = await fetch(
-        `/api/admin/finance/history?metric=${metric}&days=${days}`,
-        { cache: "no-store" }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch history");
+  const fetchHistory = useCallback(
+    async (metric: string, days: number = 7) => {
+      if (historyData[metric] && historyData[metric].length > 0) {
+        return; // Already loaded
       }
 
-      const data = await response.json();
+      setLoadingHistory((prev) => ({ ...prev, [metric]: true }));
+      try {
+        const response = await fetch(
+          `/api/admin/finance/history?metric=${metric}&days=${days}`,
+          { cache: "no-store" },
+        );
 
-      if (data.success && data.history) {
-        setHistoryData((prev) => ({ ...prev, [metric]: data.history }));
+        if (!response.ok) {
+          throw new Error("Failed to fetch history");
+        }
+
+        const data = await response.json();
+
+        if (data.success && data.history) {
+          setHistoryData((prev) => ({ ...prev, [metric]: data.history }));
+        }
+      } catch (error) {
+        console.error(`Error fetching ${metric} history:`, error);
+      } finally {
+        setLoadingHistory((prev) => ({ ...prev, [metric]: false }));
       }
-    } catch (error) {
-      console.error(`Error fetching ${metric} history:`, error);
-    } finally {
-      setLoadingHistory((prev) => ({ ...prev, [metric]: false }));
-    }
-  }, [historyData]);
+    },
+    [historyData],
+  );
 
-  const HistoryTooltipContent = ({ metric, title }: { metric: string; title: string }) => {
+  const HistoryTooltipContent = ({
+    metric,
+    title,
+  }: {
+    metric: string;
+    title: string;
+  }) => {
     const data = historyData[metric] || [];
     const loading = loadingHistory[metric];
 
@@ -524,38 +563,48 @@ export default function AdminDashboard() {
 
     return (
       <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-xl min-w-[280px] max-w-[320px]">
-        <div className="text-sm font-semibold text-white mb-3">{title} - Últimos {data.length} dias</div>
+        <div className="text-sm font-semibold text-white mb-3">
+          {title} - Últimos {data.length} dias
+        </div>
         <div className="space-y-2 mb-3">
           <div className="flex justify-between text-xs">
             <span className="text-gray-400">Total:</span>
-            <span className="text-white font-medium">{formatCurrency(total)}</span>
+            <span className="text-white font-medium">
+              {formatCurrency(total)}
+            </span>
           </div>
           <div className="flex justify-between text-xs">
             <span className="text-gray-400">Média diária:</span>
-            <span className="text-white font-medium">{formatCurrency(avg)}</span>
+            <span className="text-white font-medium">
+              {formatCurrency(avg)}
+            </span>
           </div>
         </div>
         <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
-          {data.slice().reverse().map((item, index) => {
-            const date = new Date(item.date);
-            const dateStr = `${date.getDate().toString().padStart(2, "0")}/${(date.getMonth() + 1).toString().padStart(2, "0")}`;
-            const percentage = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
-            
-            return (
-              <div key={index} className="flex items-center gap-2">
-                <div className="text-xs text-gray-400 w-12">{dateStr}</div>
-                <div className="flex-1 bg-gray-700 rounded-full h-2 relative overflow-hidden">
-                  <div
-                    className="bg-green-500 h-full rounded-full transition-all"
-                    style={{ width: `${percentage}%` }}
-                  />
+          {data
+            .slice()
+            .reverse()
+            .map((item, index) => {
+              const date = new Date(item.date);
+              const dateStr = `${date.getDate().toString().padStart(2, "0")}/${(date.getMonth() + 1).toString().padStart(2, "0")}`;
+              const percentage =
+                maxValue > 0 ? (item.value / maxValue) * 100 : 0;
+
+              return (
+                <div key={index} className="flex items-center gap-2">
+                  <div className="text-xs text-gray-400 w-12">{dateStr}</div>
+                  <div className="flex-1 bg-gray-700 rounded-full h-2 relative overflow-hidden">
+                    <div
+                      className="bg-green-500 h-full rounded-full transition-all"
+                      style={{ width: `${percentage}%` }}
+                    />
+                  </div>
+                  <div className="text-xs text-white font-medium w-20 text-right">
+                    {formatCurrency(item.value)}
+                  </div>
                 </div>
-                <div className="text-xs text-white font-medium w-20 text-right">
-                  {formatCurrency(item.value)}
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
         </div>
       </div>
     );
@@ -622,7 +671,7 @@ export default function AdminDashboard() {
         `/api/admin/transactions/${transactionDetails.id}/sync-status`,
         {
           method: "POST",
-        }
+        },
       );
 
       const data = await response.json();
@@ -634,7 +683,7 @@ export default function AdminDashboard() {
         });
         // Refresh transaction details by fetching from API
         const detailsResponse = await fetch(
-          `/api/admin/transactions/${transactionDetails.id}`
+          `/api/admin/transactions/${transactionDetails.id}`,
         );
         if (detailsResponse.ok) {
           const detailsData = await detailsResponse.json();
@@ -646,7 +695,8 @@ export default function AdminDashboard() {
         toast({
           variant: "destructive",
           title: "Erro",
-          description: data.message || data.error || "Falha ao sincronizar status",
+          description:
+            data.message || data.error || "Falha ao sincronizar status",
         });
       }
     } catch (error) {
@@ -670,7 +720,7 @@ export default function AdminDashboard() {
         `/api/admin/transactions/${transactionDetails.id}/resend-receipt`,
         {
           method: "POST",
-        }
+        },
       );
 
       const data = await response.json();
@@ -684,7 +734,7 @@ export default function AdminDashboard() {
 
         // Refresh transaction details to update receipt status
         const detailsResponse = await fetch(
-          `/api/admin/transactions/${transactionDetails.id}`
+          `/api/admin/transactions/${transactionDetails.id}`,
         );
         if (detailsResponse.ok) {
           const detailsData = await detailsResponse.json();
@@ -712,7 +762,9 @@ export default function AdminDashboard() {
     if (!transactionDetails) return;
 
     // Confirm action
-    if (!confirm("Tem certeza que deseja marcar esta transação como concluída?")) {
+    if (
+      !confirm("Tem certeza que deseja marcar esta transação como concluída?")
+    ) {
       return;
     }
 
@@ -722,7 +774,7 @@ export default function AdminDashboard() {
         `/api/admin/transactions/${transactionDetails.id}/mark-completed`,
         {
           method: "POST",
-        }
+        },
       );
 
       const data = await response.json();
@@ -736,7 +788,7 @@ export default function AdminDashboard() {
 
         // Refresh transaction details
         const detailsResponse = await fetch(
-          `/api/admin/transactions/${transactionDetails.id}`
+          `/api/admin/transactions/${transactionDetails.id}`,
         );
         if (detailsResponse.ok) {
           const detailsData = await detailsResponse.json();
@@ -747,7 +799,9 @@ export default function AdminDashboard() {
           }
         }
       } else {
-        throw new Error(data.error || "Failed to mark transaction as completed");
+        throw new Error(
+          data.error || "Failed to mark transaction as completed",
+        );
       }
     } catch (error) {
       console.error("Error marking transaction as completed:", error);
@@ -755,7 +809,9 @@ export default function AdminDashboard() {
         variant: "destructive",
         title: "Erro",
         description:
-          error instanceof Error ? error.message : "Falha ao marcar transação como concluída",
+          error instanceof Error
+            ? error.message
+            : "Falha ao marcar transação como concluída",
       });
     } finally {
       setMarkingCompleted(false);
@@ -803,8 +859,8 @@ export default function AdminDashboard() {
         typeof transaction.user === "string"
           ? transaction.user
           : transaction.user
-          ? `${transaction.user.name} ${transaction.user.email}`
-          : "";
+            ? `${transaction.user.name} ${transaction.user.email}`
+            : "";
       return (
         userString.toLowerCase().includes(searchTerm.toLowerCase()) ||
         getTransactionTypeLabel(transaction.type)
@@ -976,7 +1032,7 @@ export default function AdminDashboard() {
           "• Todas as transações\n" +
           "• Todos os saldos dos usuários\n\n" +
           "Esta ação NÃO pode ser desfeita!\n\n" +
-          "Tem certeza que deseja continuar?"
+          "Tem certeza que deseja continuar?",
       );
 
       if (!confirmed) {
@@ -1018,9 +1074,9 @@ export default function AdminDashboard() {
     try {
       setDownloadingReport(true);
       const url = `/api/admin/reports/monthly-${format}?month=${selectedMonth}&year=${selectedYear}`;
-      
+
       const response = await fetch(url);
-      
+
       if (!response.ok) {
         throw new Error(`Failed to generate ${format.toUpperCase()} report`);
       }
@@ -1055,7 +1111,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     setLoading(true);
     setTransactionsLoading(true);
-    
+
     // Fetch all initial data in parallel
     Promise.all([
       fetchStats(),
@@ -1126,7 +1182,10 @@ export default function AdminDashboard() {
                   {downloadingReport ? "Gerando..." : "Relatórios"}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 bg-gray-900 border-gray-700">
+              <DropdownMenuContent
+                align="end"
+                className="w-56 bg-gray-900 border-gray-700"
+              >
                 <DropdownMenuLabel className="text-white">
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4" />
@@ -1138,42 +1197,49 @@ export default function AdminDashboard() {
                   <div className="flex gap-2">
                     <Select
                       value={String(selectedMonth)}
-                      onValueChange={(value) => setSelectedMonth(parseInt(value))}
+                      onValueChange={(value) =>
+                        setSelectedMonth(parseInt(value))
+                      }
                     >
                       <SelectTrigger className="w-24 h-8 bg-gray-800 border-gray-700 text-white">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-gray-900 border-gray-700">
-                        {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                          <SelectItem
-                            key={m}
-                            value={String(m)}
-                            className="text-white hover:bg-gray-800"
-                          >
-                            {m.toString().padStart(2, "0")}
-                          </SelectItem>
-                        ))}
+                        {Array.from({ length: 12 }, (_, i) => i + 1).map(
+                          (m) => (
+                            <SelectItem
+                              key={m}
+                              value={String(m)}
+                              className="text-white hover:bg-gray-800"
+                            >
+                              {m.toString().padStart(2, "0")}
+                            </SelectItem>
+                          ),
+                        )}
                       </SelectContent>
                     </Select>
                     <Select
                       value={String(selectedYear)}
-                      onValueChange={(value) => setSelectedYear(parseInt(value))}
+                      onValueChange={(value) =>
+                        setSelectedYear(parseInt(value))
+                      }
                     >
                       <SelectTrigger className="w-28 h-8 bg-gray-800 border-gray-700 text-white">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-gray-900 border-gray-700">
-                        {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i).map(
-                          (y) => (
-                            <SelectItem
-                              key={y}
-                              value={String(y)}
-                              className="text-white hover:bg-gray-800"
-                            >
-                              {y}
-                            </SelectItem>
-                          )
-                        )}
+                        {Array.from(
+                          { length: 10 },
+                          (_, i) => new Date().getFullYear() - i,
+                        ).map((y) => (
+                          <SelectItem
+                            key={y}
+                            value={String(y)}
+                            className="text-white hover:bg-gray-800"
+                          >
+                            {y}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -1379,7 +1445,8 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-gray-300">
-                Send notifications and emails to users, view notification history.
+                Send notifications and emails to users, view notification
+                history.
               </p>
               <div className="flex space-x-2">
                 <Link href="/admin/notification-center">
@@ -1398,7 +1465,8 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-gray-300">
-                Monitor all webhook events received from NutzPay and other sources.
+                Monitor all webhook events received from NutzPay and other
+                sources.
               </p>
               <div className="flex space-x-2">
                 <Link href="/admin/webhook-logs">
@@ -1429,7 +1497,9 @@ export default function AdminDashboard() {
                 <div className="flex items-start gap-3">
                   <Checkbox
                     checked={depositsDisabled}
-                    onCheckedChange={(checked) => setDepositsDisabled(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setDepositsDisabled(checked === true)
+                    }
                     disabled={moneyControlsLoading || savingMoneyControls}
                     className="mt-1 border-gray-600 data-[state=checked]:bg-red-600"
                   />
@@ -1445,10 +1515,14 @@ export default function AdminDashboard() {
 
                 {depositsDisabled && (
                   <div className="space-y-2 ml-7">
-                    <Label className="text-gray-300 text-xs">Deposit message</Label>
+                    <Label className="text-gray-300 text-xs">
+                      Deposit message
+                    </Label>
                     <Textarea
                       value={depositsDisabledMessage}
-                      onChange={(e) => setDepositsDisabledMessage(e.target.value)}
+                      onChange={(e) =>
+                        setDepositsDisabledMessage(e.target.value)
+                      }
                       placeholder="Deposits are temporarily disabled..."
                       className="bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 text-sm"
                       rows={3}
@@ -1463,7 +1537,9 @@ export default function AdminDashboard() {
                 <div className="flex items-start gap-3">
                   <Checkbox
                     checked={withdrawalsDisabled}
-                    onCheckedChange={(checked) => setWithdrawalsDisabled(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setWithdrawalsDisabled(checked === true)
+                    }
                     disabled={moneyControlsLoading || savingMoneyControls}
                     className="mt-1 border-gray-600 data-[state=checked]:bg-red-600"
                   />
@@ -1479,10 +1555,14 @@ export default function AdminDashboard() {
 
                 {withdrawalsDisabled && (
                   <div className="space-y-2 ml-7">
-                    <Label className="text-gray-300 text-xs">Withdrawal message</Label>
+                    <Label className="text-gray-300 text-xs">
+                      Withdrawal message
+                    </Label>
                     <Textarea
                       value={withdrawalsDisabledMessage}
-                      onChange={(e) => setWithdrawalsDisabledMessage(e.target.value)}
+                      onChange={(e) =>
+                        setWithdrawalsDisabledMessage(e.target.value)
+                      }
                       placeholder="Withdrawals are temporarily disabled..."
                       className="bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 text-sm"
                       rows={3}
@@ -1531,103 +1611,118 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
             {/* Total Deposits */}
             <CustomTooltip
-              content={<HistoryTooltipContent metric="deposits" title="Histórico de Depósitos" />}
+              content={
+                <HistoryTooltipContent
+                  metric="deposits"
+                  title="Histórico de Depósitos"
+                />
+              }
               side="top"
             >
               <Card
                 className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-green-500 transition-all duration-200 cursor-pointer"
                 onMouseEnter={() => fetchHistory("deposits", 7)}
               >
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-gray-300">
-                  💰 Total de Depósitos
-                </CardTitle>
-                <DollarSign className="h-4 w-4 text-green-400" />
-              </CardHeader>
-              <CardContent>
-                {financeLoading ? (
-                  <div className="animate-pulse space-y-2">
-                    <div className="h-8 w-32 bg-gray-700 rounded"></div>
-                    <div className="h-4 w-16 bg-gray-700 rounded"></div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="text-2xl font-bold text-white">
-                      {formatCurrency(financeStats.totalDeposits)}
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-300">
+                    💰 Total de Depósitos
+                  </CardTitle>
+                  <DollarSign className="h-4 w-4 text-green-400" />
+                </CardHeader>
+                <CardContent>
+                  {financeLoading ? (
+                    <div className="animate-pulse space-y-2">
+                      <div className="h-8 w-32 bg-gray-700 rounded"></div>
+                      <div className="h-4 w-16 bg-gray-700 rounded"></div>
                     </div>
-                    <div className="flex items-center mt-1">
-                      {financeStats.depositsChange >= 0 ? (
-                        <ArrowUpRight className="h-3 w-3 text-green-400 mr-1" />
-                      ) : (
-                        <ArrowDownRight className="h-3 w-3 text-red-400 mr-1" />
-                      )}
-                      <span
-                        className={`text-xs ${
-                          financeStats.depositsChange >= 0
-                            ? "text-green-400"
-                            : "text-red-400"
-                        }`}
-                      >
-                        {formatPercentage(financeStats.depositsChange)}
-                      </span>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold text-white">
+                        {formatCurrency(financeStats.totalDeposits)}
+                      </div>
+                      <div className="flex items-center mt-1">
+                        {financeStats.depositsChange >= 0 ? (
+                          <ArrowUpRight className="h-3 w-3 text-green-400 mr-1" />
+                        ) : (
+                          <ArrowDownRight className="h-3 w-3 text-red-400 mr-1" />
+                        )}
+                        <span
+                          className={`text-xs ${
+                            financeStats.depositsChange >= 0
+                              ? "text-green-400"
+                              : "text-red-400"
+                          }`}
+                        >
+                          {formatPercentage(financeStats.depositsChange)}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
             </CustomTooltip>
 
             {/* Total Withdrawals */}
             <CustomTooltip
-              content={<HistoryTooltipContent metric="withdrawals" title="Histórico de Saques" />}
+              content={
+                <HistoryTooltipContent
+                  metric="withdrawals"
+                  title="Histórico de Saques"
+                />
+              }
               side="top"
             >
               <Card
                 className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-red-500 transition-all duration-200 cursor-pointer"
                 onMouseEnter={() => fetchHistory("withdrawals", 7)}
               >
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-gray-300">
-                  💸 Total de Saques
-                </CardTitle>
-                <ArrowDownRight className="h-4 w-4 text-red-400" />
-              </CardHeader>
-              <CardContent>
-                {financeLoading ? (
-                  <div className="animate-pulse space-y-2">
-                    <div className="h-8 w-32 bg-gray-700 rounded"></div>
-                    <div className="h-4 w-16 bg-gray-700 rounded"></div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="text-2xl font-bold text-white">
-                      {formatCurrency(financeStats.totalWithdrawals)}
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-300">
+                    💸 Total de Saques
+                  </CardTitle>
+                  <ArrowDownRight className="h-4 w-4 text-red-400" />
+                </CardHeader>
+                <CardContent>
+                  {financeLoading ? (
+                    <div className="animate-pulse space-y-2">
+                      <div className="h-8 w-32 bg-gray-700 rounded"></div>
+                      <div className="h-4 w-16 bg-gray-700 rounded"></div>
                     </div>
-                    <div className="flex items-center mt-1">
-                      {financeStats.withdrawalsChange >= 0 ? (
-                        <ArrowUpRight className="h-3 w-3 text-green-400 mr-1" />
-                      ) : (
-                        <ArrowDownRight className="h-3 w-3 text-red-400 mr-1" />
-                      )}
-                      <span
-                        className={`text-xs ${
-                          financeStats.withdrawalsChange >= 0
-                            ? "text-green-400"
-                            : "text-red-400"
-                        }`}
-                      >
-                        {formatPercentage(financeStats.withdrawalsChange)}
-                      </span>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold text-white">
+                        {formatCurrency(financeStats.totalWithdrawals)}
+                      </div>
+                      <div className="flex items-center mt-1">
+                        {financeStats.withdrawalsChange >= 0 ? (
+                          <ArrowUpRight className="h-3 w-3 text-green-400 mr-1" />
+                        ) : (
+                          <ArrowDownRight className="h-3 w-3 text-red-400 mr-1" />
+                        )}
+                        <span
+                          className={`text-xs ${
+                            financeStats.withdrawalsChange >= 0
+                              ? "text-green-400"
+                              : "text-red-400"
+                          }`}
+                        >
+                          {formatPercentage(financeStats.withdrawalsChange)}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
             </CustomTooltip>
 
             {/* Total Trades */}
             <CustomTooltip
-              content={<HistoryTooltipContent metric="trades" title="Histórico de Trades" />}
+              content={
+                <HistoryTooltipContent
+                  metric="trades"
+                  title="Histórico de Trades"
+                />
+              }
               side="top"
             >
               <Card
@@ -1635,47 +1730,52 @@ export default function AdminDashboard() {
                 onMouseEnter={() => fetchHistory("trades", 7)}
               >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-gray-300">
-                  🔁 Volume de Trades
-                </CardTitle>
-                <BarChart3 className="h-4 w-4 text-blue-400" />
-              </CardHeader>
-              <CardContent>
-                {financeLoading ? (
-                  <div className="animate-pulse space-y-2">
-                    <div className="h-8 w-32 bg-gray-700 rounded"></div>
-                    <div className="h-4 w-16 bg-gray-700 rounded"></div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="text-2xl font-bold text-white">
-                      {formatCurrency(financeStats.totalTrades)}
+                  <CardTitle className="text-sm font-medium text-gray-300">
+                    🔁 Volume de Trades
+                  </CardTitle>
+                  <BarChart3 className="h-4 w-4 text-blue-400" />
+                </CardHeader>
+                <CardContent>
+                  {financeLoading ? (
+                    <div className="animate-pulse space-y-2">
+                      <div className="h-8 w-32 bg-gray-700 rounded"></div>
+                      <div className="h-4 w-16 bg-gray-700 rounded"></div>
                     </div>
-                    <div className="flex items-center mt-1">
-                      {financeStats.tradesChange >= 0 ? (
-                        <ArrowUpRight className="h-3 w-3 text-green-400 mr-1" />
-                      ) : (
-                        <ArrowDownRight className="h-3 w-3 text-red-400 mr-1" />
-                      )}
-                      <span
-                        className={`text-xs ${
-                          financeStats.tradesChange >= 0
-                            ? "text-green-400"
-                            : "text-red-400"
-                        }`}
-                      >
-                        {formatPercentage(financeStats.tradesChange)}
-                      </span>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold text-white">
+                        {formatCurrency(financeStats.totalTrades)}
+                      </div>
+                      <div className="flex items-center mt-1">
+                        {financeStats.tradesChange >= 0 ? (
+                          <ArrowUpRight className="h-3 w-3 text-green-400 mr-1" />
+                        ) : (
+                          <ArrowDownRight className="h-3 w-3 text-red-400 mr-1" />
+                        )}
+                        <span
+                          className={`text-xs ${
+                            financeStats.tradesChange >= 0
+                              ? "text-green-400"
+                              : "text-red-400"
+                          }`}
+                        >
+                          {formatPercentage(financeStats.tradesChange)}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
             </CustomTooltip>
 
             {/* Total Commissions */}
             <CustomTooltip
-              content={<HistoryTooltipContent metric="commissions" title="Histórico de Comissões" />}
+              content={
+                <HistoryTooltipContent
+                  metric="commissions"
+                  title="Histórico de Comissões"
+                />
+              }
               side="top"
             >
               <Card
@@ -1683,47 +1783,52 @@ export default function AdminDashboard() {
                 onMouseEnter={() => fetchHistory("commissions", 7)}
               >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-gray-300">
-                  🧾 Comissões
-                </CardTitle>
-                <PieChart className="h-4 w-4 text-purple-400" />
-              </CardHeader>
-              <CardContent>
-                {financeLoading ? (
-                  <div className="animate-pulse space-y-2">
-                    <div className="h-8 w-32 bg-gray-700 rounded"></div>
-                    <div className="h-4 w-16 bg-gray-700 rounded"></div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="text-2xl font-bold text-white">
-                      {formatCurrency(financeStats.totalCommissions)}
+                  <CardTitle className="text-sm font-medium text-gray-300">
+                    🧾 Comissões
+                  </CardTitle>
+                  <PieChart className="h-4 w-4 text-purple-400" />
+                </CardHeader>
+                <CardContent>
+                  {financeLoading ? (
+                    <div className="animate-pulse space-y-2">
+                      <div className="h-8 w-32 bg-gray-700 rounded"></div>
+                      <div className="h-4 w-16 bg-gray-700 rounded"></div>
                     </div>
-                    <div className="flex items-center mt-1">
-                      {financeStats.commissionsChange >= 0 ? (
-                        <ArrowUpRight className="h-3 w-3 text-green-400 mr-1" />
-                      ) : (
-                        <ArrowDownRight className="h-3 w-3 text-red-400 mr-1" />
-                      )}
-                      <span
-                        className={`text-xs ${
-                          financeStats.commissionsChange >= 0
-                            ? "text-green-400"
-                            : "text-red-400"
-                        }`}
-                      >
-                        {formatPercentage(financeStats.commissionsChange)}
-                      </span>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold text-white">
+                        {formatCurrency(financeStats.totalCommissions)}
+                      </div>
+                      <div className="flex items-center mt-1">
+                        {financeStats.commissionsChange >= 0 ? (
+                          <ArrowUpRight className="h-3 w-3 text-green-400 mr-1" />
+                        ) : (
+                          <ArrowDownRight className="h-3 w-3 text-red-400 mr-1" />
+                        )}
+                        <span
+                          className={`text-xs ${
+                            financeStats.commissionsChange >= 0
+                              ? "text-green-400"
+                              : "text-red-400"
+                          }`}
+                        >
+                          {formatPercentage(financeStats.commissionsChange)}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
             </CustomTooltip>
 
             {/* Average User Balance */}
             <CustomTooltip
-              content={<HistoryTooltipContent metric="balance" title="Histórico de Saldo Médio" />}
+              content={
+                <HistoryTooltipContent
+                  metric="balance"
+                  title="Histórico de Saldo Médio"
+                />
+              }
               side="top"
             >
               <Card
@@ -1731,125 +1836,218 @@ export default function AdminDashboard() {
                 onMouseEnter={() => fetchHistory("balance", 7)}
               >
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-gray-300">
-                  🧍‍♂️ Saldo Médio dos Usuários
-                </CardTitle>
-                <TrendingUp className="h-4 w-4 text-yellow-400" />
-              </CardHeader>
-              <CardContent>
-                {financeLoading ? (
-                  <div className="animate-pulse space-y-2">
-                    <div className="h-8 w-32 bg-gray-700 rounded"></div>
-                    <div className="h-4 w-16 bg-gray-700 rounded"></div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="text-2xl font-bold text-white">
-                      {formatCurrency(financeStats.averageUserBalance)}
+                  <CardTitle className="text-sm font-medium text-gray-300">
+                    🧍‍♂️ Saldo Médio dos Usuários
+                  </CardTitle>
+                  <TrendingUp className="h-4 w-4 text-yellow-400" />
+                </CardHeader>
+                <CardContent>
+                  {financeLoading ? (
+                    <div className="animate-pulse space-y-2">
+                      <div className="h-8 w-32 bg-gray-700 rounded"></div>
+                      <div className="h-4 w-16 bg-gray-700 rounded"></div>
                     </div>
-                    <div className="flex items-center mt-1">
-                      {financeStats.balanceChange >= 0 ? (
-                        <ArrowUpRight className="h-3 w-3 text-green-400 mr-1" />
-                      ) : (
-                        <ArrowDownRight className="h-3 w-3 text-red-400 mr-1" />
-                      )}
-                      <span
-                        className={`text-xs ${
-                          financeStats.balanceChange >= 0
-                            ? "text-green-400"
-                            : "text-red-400"
-                        }`}
-                      >
-                        {formatPercentage(financeStats.balanceChange)}
-                      </span>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold text-white">
+                        {formatCurrency(financeStats.averageUserBalance)}
+                      </div>
+                      <div className="flex items-center mt-1">
+                        {financeStats.balanceChange >= 0 ? (
+                          <ArrowUpRight className="h-3 w-3 text-green-400 mr-1" />
+                        ) : (
+                          <ArrowDownRight className="h-3 w-3 text-red-400 mr-1" />
+                        )}
+                        <span
+                          className={`text-xs ${
+                            financeStats.balanceChange >= 0
+                              ? "text-green-400"
+                              : "text-red-400"
+                          }`}
+                        >
+                          {formatPercentage(financeStats.balanceChange)}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
             </CustomTooltip>
           </div>
 
           {/* Charts Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Line Chart - Deposits and Withdrawals */}
+            {/* Area Chart - Deposits and Withdrawals */}
             <Card className="bg-gray-900 border-gray-800">
               <CardHeader>
-                <CardTitle className="text-white">
-                  📈 Evolução dos Depósitos e Saques (30 dias)
+                <CardTitle className="text-white flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-green-400" />
+                  Evolução dos Depósitos e Saques (30 dias)
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {chartData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <ResponsiveContainer width="100%" height={350}>
+                    <AreaChart
+                      data={chartData}
+                      margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                    >
+                      <defs>
+                        <linearGradient
+                          id="colorDeposits"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="5%"
+                            stopColor="#10B981"
+                            stopOpacity={0.3}
+                          />
+                          <stop
+                            offset="95%"
+                            stopColor="#10B981"
+                            stopOpacity={0}
+                          />
+                        </linearGradient>
+                        <linearGradient
+                          id="colorWithdrawals"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="5%"
+                            stopColor="#EF4444"
+                            stopOpacity={0.3}
+                          />
+                          <stop
+                            offset="95%"
+                            stopColor="#EF4444"
+                            stopOpacity={0}
+                          />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="#374151"
+                        opacity={0.3}
+                      />
                       <XAxis
                         dataKey="date"
                         stroke="#9CA3AF"
-                        fontSize={12}
+                        fontSize={11}
+                        tick={{ fill: "#9CA3AF" }}
+                        tickLine={{ stroke: "#4B5563" }}
                         tickFormatter={(value) => {
                           const date = new Date(value);
                           return `${date.getDate()}/${date.getMonth() + 1}`;
                         }}
+                        interval="preserveStartEnd"
                       />
                       <YAxis
                         stroke="#9CA3AF"
-                        fontSize={12}
+                        fontSize={11}
+                        tick={{ fill: "#9CA3AF" }}
+                        tickLine={{ stroke: "#4B5563" }}
+                        width={70}
                         tickFormatter={(value) => {
                           if (value >= 1000000) {
-                            return `R$ ${(value / 1000000).toFixed(1)}M`;
+                            return `R$${(value / 1000000).toFixed(1)}M`;
                           }
                           if (value >= 1000) {
-                            return `R$ ${(value / 1000).toFixed(1)}k`;
+                            return `R$${(value / 1000).toFixed(1)}k`;
                           }
-                          return `R$ ${value.toFixed(0)}`;
+                          return `R$${value}`;
                         }}
+                        domain={["auto", "auto"]}
                       />
                       <Tooltip
                         contentStyle={{
                           backgroundColor: "#1F2937",
-                          border: "1px solid #374151",
+                          border: "1px solid #4B5563",
                           borderRadius: "8px",
                           color: "#F3F4F6",
+                          padding: "12px",
+                          boxShadow: "0 4px 6px rgba(0, 0, 0, 0.3)",
+                        }}
+                        labelStyle={{
+                          color: "#F3F4F6",
+                          fontWeight: "600",
+                          marginBottom: "8px",
+                        }}
+                        itemStyle={{
+                          color: "#D1D5DB",
+                          padding: "4px 0",
                         }}
                         labelFormatter={(value) => {
                           const date = new Date(value);
-                          return date.toLocaleDateString("pt-BR");
+                          return date.toLocaleDateString("pt-BR", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          });
                         }}
-                        formatter={(value: number) => [
-                          `R$ ${value.toFixed(2)}`,
-                          "",
-                        ]}
+                        formatter={(value: number, name: string) => {
+                          const formatted =
+                            value >= 1000
+                              ? `R$ ${(value / 1000).toFixed(2)}k`
+                              : `R$ ${value.toFixed(2)}`;
+                          return [
+                            formatted,
+                            name === "deposits" ? "Depósitos" : "Saques",
+                          ];
+                        }}
+                        cursor={{ stroke: "#6B7280", strokeWidth: 1 }}
                       />
                       <Legend
-                        wrapperStyle={{ color: "#9CA3AF" }}
-                        iconType="line"
+                        wrapperStyle={{ color: "#9CA3AF", paddingTop: "20px" }}
+                        iconType="circle"
+                        iconSize={8}
                       />
-                      <Line
+                      <Area
                         type="monotone"
                         dataKey="deposits"
                         stroke="#10B981"
-                        strokeWidth={2}
+                        strokeWidth={2.5}
+                        fill="url(#colorDeposits)"
                         name="Depósitos"
-                        dot={{ fill: "#10B981", r: 3 }}
-                        activeDot={{ r: 5 }}
+                        dot={false}
+                        activeDot={{
+                          r: 5,
+                          fill: "#10B981",
+                          stroke: "#10B981",
+                          strokeWidth: 2,
+                        }}
                       />
-                      <Line
+                      <Area
                         type="monotone"
                         dataKey="withdrawals"
                         stroke="#EF4444"
-                        strokeWidth={2}
+                        strokeWidth={2.5}
+                        fill="url(#colorWithdrawals)"
                         name="Saques"
-                        dot={{ fill: "#EF4444", r: 3 }}
-                        activeDot={{ r: 5 }}
+                        dot={false}
+                        activeDot={{
+                          r: 5,
+                          fill: "#EF4444",
+                          stroke: "#EF4444",
+                          strokeWidth: 2,
+                        }}
                       />
-                    </LineChart>
+                      <ReferenceLine
+                        y={0}
+                        stroke="#6B7280"
+                        strokeDasharray="2 2"
+                      />
+                    </AreaChart>
                   </ResponsiveContainer>
                 ) : (
                   <div className="h-64 flex items-center justify-center">
                     <div className="text-center text-gray-400">
-                      <BarChart3 className="h-12 w-12 mx-auto mb-2" />
+                      <BarChart3 className="h-12 w-12 mx-auto mb-2 opacity-50" />
                       <p>Carregando dados...</p>
                     </div>
                   </div>
@@ -1860,66 +2058,126 @@ export default function AdminDashboard() {
             {/* Bar Chart - Daily Trade Volume */}
             <Card className="bg-gray-900 border-gray-800">
               <CardHeader>
-                <CardTitle className="text-white">
-                  📊 Volume Diário de Trades
+                <CardTitle className="text-white flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-blue-400" />
+                  Volume Diário de Trades (30 dias)
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {chartData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <ResponsiveContainer width="100%" height={350}>
+                    <BarChart
+                      data={chartData}
+                      margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                    >
+                      <defs>
+                        <linearGradient
+                          id="colorTrades"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="5%"
+                            stopColor="#3B82F6"
+                            stopOpacity={0.8}
+                          />
+                          <stop
+                            offset="95%"
+                            stopColor="#3B82F6"
+                            stopOpacity={0.4}
+                          />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="#374151"
+                        opacity={0.3}
+                      />
                       <XAxis
                         dataKey="date"
                         stroke="#9CA3AF"
-                        fontSize={12}
+                        fontSize={11}
+                        tick={{ fill: "#9CA3AF" }}
+                        tickLine={{ stroke: "#4B5563" }}
                         tickFormatter={(value) => {
                           const date = new Date(value);
                           return `${date.getDate()}/${date.getMonth() + 1}`;
                         }}
+                        interval="preserveStartEnd"
                       />
                       <YAxis
                         stroke="#9CA3AF"
-                        fontSize={12}
+                        fontSize={11}
+                        tick={{ fill: "#9CA3AF" }}
+                        tickLine={{ stroke: "#4B5563" }}
+                        width={70}
                         tickFormatter={(value) => {
                           if (value >= 1000000) {
-                            return `R$ ${(value / 1000000).toFixed(1)}M`;
+                            return `R$${(value / 1000000).toFixed(1)}M`;
                           }
                           if (value >= 1000) {
-                            return `R$ ${(value / 1000).toFixed(1)}k`;
+                            return `R$${(value / 1000).toFixed(1)}k`;
                           }
-                          return `R$ ${value.toFixed(0)}`;
+                          return `R$${value}`;
                         }}
+                        domain={[0, "auto"]}
                       />
                       <Tooltip
                         contentStyle={{
                           backgroundColor: "#1F2937",
-                          border: "1px solid #374151",
+                          border: "1px solid #4B5563",
                           borderRadius: "8px",
                           color: "#F3F4F6",
+                          padding: "12px",
+                          boxShadow: "0 4px 6px rgba(0, 0, 0, 0.3)",
+                        }}
+                        labelStyle={{
+                          color: "#F3F4F6",
+                          fontWeight: "600",
+                          marginBottom: "8px",
+                        }}
+                        itemStyle={{
+                          color: "#D1D5DB",
+                          padding: "4px 0",
                         }}
                         labelFormatter={(value) => {
                           const date = new Date(value);
-                          return date.toLocaleDateString("pt-BR");
+                          return date.toLocaleDateString("pt-BR", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          });
                         }}
-                        formatter={(value: number) => [
-                          `R$ ${value.toFixed(2)}`,
-                          "Volume",
-                        ]}
+                        formatter={(value: number) => {
+                          const formatted =
+                            value >= 1000
+                              ? `R$ ${(value / 1000).toFixed(2)}k`
+                              : `R$ ${value.toFixed(2)}`;
+                          return [formatted, "Volume de Trades"];
+                        }}
+                        cursor={{ fill: "#3B82F6", fillOpacity: 0.1 }}
                       />
-                      <Legend wrapperStyle={{ color: "#9CA3AF" }} />
+                      <Legend
+                        wrapperStyle={{ color: "#9CA3AF", paddingTop: "20px" }}
+                        iconType="square"
+                        iconSize={8}
+                      />
                       <Bar
                         dataKey="trades"
-                        fill="#3B82F6"
+                        fill="url(#colorTrades)"
                         name="Volume de Trades"
-                        radius={[4, 4, 0, 0]}
+                        radius={[6, 6, 0, 0]}
+                        stroke="#3B82F6"
+                        strokeWidth={1}
                       />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
                   <div className="h-64 flex items-center justify-center">
                     <div className="text-center text-gray-400">
-                      <PieChart className="h-12 w-12 mx-auto mb-2" />
+                      <BarChart3 className="h-12 w-12 mx-auto mb-2 opacity-50" />
                       <p>Carregando dados...</p>
                     </div>
                   </div>
@@ -1928,7 +2186,7 @@ export default function AdminDashboard() {
             </Card>
           </div>
 
-        {/* Detailed Transactions Table */}
+          {/* Detailed Transactions Table */}
           <Card className="bg-gray-900 border-gray-800">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -2013,91 +2271,98 @@ export default function AdminDashboard() {
                         <td colSpan={5} className="py-8 text-center">
                           <div className="flex flex-col items-center justify-center space-y-2">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400"></div>
-                            <p className="text-gray-400">Carregando transações...</p>
+                            <p className="text-gray-400">
+                              Carregando transações...
+                            </p>
                           </div>
                         </td>
                       </tr>
                     ) : filteredAndSortedTransactions.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="py-8 text-center text-gray-400">
+                        <td
+                          colSpan={5}
+                          className="py-8 text-center text-gray-400"
+                        >
                           Nenhuma transação encontrada
                         </td>
                       </tr>
                     ) : (
                       filteredAndSortedTransactions.map((transaction) => (
-                      <tr
-                        key={transaction.id}
-                        className="border-b border-gray-800 hover:bg-gray-800 cursor-pointer transition-colors"
-                        onClick={() => handleTransactionClick(transaction)}
-                      >
-                        <td className="py-3 px-4 text-gray-300">
-                          {new Date(transaction.date).toLocaleString("pt-BR", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            second: "2-digit",
-                          })}
-                        </td>
-                        <td className="py-3 px-4">
-                          <span
-                            className={`px-2 py-1 rounded text-xs font-medium ${
-                              transaction.type === "DEPOSIT"
-                                ? "bg-green-900 text-green-300"
-                                : transaction.type === "WITHDRAWAL"
-                                ? "bg-red-900 text-red-300"
-                                : transaction.type === "FEE"
-                                ? "bg-purple-900 text-purple-300"
-                                : transaction.type === "BUY_CRYPTO"
-                                ? "bg-emerald-900 text-emerald-300"
-                                : transaction.type === "SELL_CRYPTO"
-                                ? "bg-orange-900 text-orange-300"
-                                : transaction.type === "REFUND"
-                                ? "bg-gray-900 text-gray-300"
-                                : "bg-gray-900 text-gray-300"
-                            }`}
-                          >
-                            {getTransactionTypeLabel(transaction.type)}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-gray-300">
-                          {typeof transaction.user === "string"
-                            ? transaction.user
-                            : transaction.user
-                            ? `${transaction.user.name} (${transaction.user.email})`
-                            : "N/A"}
-                        </td>
-                        <td className="py-3 px-4 text-white font-medium">
-                          {transaction.value && !isNaN(transaction.value) 
-                            ? formatCurrency(transaction.value)
-                            : transaction.currency === "USDT"
-                            ? formatUSDT(Math.abs(transaction.amount || 0))
-                            : formatCurrency(0)
-                          }
-                        </td>
-                        <td className="py-3 px-4">
-                          <span
-                            className={`px-2 py-1 rounded text-xs font-medium ${
-                              (transaction.status === "APPROVED" || 
-                              transaction.status === "COMPLETED" || 
-                              transaction.status === "CONFIRMED")
-                                ? "bg-green-900 text-green-300"
-                                : (transaction.status === "PENDING" ||
-                                  transaction.status === "PROCESSING" ||
-                                  transaction.status === "EXECUTING")
-                                ? "bg-yellow-900 text-yellow-300"
-                                : (transaction.status === "REJECTED" ||
-                                  transaction.status === "FAILED" ||
-                                  transaction.status === "CANCELLED")
-                                ? "bg-red-900 text-red-300"
-                                : "bg-gray-900 text-gray-300"
-                            }`}
-                          >
-                            {getStatusLabel(transaction.status)}
-                          </span>
-                        </td>
-                      </tr>
+                        <tr
+                          key={transaction.id}
+                          className="border-b border-gray-800 hover:bg-gray-800 cursor-pointer transition-colors"
+                          onClick={() => handleTransactionClick(transaction)}
+                        >
+                          <td className="py-3 px-4 text-gray-300">
+                            {new Date(transaction.date).toLocaleString(
+                              "pt-BR",
+                              {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                second: "2-digit",
+                              },
+                            )}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span
+                              className={`px-2 py-1 rounded text-xs font-medium ${
+                                transaction.type === "DEPOSIT"
+                                  ? "bg-green-900 text-green-300"
+                                  : transaction.type === "WITHDRAWAL"
+                                    ? "bg-red-900 text-red-300"
+                                    : transaction.type === "FEE"
+                                      ? "bg-purple-900 text-purple-300"
+                                      : transaction.type === "BUY_CRYPTO"
+                                        ? "bg-emerald-900 text-emerald-300"
+                                        : transaction.type === "SELL_CRYPTO"
+                                          ? "bg-orange-900 text-orange-300"
+                                          : transaction.type === "REFUND"
+                                            ? "bg-gray-900 text-gray-300"
+                                            : "bg-gray-900 text-gray-300"
+                              }`}
+                            >
+                              {getTransactionTypeLabel(transaction.type)}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-gray-300">
+                            {typeof transaction.user === "string"
+                              ? transaction.user
+                              : transaction.user
+                                ? `${transaction.user.name} (${transaction.user.email})`
+                                : "N/A"}
+                          </td>
+                          <td className="py-3 px-4 text-white font-medium">
+                            {transaction.value && !isNaN(transaction.value)
+                              ? formatCurrency(transaction.value)
+                              : transaction.currency === "USDT"
+                                ? formatUSDT(Math.abs(transaction.amount || 0))
+                                : formatCurrency(0)}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span
+                              className={`px-2 py-1 rounded text-xs font-medium ${
+                                transaction.status === "APPROVED" ||
+                                transaction.status === "COMPLETED" ||
+                                transaction.status === "CONFIRMED"
+                                  ? "bg-green-900 text-green-300"
+                                  : transaction.status === "PENDING" ||
+                                      transaction.status === "PROCESSING" ||
+                                      transaction.status === "EXECUTING"
+                                    ? "bg-yellow-900 text-yellow-300"
+                                    : transaction.status === "REJECTED" ||
+                                        transaction.status === "FAILED" ||
+                                        transaction.status === "CANCELLED"
+                                      ? "bg-red-900 text-red-300"
+                                      : "bg-gray-900 text-gray-300"
+                              }`}
+                            >
+                              {getStatusLabel(transaction.status)}
+                            </span>
+                          </td>
+                        </tr>
                       ))
                     )}
                   </tbody>
@@ -2149,10 +2414,10 @@ export default function AdminDashboard() {
                             transactionDetails.status === "CONFIRMED"
                               ? "bg-green-900 text-green-300"
                               : transactionDetails.status === "PENDING" ||
-                                transactionDetails.status === "PROCESSING" ||
-                                transactionDetails.status === "EXECUTING"
-                              ? "bg-yellow-900 text-yellow-300"
-                              : "bg-red-900 text-red-300"
+                                  transactionDetails.status === "PROCESSING" ||
+                                  transactionDetails.status === "EXECUTING"
+                                ? "bg-yellow-900 text-yellow-300"
+                                : "bg-red-900 text-red-300"
                           }`}
                         >
                           {getStatusLabel(transactionDetails.status)}
@@ -2187,7 +2452,7 @@ export default function AdminDashboard() {
                     <p className="text-sm text-gray-400">Data</p>
                     <p className="text-white">
                       {new Date(transactionDetails.createdAt).toLocaleString(
-                        "pt-BR"
+                        "pt-BR",
                       )}
                     </p>
                   </div>
@@ -2237,7 +2502,7 @@ export default function AdminDashboard() {
                                         <p className="text-green-400 text-sm">
                                           Enviado em{" "}
                                           {new Date(
-                                            receiptStatus.sentAt
+                                            receiptStatus.sentAt,
                                           ).toLocaleString("pt-BR")}
                                         </p>
                                       </>
@@ -2359,7 +2624,7 @@ export default function AdminDashboard() {
                           <p className="text-sm text-gray-400">Executado em</p>
                           <p className="text-white">
                             {new Date(
-                              transactionDetails.order.executedAt
+                              transactionDetails.order.executedAt,
                             ).toLocaleString("pt-BR")}
                           </p>
                         </div>
@@ -2374,7 +2639,7 @@ export default function AdminDashboard() {
                         <p className="text-sm text-gray-400">Valor Total BRL</p>
                         <p className="text-white">
                           {formatCurrency(
-                            Number(transactionDetails.order.total)
+                            Number(transactionDetails.order.total),
                           )}
                         </p>
                       </div>
@@ -2383,7 +2648,7 @@ export default function AdminDashboard() {
                         <p className="text-white">
                           {formatCurrency(
                             Number(transactionDetails.order.total) /
-                              Number(transactionDetails.order.amount)
+                              Number(transactionDetails.order.amount),
                           )}{" "}
                           BRL/USDT
                         </p>
@@ -2393,74 +2658,88 @@ export default function AdminDashboard() {
                 )}
 
                 {/* Calculation Breakdown (for BUY_CRYPTO orders) */}
-                {transactionDetails.order && transactionDetails.type === "BUY_CRYPTO" && (
-                  <div className="border-t border-gray-800 pt-4 mt-4">
-                    <Card className="bg-gray-800 border-gray-700">
-                      <CardHeader>
-                        <CardTitle className="text-white text-lg">
-                          📊 Cálculo do Valor Total
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between py-2 border-b border-gray-700">
-                            <span className="text-gray-400">Quantidade USDT:</span>
-                            <span className="text-white font-semibold">
-                              {Number(transactionDetails.order.amount).toLocaleString("pt-BR", {
-                                minimumFractionDigits: 0,
-                                maximumFractionDigits: 8,
-                              })}{" "}
-                              USDT
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between py-2 border-b border-gray-700">
-                            <span className="text-gray-400">Taxa de Câmbio:</span>
-                            <span className="text-white font-semibold">
-                              {formatCurrency(
-                                Number(transactionDetails.order.total) /
-                                  Number(transactionDetails.order.amount)
-                              )}{" "}
-                              BRL/USDT
-                            </span>
-                          </div>
-                          <div className="bg-gray-900 rounded-lg p-4 my-3">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-gray-300 text-sm">Cálculo:</span>
+                {transactionDetails.order &&
+                  transactionDetails.type === "BUY_CRYPTO" && (
+                    <div className="border-t border-gray-800 pt-4 mt-4">
+                      <Card className="bg-gray-800 border-gray-700">
+                        <CardHeader>
+                          <CardTitle className="text-white text-lg">
+                            📊 Cálculo do Valor Total
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between py-2 border-b border-gray-700">
+                              <span className="text-gray-400">
+                                Quantidade USDT:
+                              </span>
+                              <span className="text-white font-semibold">
+                                {Number(
+                                  transactionDetails.order.amount,
+                                ).toLocaleString("pt-BR", {
+                                  minimumFractionDigits: 0,
+                                  maximumFractionDigits: 8,
+                                })}{" "}
+                                USDT
+                              </span>
                             </div>
-                            <div className="text-white font-mono text-sm space-y-1">
-                              <div className="flex items-center gap-2">
-                                <span className="text-gray-400">=</span>
-                                <span>
-                                  {Number(transactionDetails.order.amount).toLocaleString("pt-BR", {
-                                    minimumFractionDigits: 0,
-                                    maximumFractionDigits: 8,
-                                  })}{" "}
-                                  USDT
-                                </span>
-                                <span className="text-gray-500">×</span>
-                                <span>
-                                  {formatCurrency(
-                                    Number(transactionDetails.order.total) /
-                                      Number(transactionDetails.order.amount)
-                                  )}
+                            <div className="flex items-center justify-between py-2 border-b border-gray-700">
+                              <span className="text-gray-400">
+                                Taxa de Câmbio:
+                              </span>
+                              <span className="text-white font-semibold">
+                                {formatCurrency(
+                                  Number(transactionDetails.order.total) /
+                                    Number(transactionDetails.order.amount),
+                                )}{" "}
+                                BRL/USDT
+                              </span>
+                            </div>
+                            <div className="bg-gray-900 rounded-lg p-4 my-3">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-gray-300 text-sm">
+                                  Cálculo:
                                 </span>
                               </div>
-                              <div className="flex items-center gap-2 pt-2 border-t border-gray-700">
-                                <span className="text-gray-400">=</span>
-                                <span className="text-green-400 font-bold">
-                                  {formatCurrency(Number(transactionDetails.order.total))}
-                                </span>
+                              <div className="text-white font-mono text-sm space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-gray-400">=</span>
+                                  <span>
+                                    {Number(
+                                      transactionDetails.order.amount,
+                                    ).toLocaleString("pt-BR", {
+                                      minimumFractionDigits: 0,
+                                      maximumFractionDigits: 8,
+                                    })}{" "}
+                                    USDT
+                                  </span>
+                                  <span className="text-gray-500">×</span>
+                                  <span>
+                                    {formatCurrency(
+                                      Number(transactionDetails.order.total) /
+                                        Number(transactionDetails.order.amount),
+                                    )}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 pt-2 border-t border-gray-700">
+                                  <span className="text-gray-400">=</span>
+                                  <span className="text-green-400 font-bold">
+                                    {formatCurrency(
+                                      Number(transactionDetails.order.total),
+                                    )}
+                                  </span>
+                                </div>
                               </div>
                             </div>
+                            <div className="text-xs text-gray-500 italic">
+                              * A taxa de câmbio já inclui todas as taxas e
+                              comissões aplicadas
+                            </div>
                           </div>
-                          <div className="text-xs text-gray-500 italic">
-                            * A taxa de câmbio já inclui todas as taxas e comissões aplicadas
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                )}
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
 
                 {/* Deposit Details */}
                 {transactionDetails.deposit && (
@@ -2502,7 +2781,7 @@ export default function AdminDashboard() {
                         <p className="text-sm text-gray-400">Valor</p>
                         <p className="text-white">
                           {formatCurrency(
-                            Number(transactionDetails.deposit.amount)
+                            Number(transactionDetails.deposit.amount),
                           )}
                         </p>
                       </div>
@@ -2519,7 +2798,7 @@ export default function AdminDashboard() {
                           <p className="text-sm text-gray-400">Confirmado em</p>
                           <p className="text-white">
                             {new Date(
-                              transactionDetails.deposit.confirmedAt
+                              transactionDetails.deposit.confirmedAt,
                             ).toLocaleString("pt-BR")}
                           </p>
                         </div>
@@ -2537,7 +2816,8 @@ export default function AdminDashboard() {
                       </h3>
                       <div className="flex gap-2">
                         {transactionDetails.withdrawal.status === "PENDING" ||
-                        transactionDetails.withdrawal.status === "PROCESSING" ? (
+                        transactionDetails.withdrawal.status ===
+                          "PROCESSING" ? (
                           <>
                             <Button
                               onClick={handleSyncStatus}
@@ -2592,7 +2872,7 @@ export default function AdminDashboard() {
                         <p className="text-sm text-gray-400">Valor</p>
                         <p className="text-white">
                           {formatCurrency(
-                            Number(transactionDetails.withdrawal.amount)
+                            Number(transactionDetails.withdrawal.amount),
                           )}
                         </p>
                       </div>
@@ -2861,8 +3141,8 @@ export default function AdminDashboard() {
                 {processingBalance
                   ? "Processando..."
                   : balanceOperation === "CREDIT"
-                  ? "Creditar"
-                  : "Deduzir"}
+                    ? "Creditar"
+                    : "Deduzir"}
               </Button>
             </div>
           </div>
@@ -2870,40 +3150,63 @@ export default function AdminDashboard() {
       </Dialog>
 
       {/* Balance Adjustment Confirmation Dialog */}
-      <Dialog open={showBalanceConfirmDialog} onOpenChange={(open) => {
-        if (!open) {
-          setShowBalanceConfirmDialog(false);
-          setBalanceConfirmStep(1);
-        }
-      }}>
+      <Dialog
+        open={showBalanceConfirmDialog}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowBalanceConfirmDialog(false);
+            setBalanceConfirmStep(1);
+          }
+        }}
+      >
         <DialogContent className="bg-gray-900 border-gray-800">
           <DialogHeader>
             <DialogTitle className="text-white">
-              {balanceConfirmStep === 1 ? "Confirmar Ajuste de Saldo" : "Confirmação Final"}
+              {balanceConfirmStep === 1
+                ? "Confirmar Ajuste de Saldo"
+                : "Confirmação Final"}
             </DialogTitle>
             <DialogDescription className="text-gray-400">
               {balanceConfirmStep === 1 ? (
                 <>
-                  Você está prestes a {balanceOperation === "CREDIT" ? "creditar" : "deduzir"} saldo.
-                  <br /><br />
-                  <strong>Usuário:</strong> {usersList.find(u => u.id === balanceUserId)?.name || balanceUserId}
+                  Você está prestes a{" "}
+                  {balanceOperation === "CREDIT" ? "creditar" : "deduzir"}{" "}
+                  saldo.
+                  <br />
+                  <br />
+                  <strong>Usuário:</strong>{" "}
+                  {usersList.find((u) => u.id === balanceUserId)?.name ||
+                    balanceUserId}
                   <br />
                   <strong>Valor:</strong> {balanceAmount} {balanceCurrency}
                   <br />
-                  <strong>Operação:</strong> {balanceOperation === "CREDIT" ? "Crédito" : "Débito"}
+                  <strong>Operação:</strong>{" "}
+                  {balanceOperation === "CREDIT" ? "Crédito" : "Débito"}
                   <br />
                   <strong>Motivo:</strong> {balanceReason || "Não especificado"}
-                  <br /><br />
+                  <br />
+                  <br />
                   Esta ação alterará o saldo do usuário. Deseja continuar?
                 </>
               ) : (
                 <>
-                  <strong className="text-red-400">ATENÇÃO:</strong> Esta é a confirmação final.
-                  <br /><br />
-                  Você confirma que deseja {balanceOperation === "CREDIT" ? "creditar" : "deduzir"} {balanceAmount} {balanceCurrency} do usuário <strong className="text-white">{usersList.find(u => u.id === balanceUserId)?.name || balanceUserId}</strong>?
-                  <br /><br />
+                  <strong className="text-red-400">ATENÇÃO:</strong> Esta é a
+                  confirmação final.
+                  <br />
+                  <br />
+                  Você confirma que deseja{" "}
+                  {balanceOperation === "CREDIT" ? "creditar" : "deduzir"}{" "}
+                  {balanceAmount} {balanceCurrency} do usuário{" "}
+                  <strong className="text-white">
+                    {usersList.find((u) => u.id === balanceUserId)?.name ||
+                      balanceUserId}
+                  </strong>
+                  ?
+                  <br />
+                  <br />
                   <strong>Motivo:</strong> {balanceReason || "Não especificado"}
-                  <br /><br />
+                  <br />
+                  <br />
                   Clique em &quot;Confirmar&quot; novamente para prosseguir.
                 </>
               )}
@@ -2922,7 +3225,11 @@ export default function AdminDashboard() {
             </Button>
             <Button
               onClick={handleBalanceConfirm}
-              className={balanceConfirmStep === 1 ? "bg-yellow-600 hover:bg-yellow-700" : "bg-red-600 hover:bg-red-700"}
+              className={
+                balanceConfirmStep === 1
+                  ? "bg-yellow-600 hover:bg-yellow-700"
+                  : "bg-red-600 hover:bg-red-700"
+              }
             >
               {balanceConfirmStep === 1 ? "Sim, Continuar" : "Confirmar Ajuste"}
             </Button>

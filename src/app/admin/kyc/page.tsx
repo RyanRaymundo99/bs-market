@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +23,17 @@ import {
   AlertCircle,
   Shield,
   Clock,
+  ZoomIn,
+  ChevronLeft,
+  ChevronRight,
+  Grid3x3,
+  List,
+  CheckSquare,
+  Square,
+  RefreshCw,
+  MoreVertical,
+  Download,
+  FileText,
 } from "lucide-react";
 import {
   Dialog,
@@ -30,12 +41,31 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
-import { ZoomIn, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import ImageAnalysisPanel from "@/components/admin/ImageAnalysisPanel";
 import NotificationBell from "@/components/admin/NotificationBell";
 import BackToDashboardButton from "@/components/admin/BackToDashboardButton";
 import KYCImage from "@/components/admin/KYCImage";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface KYCUser {
   id: string;
@@ -60,7 +90,7 @@ const AdminKYCPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
-  const [, setSelectedUser] = useState<KYCUser | null>(null);
+  const [selectedUser, setSelectedUser] = useState<KYCUser | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<{
@@ -68,10 +98,14 @@ const AdminKYCPage = () => {
     alt: string;
     title: string;
   } | null>(null);
-  
+  const [viewMode, setViewMode] = useState<"table" | "grid">("table");
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [showRejectDialog, setShowRejectDialog] = useState<string | null>(null);
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 20;
 
   const { toast } = useToast();
 
@@ -107,7 +141,7 @@ const AdminKYCPage = () => {
         (user) =>
           user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.cpf.includes(searchTerm)
+          user.cpf.includes(searchTerm),
       );
     }
 
@@ -132,6 +166,15 @@ const AdminKYCPage = () => {
     setCurrentPage(1); // Reset to first page when filters change
   }, [filterUsers]);
 
+  // Statistics
+  const stats = useMemo(() => {
+    const total = users.length;
+    const pending = users.filter((u) => u.kycStatus === "PENDING").length;
+    const approved = users.filter((u) => u.kycStatus === "APPROVED").length;
+    const rejected = users.filter((u) => u.kycStatus === "REJECTED").length;
+    return { total, pending, approved, rejected };
+  }, [users]);
+
   // Pagination calculations
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -149,8 +192,8 @@ const AdminKYCPage = () => {
 
       if (response.ok) {
         toast({
-        title: "Sucesso",
-        description: "KYC do usuário aprovado com sucesso",
+          title: "Sucesso",
+          description: "KYC do usuário aprovado com sucesso",
         });
         fetchUsers();
         setSelectedUser(null);
@@ -193,12 +236,13 @@ const AdminKYCPage = () => {
 
       if (response.ok) {
         toast({
-        title: "Sucesso",
-        description: "KYC do usuário rejeitado com sucesso",
+          title: "Sucesso",
+          description: "KYC do usuário rejeitado com sucesso",
         });
         fetchUsers();
         setSelectedUser(null);
         setRejectionReason("");
+        setShowRejectDialog(null);
       } else {
         throw new Error(data.error || "Failed to reject KYC");
       }
@@ -225,8 +269,8 @@ const AdminKYCPage = () => {
 
       if (response.ok) {
         toast({
-        title: "Sucesso",
-        description: "Status KYC redefinido para pendente para nova revisão",
+          title: "Sucesso",
+          description: "Status KYC redefinido para pendente para nova revisão",
         });
         fetchUsers();
         setSelectedUser(null);
@@ -242,6 +286,82 @@ const AdminKYCPage = () => {
       });
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const handleBatchApprove = async () => {
+    if (selectedUsers.size === 0) return;
+
+    const pendingUsers = Array.from(selectedUsers).filter((id) => {
+      const user = users.find((u) => u.id === id);
+      return user?.kycStatus === "PENDING";
+    });
+
+    if (pendingUsers.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Nenhum usuário pendente selecionado",
+      });
+      return;
+    }
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const userId of pendingUsers) {
+      try {
+        const response = await fetch(`/api/admin/kyc/${userId}/approve`, {
+          method: "POST",
+        });
+        if (response.ok) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      } catch (error) {
+        failCount++;
+      }
+    }
+
+    toast({
+      title: "Aprovação em lote concluída",
+      description: `Aprovados: ${successCount}${failCount > 0 ? ` | Falhas: ${failCount}` : ""}`,
+    });
+
+    setSelectedUsers(new Set());
+    fetchUsers();
+  };
+
+  const toggleRowExpansion = (userId: string) => {
+    setExpandedRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) {
+        next.delete(userId);
+      } else {
+        next.add(userId);
+      }
+      return next;
+    });
+  };
+
+  const toggleUserSelection = (userId: string) => {
+    setSelectedUsers((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) {
+        next.delete(userId);
+      } else {
+        next.add(userId);
+      }
+      return next;
+    });
+  };
+
+  const selectAllUsers = () => {
+    if (selectedUsers.size === paginatedUsers.length) {
+      setSelectedUsers(new Set());
+    } else {
+      setSelectedUsers(new Set(paginatedUsers.map((u) => u.id)));
     }
   };
 
@@ -275,7 +395,7 @@ const AdminKYCPage = () => {
   };
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return "N/A";
     return new Date(dateString).toLocaleDateString("pt-BR", {
       year: "numeric",
       month: "short",
@@ -287,6 +407,10 @@ const AdminKYCPage = () => {
 
   const handleImageClick = (src: string, alt: string, title: string) => {
     setSelectedImage({ src, alt, title });
+  };
+
+  const hasDocuments = (user: KYCUser) => {
+    return !!(user.documentFront || user.documentBack || user.documentSelfie);
   };
 
   if (loading) {
@@ -301,474 +425,625 @@ const AdminKYCPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-black p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-black p-4 lg:p-6">
+      <div className="max-w-[1920px] mx-auto space-y-6">
         {/* Back to Dashboard Button */}
-        <BackToDashboardButton className="mb-6" />
-        
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-white mb-2">
-                Verificação KYC
-              </h1>
-              <p className="text-gray-300">
-                Revise e verifique documentos de identidade dos usuários
-              </p>
-            </div>
-            <div className="flex items-center space-x-2">
-              <NotificationBell className="text-white hover:text-blue-400" />
-            </div>
+        <BackToDashboardButton />
+
+        {/* Header */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-white mb-2">
+              Verificação KYC
+            </h1>
+            <p className="text-gray-300">
+              Revise e verifique documentos de identidade dos usuários
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <Button
+              onClick={() => fetchUsers()}
+              variant="outline"
+              size="sm"
+              className="border-gray-700 hover:bg-gray-800"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Atualizar
+            </Button>
           </div>
         </div>
 
-        {/* Filters */}
-        <Card className="mb-6 bg-gray-900 border-gray-800">
-          <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1">
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-400">Total</p>
+                  <p className="text-2xl font-bold text-white">{stats.total}</p>
+                </div>
+                <FileText className="w-8 h-8 text-blue-400 opacity-50" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-400">Pendente</p>
+                  <p className="text-2xl font-bold text-yellow-400">
+                    {stats.pending}
+                  </p>
+                </div>
+                <Clock className="w-8 h-8 text-yellow-400 opacity-50" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-400">Aprovado</p>
+                  <p className="text-2xl font-bold text-green-400">
+                    {stats.approved}
+                  </p>
+                </div>
+                <CheckCircle className="w-8 h-8 text-green-400 opacity-50" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-400">Rejeitado</p>
+                  <p className="text-2xl font-bold text-red-400">
+                    {stats.rejected}
+                  </p>
+                </div>
+                <XCircle className="w-8 h-8 text-red-400 opacity-50" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Filters and Actions */}
+        <Card className="bg-gray-900 border-gray-800">
+          <CardContent className="p-4">
+            <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
+              <div className="flex-1 w-full">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <Input
                     placeholder="Buscar por nome, email ou CPF..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 bg-gray-700 border-gray-600 text-white placeholder:text-gray-400"
+                    className="pl-10 bg-gray-800 border-gray-700 text-white placeholder:text-gray-400"
                   />
                 </div>
               </div>
-              <div className="w-full md:w-48">
+              <div className="flex gap-2 flex-wrap">
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
+                  <SelectTrigger className="w-[180px] bg-gray-800 border-gray-700 text-white">
                     <Filter className="w-4 h-4 mr-2" />
-                    <SelectValue placeholder="Filtrar por status" />
+                    <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="ALL">Todos os Status</SelectItem>
+                    <SelectItem value="ALL">Todos</SelectItem>
                     <SelectItem value="PENDING">Pendente</SelectItem>
                     <SelectItem value="APPROVED">Aprovado</SelectItem>
                     <SelectItem value="REJECTED">Rejeitado</SelectItem>
                   </SelectContent>
                 </Select>
+                <div className="flex gap-1 border border-gray-700 rounded-md p-1">
+                  <Button
+                    variant={viewMode === "table" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode("table")}
+                    className={viewMode === "table" ? "bg-gray-700" : ""}
+                  >
+                    <List className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === "grid" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode("grid")}
+                    className={viewMode === "grid" ? "bg-gray-700" : ""}
+                  >
+                    <Grid3x3 className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             </div>
+
+            {/* Filter Buttons */}
+            <div className="flex flex-wrap gap-2 mt-4">
+              <Button
+                variant={statusFilter === "ALL" ? "default" : "outline"}
+                onClick={() => handleStatusFilter("ALL")}
+                size="sm"
+                className={
+                  statusFilter === "ALL"
+                    ? "bg-gray-600 hover:bg-gray-700"
+                    : "border-gray-700"
+                }
+              >
+                Todos ({stats.total})
+              </Button>
+              <Button
+                variant={statusFilter === "PENDING" ? "default" : "outline"}
+                onClick={() => handleStatusFilter("PENDING")}
+                size="sm"
+                className={
+                  statusFilter === "PENDING"
+                    ? "bg-yellow-600 hover:bg-yellow-700"
+                    : "border-gray-700"
+                }
+              >
+                Pendente ({stats.pending})
+              </Button>
+              <Button
+                variant={statusFilter === "APPROVED" ? "default" : "outline"}
+                onClick={() => handleStatusFilter("APPROVED")}
+                size="sm"
+                className={
+                  statusFilter === "APPROVED"
+                    ? "bg-green-600 hover:bg-green-700"
+                    : "border-gray-700"
+                }
+              >
+                Aprovado ({stats.approved})
+              </Button>
+              <Button
+                variant={statusFilter === "REJECTED" ? "default" : "outline"}
+                onClick={() => handleStatusFilter("REJECTED")}
+                size="sm"
+                className={
+                  statusFilter === "REJECTED"
+                    ? "bg-red-600 hover:bg-red-700"
+                    : "border-gray-700"
+                }
+              >
+                Rejeitado ({stats.rejected})
+              </Button>
+            </div>
+
+            {/* Batch Actions */}
+            {selectedUsers.size > 0 && (
+              <div className="mt-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg flex items-center justify-between">
+                <span className="text-sm text-blue-300">
+                  {selectedUsers.size} usuário(s) selecionado(s)
+                </span>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={handleBatchApprove}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Aprovar Selecionados
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setSelectedUsers(new Set())}
+                    className="border-gray-600"
+                  >
+                    Limpar Seleção
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* Filter Buttons */}
-        <div className="flex flex-wrap gap-2 mb-6">
-          <Button
-            variant={statusFilter === "ALL" ? "default" : "outline"}
-            onClick={() => handleStatusFilter("ALL")}
-            size="sm"
-            className="bg-gray-600 hover:bg-gray-700 text-white"
-          >
-            Todos os Status ({users.length})
-          </Button>
-          <Button
-            variant={statusFilter === "PENDING" ? "default" : "outline"}
-            onClick={() => handleStatusFilter("PENDING")}
-            size="sm"
-            className="bg-yellow-600 hover:bg-yellow-700 text-white"
-          >
-            Pendente ({users.filter((u) => u.kycStatus === "PENDING").length})
-          </Button>
-          <Button
-            variant={statusFilter === "APPROVED" ? "default" : "outline"}
-            onClick={() => handleStatusFilter("APPROVED")}
-            size="sm"
-            className="bg-green-600 hover:bg-green-700 text-white"
-          >
-            Aprovado ({users.filter((u) => u.kycStatus === "APPROVED").length})
-          </Button>
-          <Button
-            variant={statusFilter === "REJECTED" ? "default" : "outline"}
-            onClick={() => handleStatusFilter("REJECTED")}
-            size="sm"
-            className="bg-red-600 hover:bg-red-700 text-white"
-          >
-            Rejeitado ({users.filter((u) => u.kycStatus === "REJECTED").length})
-          </Button>
-        </div>
-
-        {/* Users List */}
-        <div className="grid gap-4">
-          {filteredUsers.length === 0 ? (
-            <Card className="bg-gray-900 border-gray-800">
-              <CardContent className="p-8 text-center">
-                <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-white mb-2">
-                  Nenhum usuário encontrado
-                </h3>
-                <p className="text-gray-300">
-                  {searchTerm || statusFilter !== "ALL"
-                    ? "Tente ajustar sua busca ou critérios de filtro"
-                    : "Nenhum usuário enviou documentos KYC ainda"}
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            paginatedUsers.map((user) => (
-              <Card
-                key={user.id}
-                className="hover:shadow-md transition-shadow bg-gray-900 border-gray-800"
-              >
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
-                        <User className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="font-medium text-white">{user.name}</h3>
-                        <p className="text-sm text-gray-300">{user.email}</p>
-                        <p className="text-xs text-gray-400">CPF: {user.cpf}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-4">
-                      <div className="text-right">
-                        <div className="mb-1">
-                          {getStatusBadge(user.kycStatus)}
-                        </div>
-                        <p className="text-xs text-gray-400">
-                          Enviado: {user.kycSubmittedAt ? formatDate(user.kycSubmittedAt) : 'N/A'}
-                        </p>
-                        {user.kycReviewedAt && (
-                          <p className="text-xs text-gray-400">
-                            Revisado: {formatDate(user.kycReviewedAt)}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="flex space-x-2">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setSelectedUser(user)}
-                              className="border-gray-600 text-white hover:bg-gray-700"
-                            >
-                              <Eye className="w-4 h-4 mr-1" />
-                              Revisar
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-gray-800 border-gray-700">
-                            <DialogHeader>
-                              <DialogTitle className="text-white">
-                                Revisão de Documentos KYC - {user.name}
-                              </DialogTitle>
-                            </DialogHeader>
-
-                            <div className="space-y-6">
-                              {/* User Info */}
-                              <div className="grid grid-cols-2 gap-4 p-4 bg-gray-700 rounded-lg">
-                                <div>
-                                  <label className="text-sm font-medium text-gray-300">
-                                    Nome
-                                  </label>
-                                  <p className="text-sm text-white">
+        {/* Users List/Table */}
+        {filteredUsers.length === 0 ? (
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-8 text-center">
+              <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-white mb-2">
+                Nenhum usuário encontrado
+              </h3>
+              <p className="text-gray-300">
+                {searchTerm || statusFilter !== "ALL"
+                  ? "Tente ajustar sua busca ou critérios de filtro"
+                  : "Nenhum usuário enviou documentos KYC ainda"}
+              </p>
+            </CardContent>
+          </Card>
+        ) : viewMode === "table" ? (
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-gray-700 hover:bg-gray-800">
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={
+                            selectedUsers.size === paginatedUsers.length &&
+                            paginatedUsers.length > 0
+                          }
+                          onCheckedChange={selectAllUsers}
+                          className="border-gray-600"
+                        />
+                      </TableHead>
+                      <TableHead className="text-gray-300">Usuário</TableHead>
+                      <TableHead className="text-gray-300">CPF</TableHead>
+                      <TableHead className="text-gray-300">
+                        Documentos
+                      </TableHead>
+                      <TableHead className="text-gray-300">Status</TableHead>
+                      <TableHead className="text-gray-300">Enviado</TableHead>
+                      <TableHead className="text-gray-300">Revisado</TableHead>
+                      <TableHead className="text-gray-300 text-right">
+                        Ações
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedUsers.map((user) => {
+                      const isExpanded = expandedRows.has(user.id);
+                      const isSelected = selectedUsers.has(user.id);
+                      return (
+                        <React.Fragment key={user.id}>
+                          <TableRow className="border-gray-700 hover:bg-gray-800/50">
+                            <TableCell>
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={() =>
+                                  toggleUserSelection(user.id)
+                                }
+                                className="border-gray-600"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <User className="w-4 h-4 text-white" />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-medium text-white truncate">
                                     {user.name}
                                   </p>
-                                </div>
-                                <div>
-                                  <label className="text-sm font-medium text-gray-300">
-                                    Email
-                                  </label>
-                                  <p className="text-sm text-white">
+                                  <p className="text-xs text-gray-400 truncate">
                                     {user.email}
                                   </p>
                                 </div>
-                                <div>
-                                  <label className="text-sm font-medium text-gray-300">
-                                    CPF
-                                  </label>
-                                  <p className="text-sm text-white">
-                                    {user.cpf}
-                                  </p>
-                                </div>
-                                <div>
-                                  <label className="text-sm font-medium text-gray-300">
-                                    Tipo de Documento
-                                  </label>
-                                  <p className="text-sm text-white">
-                                    {user.documentType || 'N/A'}
-                                  </p>
-                                </div>
-                                <div>
-                                  <label className="text-sm font-medium text-gray-300">
-                                    Número do Documento
-                                  </label>
-                                  <p className="text-sm text-white">
-                                    {user.documentNumber || 'N/A'}
-                                  </p>
-                                </div>
-                                <div>
-                                  <label className="text-sm font-medium text-gray-300">
-                                    Status
-                                  </label>
-                                  <div className="mt-1">
-                                    {getStatusBadge(user.kycStatus)}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-gray-300 text-sm">
+                              {user.cpf}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                {user.documentFront && (
+                                  <div className="w-8 h-8 bg-gray-700 rounded border border-gray-600 flex items-center justify-center">
+                                    <FileText className="w-3 h-3 text-green-400" />
                                   </div>
-                                </div>
+                                )}
+                                {user.documentBack && (
+                                  <div className="w-8 h-8 bg-gray-700 rounded border border-gray-600 flex items-center justify-center">
+                                    <FileText className="w-3 h-3 text-green-400" />
+                                  </div>
+                                )}
+                                {user.documentSelfie && (
+                                  <div className="w-8 h-8 bg-gray-700 rounded border border-gray-600 flex items-center justify-center">
+                                    <User className="w-3 h-3 text-blue-400" />
+                                  </div>
+                                )}
+                                {!hasDocuments(user) && (
+                                  <span className="text-xs text-gray-500">
+                                    N/A
+                                  </span>
+                                )}
                               </div>
-
-                              {/* Documents */}
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div>
-                                  <h4 className="font-medium text-white mb-2 flex items-center gap-2">
-                                    Frente do Documento
-                                    <ZoomIn className="w-4 h-4 text-gray-400" />
-                                  </h4>
-                                  <KYCImage
-                                    src={user.documentFront}
-                                    alt="Frente do Documento"
-                                    className="w-full h-48"
-                                    onClick={user.documentFront ? () =>
-                                      handleImageClick(
-                                        user.documentFront!,
-                                        "Frente do Documento",
-                                        "Frente do Documento"
-                                      )
-                                    : undefined}
-                                  />
-                                </div>
-                                <div>
-                                  <h4 className="font-medium text-white mb-2 flex items-center gap-2">
-                                    Verso do Documento
-                                    <ZoomIn className="w-4 h-4 text-gray-400" />
-                                  </h4>
-                                  <KYCImage
-                                    src={user.documentBack}
-                                    alt="Verso do Documento"
-                                    className="w-full h-48"
-                                    onClick={user.documentBack ? () =>
-                                      handleImageClick(
-                                        user.documentBack!,
-                                        "Verso do Documento",
-                                        "Verso do Documento"
-                                      )
-                                    : undefined}
-                                  />
-                                </div>
-                                <div>
-                                  <h4 className="font-medium text-white mb-2 flex items-center gap-2">
-                                    Selfie com Documento
-                                    <ZoomIn className="w-4 h-4 text-gray-400" />
-                                  </h4>
-                                  <KYCImage
-                                    src={user.documentSelfie}
-                                    alt="Selfie com Documento"
-                                    className="w-full h-48"
-                                    onClick={user.documentSelfie ? () =>
-                                      handleImageClick(
-                                        user.documentSelfie!,
-                                        "Selfie com Documento",
-                                        "Selfie com Documento"
-                                      )
-                                    : undefined}
-                                  />
-                                </div>
-                              </div>
-
-                              {/* Image Analysis */}
-                              <div className="mt-6">
-                                <h4 className="font-medium text-white mb-4 flex items-center gap-2">
-                                  <Shield className="w-5 h-5" />
-                                  Análise de Detecção de Fraude
-                                </h4>
-                                <ImageAnalysisPanel
-                                  documentFront={user.documentFront || ''}
-                                  documentBack={user.documentBack || ''}
-                                  selfie={user.documentSelfie || ''}
-                                  onAnalysisComplete={(result) => {
-                                    console.log("Analysis complete:", result);
-                                  }}
-                                />
-                              </div>
-
-                              {/* Actions */}
-                              <div className="flex space-x-4 pt-4 border-t border-gray-600">
+                            </TableCell>
+                            <TableCell>
+                              {getStatusBadge(user.kycStatus)}
+                            </TableCell>
+                            <TableCell className="text-gray-400 text-xs">
+                              {formatDate(user.kycSubmittedAt)}
+                            </TableCell>
+                            <TableCell className="text-gray-400 text-xs">
+                              {formatDate(user.kycReviewedAt)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-2">
                                 {user.kycStatus === "PENDING" && (
                                   <>
                                     <Button
+                                      size="sm"
                                       onClick={() => handleApprove(user.id)}
                                       disabled={actionLoading === user.id}
-                                      className="bg-green-600 hover:bg-green-700"
+                                      className="bg-green-600 hover:bg-green-700 h-7 px-2"
+                                      title="Aprovar"
                                     >
-                                      <CheckCircle className="w-4 h-4 mr-2" />
-                                      Aprovar
+                                      <CheckCircle className="w-3 h-3" />
                                     </Button>
-                                    <Dialog>
-                                      <DialogTrigger asChild>
-                                        <Button variant="destructive">
-                                          <XCircle className="w-4 h-4 mr-2" />
-                                          Reject
-                                        </Button>
-                                      </DialogTrigger>
-                                      <DialogContent className="bg-gray-800 border-gray-700">
-                                        <DialogHeader>
-                                          <DialogTitle className="text-white">
-                                            Rejeitar Verificação KYC
-                                          </DialogTitle>
-                                        </DialogHeader>
-                                        <div className="space-y-4">
-                                          <div>
-                                            <label className="text-sm font-medium text-gray-300">
-                                              Motivo da Rejeição
-                                            </label>
-                                            <textarea
-                                              value={rejectionReason}
-                                              onChange={(e) =>
-                                                setRejectionReason(
-                                                  e.target.value
-                                                )
-                                              }
-                                              placeholder="Por favor, forneça um motivo para a rejeição..."
-                                              className="w-full mt-1 p-3 border border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-700 text-white placeholder:text-gray-400"
-                                              rows={4}
-                                            />
-                                          </div>
-                                          <div className="flex justify-end space-x-2">
-                                            <Button
-                                              variant="outline"
-                                              onClick={() =>
-                                                setRejectionReason("")
-                                              }
-                                              className="border-gray-600 text-white hover:bg-gray-700"
-                                            >
-                                              Cancel
-                                            </Button>
-                                            <Button
-                                              variant="destructive"
-                                              onClick={() =>
-                                                handleReject(user.id)
-                                              }
-                                              disabled={
-                                                actionLoading === user.id ||
-                                                !rejectionReason.trim()
-                                              }
-                                            >
-                                              Reject KYC
-                                            </Button>
-                                          </div>
-                                        </div>
-                                      </DialogContent>
-                                    </Dialog>
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      onClick={() =>
+                                        setShowRejectDialog(user.id)
+                                      }
+                                      disabled={actionLoading === user.id}
+                                      className="h-7 px-2"
+                                      title="Rejeitar"
+                                    >
+                                      <XCircle className="w-3 h-3" />
+                                    </Button>
                                   </>
                                 )}
-
-                                {/* Recheck button for approved/rejected users */}
                                 {(user.kycStatus === "APPROVED" ||
                                   user.kycStatus === "REJECTED") && (
-                                  <div className="flex space-x-2">
+                                  <>
                                     <Button
+                                      size="sm"
                                       onClick={() =>
                                         handleResetToPending(user.id)
                                       }
                                       disabled={actionLoading === user.id}
-                                      className="bg-orange-600 hover:bg-orange-700"
+                                      className="bg-orange-600 hover:bg-orange-700 h-7 px-2"
+                                      title="Resetar"
                                     >
-                                      <Clock className="w-4 h-4 mr-2" />
-                                      Redefinir para Pendente
+                                      <Clock className="w-3 h-3" />
                                     </Button>
                                     <Button
+                                      size="sm"
                                       onClick={() => handleApprove(user.id)}
                                       disabled={actionLoading === user.id}
-                                      className="bg-blue-600 hover:bg-blue-700"
+                                      className="bg-green-600 hover:bg-green-700 h-7 px-2"
+                                      title="Reaprovar"
                                     >
-                                      <CheckCircle className="w-4 h-4 mr-2" />
-                                      Reaprovar
+                                      <CheckCircle className="w-3 h-3" />
                                     </Button>
-                                    <Dialog>
-                                      <DialogTrigger asChild>
-                                        <Button variant="destructive">
-                                          <XCircle className="w-4 h-4 mr-2" />
-                                          Reject
-                                        </Button>
-                                      </DialogTrigger>
-                                      <DialogContent className="bg-gray-800 border-gray-700">
-                                        <DialogHeader>
-                                          <DialogTitle className="text-white">
-                                            Rejeitar Verificação KYC
-                                          </DialogTitle>
-                                        </DialogHeader>
-                                        <div className="space-y-4">
-                                          <div>
-                                            <label className="text-sm font-medium text-gray-300">
-                                              Motivo da Rejeição
-                                            </label>
-                                            <textarea
-                                              value={rejectionReason}
-                                              onChange={(e) =>
-                                                setRejectionReason(
-                                                  e.target.value
-                                                )
-                                              }
-                                              placeholder="Por favor, forneça um motivo para a rejeição..."
-                                              className="w-full mt-1 p-3 border border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-700 text-white placeholder:text-gray-400"
-                                              rows={4}
-                                            />
-                                          </div>
-                                          <div className="flex justify-end space-x-2">
-                                            <Button
-                                              variant="outline"
-                                              onClick={() =>
-                                                setRejectionReason("")
-                                              }
-                                              className="border-gray-600 text-white hover:bg-gray-700"
-                                            >
-                                              Cancel
-                                            </Button>
-                                            <Button
-                                              variant="destructive"
-                                              onClick={() =>
-                                                handleReject(user.id)
-                                              }
-                                              disabled={
-                                                actionLoading === user.id ||
-                                                !rejectionReason.trim()
-                                              }
-                                            >
-                                              Reject KYC
-                                            </Button>
-                                          </div>
-                                        </div>
-                                      </DialogContent>
-                                    </Dialog>
-                                  </div>
+                                  </>
                                 )}
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setSelectedUser(user);
+                                    toggleRowExpansion(user.id);
+                                  }}
+                                  className="border-gray-600 text-white hover:bg-gray-700 h-7 px-2"
+                                  title="Ver Detalhes"
+                                >
+                                  <Eye className="w-3 h-3" />
+                                </Button>
                               </div>
-
-                              {user.kycStatus === "REJECTED" &&
-                                user.kycRejectionReason && (
-                                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                                    <h4 className="font-medium text-red-900 mb-2">
-                                      Motivo da Rejeição
-                                    </h4>
-                                    <p className="text-sm text-red-700">
-                                      {user.kycRejectionReason}
-                                    </p>
+                            </TableCell>
+                          </TableRow>
+                          {isExpanded && (
+                            <TableRow className="border-gray-700 bg-gray-800/30">
+                              <TableCell colSpan={8} className="p-3">
+                                <div className="flex items-center justify-between">
+                                  {/* Rejection Reason or Additional Info */}
+                                  <div className="flex-1">
+                                    {user.kycStatus === "REJECTED" &&
+                                    user.kycRejectionReason ? (
+                                      <div className="p-2 bg-red-900/20 border border-red-500/30 rounded">
+                                        <p className="text-xs font-medium text-red-400 mb-1">
+                                          Motivo da Rejeição:
+                                        </p>
+                                        <p className="text-xs text-red-300 line-clamp-2">
+                                          {user.kycRejectionReason}
+                                        </p>
+                                      </div>
+                                    ) : (
+                                      <div className="text-xs text-gray-400">
+                                        <p>
+                                          Tipo: {user.documentType || "N/A"} |
+                                          Número: {user.documentNumber || "N/A"}
+                                        </p>
+                                        {user.kycSubmittedAt && (
+                                          <p className="mt-1">
+                                            Enviado em:{" "}
+                                            {formatDate(user.kycSubmittedAt)}
+                                          </p>
+                                        )}
+                                      </div>
+                                    )}
                                   </div>
-                                )}
-                            </div>
-                          </DialogContent>
-                        </Dialog>
+
+                                  {/* Full Review Button */}
+                                  <Button
+                                    size="sm"
+                                    onClick={() => setSelectedUser(user)}
+                                    className="bg-blue-600 hover:bg-blue-700 ml-4"
+                                  >
+                                    <Eye className="w-4 h-4 mr-2" />
+                                    Ver Documentos Completos
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {paginatedUsers.map((user) => (
+              <Card
+                key={user.id}
+                className="hover:shadow-md transition-shadow bg-gray-900 border-gray-800"
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                        <User className="w-5 h-5 text-white" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-medium text-white truncate">
+                          {user.name}
+                        </h3>
+                        <p className="text-xs text-gray-400 truncate">
+                          {user.email}
+                        </p>
                       </div>
                     </div>
+                    <Checkbox
+                      checked={selectedUsers.has(user.id)}
+                      onCheckedChange={() => toggleUserSelection(user.id)}
+                      className="border-gray-600"
+                    />
+                  </div>
+
+                  <div className="space-y-2 mb-3">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-gray-400">CPF:</span>
+                      <span className="text-gray-300">{user.cpf}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-gray-400">Status:</span>
+                      {getStatusBadge(user.kycStatus)}
+                    </div>
+                    {user.kycStatus === "REJECTED" &&
+                      user.kycRejectionReason && (
+                        <div className="p-2 bg-red-900/20 border border-red-500/30 rounded text-xs">
+                          <p className="text-red-400 font-medium mb-1">
+                            Motivo:
+                          </p>
+                          <p className="text-red-300 line-clamp-2">
+                            {user.kycRejectionReason}
+                          </p>
+                        </div>
+                      )}
+                  </div>
+
+                  {/* Document Thumbnails */}
+                  <div className="flex gap-2 mb-3">
+                    {user.documentFront && (
+                      <div className="flex-1">
+                        <KYCImage
+                          src={user.documentFront}
+                          alt="Frente"
+                          className="w-full h-20"
+                          onClick={() =>
+                            handleImageClick(
+                              user.documentFront!,
+                              "Frente",
+                              "Frente do Documento",
+                            )
+                          }
+                        />
+                      </div>
+                    )}
+                    {user.documentBack && (
+                      <div className="flex-1">
+                        <KYCImage
+                          src={user.documentBack}
+                          alt="Verso"
+                          className="w-full h-20"
+                          onClick={() =>
+                            handleImageClick(
+                              user.documentBack!,
+                              "Verso",
+                              "Verso do Documento",
+                            )
+                          }
+                        />
+                      </div>
+                    )}
+                    {user.documentSelfie && (
+                      <div className="flex-1">
+                        <KYCImage
+                          src={user.documentSelfie}
+                          alt="Selfie"
+                          className="w-full h-20"
+                          onClick={() =>
+                            handleImageClick(
+                              user.documentSelfie!,
+                              "Selfie",
+                              "Selfie com Documento",
+                            )
+                          }
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Quick Actions */}
+                  <div className="flex gap-2 flex-wrap">
+                    {user.kycStatus === "PENDING" && (
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={() => handleApprove(user.id)}
+                          disabled={actionLoading === user.id}
+                          className="bg-green-600 hover:bg-green-700 flex-1 text-xs"
+                        >
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          Aprovar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => setShowRejectDialog(user.id)}
+                          disabled={actionLoading === user.id}
+                          className="flex-1 text-xs"
+                        >
+                          <XCircle className="w-3 h-3 mr-1" />
+                          Rejeitar
+                        </Button>
+                      </>
+                    )}
+                    {(user.kycStatus === "APPROVED" ||
+                      user.kycStatus === "REJECTED") && (
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={() => handleResetToPending(user.id)}
+                          disabled={actionLoading === user.id}
+                          className="bg-orange-600 hover:bg-orange-700 flex-1 text-xs"
+                        >
+                          <Clock className="w-3 h-3 mr-1" />
+                          Resetar
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => handleApprove(user.id)}
+                          disabled={actionLoading === user.id}
+                          className="bg-green-600 hover:bg-green-700 flex-1 text-xs"
+                        >
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          Reaprovar
+                        </Button>
+                      </>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setSelectedUser(user)}
+                      className="border-gray-600 text-white hover:bg-gray-700 flex-1 text-xs"
+                    >
+                      <Eye className="w-3 h-3 mr-1" />
+                      Detalhes
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )}
 
-        {/* Pagination Controls */}
+        {/* Pagination */}
         {filteredUsers.length > itemsPerPage && (
-          <div className="flex items-center justify-between mt-6 px-4 py-3 bg-gray-900 border border-gray-800 rounded-lg">
+          <div className="flex items-center justify-between px-4 py-3 bg-gray-900 border border-gray-800 rounded-lg">
             <div className="text-sm text-gray-400">
-              Mostrando {startIndex + 1} a {Math.min(endIndex, filteredUsers.length)} de {filteredUsers.length} usuários
+              Mostrando {startIndex + 1} a{" "}
+              {Math.min(endIndex, filteredUsers.length)} de{" "}
+              {filteredUsers.length} usuários
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -815,6 +1090,281 @@ const AdminKYCPage = () => {
         )}
       </div>
 
+      {/* Full Review Dialog */}
+      {selectedUser && (
+        <Dialog
+          open={!!selectedUser}
+          onOpenChange={() => setSelectedUser(null)}
+        >
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto bg-gray-900 border-gray-800">
+            <DialogHeader>
+              <DialogTitle className="text-white">
+                Revisão de Documentos KYC - {selectedUser.name}
+              </DialogTitle>
+              <DialogDescription className="text-gray-400">
+                Revise todos os documentos e informações do usuário
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-6">
+              {/* User Info */}
+              <div className="grid grid-cols-2 gap-4 p-4 bg-gray-800 rounded-lg">
+                <div>
+                  <label className="text-sm font-medium text-gray-300">
+                    Nome
+                  </label>
+                  <p className="text-sm text-white">{selectedUser.name}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-300">
+                    Email
+                  </label>
+                  <p className="text-sm text-white">{selectedUser.email}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-300">
+                    CPF
+                  </label>
+                  <p className="text-sm text-white">{selectedUser.cpf}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-300">
+                    Tipo de Documento
+                  </label>
+                  <p className="text-sm text-white">
+                    {selectedUser.documentType || "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-300">
+                    Número do Documento
+                  </label>
+                  <p className="text-sm text-white">
+                    {selectedUser.documentNumber || "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-300">
+                    Status
+                  </label>
+                  <div className="mt-1">
+                    {getStatusBadge(selectedUser.kycStatus)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Documents */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <h4 className="font-medium text-white mb-2 flex items-center gap-2">
+                    Frente do Documento
+                    <ZoomIn className="w-4 h-4 text-gray-400" />
+                  </h4>
+                  <KYCImage
+                    src={selectedUser.documentFront}
+                    alt="Frente do Documento"
+                    className="w-full h-48"
+                    onClick={
+                      selectedUser.documentFront
+                        ? () =>
+                            handleImageClick(
+                              selectedUser.documentFront!,
+                              "Frente do Documento",
+                              "Frente do Documento",
+                            )
+                        : undefined
+                    }
+                  />
+                </div>
+                <div>
+                  <h4 className="font-medium text-white mb-2 flex items-center gap-2">
+                    Verso do Documento
+                    <ZoomIn className="w-4 h-4 text-gray-400" />
+                  </h4>
+                  <KYCImage
+                    src={selectedUser.documentBack}
+                    alt="Verso do Documento"
+                    className="w-full h-48"
+                    onClick={
+                      selectedUser.documentBack
+                        ? () =>
+                            handleImageClick(
+                              selectedUser.documentBack!,
+                              "Verso do Documento",
+                              "Verso do Documento",
+                            )
+                        : undefined
+                    }
+                  />
+                </div>
+                <div>
+                  <h4 className="font-medium text-white mb-2 flex items-center gap-2">
+                    Selfie com Documento
+                    <ZoomIn className="w-4 h-4 text-gray-400" />
+                  </h4>
+                  <KYCImage
+                    src={selectedUser.documentSelfie}
+                    alt="Selfie com Documento"
+                    className="w-full h-48"
+                    onClick={
+                      selectedUser.documentSelfie
+                        ? () =>
+                            handleImageClick(
+                              selectedUser.documentSelfie!,
+                              "Selfie com Documento",
+                              "Selfie com Documento",
+                            )
+                        : undefined
+                    }
+                  />
+                </div>
+              </div>
+
+              {/* Image Analysis */}
+              {selectedUser.documentFront &&
+                selectedUser.documentBack &&
+                selectedUser.documentSelfie && (
+                  <div className="mt-6">
+                    <h4 className="font-medium text-white mb-4 flex items-center gap-2">
+                      <Shield className="w-5 h-5" />
+                      Análise de Detecção de Fraude
+                    </h4>
+                    <ImageAnalysisPanel
+                      documentFront={selectedUser.documentFront || ""}
+                      documentBack={selectedUser.documentBack || ""}
+                      selfie={selectedUser.documentSelfie || ""}
+                      onAnalysisComplete={(result) => {
+                        console.log("Analysis complete:", result);
+                      }}
+                    />
+                  </div>
+                )}
+
+              {/* Actions */}
+              <div className="flex flex-wrap gap-4 pt-4 border-t border-gray-700">
+                {selectedUser.kycStatus === "PENDING" && (
+                  <>
+                    <Button
+                      onClick={() => handleApprove(selectedUser.id)}
+                      disabled={actionLoading === selectedUser.id}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Aprovar
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => setShowRejectDialog(selectedUser.id)}
+                      disabled={actionLoading === selectedUser.id}
+                    >
+                      <XCircle className="w-4 h-4 mr-2" />
+                      Rejeitar
+                    </Button>
+                  </>
+                )}
+
+                {(selectedUser.kycStatus === "APPROVED" ||
+                  selectedUser.kycStatus === "REJECTED") && (
+                  <>
+                    <Button
+                      onClick={() => handleResetToPending(selectedUser.id)}
+                      disabled={actionLoading === selectedUser.id}
+                      className="bg-orange-600 hover:bg-orange-700"
+                    >
+                      <Clock className="w-4 h-4 mr-2" />
+                      Redefinir para Pendente
+                    </Button>
+                    <Button
+                      onClick={() => handleApprove(selectedUser.id)}
+                      disabled={actionLoading === selectedUser.id}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Reaprovar
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => setShowRejectDialog(selectedUser.id)}
+                      disabled={actionLoading === selectedUser.id}
+                    >
+                      <XCircle className="w-4 h-4 mr-2" />
+                      Rejeitar
+                    </Button>
+                  </>
+                )}
+              </div>
+
+              {selectedUser.kycStatus === "REJECTED" &&
+                selectedUser.kycRejectionReason && (
+                  <div className="p-4 bg-red-900/20 border border-red-500/30 rounded-lg">
+                    <h4 className="font-medium text-red-400 mb-2">
+                      Motivo da Rejeição
+                    </h4>
+                    <p className="text-sm text-red-300">
+                      {selectedUser.kycRejectionReason}
+                    </p>
+                  </div>
+                )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Reject Dialog */}
+      {showRejectDialog && (
+        <Dialog
+          open={!!showRejectDialog}
+          onOpenChange={() => setShowRejectDialog(null)}
+        >
+          <DialogContent className="bg-gray-900 border-gray-800">
+            <DialogHeader>
+              <DialogTitle className="text-white">
+                Rejeitar Verificação KYC
+              </DialogTitle>
+              <DialogDescription className="text-gray-400">
+                Forneça um motivo para a rejeição. O usuário receberá este
+                motivo por email.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label className="text-sm font-medium text-gray-300">
+                  Motivo da Rejeição <span className="text-red-400">*</span>
+                </Label>
+                <Textarea
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="Por favor, forneça um motivo detalhado para a rejeição..."
+                  className="w-full mt-1 p-3 border border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-800 text-white placeholder:text-gray-400"
+                  rows={4}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowRejectDialog(null);
+                  setRejectionReason("");
+                }}
+                className="border-gray-600 text-white hover:bg-gray-800"
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => handleReject(showRejectDialog)}
+                disabled={
+                  actionLoading === showRejectDialog || !rejectionReason.trim()
+                }
+              >
+                Rejeitar KYC
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
       {/* Full-size Image Modal */}
       {selectedImage && (
         <Dialog
@@ -829,6 +1379,7 @@ const AdminKYCPage = () => {
             </DialogHeader>
             <div className="p-6 pt-4">
               <div className="relative">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={selectedImage.src}
                   alt={selectedImage.alt}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,9 +12,17 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Mail,
   Search,
@@ -25,9 +33,35 @@ import {
   ChevronRight,
   Clock,
   RefreshCw,
+  Grid3x3,
+  List,
+  CheckSquare,
+  Square,
+  Filter,
+  AlertCircle,
+  Shield,
+  CheckCircle2,
+  XCircle,
+  Eye,
+  MoreVertical,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import BackToDashboardButton from "@/components/admin/BackToDashboardButton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface User {
   id: string;
@@ -57,6 +91,8 @@ export default function NotificationCenterPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [unreadFilter, setUnreadFilter] = useState<string>("ALL");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [userNotifications, setUserNotifications] = useState<
     Record<string, Notification[]>
@@ -67,6 +103,8 @@ export default function NotificationCenterPage() {
   const [notificationSubject, setNotificationSubject] = useState("");
   const [notificationMessage, setNotificationMessage] = useState("");
   const [sendEmail, setSendEmail] = useState(true);
+  const [viewMode, setViewMode] = useState<"table" | "grid">("table");
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   useEffect(() => {
@@ -88,16 +126,16 @@ export default function NotificationCenterPage() {
       } else {
         toast({
           variant: "destructive",
-          title: "Error",
-          description: "Failed to load users",
+          title: "Erro",
+          description: "Falha ao carregar usuários",
         });
       }
     } catch (error) {
       console.error("Error fetching users:", error);
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Failed to load users",
+        title: "Erro",
+        description: "Falha ao carregar usuários",
       });
     } finally {
       setLoading(false);
@@ -146,8 +184,8 @@ export default function NotificationCenterPage() {
     if (!notificationSubject.trim() || !notificationMessage.trim()) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Subject and message are required",
+        title: "Erro",
+        description: "Assunto e mensagem são obrigatórios",
       });
       return;
     }
@@ -171,10 +209,10 @@ export default function NotificationCenterPage() {
 
       if (response.ok) {
         toast({
-          title: "Success",
+          title: "Sucesso",
           description: sendEmail
-            ? "Notification sent and email delivered successfully"
-            : "Notification created successfully",
+            ? "Notificação enviada e email entregue com sucesso"
+            : "Notificação criada com sucesso",
         });
 
         // Reset form
@@ -197,16 +235,110 @@ export default function NotificationCenterPage() {
       console.error("Error sending notification:", error);
       toast({
         variant: "destructive",
-        title: "Error",
+        title: "Erro",
         description:
           error instanceof Error
             ? error.message
-            : "Failed to send notification",
+            : "Falha ao enviar notificação",
       });
     } finally {
       setSending(false);
     }
   };
+
+  const handleBatchSend = async () => {
+    if (selectedUsers.size === 0) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Selecione pelo menos um usuário",
+      });
+      return;
+    }
+
+    if (!notificationSubject.trim() || !notificationMessage.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Assunto e mensagem são obrigatórios",
+      });
+      return;
+    }
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const userId of Array.from(selectedUsers)) {
+      try {
+        const response = await fetch("/api/admin/notification-center/send", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            userId,
+            subject: notificationSubject,
+            message: notificationMessage,
+            sendEmail: sendEmail,
+          }),
+        });
+
+        if (response.ok) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      } catch (error) {
+        failCount++;
+      }
+    }
+
+    toast({
+      title: "Envio em lote concluído",
+      description: `Enviados: ${successCount}${failCount > 0 ? ` | Falhas: ${failCount}` : ""}`,
+    });
+
+    setNotificationSubject("");
+    setNotificationMessage("");
+    setSelectedUsers(new Set());
+    fetchUsers();
+  };
+
+  // Filter users
+  const filteredUsers = useMemo(() => {
+    let filtered = users;
+
+    // Filter by unread status
+    if (unreadFilter === "HAS_UNREAD") {
+      filtered = filtered.filter((u) => u.unreadNotificationCount > 0);
+    } else if (unreadFilter === "NO_UNREAD") {
+      filtered = filtered.filter((u) => u.unreadNotificationCount === 0);
+    }
+
+    // Filter by approval status
+    if (statusFilter !== "ALL") {
+      if (statusFilter === "APPROVED") {
+        filtered = filtered.filter(
+          (u) => u.approvalStatus === "APPROVED" && u.kycStatus === "APPROVED"
+        );
+      } else {
+        filtered = filtered.filter(
+          (u) => u.approvalStatus === statusFilter || u.kycStatus === statusFilter
+        );
+      }
+    }
+
+    return filtered;
+  }, [users, statusFilter, unreadFilter]);
+
+  // Statistics
+  const stats = useMemo(() => {
+    const total = users.length;
+    const withUnread = users.filter((u) => u.unreadNotificationCount > 0).length;
+    const totalNotifications = users.reduce((sum, u) => sum + u.notificationCount, 0);
+    const totalUnread = users.reduce((sum, u) => sum + u.unreadNotificationCount, 0);
+    return { total, withUnread, totalNotifications, totalUnread };
+  }, [users]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -233,65 +365,203 @@ export default function NotificationCenterPage() {
   };
 
   const getStatusBadge = (status: string) => {
-    const statusMap: Record<
-      string,
-      { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
-    > = {
-      APPROVED: { label: "Aprovado", variant: "default" },
-      PENDING: { label: "Pendente", variant: "secondary" },
-      REJECTED: { label: "Rejeitado", variant: "destructive" },
-    };
-    const statusInfo = statusMap[status] || {
-      label: status,
-      variant: "secondary" as const,
-    };
-    return <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>;
+    switch (status) {
+      case "APPROVED":
+        return (
+          <Badge className="bg-green-600 text-white text-xs">Aprovado</Badge>
+        );
+      case "PENDING":
+        return (
+          <Badge className="bg-yellow-600 text-white text-xs">Pendente</Badge>
+        );
+      case "REJECTED":
+        return (
+          <Badge className="bg-red-600 text-white text-xs">Rejeitado</Badge>
+        );
+      default:
+        return (
+          <Badge className="bg-gray-600 text-white text-xs">{status}</Badge>
+        );
+    }
+  };
+
+  const toggleUserSelection = (userId: string) => {
+    setSelectedUsers((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) {
+        next.delete(userId);
+      } else {
+        next.add(userId);
+      }
+      return next;
+    });
+  };
+
+  const selectAllUsers = () => {
+    if (selectedUsers.size === filteredUsers.length) {
+      setSelectedUsers(new Set());
+    } else {
+      setSelectedUsers(new Set(filteredUsers.map((u) => u.id)));
+    }
   };
 
   return (
-    <div className="min-h-screen bg-black p-6 text-white">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-black p-4 lg:p-6 text-white">
+      <div className="max-w-[1920px] mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-4">
-            <BackToDashboardButton />
-            <div>
-              <h1 className="text-3xl font-bold flex items-center gap-2">
-                <Mail className="w-8 h-8" />
-                Centro de Notificações
-              </h1>
-              <p className="text-gray-400">
-                Envie notificações e emails para usuários
-              </p>
-            </div>
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold flex items-center gap-2 mb-2">
+              <Mail className="w-8 h-8" />
+              Centro de Notificações
+            </h1>
+            <p className="text-gray-400">
+              Envie notificações e emails para usuários
+            </p>
           </div>
           <Button
             onClick={fetchUsers}
             variant="outline"
-            className="border-gray-600 text-white hover:bg-gray-800"
+            className="border-gray-700 hover:bg-gray-800"
           >
             <RefreshCw className="w-4 h-4 mr-2" />
             Atualizar
           </Button>
         </div>
 
-        {/* Search */}
-        <Card className="bg-gray-900 border-gray-800 mb-6">
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-400">Total Usuários</p>
+                  <p className="text-2xl font-bold text-white">{stats.total}</p>
+                </div>
+                <User className="w-8 h-8 text-blue-400 opacity-50" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-400">Com Não Lidas</p>
+                  <p className="text-2xl font-bold text-yellow-400">{stats.withUnread}</p>
+                </div>
+                <Bell className="w-8 h-8 text-yellow-400 opacity-50" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-400">Total Notificações</p>
+                  <p className="text-2xl font-bold text-white">{stats.totalNotifications}</p>
+                </div>
+                <Mail className="w-8 h-8 text-green-400 opacity-50" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-400">Não Lidas</p>
+                  <p className="text-2xl font-bold text-red-400">{stats.totalUnread}</p>
+                </div>
+                <AlertCircle className="w-8 h-8 text-red-400 opacity-50" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Filters */}
+        <Card className="bg-gray-900 border-gray-800">
           <CardContent className="p-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <Input
-                type="text"
-                placeholder="Buscar por nome, email ou CPF..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-gray-800 border-gray-700 text-white"
-              />
+            <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
+              <div className="flex-1 w-full">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    type="text"
+                    placeholder="Buscar por nome, email ou CPF..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 bg-gray-800 border-gray-700 text-white placeholder:text-gray-400"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                <Select value={unreadFilter} onValueChange={setUnreadFilter}>
+                  <SelectTrigger className="w-[180px] bg-gray-800 border-gray-700 text-white">
+                    <Filter className="w-4 h-4 mr-2" />
+                    <SelectValue placeholder="Não Lidas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">Todas</SelectItem>
+                    <SelectItem value="HAS_UNREAD">Com Não Lidas</SelectItem>
+                    <SelectItem value="NO_UNREAD">Sem Não Lidas</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[180px] bg-gray-800 border-gray-700 text-white">
+                    <Shield className="w-4 h-4 mr-2" />
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">Todos</SelectItem>
+                    <SelectItem value="APPROVED">Aprovado</SelectItem>
+                    <SelectItem value="PENDING">Pendente</SelectItem>
+                    <SelectItem value="REJECTED">Rejeitado</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="flex gap-1 border border-gray-700 rounded-md p-1">
+                  <Button
+                    variant={viewMode === "table" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode("table")}
+                    className={viewMode === "table" ? "bg-gray-700" : ""}
+                  >
+                    <List className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === "grid" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode("grid")}
+                    className={viewMode === "grid" ? "bg-gray-700" : ""}
+                  >
+                    <Grid3x3 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
             </div>
+
+            {/* Batch Actions */}
+            {selectedUsers.size > 0 && (
+              <div className="mt-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg flex items-center justify-between">
+                <span className="text-sm text-blue-300">
+                  {selectedUsers.size} usuário(s) selecionado(s)
+                </span>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setNotificationSubject("");
+                    setNotificationMessage("");
+                    setSendDialogOpen(true);
+                  }}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <Send className="w-4 h-4 mr-2" />
+                  Enviar para Selecionados
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* Users List */}
+        {/* Users List/Table */}
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
@@ -299,7 +569,7 @@ export default function NotificationCenterPage() {
               <p>Carregando usuários...</p>
             </div>
           </div>
-        ) : users.length === 0 ? (
+        ) : filteredUsers.length === 0 ? (
           <Card className="bg-gray-900 border-gray-800">
             <CardContent className="p-8 text-center">
               <User className="w-16 h-16 text-gray-500 mx-auto mb-4" />
@@ -311,12 +581,181 @@ export default function NotificationCenterPage() {
               </p>
             </CardContent>
           </Card>
+        ) : viewMode === "table" ? (
+          <Card className="bg-gray-900 border-gray-800">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-gray-700 hover:bg-gray-800">
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={selectedUsers.size === filteredUsers.length && filteredUsers.length > 0}
+                          onCheckedChange={selectAllUsers}
+                          className="border-gray-600"
+                        />
+                      </TableHead>
+                      <TableHead className="text-gray-300">Usuário</TableHead>
+                      <TableHead className="text-gray-300">Status</TableHead>
+                      <TableHead className="text-gray-300">Notificações</TableHead>
+                      <TableHead className="text-gray-300">Não Lidas</TableHead>
+                      <TableHead className="text-gray-300 text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUsers.map((user) => {
+                      const isExpanded = expandedUsers.has(user.id);
+                      const notifications = userNotifications[user.id] || [];
+                      const hasUnread = user.unreadNotificationCount > 0;
+                      const isSelected = selectedUsers.has(user.id);
+
+                      return (
+                        <React.Fragment key={user.id}>
+                          <TableRow className={`border-gray-700 hover:bg-gray-800/50 ${hasUnread ? "bg-blue-900/10" : ""}`}>
+                            <TableCell>
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={() => toggleUserSelection(user.id)}
+                                className="border-gray-600"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <User className="w-4 h-4 text-white" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="font-medium text-white truncate">{user.name}</p>
+                                  <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                                  {user.cpf && (
+                                    <p className="text-xs text-gray-500">CPF: {user.cpf}</p>
+                                  )}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1">
+                                {getStatusBadge(user.approvalStatus)}
+                                {getStatusBadge(user.kycStatus)}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Bell className="w-4 h-4 text-gray-400" />
+                                <span className="text-sm text-gray-300">{user.notificationCount}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {hasUnread ? (
+                                <Badge className="bg-blue-600 text-white">
+                                  {user.unreadNotificationCount}
+                                </Badge>
+                              ) : (
+                                <span className="text-sm text-gray-500">0</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setSelectedUser(user);
+                                    setSendDialogOpen(true);
+                                  }}
+                                  className="border-gray-600 text-white hover:bg-gray-700 h-7 px-2"
+                                  title="Enviar Notificação"
+                                >
+                                  <Send className="w-3 h-3" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => toggleUserExpanded(user.id)}
+                                  className="border-gray-600 text-white hover:bg-gray-700 h-7 px-2"
+                                  title="Ver Notificações"
+                                >
+                                  {isExpanded ? (
+                                    <ChevronDown className="w-3 h-3" />
+                                  ) : (
+                                    <ChevronRight className="w-3 h-3" />
+                                  )}
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                          {isExpanded && (
+                            <TableRow className="border-gray-700 bg-gray-800/30">
+                              <TableCell colSpan={6} className="p-4">
+                                <div className="space-y-3">
+                                  {notifications.length === 0 ? (
+                                    <p className="text-gray-400 text-sm text-center py-4">
+                                      Nenhuma notificação encontrada
+                                    </p>
+                                  ) : (
+                                    notifications.map((notification) => (
+                                      <div
+                                        key={notification.id}
+                                        className={`p-3 rounded-lg border ${
+                                          notification.read
+                                            ? "bg-gray-800/50 border-gray-700"
+                                            : "bg-blue-900/20 border-blue-500/30"
+                                        }`}
+                                      >
+                                        <div className="flex items-start justify-between">
+                                          <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-1">
+                                              <h4 className="font-semibold text-white truncate">
+                                                {notification.title}
+                                              </h4>
+                                              {!notification.read && (
+                                                <Badge className="bg-blue-600 text-white text-xs">
+                                                  Nova
+                                                </Badge>
+                                              )}
+                                            </div>
+                                            <p className="text-sm text-gray-300 mb-2 line-clamp-2">
+                                              {notification.message}
+                                            </p>
+                                            <div className="flex items-center gap-4 text-xs text-gray-400 flex-wrap">
+                                              <span className="flex items-center gap-1">
+                                                <Clock className="w-3 h-3" />
+                                                {formatTimeAgo(notification.createdAt)}
+                                              </span>
+                                              <span>{formatDate(notification.createdAt)}</span>
+                                              {notification.metadata &&
+                                                typeof notification.metadata === "object" &&
+                                                "emailSent" in notification.metadata &&
+                                                Boolean(notification.metadata.emailSent) && (
+                                                  <span className="flex items-center gap-1 text-green-400">
+                                                    <Mail className="w-3 h-3" />
+                                                    Email enviado
+                                                  </span>
+                                                )}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
         ) : (
-          <div className="space-y-4">
-            {users.map((user) => {
-              const isExpanded = expandedUsers.has(user.id);
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredUsers.map((user) => {
               const notifications = userNotifications[user.id] || [];
               const hasUnread = user.unreadNotificationCount > 0;
+              const isExpanded = expandedUsers.has(user.id);
 
               return (
                 <Card
@@ -326,121 +765,87 @@ export default function NotificationCenterPage() {
                   }`}
                 >
                   <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleUserExpanded(user.id)}
-                            className="p-1 h-auto text-white hover:bg-gray-800"
-                          >
-                            {isExpanded ? (
-                              <ChevronDown className="w-5 h-5" />
-                            ) : (
-                              <ChevronRight className="w-5 h-5" />
-                            )}
-                          </Button>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className="text-lg font-semibold text-white">
-                                {user.name}
-                              </h3>
-                              {getStatusBadge(user.approvalStatus)}
-                              {getStatusBadge(user.kycStatus)}
-                            </div>
-                            <div className="text-sm text-gray-400 space-y-1">
-                              <p>{user.email}</p>
-                              {user.cpf && <p>CPF: {user.cpf}</p>}
-                              {user.phone && <p>Telefone: {user.phone}</p>}
-                            </div>
-                          </div>
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                          <User className="w-5 h-5 text-white" />
                         </div>
-
-                        {/* Notification Summary */}
-                        <div className="flex items-center gap-4 mt-3 ml-8">
-                          <div className="flex items-center gap-2">
-                            <Bell className="w-4 h-4 text-gray-400" />
-                            <span className="text-sm text-gray-400">
-                              {user.notificationCount} notificações
-                            </span>
-                            {hasUnread && (
-                              <Badge className="bg-blue-600 text-white">
-                                {user.unreadNotificationCount} não lidas
-                              </Badge>
-                            )}
-                          </div>
-                          <Button
-                            size="sm"
-                            onClick={() => {
-                              setSelectedUser(user);
-                              setSendDialogOpen(true);
-                            }}
-                            className="bg-[#12E0A1] hover:bg-[#0FB88A] text-black"
-                          >
-                            <Send className="w-4 h-4 mr-2" />
-                            Enviar Notificação
-                          </Button>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-semibold text-white truncate">{user.name}</h3>
+                          <p className="text-xs text-gray-400 truncate">{user.email}</p>
                         </div>
+                      </div>
+                      <Checkbox
+                        checked={selectedUsers.has(user.id)}
+                        onCheckedChange={() => toggleUserSelection(user.id)}
+                        className="border-gray-600"
+                      />
+                    </div>
 
-                        {/* Notifications List */}
-                        {isExpanded && (
-                          <div className="mt-4 ml-8 space-y-3 border-t border-gray-800 pt-4">
-                            {notifications.length === 0 ? (
-                              <p className="text-gray-400 text-sm">
-                                Nenhuma notificação encontrada
-                              </p>
-                            ) : (
-                              notifications.map((notification) => (
-                                <div
-                                  key={notification.id}
-                                  className={`p-3 rounded-lg border ${
-                                    notification.read
-                                      ? "bg-gray-800/50 border-gray-700"
-                                      : "bg-blue-900/20 border-blue-500/30"
-                                  }`}
-                                >
-                                  <div className="flex items-start justify-between mb-2">
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-2 mb-1">
-                                        <h4 className="font-semibold text-white">
-                                          {notification.title}
-                                        </h4>
-                                        {!notification.read && (
-                                          <Badge className="bg-blue-600 text-white text-xs">
-                                            Nova
-                                          </Badge>
-                                        )}
-                                      </div>
-                                      <p className="text-sm text-gray-300 mb-2">
-                                        {notification.message}
-                                      </p>
-                                      <div className="flex items-center gap-4 text-xs text-gray-400">
-                                        <span className="flex items-center gap-1">
-                                          <Clock className="w-3 h-3" />
-                                          {formatTimeAgo(notification.createdAt)}
-                                        </span>
-                                        <span>
-                                          {formatDate(notification.createdAt)}
-                                        </span>
-                                        {notification.metadata &&
-                                          typeof notification.metadata === "object" &&
-                                          "emailSent" in notification.metadata &&
-                                          Boolean(notification.metadata.emailSent) && (
-                                            <span className="flex items-center gap-1 text-green-400">
-                                              <Mail className="w-3 h-3" />
-                                              Email enviado
-                                            </span>
-                                          )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              ))
-                            )}
-                          </div>
+                    <div className="space-y-2 mb-3">
+                      <div className="flex flex-wrap gap-1">
+                        {getStatusBadge(user.approvalStatus)}
+                        {getStatusBadge(user.kycStatus)}
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-gray-400">Notificações:</span>
+                        <span className="text-white font-medium">{user.notificationCount}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-gray-400">Não lidas:</span>
+                        {hasUnread ? (
+                          <Badge className="bg-blue-600 text-white">
+                            {user.unreadNotificationCount}
+                          </Badge>
+                        ) : (
+                          <span className="text-gray-500">0</span>
                         )}
                       </div>
+                    </div>
+
+                    {/* Notifications Preview */}
+                    {isExpanded && notifications.length > 0 && (
+                      <div className="mb-3 space-y-2 max-h-48 overflow-y-auto">
+                        {notifications.slice(0, 3).map((notification) => (
+                          <div
+                            key={notification.id}
+                            className={`p-2 rounded border text-xs ${
+                              notification.read
+                                ? "bg-gray-800/50 border-gray-700"
+                                : "bg-blue-900/20 border-blue-500/30"
+                            }`}
+                          >
+                            <p className="font-medium text-white truncate">{notification.title}</p>
+                            <p className="text-gray-400 line-clamp-1">{notification.message}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setSelectedUser(user);
+                          setSendDialogOpen(true);
+                        }}
+                        className="bg-green-600 hover:bg-green-700 flex-1 text-xs"
+                      >
+                        <Send className="w-3 h-3 mr-1" />
+                        Enviar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => toggleUserExpanded(user.id)}
+                        className="border-gray-600 text-white hover:bg-gray-700 text-xs"
+                      >
+                        {isExpanded ? (
+                          <ChevronDown className="w-3 h-3" />
+                        ) : (
+                          <ChevronRight className="w-3 h-3" />
+                        )}
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -455,18 +860,18 @@ export default function NotificationCenterPage() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Send className="w-5 h-5" />
-                Enviar Notificação
+                {selectedUsers.size > 0 ? "Enviar Notificação em Lote" : "Enviar Notificação"}
               </DialogTitle>
               <DialogDescription className="text-gray-400">
-                {selectedUser && (
+                {selectedUsers.size > 0 ? (
+                  <>Enviar para {selectedUsers.size} usuário(s) selecionado(s)</>
+                ) : selectedUser ? (
                   <>
                     Enviar notificação para{" "}
-                    <span className="font-semibold text-white">
-                      {selectedUser.name}
-                    </span>{" "}
-                    ({selectedUser.email})
+                    <span className="font-semibold text-white">{selectedUser.name}</span> (
+                    {selectedUser.email})
                   </>
-                )}
+                ) : null}
               </DialogDescription>
             </DialogHeader>
 
@@ -511,13 +916,12 @@ export default function NotificationCenterPage() {
                     </Label>
                   </div>
                   <p className="text-sm text-gray-400 mt-1 ml-6">
-                    A notificação será salva e um email será enviado para o
-                    usuário
+                    A notificação será salva e um email será enviado para o(s) usuário(s)
                   </p>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4">
+              <DialogFooter>
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -525,19 +929,26 @@ export default function NotificationCenterPage() {
                     setNotificationSubject("");
                     setNotificationMessage("");
                     setSelectedUser(null);
+                    setSelectedUsers(new Set());
                   }}
                   className="border-gray-600 text-white hover:bg-gray-800"
                 >
                   Cancelar
                 </Button>
                 <Button
-                  onClick={handleSendNotification}
-                  disabled={sending || !notificationSubject.trim() || !notificationMessage.trim()}
-                  className="bg-[#12E0A1] hover:bg-[#0FB88A] text-black"
+                  onClick={
+                    selectedUsers.size > 0 ? handleBatchSend : handleSendNotification
+                  }
+                  disabled={
+                    sending ||
+                    !notificationSubject.trim() ||
+                    !notificationMessage.trim()
+                  }
+                  className="bg-green-600 hover:bg-green-700 text-white"
                 >
                   {sending ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2"></div>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                       Enviando...
                     </>
                   ) : (
@@ -547,7 +958,7 @@ export default function NotificationCenterPage() {
                     </>
                   )}
                 </Button>
-              </div>
+              </DialogFooter>
             </div>
           </DialogContent>
         </Dialog>
