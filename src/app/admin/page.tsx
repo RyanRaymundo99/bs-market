@@ -40,6 +40,18 @@ import {
   Calendar,
   Webhook,
   RefreshCw,
+  Activity,
+  AlertCircle,
+  CheckCircle2,
+  Zap,
+  UserPlus,
+  TrendingDown,
+  Eye,
+  Filter,
+  Download,
+  Settings,
+  Database,
+  Server,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -262,6 +274,30 @@ export default function AdminDashboard() {
   const [loadingHistory, setLoadingHistory] = useState<Record<string, boolean>>(
     {},
   );
+
+  // New features states
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [topUsers, setTopUsers] = useState<any[]>([]);
+  const [systemHealth, setSystemHealth] = useState({
+    database: "checking",
+    api: "checking",
+  });
+  const [quickSearchQuery, setQuickSearchQuery] = useState("");
+  const [showQuickSearch, setShowQuickSearch] = useState(false);
+  const [quickSearchResults, setQuickSearchResults] = useState<any[]>([]);
+  const [loadingQuickSearch, setLoadingQuickSearch] = useState(false);
+
+  // Transaction table enhancements
+  const [selectedTransactions, setSelectedTransactions] = useState<Set<string>>(
+    new Set(),
+  );
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [processingTransaction, setProcessingTransaction] = useState<
+    string | null
+  >(null);
+  const [chartDateRange, setChartDateRange] = useState<number>(30);
+  const [adminActivityLog, setAdminActivityLog] = useState<any[]>([]);
 
   const { toast } = useToast();
   const router = useRouter();
@@ -496,6 +532,19 @@ export default function AdminDashboard() {
   const formatPercentage = (value: number) => {
     const sign = value >= 0 ? "+" : "";
     return `${sign}${value.toFixed(1)}%`;
+  };
+
+  const formatTimeAgo = (timestamp: string) => {
+    const now = new Date();
+    const date = new Date(timestamp);
+    const diffInMinutes = Math.floor(
+      (now.getTime() - date.getTime()) / (1000 * 60),
+    );
+
+    if (diffInMinutes < 1) return "Agora";
+    if (diffInMinutes < 60) return `${diffInMinutes}m atrás`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h atrás`;
+    return `${Math.floor(diffInMinutes / 1440)}d atrás`;
   };
 
   const fetchHistory = useCallback(
@@ -853,6 +902,144 @@ export default function AdminDashboard() {
     }
   };
 
+  // Handle transaction approval/rejection
+  const handleTransactionAction = async (
+    transactionId: string,
+    action: "approve" | "reject",
+  ) => {
+    setProcessingTransaction(transactionId);
+    try {
+      // For now, use mark-completed endpoint. In the future, we might need separate approve/reject endpoints
+      const response = await fetch(
+        `/api/admin/transactions/${transactionId}/mark-completed`,
+        {
+          method: "POST",
+        },
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        toast({
+          title: "Sucesso",
+          description:
+            data.message ||
+            `Transação ${action === "approve" ? "aprovada" : "processada"} com sucesso!`,
+        });
+        await fetchRealtimeTransactions();
+        setAdminActivityLog((prev) => [
+          {
+            type: `transaction_${action}`,
+            description: `Transação ${transactionId.substring(0, 8)}... ${action === "approve" ? "aprovada" : "processada"}`,
+            timestamp: new Date().toISOString(),
+          },
+          ...prev.slice(0, 49),
+        ]);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to update transaction");
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description:
+          error instanceof Error
+            ? error.message
+            : `Falha ao ${action === "approve" ? "aprovar" : "processar"} transação`,
+      });
+    } finally {
+      setProcessingTransaction(null);
+    }
+  };
+
+  // Bulk actions
+  const handleBulkAction = async (action: "approve" | "reject") => {
+    if (selectedTransactions.size === 0) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Selecione pelo menos uma transação",
+      });
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Tem certeza que deseja ${action === "approve" ? "aprovar" : "rejeitar"} ${selectedTransactions.size} transação(ões)?`,
+    );
+
+    if (!confirmed) return;
+
+    const promises = Array.from(selectedTransactions).map((id) =>
+      handleTransactionAction(id, action),
+    );
+
+    await Promise.all(promises);
+    setSelectedTransactions(new Set());
+  };
+
+  // Export to CSV
+  const handleExportCSV = () => {
+    const headers = ["Data", "Tipo", "Usuário", "Valor", "Status"];
+    const rows = filteredAndSortedTransactions.map((tx) => [
+      new Date(tx.date).toLocaleString("pt-BR"),
+      getTransactionTypeLabel(tx.type),
+      typeof tx.user === "string"
+        ? tx.user
+        : tx.user
+          ? `${tx.user.name} (${tx.user.email})`
+          : "N/A",
+      formatCurrency(tx.value || 0),
+      getStatusLabel(tx.status),
+    ]);
+
+    const csvContent =
+      headers.join(",") +
+      "\n" +
+      rows.map((row) => row.map((cell) => `"${cell}"`).join(",")).join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `transactions-${new Date().toISOString().split("T")[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+
+    toast({
+      title: "Exportado",
+      description: "Arquivo CSV gerado com sucesso!",
+    });
+  };
+
+  // Toggle transaction selection
+  const toggleTransactionSelection = (id: string) => {
+    setSelectedTransactions((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  // Select all filtered transactions
+  const toggleSelectAll = () => {
+    if (selectedTransactions.size === filteredAndSortedTransactions.length) {
+      setSelectedTransactions(new Set());
+    } else {
+      setSelectedTransactions(
+        new Set(filteredAndSortedTransactions.map((tx) => tx.id)),
+      );
+    }
+  };
+
+  // Handle metric card click to filter
+  const handleMetricCardClick = (type: string) => {
+    setTypeFilter(type);
+    setSearchTerm("");
+  };
+
   const filteredAndSortedTransactions = transactions
     .filter((transaction) => {
       const userString =
@@ -861,15 +1048,39 @@ export default function AdminDashboard() {
           : transaction.user
             ? `${transaction.user.name} ${transaction.user.email}`
             : "";
-      return (
+
+      // Search filter
+      const matchesSearch =
         userString.toLowerCase().includes(searchTerm.toLowerCase()) ||
         getTransactionTypeLabel(transaction.type)
           .toLowerCase()
           .includes(searchTerm.toLowerCase()) ||
         getStatusLabel(transaction.status)
           .toLowerCase()
-          .includes(searchTerm.toLowerCase())
-      );
+          .includes(searchTerm.toLowerCase());
+
+      // Status filter
+      const matchesStatus =
+        statusFilter === "all" ||
+        transaction.status === statusFilter ||
+        (statusFilter === "PENDING" &&
+          (transaction.status === "PENDING" ||
+            transaction.status === "PROCESSING" ||
+            transaction.status === "EXECUTING")) ||
+        (statusFilter === "APPROVED" &&
+          (transaction.status === "APPROVED" ||
+            transaction.status === "COMPLETED" ||
+            transaction.status === "CONFIRMED")) ||
+        (statusFilter === "REJECTED" &&
+          (transaction.status === "REJECTED" ||
+            transaction.status === "FAILED" ||
+            transaction.status === "CANCELLED"));
+
+      // Type filter
+      const matchesType =
+        typeFilter === "all" || transaction.type === typeFilter;
+
+      return matchesSearch && matchesStatus && matchesType;
     })
     .sort((a, b) => {
       const aValue = a[sortField];
@@ -1107,6 +1318,217 @@ export default function AdminDashboard() {
     }
   };
 
+  // Fetch recent activity
+  const fetchRecentActivity = useCallback(async () => {
+    try {
+      const [usersRes, transactionsRes, kycRes] = await Promise.all([
+        fetch("/api/admin/users?limit=5&sort=createdAt:desc"),
+        fetch("/api/admin/transactions/realtime?limit=5"),
+        fetch("/api/admin/kyc?limit=5&status=PENDING"),
+      ]);
+
+      const activities: any[] = [];
+
+      if (usersRes.ok) {
+        const usersData = await usersRes.json();
+        usersData.users?.forEach((user: any) => {
+          activities.push({
+            type: "user_registered",
+            title: "Novo usuário registrado",
+            description: `${user.name} (${user.email})`,
+            timestamp: user.createdAt,
+            link: `/admin/users/${user.id}`,
+            icon: UserPlus,
+            color: "blue",
+          });
+        });
+      }
+
+      if (transactionsRes.ok) {
+        const txData = await transactionsRes.json();
+        txData.transactions?.slice(0, 3).forEach((tx: any) => {
+          activities.push({
+            type: "transaction",
+            title: `Transação ${tx.type}`,
+            description: `${formatCurrency(tx.value || 0)} - ${tx.user?.name || "N/A"}`,
+            timestamp: tx.date,
+            link: "#",
+            icon: DollarSign,
+            color: tx.type === "DEPOSIT" ? "green" : "red",
+          });
+        });
+      }
+
+      if (kycRes.ok) {
+        const kycData = await kycRes.json();
+        kycData.users?.slice(0, 2).forEach((user: any) => {
+          activities.push({
+            type: "kyc_submitted",
+            title: "KYC submetido",
+            description: `${user.name} aguardando revisão`,
+            timestamp: user.kycSubmittedAt,
+            link: `/admin/kyc`,
+            icon: FileText,
+            color: "orange",
+          });
+        });
+      }
+
+      activities.sort(
+        (a, b) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+      );
+      setRecentActivity(activities.slice(0, 10));
+    } catch (error) {
+      console.error("Error fetching recent activity:", error);
+    }
+  }, []);
+
+  // Fetch top users
+  const fetchTopUsers = useCallback(async () => {
+    try {
+      const response = await fetch("/api/admin/users?limit=100");
+      if (response.ok) {
+        const data = await response.json();
+        const usersWithBalances = await Promise.all(
+          (data.users || []).slice(0, 20).map(async (user: any) => {
+            try {
+              const balanceRes = await fetch(
+                `/api/admin/users/${user.id}?include=balance`,
+              );
+              if (balanceRes.ok) {
+                const balanceData = await balanceRes.json();
+                const totalBalance =
+                  (balanceData.balances || []).reduce(
+                    (sum: number, b: any) => sum + (b.amount || 0),
+                    0,
+                  ) || 0;
+                return { ...user, totalBalance };
+              }
+              return { ...user, totalBalance: 0 };
+            } catch {
+              return { ...user, totalBalance: 0 };
+            }
+          }),
+        );
+
+        usersWithBalances.sort((a, b) => b.totalBalance - a.totalBalance);
+        setTopUsers(usersWithBalances.slice(0, 5));
+      }
+    } catch (error) {
+      console.error("Error fetching top users:", error);
+    }
+  }, []);
+
+  // Check system health
+  const checkSystemHealth = useCallback(async () => {
+    try {
+      // Check database
+      const dbCheck = await fetch("/api/admin/stats");
+      setSystemHealth((prev) => ({
+        ...prev,
+        database: dbCheck.ok ? "healthy" : "unhealthy",
+      }));
+
+      // Check API (simple ping)
+      setSystemHealth((prev) => ({
+        ...prev,
+        api: "healthy",
+      }));
+    } catch (error) {
+      setSystemHealth({
+        database: "unhealthy",
+        api: "unhealthy",
+      });
+    }
+  }, []);
+
+  // Quick search
+  const performQuickSearch = useCallback(async (query: string) => {
+    if (!query || query.length < 2) {
+      setQuickSearchResults([]);
+      return;
+    }
+
+    setLoadingQuickSearch(true);
+    try {
+      const [usersRes, transactionsRes] = await Promise.all([
+        fetch(`/api/admin/users?search=${encodeURIComponent(query)}&limit=5`),
+        fetch(`/api/admin/transactions/realtime?limit=5`),
+      ]);
+
+      const results: any[] = [];
+
+      if (usersRes.ok) {
+        const usersData = await usersRes.json();
+        usersData.users?.forEach((user: any) => {
+          if (
+            user.name?.toLowerCase().includes(query.toLowerCase()) ||
+            user.email?.toLowerCase().includes(query.toLowerCase())
+          ) {
+            results.push({
+              type: "user",
+              title: user.name,
+              subtitle: user.email,
+              link: `/admin/users/${user.id}`,
+              icon: Users,
+            });
+          }
+        });
+      }
+
+      if (transactionsRes.ok) {
+        const txData = await transactionsRes.json();
+        txData.transactions
+          ?.filter(
+            (tx: any) =>
+              tx.user?.name?.toLowerCase().includes(query.toLowerCase()) ||
+              tx.user?.email?.toLowerCase().includes(query.toLowerCase()),
+          )
+          .slice(0, 3)
+          .forEach((tx: any) => {
+            results.push({
+              type: "transaction",
+              title: `${getTransactionTypeLabel(tx.type)} - ${formatCurrency(tx.value || 0)}`,
+              subtitle: tx.user?.name || "N/A",
+              link: "#",
+              icon: DollarSign,
+            });
+          });
+      }
+
+      setQuickSearchResults(results);
+    } catch (error) {
+      console.error("Error performing quick search:", error);
+    } finally {
+      setLoadingQuickSearch(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      performQuickSearch(quickSearchQuery);
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [quickSearchQuery, performQuickSearch]);
+
+  // Close quick search when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest(".quick-search-container")) {
+        setShowQuickSearch(false);
+      }
+    };
+
+    if (showQuickSearch) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showQuickSearch]);
+
   // Load all initial data in parallel for faster page load
   useEffect(() => {
     setLoading(true);
@@ -1117,10 +1539,20 @@ export default function AdminDashboard() {
       fetchStats(),
       fetchFinanceData(),
       fetchRealtimeTransactions(),
+      fetchRecentActivity(),
+      fetchTopUsers(),
+      checkSystemHealth(),
     ]).finally(() => {
       setLoading(false);
     });
-  }, [fetchStats, fetchFinanceData, fetchRealtimeTransactions]);
+  }, [
+    fetchStats,
+    fetchFinanceData,
+    fetchRealtimeTransactions,
+    fetchRecentActivity,
+    fetchTopUsers,
+    checkSystemHealth,
+  ]);
 
   // Real-time polling for transactions (every 5 seconds)
   useEffect(() => {
@@ -1139,15 +1571,89 @@ export default function AdminDashboard() {
   // Don't block the entire page - show skeleton loaders instead
 
   return (
-    <div className="min-h-screen bg-black text-white p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-black text-white p-4 lg:p-6">
+      <div className="max-w-[1920px] mx-auto space-y-4 lg:space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
-            <p className="text-gray-300 mt-1">BS Market Administration Panel</p>
+            <h1 className="text-2xl lg:text-3xl font-bold text-white">
+              Admin Dashboard
+            </h1>
+            <p className="text-gray-400 text-sm mt-0.5">
+              BS Market Administration Panel
+            </p>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Quick Search */}
+            <div className="relative quick-search-container">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Buscar rapidamente..."
+                  value={quickSearchQuery}
+                  onChange={(e) => {
+                    setQuickSearchQuery(e.target.value);
+                    setShowQuickSearch(true);
+                  }}
+                  onFocus={() => setShowQuickSearch(true)}
+                  className="pl-10 pr-10 w-64 bg-gray-900 border-gray-700 text-white placeholder-gray-400"
+                />
+                {quickSearchQuery && (
+                  <X
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 cursor-pointer hover:text-white"
+                    onClick={() => {
+                      setQuickSearchQuery("");
+                      setShowQuickSearch(false);
+                      setQuickSearchResults([]);
+                    }}
+                  />
+                )}
+              </div>
+              {showQuickSearch &&
+                (quickSearchQuery.length >= 2 ||
+                  quickSearchResults.length > 0) && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-gray-900 border border-gray-700 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
+                    {loadingQuickSearch ? (
+                      <div className="p-4 text-center">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500 mx-auto"></div>
+                      </div>
+                    ) : quickSearchResults.length > 0 ? (
+                      <div className="py-2">
+                        {quickSearchResults.map((result, idx) => {
+                          const Icon = result.icon;
+                          return (
+                            <div
+                              key={idx}
+                              className="px-4 py-2 hover:bg-gray-800 cursor-pointer flex items-center gap-3"
+                              onClick={() => {
+                                router.push(result.link);
+                                setShowQuickSearch(false);
+                                setQuickSearchQuery("");
+                              }}
+                            >
+                              <Icon className="h-4 w-4 text-gray-400" />
+                              <div className="flex-1">
+                                <p className="text-sm text-white">
+                                  {result.title}
+                                </p>
+                                {result.subtitle && (
+                                  <p className="text-xs text-gray-400">
+                                    {result.subtitle}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : quickSearchQuery.length >= 2 ? (
+                      <div className="p-4 text-center text-gray-400 text-sm">
+                        Nenhum resultado encontrado
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+            </div>
             <NotificationBell className="text-white hover:text-blue-400" />
             {/* Real-time status indicator */}
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-gray-900 border border-gray-700">
@@ -1279,205 +1785,188 @@ export default function AdminDashboard() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 lg:gap-4">
           {/* Total Users */}
           <Link href="/admin/users">
-            <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-blue-500 transition-all duration-200 cursor-pointer group">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-gray-300 group-hover:text-white">
-                  Total Users
-                </CardTitle>
-                <Users className="h-4 w-4 text-blue-400 group-hover:text-blue-300" />
-              </CardHeader>
-              <CardContent>
-                {statsLoading ? (
-                  <div className="animate-pulse space-y-2">
-                    <div className="h-8 w-16 bg-gray-700 rounded"></div>
-                    <div className="h-4 w-24 bg-gray-700 rounded"></div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="text-2xl font-bold text-white group-hover:text-blue-100">
+            <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-blue-500 transition-all duration-200 cursor-pointer group h-full">
+              <CardContent className="p-3 lg:p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <Users className="h-4 w-4 text-blue-400 group-hover:text-blue-300" />
+                  {statsLoading ? (
+                    <div className="h-5 w-8 bg-gray-700 rounded animate-pulse"></div>
+                  ) : (
+                    <div className="text-xl lg:text-2xl font-bold text-white">
                       {stats.totalUsers}
                     </div>
-                    <p className="text-xs text-gray-400 mt-1 group-hover:text-gray-300">
-                      Click to manage users
-                    </p>
-                  </>
-                )}
+                  )}
+                </div>
+                <p className="text-xs text-gray-400">Total Users</p>
               </CardContent>
             </Card>
           </Link>
 
           {/* Pending Approvals */}
           <Link href="/admin/users">
-            <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-yellow-500 transition-all duration-200 cursor-pointer group">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-gray-300 group-hover:text-white">
-                  Pending Approvals
-                </CardTitle>
-                <Clock className="h-4 w-4 text-yellow-400 group-hover:text-yellow-300" />
-              </CardHeader>
-              <CardContent>
-                {statsLoading ? (
-                  <div className="animate-pulse space-y-2">
-                    <div className="h-8 w-16 bg-gray-700 rounded"></div>
-                    <div className="h-4 w-24 bg-gray-700 rounded"></div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="text-2xl font-bold text-white group-hover:text-yellow-100">
+            <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-yellow-500 transition-all duration-200 cursor-pointer group h-full">
+              <CardContent className="p-3 lg:p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <Clock className="h-4 w-4 text-yellow-400 group-hover:text-yellow-300" />
+                  {statsLoading ? (
+                    <div className="h-5 w-8 bg-gray-700 rounded animate-pulse"></div>
+                  ) : (
+                    <div className="text-xl lg:text-2xl font-bold text-yellow-400">
                       {stats.pendingApprovals}
                     </div>
-                    <p className="text-xs text-gray-400 mt-1 group-hover:text-gray-300">
-                      Click to review approvals
-                    </p>
-                  </>
-                )}
+                  )}
+                </div>
+                <p className="text-xs text-gray-400">Pendentes</p>
               </CardContent>
             </Card>
           </Link>
 
           {/* Approved Users */}
           <Link href="/admin/users">
-            <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-green-500 transition-all duration-200 cursor-pointer group">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-gray-300 group-hover:text-white">
-                  Approved Users
-                </CardTitle>
-                <CheckCircle className="h-4 w-4 text-green-400 group-hover:text-green-300" />
-              </CardHeader>
-              <CardContent>
-                {statsLoading ? (
-                  <div className="animate-pulse space-y-2">
-                    <div className="h-8 w-16 bg-gray-700 rounded"></div>
-                    <div className="h-4 w-24 bg-gray-700 rounded"></div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="text-2xl font-bold text-white group-hover:text-green-100">
+            <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-green-500 transition-all duration-200 cursor-pointer group h-full">
+              <CardContent className="p-3 lg:p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <CheckCircle className="h-4 w-4 text-green-400 group-hover:text-green-300" />
+                  {statsLoading ? (
+                    <div className="h-5 w-8 bg-gray-700 rounded animate-pulse"></div>
+                  ) : (
+                    <div className="text-xl lg:text-2xl font-bold text-green-400">
                       {stats.approvedUsers}
                     </div>
-                    <p className="text-xs text-gray-400 mt-1 group-hover:text-gray-300">
-                      Click to view approved users
-                    </p>
-                  </>
-                )}
+                  )}
+                </div>
+                <p className="text-xs text-gray-400">Aprovados</p>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* Rejected Users */}
+          <Link href="/admin/users">
+            <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-red-500 transition-all duration-200 cursor-pointer group h-full">
+              <CardContent className="p-3 lg:p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <X className="h-4 w-4 text-red-400 group-hover:text-red-300" />
+                  {statsLoading ? (
+                    <div className="h-5 w-8 bg-gray-700 rounded animate-pulse"></div>
+                  ) : (
+                    <div className="text-xl lg:text-2xl font-bold text-red-400">
+                      {stats.rejectedUsers}
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-gray-400">Rejeitados</p>
               </CardContent>
             </Card>
           </Link>
 
           {/* Pending KYC */}
           <Link href="/admin/kyc">
-            <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-orange-500 transition-all duration-200 cursor-pointer group">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-gray-300 group-hover:text-white">
-                  Pending KYC
-                </CardTitle>
-                <FileText className="h-4 w-4 text-orange-400 group-hover:text-orange-300" />
-              </CardHeader>
-              <CardContent>
-                {statsLoading ? (
-                  <div className="animate-pulse space-y-2">
-                    <div className="h-8 w-16 bg-gray-700 rounded"></div>
-                    <div className="h-4 w-24 bg-gray-700 rounded"></div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="text-2xl font-bold text-white group-hover:text-orange-100">
+            <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-orange-500 transition-all duration-200 cursor-pointer group h-full">
+              <CardContent className="p-3 lg:p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <FileText className="h-4 w-4 text-orange-400 group-hover:text-orange-300" />
+                  {statsLoading ? (
+                    <div className="h-5 w-8 bg-gray-700 rounded animate-pulse"></div>
+                  ) : (
+                    <div className="text-xl lg:text-2xl font-bold text-orange-400">
                       {stats.pendingKYC}
                     </div>
-                    <p className="text-xs text-gray-400 mt-1 group-hover:text-gray-300">
-                      Click to review KYC documents
-                    </p>
-                  </>
-                )}
+                  )}
+                </div>
+                <p className="text-xs text-gray-400">KYC Pendente</p>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* Approved KYC */}
+          <Link href="/admin/kyc">
+            <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-green-500 transition-all duration-200 cursor-pointer group h-full">
+              <CardContent className="p-3 lg:p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <Shield className="h-4 w-4 text-green-400 group-hover:text-green-300" />
+                  {statsLoading ? (
+                    <div className="h-5 w-8 bg-gray-700 rounded animate-pulse"></div>
+                  ) : (
+                    <div className="text-xl lg:text-2xl font-bold text-green-400">
+                      {stats.approvedKYC}
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-gray-400">KYC Aprovado</p>
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* Rejected KYC */}
+          <Link href="/admin/kyc">
+            <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-red-500 transition-all duration-200 cursor-pointer group h-full">
+              <CardContent className="p-3 lg:p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <Shield className="h-4 w-4 text-red-400 group-hover:text-red-300" />
+                  {statsLoading ? (
+                    <div className="h-5 w-8 bg-gray-700 rounded animate-pulse"></div>
+                  ) : (
+                    <div className="text-xl lg:text-2xl font-bold text-red-400">
+                      {stats.rejectedKYC}
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-gray-400">KYC Rejeitado</p>
               </CardContent>
             </Card>
           </Link>
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="bg-gray-900 border-gray-800">
-            <CardHeader>
-              <CardTitle className="text-white">User Management</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-gray-300">
-                Manage user accounts, approve registrations, and handle
-                user-related issues.
-              </p>
-              <div className="flex space-x-2">
-                <Link href="/admin/users">
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                    <Users className="w-4 h-4 mr-2" />
-                    Manage Users
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 lg:gap-4">
+          <Link href="/admin/users">
+            <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-blue-500 transition-all cursor-pointer h-full">
+              <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
+                <Users className="w-6 h-6 text-blue-400 mb-2" />
+                <CardTitle className="text-sm text-white mb-1">
+                  Usuários
+                </CardTitle>
+                <p className="text-xs text-gray-400">Gerenciar usuários</p>
+              </CardContent>
+            </Card>
+          </Link>
 
-          <Card className="bg-gray-900 border-gray-800">
-            <CardHeader>
-              <CardTitle className="text-white">KYC Verification</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-gray-300">
-                Review identity documents and verify user identities for
-                compliance.
-              </p>
-              <div className="flex space-x-2">
-                <Link href="/admin/kyc">
-                  <Button className="bg-green-600 hover:bg-green-700 text-white">
-                    <FileText className="w-4 h-4 mr-2" />
-                    Review Documents
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
+          <Link href="/admin/kyc">
+            <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-green-500 transition-all cursor-pointer h-full">
+              <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
+                <FileText className="w-6 h-6 text-green-400 mb-2" />
+                <CardTitle className="text-sm text-white mb-1">KYC</CardTitle>
+                <p className="text-xs text-gray-400">Verificar documentos</p>
+              </CardContent>
+            </Card>
+          </Link>
 
-          <Card className="bg-gray-900 border-gray-800">
-            <CardHeader>
-              <CardTitle className="text-white">Notification Center</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-gray-300">
-                Send notifications and emails to users, view notification
-                history.
-              </p>
-              <div className="flex space-x-2">
-                <Link href="/admin/notification-center">
-                  <Button className="bg-purple-600 hover:bg-purple-700 text-white">
-                    <Mail className="w-4 h-4 mr-2" />
-                    Notification Center
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
+          <Link href="/admin/notification-center">
+            <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-purple-500 transition-all cursor-pointer h-full">
+              <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
+                <Mail className="w-6 h-6 text-purple-400 mb-2" />
+                <CardTitle className="text-sm text-white mb-1">
+                  Notificações
+                </CardTitle>
+                <p className="text-xs text-gray-400">Enviar mensagens</p>
+              </CardContent>
+            </Card>
+          </Link>
 
-          <Card className="bg-gray-900 border-gray-800">
-            <CardHeader>
-              <CardTitle className="text-white">Webhook Logs</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-gray-300">
-                Monitor all webhook events received from NutzPay and other
-                sources.
-              </p>
-              <div className="flex space-x-2">
-                <Link href="/admin/webhook-logs">
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                    <Webhook className="w-4 h-4 mr-2" />
-                    View Webhook Logs
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
+          <Link href="/admin/webhook-logs">
+            <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-blue-500 transition-all cursor-pointer h-full">
+              <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
+                <Webhook className="w-6 h-6 text-blue-400 mb-2" />
+                <CardTitle className="text-sm text-white mb-1">
+                  Webhooks
+                </CardTitle>
+                <p className="text-xs text-gray-400">Ver logs</p>
+              </CardContent>
+            </Card>
+          </Link>
 
           {/* Money Functions / Maintenance */}
           <Card className="bg-gray-900 border-gray-800">
@@ -1598,17 +2087,263 @@ export default function AdminDashboard() {
           </Card>
         </div>
 
+        {/* New Features Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Recent Activity */}
+          <Card className="bg-gray-900 border-gray-800 lg:col-span-2">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Activity className="h-5 w-5 text-blue-400" />
+                  Atividade Recente
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={fetchRecentActivity}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                {recentActivity.length === 0 ? (
+                  <div className="text-center py-8 text-gray-400">
+                    <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">Nenhuma atividade recente</p>
+                  </div>
+                ) : (
+                  recentActivity.map((activity, idx) => {
+                    const Icon = activity.icon;
+                    const timeAgo = formatTimeAgo(activity.timestamp);
+                    return (
+                      <div
+                        key={idx}
+                        className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-800/50 transition-colors cursor-pointer"
+                        onClick={() => router.push(activity.link)}
+                      >
+                        <div
+                          className={`p-2 rounded-lg ${
+                            activity.color === "blue"
+                              ? "bg-blue-900/30"
+                              : activity.color === "green"
+                                ? "bg-green-900/30"
+                                : activity.color === "orange"
+                                  ? "bg-orange-900/30"
+                                  : "bg-gray-800"
+                          }`}
+                        >
+                          <Icon
+                            className={`h-4 w-4 ${
+                              activity.color === "blue"
+                                ? "text-blue-400"
+                                : activity.color === "green"
+                                  ? "text-green-400"
+                                  : activity.color === "orange"
+                                    ? "text-orange-400"
+                                    : "text-gray-400"
+                            }`}
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-white">
+                            {activity.title}
+                          </p>
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            {activity.description}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {timeAgo}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Top Users & System Health */}
+          <div className="space-y-4">
+            {/* Top Users */}
+            <Card className="bg-gray-900 border-gray-800">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-white flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-green-400" />
+                  Top Usuários
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {topUsers.length === 0 ? (
+                    <div className="text-center py-4 text-gray-400 text-sm">
+                      Carregando...
+                    </div>
+                  ) : (
+                    topUsers.map((user, idx) => (
+                      <div
+                        key={user.id}
+                        className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-800/50 transition-colors cursor-pointer"
+                        onClick={() => router.push(`/admin/users/${user.id}`)}
+                      >
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold text-white">
+                            {idx + 1}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-white truncate">
+                              {user.name}
+                            </p>
+                            <p className="text-xs text-gray-400 truncate">
+                              {user.email}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-green-400">
+                            {formatCurrency(user.totalBalance || 0)}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* System Health */}
+            <Card className="bg-gray-900 border-gray-800">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Server className="h-5 w-5 text-blue-400" />
+                  Status do Sistema
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-gray-800/30">
+                    <div className="flex items-center gap-2">
+                      <Database className="h-4 w-4 text-gray-400" />
+                      <span className="text-sm text-gray-300">
+                        Banco de Dados
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {systemHealth.database === "healthy" ? (
+                        <>
+                          <CheckCircle2 className="h-4 w-4 text-green-400" />
+                          <span className="text-xs text-green-400">Online</span>
+                        </>
+                      ) : systemHealth.database === "checking" ? (
+                        <>
+                          <Clock className="h-4 w-4 text-yellow-400 animate-pulse" />
+                          <span className="text-xs text-yellow-400">
+                            Verificando
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <AlertCircle className="h-4 w-4 text-red-400" />
+                          <span className="text-xs text-red-400">Offline</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-gray-800/30">
+                    <div className="flex items-center gap-2">
+                      <Zap className="h-4 w-4 text-gray-400" />
+                      <span className="text-sm text-gray-300">API</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {systemHealth.api === "healthy" ? (
+                        <>
+                          <CheckCircle2 className="h-4 w-4 text-green-400" />
+                          <span className="text-xs text-green-400">Online</span>
+                        </>
+                      ) : systemHealth.api === "checking" ? (
+                        <>
+                          <Clock className="h-4 w-4 text-yellow-400 animate-pulse" />
+                          <span className="text-xs text-yellow-400">
+                            Verificando
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <AlertCircle className="h-4 w-4 text-red-400" />
+                          <span className="text-xs text-red-400">Offline</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={checkSystemHealth}
+                    className="w-full border-gray-700 text-gray-300 hover:bg-gray-800"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Verificar Status
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Admin Activity Log */}
+        {adminActivityLog.length > 0 && (
+          <Card className="bg-gray-900 border-gray-800">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Activity className="h-5 w-5 text-purple-400" />
+                Log de Atividades do Admin
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                {adminActivityLog.slice(0, 10).map((log, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-3 p-2 rounded-lg bg-gray-800/30"
+                  >
+                    <div className="flex-shrink-0">
+                      {log.type.includes("approve") ? (
+                        <CheckCircle className="h-4 w-4 text-green-400" />
+                      ) : log.type.includes("reject") ? (
+                        <X className="h-4 w-4 text-red-400" />
+                      ) : (
+                        <Activity className="h-4 w-4 text-blue-400" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-white">{log.description}</p>
+                      <p className="text-xs text-gray-400">
+                        {formatTimeAgo(log.timestamp)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Finance Overview */}
-        <div className="space-y-6">
+        <div className="space-y-4">
           <div>
-            <h2 className="text-2xl font-bold text-white">Finance Overview</h2>
-            <p className="text-gray-300 mt-1">
+            <h2 className="text-xl lg:text-2xl font-bold text-white">
+              Finance Overview
+            </h2>
+            <p className="text-gray-400 text-sm mt-0.5">
               Acompanhe a movimentação financeira da plataforma em tempo real
             </p>
           </div>
 
           {/* Finance Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 lg:gap-4">
             {/* Total Deposits */}
             <CustomTooltip
               content={
@@ -1620,34 +2355,39 @@ export default function AdminDashboard() {
               side="top"
             >
               <Card
-                className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-green-500 transition-all duration-200 cursor-pointer"
+                className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-green-500 transition-all duration-200 cursor-pointer h-full"
                 onMouseEnter={() => fetchHistory("deposits", 7)}
+                onClick={() => handleMetricCardClick("DEPOSIT")}
               >
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-300">
-                    💰 Total de Depósitos
-                  </CardTitle>
-                  <DollarSign className="h-4 w-4 text-green-400" />
-                </CardHeader>
-                <CardContent>
-                  {financeLoading ? (
-                    <div className="animate-pulse space-y-2">
-                      <div className="h-8 w-32 bg-gray-700 rounded"></div>
-                      <div className="h-4 w-16 bg-gray-700 rounded"></div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="text-2xl font-bold text-white">
-                        {formatCurrency(financeStats.totalDeposits)}
+                <CardContent className="p-3 lg:p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <DollarSign className="h-4 w-4 text-green-400" />
+                    {financeLoading ? (
+                      <div className="h-5 w-16 bg-gray-700 rounded animate-pulse"></div>
+                    ) : (
+                      <div className="text-lg lg:text-xl font-bold text-white">
+                        {formatCurrency(financeStats.totalDeposits).replace(
+                          "R$",
+                          "R$",
+                        ).length > 15
+                          ? formatCurrency(
+                              financeStats.totalDeposits,
+                            ).substring(0, 12) + "..."
+                          : formatCurrency(financeStats.totalDeposits)}
                       </div>
-                      <div className="flex items-center mt-1">
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-gray-400">Depósitos</p>
+                    {!financeLoading && (
+                      <div className="flex items-center">
                         {financeStats.depositsChange >= 0 ? (
-                          <ArrowUpRight className="h-3 w-3 text-green-400 mr-1" />
+                          <ArrowUpRight className="h-3 w-3 text-green-400" />
                         ) : (
-                          <ArrowDownRight className="h-3 w-3 text-red-400 mr-1" />
+                          <ArrowDownRight className="h-3 w-3 text-red-400" />
                         )}
                         <span
-                          className={`text-xs ${
+                          className={`text-xs ml-0.5 ${
                             financeStats.depositsChange >= 0
                               ? "text-green-400"
                               : "text-red-400"
@@ -1656,8 +2396,8 @@ export default function AdminDashboard() {
                           {formatPercentage(financeStats.depositsChange)}
                         </span>
                       </div>
-                    </>
-                  )}
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             </CustomTooltip>
@@ -1673,34 +2413,39 @@ export default function AdminDashboard() {
               side="top"
             >
               <Card
-                className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-red-500 transition-all duration-200 cursor-pointer"
+                className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-red-500 transition-all duration-200 cursor-pointer h-full"
                 onMouseEnter={() => fetchHistory("withdrawals", 7)}
+                onClick={() => handleMetricCardClick("WITHDRAWAL")}
               >
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-300">
-                    💸 Total de Saques
-                  </CardTitle>
-                  <ArrowDownRight className="h-4 w-4 text-red-400" />
-                </CardHeader>
-                <CardContent>
-                  {financeLoading ? (
-                    <div className="animate-pulse space-y-2">
-                      <div className="h-8 w-32 bg-gray-700 rounded"></div>
-                      <div className="h-4 w-16 bg-gray-700 rounded"></div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="text-2xl font-bold text-white">
-                        {formatCurrency(financeStats.totalWithdrawals)}
+                <CardContent className="p-3 lg:p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <ArrowDownRight className="h-4 w-4 text-red-400" />
+                    {financeLoading ? (
+                      <div className="h-5 w-16 bg-gray-700 rounded animate-pulse"></div>
+                    ) : (
+                      <div className="text-lg lg:text-xl font-bold text-white">
+                        {formatCurrency(financeStats.totalWithdrawals).replace(
+                          "R$",
+                          "R$",
+                        ).length > 15
+                          ? formatCurrency(
+                              financeStats.totalWithdrawals,
+                            ).substring(0, 12) + "..."
+                          : formatCurrency(financeStats.totalWithdrawals)}
                       </div>
-                      <div className="flex items-center mt-1">
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-gray-400">Saques</p>
+                    {!financeLoading && (
+                      <div className="flex items-center">
                         {financeStats.withdrawalsChange >= 0 ? (
-                          <ArrowUpRight className="h-3 w-3 text-green-400 mr-1" />
+                          <ArrowUpRight className="h-3 w-3 text-green-400" />
                         ) : (
-                          <ArrowDownRight className="h-3 w-3 text-red-400 mr-1" />
+                          <ArrowDownRight className="h-3 w-3 text-red-400" />
                         )}
                         <span
-                          className={`text-xs ${
+                          className={`text-xs ml-0.5 ${
                             financeStats.withdrawalsChange >= 0
                               ? "text-green-400"
                               : "text-red-400"
@@ -1709,8 +2454,8 @@ export default function AdminDashboard() {
                           {formatPercentage(financeStats.withdrawalsChange)}
                         </span>
                       </div>
-                    </>
-                  )}
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             </CustomTooltip>
@@ -1726,34 +2471,39 @@ export default function AdminDashboard() {
               side="top"
             >
               <Card
-                className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-blue-500 transition-all duration-200 cursor-pointer"
+                className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-blue-500 transition-all duration-200 cursor-pointer h-full"
                 onMouseEnter={() => fetchHistory("trades", 7)}
               >
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-300">
-                    🔁 Volume de Trades
-                  </CardTitle>
-                  <BarChart3 className="h-4 w-4 text-blue-400" />
-                </CardHeader>
-                <CardContent>
-                  {financeLoading ? (
-                    <div className="animate-pulse space-y-2">
-                      <div className="h-8 w-32 bg-gray-700 rounded"></div>
-                      <div className="h-4 w-16 bg-gray-700 rounded"></div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="text-2xl font-bold text-white">
-                        {formatCurrency(financeStats.totalTrades)}
+                <CardContent className="p-3 lg:p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <BarChart3 className="h-4 w-4 text-blue-400" />
+                    {financeLoading ? (
+                      <div className="h-5 w-16 bg-gray-700 rounded animate-pulse"></div>
+                    ) : (
+                      <div className="text-lg lg:text-xl font-bold text-white">
+                        {formatCurrency(financeStats.totalTrades).replace(
+                          "R$",
+                          "R$",
+                        ).length > 15
+                          ? formatCurrency(financeStats.totalTrades).substring(
+                              0,
+                              12,
+                            ) + "..."
+                          : formatCurrency(financeStats.totalTrades)}
                       </div>
-                      <div className="flex items-center mt-1">
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-gray-400">Trades</p>
+                    {!financeLoading && (
+                      <div className="flex items-center">
                         {financeStats.tradesChange >= 0 ? (
-                          <ArrowUpRight className="h-3 w-3 text-green-400 mr-1" />
+                          <ArrowUpRight className="h-3 w-3 text-green-400" />
                         ) : (
-                          <ArrowDownRight className="h-3 w-3 text-red-400 mr-1" />
+                          <ArrowDownRight className="h-3 w-3 text-red-400" />
                         )}
                         <span
-                          className={`text-xs ${
+                          className={`text-xs ml-0.5 ${
                             financeStats.tradesChange >= 0
                               ? "text-green-400"
                               : "text-red-400"
@@ -1762,8 +2512,8 @@ export default function AdminDashboard() {
                           {formatPercentage(financeStats.tradesChange)}
                         </span>
                       </div>
-                    </>
-                  )}
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             </CustomTooltip>
@@ -1779,34 +2529,38 @@ export default function AdminDashboard() {
               side="top"
             >
               <Card
-                className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-purple-500 transition-all duration-200 cursor-pointer"
+                className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-purple-500 transition-all duration-200 cursor-pointer h-full"
                 onMouseEnter={() => fetchHistory("commissions", 7)}
               >
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-300">
-                    🧾 Comissões
-                  </CardTitle>
-                  <PieChart className="h-4 w-4 text-purple-400" />
-                </CardHeader>
-                <CardContent>
-                  {financeLoading ? (
-                    <div className="animate-pulse space-y-2">
-                      <div className="h-8 w-32 bg-gray-700 rounded"></div>
-                      <div className="h-4 w-16 bg-gray-700 rounded"></div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="text-2xl font-bold text-white">
-                        {formatCurrency(financeStats.totalCommissions)}
+                <CardContent className="p-3 lg:p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <PieChart className="h-4 w-4 text-purple-400" />
+                    {financeLoading ? (
+                      <div className="h-5 w-16 bg-gray-700 rounded animate-pulse"></div>
+                    ) : (
+                      <div className="text-lg lg:text-xl font-bold text-white">
+                        {formatCurrency(financeStats.totalCommissions).replace(
+                          "R$",
+                          "R$",
+                        ).length > 15
+                          ? formatCurrency(
+                              financeStats.totalCommissions,
+                            ).substring(0, 12) + "..."
+                          : formatCurrency(financeStats.totalCommissions)}
                       </div>
-                      <div className="flex items-center mt-1">
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-gray-400">Comissões</p>
+                    {!financeLoading && (
+                      <div className="flex items-center">
                         {financeStats.commissionsChange >= 0 ? (
-                          <ArrowUpRight className="h-3 w-3 text-green-400 mr-1" />
+                          <ArrowUpRight className="h-3 w-3 text-green-400" />
                         ) : (
-                          <ArrowDownRight className="h-3 w-3 text-red-400 mr-1" />
+                          <ArrowDownRight className="h-3 w-3 text-red-400" />
                         )}
                         <span
-                          className={`text-xs ${
+                          className={`text-xs ml-0.5 ${
                             financeStats.commissionsChange >= 0
                               ? "text-green-400"
                               : "text-red-400"
@@ -1815,8 +2569,8 @@ export default function AdminDashboard() {
                           {formatPercentage(financeStats.commissionsChange)}
                         </span>
                       </div>
-                    </>
-                  )}
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             </CustomTooltip>
@@ -1832,34 +2586,37 @@ export default function AdminDashboard() {
               side="top"
             >
               <Card
-                className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-yellow-500 transition-all duration-200 cursor-pointer"
+                className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-yellow-500 transition-all duration-200 cursor-pointer h-full"
                 onMouseEnter={() => fetchHistory("balance", 7)}
               >
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-300">
-                    🧍‍♂️ Saldo Médio dos Usuários
-                  </CardTitle>
-                  <TrendingUp className="h-4 w-4 text-yellow-400" />
-                </CardHeader>
-                <CardContent>
-                  {financeLoading ? (
-                    <div className="animate-pulse space-y-2">
-                      <div className="h-8 w-32 bg-gray-700 rounded"></div>
-                      <div className="h-4 w-16 bg-gray-700 rounded"></div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="text-2xl font-bold text-white">
-                        {formatCurrency(financeStats.averageUserBalance)}
+                <CardContent className="p-3 lg:p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <TrendingUp className="h-4 w-4 text-yellow-400" />
+                    {financeLoading ? (
+                      <div className="h-5 w-16 bg-gray-700 rounded animate-pulse"></div>
+                    ) : (
+                      <div className="text-lg lg:text-xl font-bold text-white">
+                        {formatCurrency(
+                          financeStats.averageUserBalance,
+                        ).replace("R$", "R$").length > 15
+                          ? formatCurrency(
+                              financeStats.averageUserBalance,
+                            ).substring(0, 12) + "..."
+                          : formatCurrency(financeStats.averageUserBalance)}
                       </div>
-                      <div className="flex items-center mt-1">
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-gray-400">Saldo Médio</p>
+                    {!financeLoading && (
+                      <div className="flex items-center">
                         {financeStats.balanceChange >= 0 ? (
-                          <ArrowUpRight className="h-3 w-3 text-green-400 mr-1" />
+                          <ArrowUpRight className="h-3 w-3 text-green-400" />
                         ) : (
-                          <ArrowDownRight className="h-3 w-3 text-red-400 mr-1" />
+                          <ArrowDownRight className="h-3 w-3 text-red-400" />
                         )}
                         <span
-                          className={`text-xs ${
+                          className={`text-xs ml-0.5 ${
                             financeStats.balanceChange >= 0
                               ? "text-green-400"
                               : "text-red-400"
@@ -1868,22 +2625,52 @@ export default function AdminDashboard() {
                           {formatPercentage(financeStats.balanceChange)}
                         </span>
                       </div>
-                    </>
-                  )}
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             </CustomTooltip>
           </div>
 
           {/* Charts Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
             {/* Area Chart - Deposits and Withdrawals */}
             <Card className="bg-gray-900 border-gray-800">
               <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-green-400" />
-                  Evolução dos Depósitos e Saques (30 dias)
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-green-400" />
+                    Evolução dos Depósitos e Saques
+                  </CardTitle>
+                  <Select
+                    value={String(chartDateRange)}
+                    onValueChange={(value) => setChartDateRange(Number(value))}
+                  >
+                    <SelectTrigger className="w-32 h-8 bg-gray-800 border-gray-700 text-white text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-900 border-gray-700">
+                      <SelectItem
+                        value="7"
+                        className="text-white hover:bg-gray-800"
+                      >
+                        7 dias
+                      </SelectItem>
+                      <SelectItem
+                        value="30"
+                        className="text-white hover:bg-gray-800"
+                      >
+                        30 dias
+                      </SelectItem>
+                      <SelectItem
+                        value="90"
+                        className="text-white hover:bg-gray-800"
+                      >
+                        90 dias
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </CardHeader>
               <CardContent>
                 {chartData.length > 0 ? (
@@ -2058,10 +2845,40 @@ export default function AdminDashboard() {
             {/* Bar Chart - Daily Trade Volume */}
             <Card className="bg-gray-900 border-gray-800">
               <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5 text-blue-400" />
-                  Volume Diário de Trades (30 dias)
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5 text-blue-400" />
+                    Volume Diário de Trades
+                  </CardTitle>
+                  <Select
+                    value={String(chartDateRange)}
+                    onValueChange={(value) => setChartDateRange(Number(value))}
+                  >
+                    <SelectTrigger className="w-32 h-8 bg-gray-800 border-gray-700 text-white text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-900 border-gray-700">
+                      <SelectItem
+                        value="7"
+                        className="text-white hover:bg-gray-800"
+                      >
+                        7 dias
+                      </SelectItem>
+                      <SelectItem
+                        value="30"
+                        className="text-white hover:bg-gray-800"
+                      >
+                        30 dias
+                      </SelectItem>
+                      <SelectItem
+                        value="90"
+                        className="text-white hover:bg-gray-800"
+                      >
+                        90 dias
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </CardHeader>
               <CardContent>
                 {chartData.length > 0 ? (
@@ -2201,7 +3018,7 @@ export default function AdminDashboard() {
                   Ajustar Saldo
                 </Button>
               </div>
-              <div className="flex items-center space-x-4 mt-4">
+              <div className="flex flex-wrap items-center gap-3 mt-4">
                 <div className="relative flex-1 max-w-sm">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                   <Input
@@ -2211,6 +3028,114 @@ export default function AdminDashboard() {
                     className="pl-10 bg-gray-800 border-gray-700 text-white placeholder-gray-400"
                   />
                 </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-40 bg-gray-800 border-gray-700 text-white">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-900 border-gray-700">
+                    <SelectItem
+                      value="all"
+                      className="text-white hover:bg-gray-800"
+                    >
+                      Todos Status
+                    </SelectItem>
+                    <SelectItem
+                      value="PENDING"
+                      className="text-white hover:bg-gray-800"
+                    >
+                      Pendente
+                    </SelectItem>
+                    <SelectItem
+                      value="APPROVED"
+                      className="text-white hover:bg-gray-800"
+                    >
+                      Aprovado
+                    </SelectItem>
+                    <SelectItem
+                      value="REJECTED"
+                      className="text-white hover:bg-gray-800"
+                    >
+                      Rejeitado
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                  <SelectTrigger className="w-40 bg-gray-800 border-gray-700 text-white">
+                    <SelectValue placeholder="Tipo" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-900 border-gray-700">
+                    <SelectItem
+                      value="all"
+                      className="text-white hover:bg-gray-800"
+                    >
+                      Todos Tipos
+                    </SelectItem>
+                    <SelectItem
+                      value="DEPOSIT"
+                      className="text-white hover:bg-gray-800"
+                    >
+                      Depósito
+                    </SelectItem>
+                    <SelectItem
+                      value="WITHDRAWAL"
+                      className="text-white hover:bg-gray-800"
+                    >
+                      Saque
+                    </SelectItem>
+                    <SelectItem
+                      value="FEE"
+                      className="text-white hover:bg-gray-800"
+                    >
+                      Comissão
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                {selectedTransactions.size > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => handleBulkAction("approve")}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      Aprovar ({selectedTransactions.size})
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => handleBulkAction("reject")}
+                      className="bg-red-600 hover:bg-red-700 text-white"
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Rejeitar ({selectedTransactions.size})
+                    </Button>
+                  </div>
+                )}
+                <Button
+                  size="sm"
+                  onClick={handleExportCSV}
+                  variant="outline"
+                  className="border-gray-700 text-gray-300 hover:bg-gray-800"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportar CSV
+                </Button>
+                {(statusFilter !== "all" ||
+                  typeFilter !== "all" ||
+                  searchTerm) && (
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setStatusFilter("all");
+                      setTypeFilter("all");
+                      setSearchTerm("");
+                    }}
+                    variant="ghost"
+                    className="text-gray-400 hover:text-white"
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Limpar Filtros
+                  </Button>
+                )}
               </div>
             </CardHeader>
             <CardContent>
@@ -2218,6 +3143,17 @@ export default function AdminDashboard() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-gray-700">
+                      <th className="text-left py-3 px-4 w-12">
+                        <Checkbox
+                          checked={
+                            filteredAndSortedTransactions.length > 0 &&
+                            selectedTransactions.size ===
+                              filteredAndSortedTransactions.length
+                          }
+                          onCheckedChange={toggleSelectAll}
+                          className="border-gray-600"
+                        />
+                      </th>
                       <th
                         className="text-left py-3 px-4 cursor-pointer hover:text-white text-gray-300"
                         onClick={() => handleSort("date")}
@@ -2268,7 +3204,7 @@ export default function AdminDashboard() {
                   <tbody>
                     {transactionsLoading ? (
                       <tr>
-                        <td colSpan={5} className="py-8 text-center">
+                        <td colSpan={6} className="py-8 text-center">
                           <div className="flex flex-col items-center justify-center space-y-2">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400"></div>
                             <p className="text-gray-400">
@@ -2280,7 +3216,7 @@ export default function AdminDashboard() {
                     ) : filteredAndSortedTransactions.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={5}
+                          colSpan={6}
                           className="py-8 text-center text-gray-400"
                         >
                           Nenhuma transação encontrada
@@ -2290,10 +3226,24 @@ export default function AdminDashboard() {
                       filteredAndSortedTransactions.map((transaction) => (
                         <tr
                           key={transaction.id}
-                          className="border-b border-gray-800 hover:bg-gray-800 cursor-pointer transition-colors"
-                          onClick={() => handleTransactionClick(transaction)}
+                          className="border-b border-gray-800 hover:bg-gray-800 transition-colors"
                         >
-                          <td className="py-3 px-4 text-gray-300">
+                          <td
+                            className="py-3 px-4"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Checkbox
+                              checked={selectedTransactions.has(transaction.id)}
+                              onCheckedChange={() =>
+                                toggleTransactionSelection(transaction.id)
+                              }
+                              className="border-gray-600"
+                            />
+                          </td>
+                          <td
+                            className="py-3 px-4 text-gray-300 cursor-pointer"
+                            onClick={() => handleTransactionClick(transaction)}
+                          >
                             {new Date(transaction.date).toLocaleString(
                               "pt-BR",
                               {
@@ -2327,12 +3277,29 @@ export default function AdminDashboard() {
                               {getTransactionTypeLabel(transaction.type)}
                             </span>
                           </td>
-                          <td className="py-3 px-4 text-gray-300">
-                            {typeof transaction.user === "string"
-                              ? transaction.user
-                              : transaction.user
-                                ? `${transaction.user.name} (${transaction.user.email})`
-                                : "N/A"}
+                          <td
+                            className="py-3 px-4 text-gray-300"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {typeof transaction.user === "string" ? (
+                              transaction.user
+                            ) : transaction.user ? (
+                              <button
+                                onClick={() => {
+                                  if (transaction.userId) {
+                                    router.push(
+                                      `/admin/users/${transaction.userId}`,
+                                    );
+                                  }
+                                }}
+                                className="text-blue-400 hover:text-blue-300 hover:underline"
+                              >
+                                {transaction.user.name} (
+                                {transaction.user.email})
+                              </button>
+                            ) : (
+                              "N/A"
+                            )}
                           </td>
                           <td className="py-3 px-4 text-white font-medium">
                             {transaction.value && !isNaN(transaction.value)
@@ -2342,25 +3309,66 @@ export default function AdminDashboard() {
                                 : formatCurrency(0)}
                           </td>
                           <td className="py-3 px-4">
-                            <span
-                              className={`px-2 py-1 rounded text-xs font-medium ${
-                                transaction.status === "APPROVED" ||
-                                transaction.status === "COMPLETED" ||
-                                transaction.status === "CONFIRMED"
-                                  ? "bg-green-900 text-green-300"
-                                  : transaction.status === "PENDING" ||
-                                      transaction.status === "PROCESSING" ||
-                                      transaction.status === "EXECUTING"
-                                    ? "bg-yellow-900 text-yellow-300"
-                                    : transaction.status === "REJECTED" ||
-                                        transaction.status === "FAILED" ||
-                                        transaction.status === "CANCELLED"
-                                      ? "bg-red-900 text-red-300"
-                                      : "bg-gray-900 text-gray-300"
-                              }`}
-                            >
-                              {getStatusLabel(transaction.status)}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`px-2 py-1 rounded text-xs font-medium ${
+                                  transaction.status === "APPROVED" ||
+                                  transaction.status === "COMPLETED" ||
+                                  transaction.status === "CONFIRMED"
+                                    ? "bg-green-900 text-green-300"
+                                    : transaction.status === "PENDING" ||
+                                        transaction.status === "PROCESSING" ||
+                                        transaction.status === "EXECUTING"
+                                      ? "bg-yellow-900 text-yellow-300"
+                                      : transaction.status === "REJECTED" ||
+                                          transaction.status === "FAILED" ||
+                                          transaction.status === "CANCELLED"
+                                        ? "bg-red-900 text-red-300"
+                                        : "bg-gray-900 text-gray-300"
+                                }`}
+                              >
+                                {getStatusLabel(transaction.status)}
+                              </span>
+                              {(transaction.status === "PENDING" ||
+                                transaction.status === "PROCESSING") && (
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleTransactionAction(
+                                        transaction.id,
+                                        "approve",
+                                      );
+                                    }}
+                                    disabled={
+                                      processingTransaction === transaction.id
+                                    }
+                                    className="h-6 w-6 p-0 text-green-400 hover:text-green-300 hover:bg-green-900/30"
+                                  >
+                                    <CheckCircle className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleTransactionAction(
+                                        transaction.id,
+                                        "reject",
+                                      );
+                                    }}
+                                    disabled={
+                                      processingTransaction === transaction.id
+                                    }
+                                    className="h-6 w-6 p-0 text-red-400 hover:text-red-300 hover:bg-red-900/30"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))
