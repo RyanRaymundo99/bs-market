@@ -208,6 +208,8 @@ export default function AdminDashboard() {
   const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
   const [isPolling, setIsPolling] = useState(false);
   const [showBalanceDialog, setShowBalanceDialog] = useState(false);
+  const [showBalanceConfirmDialog, setShowBalanceConfirmDialog] = useState(false);
+  const [balanceConfirmStep, setBalanceConfirmStep] = useState(1);
   const [balanceUserId, setBalanceUserId] = useState("");
   const [balanceCurrency, setBalanceCurrency] = useState<"USDT" | "BRL">(
     "USDT"
@@ -855,7 +857,7 @@ export default function AdminDashboard() {
     fetchUsersList();
   };
 
-  const handleBalanceAdjustment = async (e?: React.MouseEvent) => {
+  const handleBalanceAdjustmentClick = (e?: React.MouseEvent) => {
     // Prevent any default form submission behavior
     if (e) {
       e.preventDefault();
@@ -868,6 +870,25 @@ export default function AdminDashboard() {
         title: "Erro",
         description: "Preencha todos os campos corretamente",
       });
+      return;
+    }
+
+    setShowBalanceConfirmDialog(true);
+    setBalanceConfirmStep(1);
+  };
+
+  const handleBalanceConfirm = () => {
+    if (balanceConfirmStep === 1) {
+      setBalanceConfirmStep(2);
+    } else {
+      setShowBalanceConfirmDialog(false);
+      setBalanceConfirmStep(1);
+      handleBalanceAdjustment();
+    }
+  };
+
+  const handleBalanceAdjustment = async () => {
+    if (!balanceUserId || !balanceAmount || parseFloat(balanceAmount) <= 0) {
       return;
     }
 
@@ -2828,7 +2849,7 @@ export default function AdminDashboard() {
               </Button>
               <Button
                 type="button"
-                onClick={handleBalanceAdjustment}
+                onClick={handleBalanceAdjustmentClick}
                 disabled={processingBalance || !balanceUserId || !balanceAmount}
                 className={`${
                   balanceOperation === "CREDIT"
@@ -2844,6 +2865,67 @@ export default function AdminDashboard() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Balance Adjustment Confirmation Dialog */}
+      <Dialog open={showBalanceConfirmDialog} onOpenChange={(open) => {
+        if (!open) {
+          setShowBalanceConfirmDialog(false);
+          setBalanceConfirmStep(1);
+        }
+      }}>
+        <DialogContent className="bg-gray-900 border-gray-800">
+          <DialogHeader>
+            <DialogTitle className="text-white">
+              {balanceConfirmStep === 1 ? "Confirmar Ajuste de Saldo" : "Confirmação Final"}
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              {balanceConfirmStep === 1 ? (
+                <>
+                  Você está prestes a {balanceOperation === "CREDIT" ? "creditar" : "deduzir"} saldo.
+                  <br /><br />
+                  <strong>Usuário:</strong> {usersList.find(u => u.id === balanceUserId)?.name || balanceUserId}
+                  <br />
+                  <strong>Valor:</strong> {balanceAmount} {balanceCurrency}
+                  <br />
+                  <strong>Operação:</strong> {balanceOperation === "CREDIT" ? "Crédito" : "Débito"}
+                  <br />
+                  <strong>Motivo:</strong> {balanceReason || "Não especificado"}
+                  <br /><br />
+                  Esta ação alterará o saldo do usuário. Deseja continuar?
+                </>
+              ) : (
+                <>
+                  <strong className="text-red-400">ATENÇÃO:</strong> Esta é a confirmação final.
+                  <br /><br />
+                  Você confirma que deseja {balanceOperation === "CREDIT" ? "creditar" : "deduzir"} {balanceAmount} {balanceCurrency} do usuário <strong className="text-white">{usersList.find(u => u.id === balanceUserId)?.name || balanceUserId}</strong>?
+                  <br /><br />
+                  <strong>Motivo:</strong> {balanceReason || "Não especificado"}
+                  <br /><br />
+                  Clique em "Confirmar" novamente para prosseguir.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowBalanceConfirmDialog(false);
+                setBalanceConfirmStep(1);
+              }}
+              className="border-gray-700 text-gray-300 hover:bg-gray-800"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleBalanceConfirm}
+              className={balanceConfirmStep === 1 ? "bg-yellow-600 hover:bg-yellow-700" : "bg-red-600 hover:bg-red-700"}
+            >
+              {balanceConfirmStep === 1 ? "Sim, Continuar" : "Confirmar Ajuste"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

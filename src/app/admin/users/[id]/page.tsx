@@ -99,6 +99,10 @@ export default function AdminUserDetailsPage({
   const [showBalanceDialog, setShowBalanceDialog] = useState(false);
   const [balanceAdjustment, setBalanceAdjustment] = useState({ amount: "", reason: "" });
   const [adjustingBalance, setAdjustingBalance] = useState(false);
+  const [showBalanceConfirmDialog, setShowBalanceConfirmDialog] = useState(false);
+  const [balanceConfirmStep, setBalanceConfirmStep] = useState(1);
+  const [showEditConfirmDialog, setShowEditConfirmDialog] = useState(false);
+  const [editConfirmStep, setEditConfirmStep] = useState(1);
   const [userId, setUserId] = useState<string | null>(null);
   const [loggingInAsUser, setLoggingInAsUser] = useState(false);
   const { toast } = useToast();
@@ -165,6 +169,21 @@ export default function AdminUserDetailsPage({
     fetchAllData();
   }, [params, toast]);
 
+  const handleSaveProfileClick = () => {
+    setShowEditConfirmDialog(true);
+    setEditConfirmStep(1);
+  };
+
+  const handleEditConfirm = () => {
+    if (editConfirmStep === 1) {
+      setEditConfirmStep(2);
+    } else {
+      setShowEditConfirmDialog(false);
+      setEditConfirmStep(1);
+      handleSaveProfile();
+    }
+  };
+
   const handleSaveProfile = async () => {
     if (!userId) return;
     setSaving(true);
@@ -194,6 +213,22 @@ export default function AdminUserDetailsPage({
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleAdjustBalanceClick = () => {
+    if (!userId || !balanceAdjustment.amount) return;
+    setShowBalanceConfirmDialog(true);
+    setBalanceConfirmStep(1);
+  };
+
+  const handleBalanceConfirm = () => {
+    if (balanceConfirmStep === 1) {
+      setBalanceConfirmStep(2);
+    } else {
+      setShowBalanceConfirmDialog(false);
+      setBalanceConfirmStep(1);
+      handleAdjustBalance();
     }
   };
 
@@ -473,7 +508,7 @@ export default function AdminUserDetailsPage({
                     <div className="flex gap-2 pt-2">
                       <Button
                         size="sm"
-                        onClick={handleSaveProfile}
+                        onClick={handleSaveProfileClick}
                         disabled={saving}
                         className="bg-green-600 hover:bg-green-700"
                       >
@@ -852,7 +887,7 @@ export default function AdminUserDetailsPage({
                   Cancelar
                 </Button>
                 <Button
-                  onClick={handleAdjustBalance}
+                  onClick={handleAdjustBalanceClick}
                   disabled={adjustingBalance || !balanceAdjustment.amount}
                   className="bg-blue-600 hover:bg-blue-700"
                 >
@@ -860,6 +895,114 @@ export default function AdminUserDetailsPage({
                 </Button>
               </div>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Balance Adjustment Confirmation Dialog */}
+        <Dialog open={showBalanceConfirmDialog} onOpenChange={(open) => {
+          if (!open) {
+            setShowBalanceConfirmDialog(false);
+            setBalanceConfirmStep(1);
+          }
+        }}>
+          <DialogContent className="bg-gray-900 border-gray-800">
+            <DialogHeader>
+              <DialogTitle className="text-white">
+                {balanceConfirmStep === 1 ? "Confirmar Ajuste de Saldo" : "Confirmação Final"}
+              </DialogTitle>
+              <DialogDescription className="text-gray-400">
+                {balanceConfirmStep === 1 ? (
+                  <>
+                    Você está prestes a ajustar o saldo do usuário <strong className="text-white">{user?.name}</strong>.
+                    <br /><br />
+                    <strong>Valor:</strong> {balanceAdjustment.amount.startsWith("-") ? "Remover" : "Adicionar"} {Math.abs(parseFloat(balanceAdjustment.amount) || 0).toFixed(2)} USDT
+                    <br />
+                    <strong>Motivo:</strong> {balanceAdjustment.reason || "Não especificado"}
+                    <br /><br />
+                    Esta ação alterará o saldo do usuário. Deseja continuar?
+                  </>
+                ) : (
+                  <>
+                    <strong className="text-red-400">ATENÇÃO:</strong> Esta é a confirmação final.
+                    <br /><br />
+                    Você confirma que deseja ajustar o saldo do usuário <strong className="text-white">{user?.name}</strong>?
+                    <br /><br />
+                    <strong>Valor:</strong> {balanceAdjustment.amount.startsWith("-") ? "Remover" : "Adicionar"} {Math.abs(parseFloat(balanceAdjustment.amount) || 0).toFixed(2)} USDT
+                    <br /><br />
+                    Clique em "Confirmar" novamente para prosseguir.
+                  </>
+                )}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowBalanceConfirmDialog(false);
+                  setBalanceConfirmStep(1);
+                }}
+                className="border-gray-700 text-gray-300 hover:bg-gray-800"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleBalanceConfirm}
+                className={balanceConfirmStep === 1 ? "bg-yellow-600 hover:bg-yellow-700" : "bg-red-600 hover:bg-red-700"}
+              >
+                {balanceConfirmStep === 1 ? "Sim, Continuar" : "Confirmar Ajuste"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Profile Confirmation Dialog */}
+        <Dialog open={showEditConfirmDialog} onOpenChange={(open) => {
+          if (!open) {
+            setShowEditConfirmDialog(false);
+            setEditConfirmStep(1);
+          }
+        }}>
+          <DialogContent className="bg-gray-900 border-gray-800">
+            <DialogHeader>
+              <DialogTitle className="text-white">
+                {editConfirmStep === 1 ? "Confirmar Edição" : "Confirmação Final"}
+              </DialogTitle>
+              <DialogDescription className="text-gray-400">
+                {editConfirmStep === 1 ? (
+                  <>
+                    Você está prestes a editar as informações do usuário <strong className="text-white">{user?.name}</strong>.
+                    <br /><br />
+                    Esta ação alterará os dados do usuário. Deseja continuar?
+                  </>
+                ) : (
+                  <>
+                    <strong className="text-red-400">ATENÇÃO:</strong> Esta é a confirmação final.
+                    <br /><br />
+                    Você confirma que deseja editar as informações do usuário <strong className="text-white">{user?.name}</strong>?
+                    <br /><br />
+                    Clique em "Confirmar" novamente para prosseguir.
+                  </>
+                )}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowEditConfirmDialog(false);
+                  setEditConfirmStep(1);
+                }}
+                className="border-gray-700 text-gray-300 hover:bg-gray-800"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleEditConfirm}
+                className={editConfirmStep === 1 ? "bg-yellow-600 hover:bg-yellow-700" : "bg-red-600 hover:bg-red-700"}
+              >
+                {editConfirmStep === 1 ? "Sim, Continuar" : "Confirmar Edição"}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 

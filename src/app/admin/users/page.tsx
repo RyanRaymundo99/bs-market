@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -16,21 +16,18 @@ import {
   MoreVertical,
   Trash2,
   Edit,
-  UserX,
   Search,
   Phone,
   Wallet,
-  TrendingUp,
-  TrendingDown,
   Shield,
   Calendar,
   ChevronDown,
   ChevronUp,
   ExternalLink,
-  DollarSign,
   Activity,
-  Filter,
   X,
+  TrendingUp,
+  TrendingDown,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
@@ -53,6 +50,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -82,6 +80,15 @@ interface UserWithDetails extends User {
   }[];
   transactionCount?: number;
   lastTransactionDate?: string;
+  transactions?: Array<{
+    id: string;
+    type: string;
+    amount: number;
+    currency: string;
+    status: string;
+    createdAt: string;
+    externalId?: string | null;
+  }>;
 }
 
 export default function AdminUsersPage() {
@@ -106,6 +113,17 @@ export default function AdminUsersPage() {
   });
   const [saving, setSaving] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [showEditConfirmDialog, setShowEditConfirmDialog] = useState(false);
+  const [editConfirmStep, setEditConfirmStep] = useState(1);
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailMessage, setEmailMessage] = useState("");
+  const [emailRecipients, setEmailRecipients] = useState<"all" | "filtered" | "selected">("filtered");
+  const [selectedUsers] = useState<Set<string>>(new Set());
+  const [sendingEmails, setSendingEmails] = useState(false);
+  const [showTransactionsDialog, setShowTransactionsDialog] = useState(false);
+  const [viewingUserTransactions, setViewingUserTransactions] = useState<UserWithDetails | null>(null);
+  const [loadingTransactions, setLoadingTransactions] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -179,6 +197,7 @@ export default function AdminUsersPage() {
                     transactionCount: txData?.transactions?.length || 0,
                     lastTransactionDate:
                       txData?.transactions?.[0]?.createdAt || undefined,
+                    transactions: txData?.transactions || [],
                   }
                 : u
             );
@@ -392,6 +411,21 @@ export default function AdminUsersPage() {
     setEditDialogOpen(true);
   };
 
+  const handleSaveUserClick = () => {
+    setShowEditConfirmDialog(true);
+    setEditConfirmStep(1);
+  };
+
+  const handleEditConfirm = () => {
+    if (editConfirmStep === 1) {
+      setEditConfirmStep(2);
+    } else {
+      setShowEditConfirmDialog(false);
+      setEditConfirmStep(1);
+      handleSaveUser();
+    }
+  };
+
   const handleSaveUser = async () => {
     if (!editingUser) return;
 
@@ -430,6 +464,170 @@ export default function AdminUsersPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSendEmails = async () => {
+    if (!emailSubject.trim() || !emailMessage.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Assunto e mensagem são obrigatórios",
+      });
+      return;
+    }
+
+    // Determine which users to send to
+    let recipients: UserWithDetails[] = [];
+    if (emailRecipients === "all") {
+      recipients = usersWithDetails;
+    } else if (emailRecipients === "filtered") {
+      recipients = filteredUsers;
+    } else if (emailRecipients === "selected") {
+      recipients = usersWithDetails.filter((u) => selectedUsers.has(u.id));
+      if (recipients.length === 0) {
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "Nenhum usuário selecionado",
+        });
+        return;
+      }
+    }
+
+    if (recipients.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Nenhum destinatário encontrado",
+      });
+      return;
+    }
+
+    setSendingEmails(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    try {
+      // Send emails sequentially to avoid overwhelming the server
+      for (const user of recipients) {
+        try {
+          const response = await fetch("/api/admin/notification-center/send", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              userId: user.id,
+              subject: emailSubject,
+              message: emailMessage,
+              sendEmail: true,
+            }),
+          });
+
+          if (response.ok) {
+            successCount++;
+          } else {
+            failCount++;
+            console.error(`Failed to send email to ${user.email}`);
+          }
+        } catch (error) {
+          failCount++;
+          console.error(`Error sending email to ${user.email}:`, error);
+        }
+      }
+
+      toast({
+        title: "Emails Enviados",
+        description: `Enviados com sucesso: ${successCount}${failCount > 0 ? ` | Falhas: ${failCount}` : ""}`,
+      });
+
+      // Reset form
+      setEmailSubject("");
+      setEmailMessage("");
+      setEmailDialogOpen(false);
+    } catch (error) {
+      console.error("Error sending emails:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Erro ao enviar emails",
+      });
+    } finally {
+      setSendingEmails(false);
+    }
+  };
+
+  const getRecipientCount = () => {
+    if (emailRecipients === "all") return usersWithDetails.length;
+    if (emailRecipients === "filtered") return filteredUsers.length;
+    return selectedUsers.size;
+  };
+
+  const handleViewTransactions = async (user: UserWithDetails) => {
+    setViewingUserTransactions(user);
+    setShowTransactionsDialog(true);
+    
+    // If transactions not loaded, fetch them
+    if (!user.transactions || user.transactions.length === 0) {
+      setLoadingTransactions(true);
+      try {
+        const response = await fetch(`/api/admin/users/${user.id}?include=transactions`);
+        if (response.ok) {
+          const data = await response.json();
+          setViewingUserTransactions({
+            ...user,
+            transactions: data.transactions || [],
+            transactionCount: data.transactions?.length || 0,
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching transactions:", error);
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "Falha ao carregar transações",
+        });
+      } finally {
+        setLoadingTransactions(false);
+      }
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    const statusMap: Record<string, string> = {
+      COMPLETED: "Concluída",
+      APPROVED: "Aprovada",
+      CONFIRMED: "Confirmada",
+      PENDING: "Pendente",
+      PROCESSING: "Processando",
+      EXECUTING: "Executando",
+      REJECTED: "Rejeitada",
+      FAILED: "Falhou",
+      CANCELLED: "Cancelada",
+    };
+    return statusMap[status] || status;
+  };
+
+  const getStatusColor = (status: string) => {
+    if (status === "COMPLETED" || status === "APPROVED" || status === "CONFIRMED") {
+      return "bg-green-900/50 text-green-400 border border-green-500/30";
+    }
+    if (status === "PENDING" || status === "PROCESSING" || status === "EXECUTING") {
+      return "bg-yellow-900/50 text-yellow-400 border border-yellow-500/30";
+    }
+    return "bg-red-900/50 text-red-400 border border-red-500/30";
+  };
+
+  const getTransactionTypeLabel = (type: string) => {
+    const typeMap: Record<string, string> = {
+      DEPOSIT: "Depósito",
+      WITHDRAWAL: "Saque",
+      BUY_CRYPTO: "Compra de Cripto",
+      SELL_CRYPTO: "Venda de Cripto",
+      BUY: "Compra",
+      SELL: "Venda",
+    };
+    return typeMap[type] || type.replace(/_/g, " ");
   };
 
   const getStatusBadge = (status: string) => {
@@ -506,6 +704,13 @@ export default function AdminUsersPage() {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            <Button 
+              onClick={() => setEmailDialogOpen(true)} 
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <Mail className="w-4 h-4 mr-2" />
+              Enviar Email
+            </Button>
             <NotificationBell />
             <Link href="/admin/kyc">
               <Button variant="outline" className="border-gray-700 hover:bg-gray-800">
@@ -875,6 +1080,17 @@ export default function AdminUsersPage() {
                                     </p>
                                   )}
                                 </div>
+                                {user.transactionCount > 0 && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleViewTransactions(user)}
+                                    className="mt-3 w-full border-gray-600 text-gray-300 hover:bg-gray-700"
+                                  >
+                                    <Activity className="w-4 h-4 mr-2" />
+                                    Ver Transações
+                                  </Button>
+                                )}
                               </div>
                             )}
 
@@ -1265,7 +1481,7 @@ export default function AdminUsersPage() {
             >
               Cancel
             </Button>
-            <Button onClick={handleSaveUser} disabled={saving} className="bg-blue-600 hover:bg-blue-700">
+            <Button onClick={handleSaveUserClick} disabled={saving} className="bg-blue-600 hover:bg-blue-700">
               {saving ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
@@ -1275,6 +1491,312 @@ export default function AdminUsersPage() {
                 "Save Changes"
               )}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Confirmation Dialog */}
+      <Dialog open={showEditConfirmDialog} onOpenChange={(open) => {
+        if (!open) {
+          setShowEditConfirmDialog(false);
+          setEditConfirmStep(1);
+        }
+      }}>
+        <DialogContent className="bg-gray-900 border-gray-800">
+          <DialogHeader>
+            <DialogTitle className="text-white">
+              {editConfirmStep === 1 ? "Confirmar Edição" : "Confirmação Final"}
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              {editConfirmStep === 1 ? (
+                <>
+                  Você está prestes a editar as informações do usuário <strong className="text-white">{editingUser?.name}</strong>.
+                  <br /><br />
+                  Esta ação alterará os dados do usuário. Deseja continuar?
+                </>
+              ) : (
+                <>
+                  <strong className="text-red-400">ATENÇÃO:</strong> Esta é a confirmação final.
+                  <br /><br />
+                  Você confirma que deseja editar as informações do usuário <strong className="text-white">{editingUser?.name}</strong>?
+                  <br /><br />
+                  Clique em "Confirmar" novamente para prosseguir.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowEditConfirmDialog(false);
+                setEditConfirmStep(1);
+              }}
+              className="border-gray-700 text-gray-300 hover:bg-gray-800"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleEditConfirm}
+              className={editConfirmStep === 1 ? "bg-yellow-600 hover:bg-yellow-700" : "bg-red-600 hover:bg-red-700"}
+            >
+              {editConfirmStep === 1 ? "Sim, Continuar" : "Confirmar Edição"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Quick Email Dialog */}
+      <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
+        <DialogContent className="max-w-2xl bg-gray-900 border-gray-800 max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <Mail className="w-5 h-5 text-blue-400" />
+              Enviar Email Rápido
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Envie um email para os usuários selecionados. O email também criará uma notificação na plataforma.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            {/* Recipient Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="email-recipients" className="text-gray-300">
+                Destinatários
+              </Label>
+              <Select
+                value={emailRecipients}
+                onValueChange={(value: "all" | "filtered" | "selected") =>
+                  setEmailRecipients(value)
+                }
+              >
+                <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-900 border-gray-800">
+                  <SelectItem value="filtered">
+                    Usuários Filtrados ({filteredUsers.length})
+                  </SelectItem>
+                  <SelectItem value="all">
+                    Todos os Usuários ({usersWithDetails.length})
+                  </SelectItem>
+                  <SelectItem value="selected">
+                    Usuários Selecionados ({selectedUsers.size})
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">
+                {emailRecipients === "all" && `Enviando para todos os ${usersWithDetails.length} usuários`}
+                {emailRecipients === "filtered" && `Enviando para ${filteredUsers.length} usuário(s) filtrado(s)`}
+                {emailRecipients === "selected" && selectedUsers.size === 0 && "Nenhum usuário selecionado"}
+                {emailRecipients === "selected" && selectedUsers.size > 0 && `Enviando para ${selectedUsers.size} usuário(s) selecionado(s)`}
+              </p>
+            </div>
+
+            {/* Subject */}
+            <div className="space-y-2">
+              <Label htmlFor="email-subject" className="text-gray-300">
+                Assunto <span className="text-red-400">*</span>
+              </Label>
+              <Input
+                id="email-subject"
+                placeholder="Ex: Atualização importante da conta"
+                value={emailSubject}
+                onChange={(e) => setEmailSubject(e.target.value)}
+                className="bg-gray-800 border-gray-700 text-white placeholder-gray-500"
+              />
+            </div>
+
+            {/* Message */}
+            <div className="space-y-2">
+              <Label htmlFor="email-message" className="text-gray-300">
+                Mensagem <span className="text-red-400">*</span>
+              </Label>
+              <Textarea
+                id="email-message"
+                placeholder="Digite sua mensagem aqui..."
+                value={emailMessage}
+                onChange={(e) => setEmailMessage(e.target.value)}
+                className="bg-gray-800 border-gray-700 text-white placeholder-gray-500 min-h-[200px]"
+                rows={8}
+              />
+              <p className="text-xs text-gray-500">
+                A mensagem será enviada por email e também aparecerá como notificação na plataforma.
+              </p>
+            </div>
+
+            {/* Preview Recipients */}
+            {getRecipientCount() > 0 && (
+              <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700">
+                <p className="text-sm font-semibold text-gray-300 mb-2">
+                  Preview de Destinatários:
+                </p>
+                <div className="max-h-32 overflow-y-auto space-y-1">
+                  {(emailRecipients === "all"
+                    ? usersWithDetails
+                    : emailRecipients === "filtered"
+                    ? filteredUsers
+                    : usersWithDetails.filter((u) => selectedUsers.has(u.id))
+                  )
+                    .slice(0, 10)
+                    .map((user) => (
+                      <div
+                        key={user.id}
+                        className="text-xs text-gray-400 flex items-center gap-2"
+                      >
+                        <Mail className="w-3 h-3" />
+                        <span className="truncate">{user.email}</span>
+                      </div>
+                    ))}
+                  {getRecipientCount() > 10 && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      ... e mais {getRecipientCount() - 10} destinatário(s)
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEmailDialogOpen(false);
+                setEmailSubject("");
+                setEmailMessage("");
+              }}
+              disabled={sendingEmails}
+              className="border-gray-700 text-gray-300 hover:bg-gray-800"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSendEmails}
+              disabled={sendingEmails || !emailSubject.trim() || !emailMessage.trim() || getRecipientCount() === 0}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {sendingEmails ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  <Mail className="w-4 h-4 mr-2" />
+                  Enviar para {getRecipientCount()} usuário(s)
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+      {/* Transactions Dialog */}
+      <Dialog open={showTransactionsDialog} onOpenChange={setShowTransactionsDialog}>
+        <DialogContent className="max-w-4xl bg-gray-900 border-gray-800 max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <Activity className="w-5 h-5 text-blue-400" />
+              Transações de {viewingUserTransactions?.name}
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Histórico completo de transações do usuário
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto py-4">
+            {loadingTransactions ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                <p className="ml-3 text-gray-400">Carregando transações...</p>
+              </div>
+            ) : viewingUserTransactions?.transactions && viewingUserTransactions.transactions.length > 0 ? (
+              <div className="space-y-2">
+                {viewingUserTransactions.transactions.map((tx) => (
+                  <div
+                    key={tx.id}
+                    className="bg-gray-800 rounded-lg p-4 border border-gray-700 hover:border-gray-600 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 flex-1">
+                        <div className={`p-2 rounded ${
+                          tx.type.includes("DEPOSIT") || tx.type.includes("BUY")
+                            ? "bg-green-900/30 text-green-400"
+                            : "bg-red-900/30 text-red-400"
+                        }`}>
+                          {tx.type.includes("DEPOSIT") || tx.type.includes("BUY") ? (
+                            <TrendingUp className="w-4 h-4" />
+                          ) : (
+                            <TrendingDown className="w-4 h-4" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-white font-medium">
+                              {getTransactionTypeLabel(tx.type)}
+                            </span>
+                            <span className={`text-xs px-2 py-0.5 rounded ${getStatusColor(tx.status)}`}>
+                              {getStatusLabel(tx.status)}
+                            </span>
+                          </div>
+                          <div className="text-sm text-gray-400">
+                            {formatDate(tx.createdAt)}
+                            {tx.externalId && (
+                              <span className="ml-2 text-xs">ID: {tx.externalId}</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className={`text-lg font-semibold ${
+                            tx.type.includes("DEPOSIT") || tx.type.includes("BUY")
+                              ? "text-green-400"
+                              : "text-red-400"
+                          }`}>
+                            {tx.type.includes("DEPOSIT") || tx.type.includes("BUY") ? "+" : "-"}
+                            {tx.currency === "BRL"
+                              ? formatBRL(Number(tx.amount)).replace("R$ ", "")
+                              : formatUSDT(Number(tx.amount)).replace(" USDT", "")}
+                          </span>
+                          <p className="text-xs text-gray-400 mt-1">{tx.currency}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Activity className="w-12 h-12 text-gray-400 mx-auto mb-4 opacity-50" />
+                <p className="text-gray-400">Nenhuma transação encontrada</p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowTransactionsDialog(false);
+                setViewingUserTransactions(null);
+              }}
+              className="border-gray-700 text-gray-300 hover:bg-gray-800"
+            >
+              Fechar
+            </Button>
+            {viewingUserTransactions && (
+              <Button
+                onClick={() => {
+                  setShowTransactionsDialog(false);
+                  handleViewProfile(viewingUserTransactions.id);
+                }}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Ver Perfil Completo
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
