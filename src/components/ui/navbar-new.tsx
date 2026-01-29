@@ -30,8 +30,10 @@ interface NavbarProps {
 export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [moneyDisabled, setMoneyDisabled] = useState(false);
-  const [moneyDisabledMessage, setMoneyDisabledMessage] = useState<string>("");
+  const [depositsDisabled, setDepositsDisabled] = useState(false);
+  const [withdrawalsDisabled, setWithdrawalsDisabled] = useState(false);
+  const [depositsDisabledMessage, setDepositsDisabledMessage] = useState<string>("");
+  const [withdrawalsDisabledMessage, setWithdrawalsDisabledMessage] = useState<string>("");
   const { language, setLanguage, t } = useLanguage();
 
   // Prevent hydration mismatch by only rendering translated content after mount
@@ -46,8 +48,10 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
         if (!response.ok) return;
         const data = await response.json();
         if (data?.success) {
-          setMoneyDisabled(Boolean(data.moneyDisabled));
-          setMoneyDisabledMessage(String(data.moneyDisabledMessage || ""));
+          setDepositsDisabled(Boolean(data.depositsDisabled));
+          setWithdrawalsDisabled(Boolean(data.withdrawalsDisabled));
+          setDepositsDisabledMessage(String(data.depositsDisabledMessage || ""));
+          setWithdrawalsDisabledMessage(String(data.withdrawalsDisabledMessage || ""));
         }
       } catch (error) {
         console.error("Failed to load site status:", error);
@@ -215,15 +219,29 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
         </div>
       </header>
 
-      {moneyDisabled ? (
+      {(depositsDisabled || withdrawalsDisabled) ? (
         <div className="w-full border-b border-yellow-500/30 bg-yellow-500/10 px-4 py-2">
           <p className="text-xs text-yellow-200">
-            {moneyDisabledMessage ||
-              (mounted
-                ? language === "pt"
-                  ? "A plataforma está em atualização. Depósitos e saques estão temporariamente desativados."
-                  : "The platform is being updated. Deposits and withdrawals are temporarily disabled."
-                : "Platform update in progress.")}
+            {depositsDisabled && withdrawalsDisabled
+              ? depositsDisabledMessage || withdrawalsDisabledMessage ||
+                (mounted
+                  ? language === "pt"
+                    ? "A plataforma está em atualização. Depósitos e saques estão temporariamente desativados."
+                    : "The platform is being updated. Deposits and withdrawals are temporarily disabled."
+                  : "Platform update in progress.")
+              : depositsDisabled
+              ? depositsDisabledMessage ||
+                (mounted
+                  ? language === "pt"
+                    ? "Depósitos estão temporariamente desativados."
+                    : "Deposits are temporarily disabled."
+                  : "Deposits disabled.")
+              : withdrawalsDisabledMessage ||
+                (mounted
+                  ? language === "pt"
+                    ? "Saques estão temporariamente desativados."
+                    : "Withdrawals are temporarily disabled."
+                  : "Withdrawals disabled.")}
           </p>
         </div>
       ) : null}

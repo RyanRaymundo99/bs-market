@@ -46,13 +46,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Admin-controlled global switch to disable money functions (deposits/withdrawals)
+    // Admin-controlled switch to disable deposits
     const moneyControls = await getMoneyControls();
-    if (moneyControls.moneyDisabled) {
+    if (moneyControls.depositsDisabled) {
       return NextResponse.json(
         {
-          error: moneyControls.moneyDisabledMessage,
-          code: "MONEY_DISABLED",
+          error: moneyControls.depositsDisabledMessage,
+          code: "DEPOSITS_DISABLED",
         },
         { status: 503 }
       );

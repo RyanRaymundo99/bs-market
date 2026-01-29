@@ -257,8 +257,10 @@ export default function AdminDashboard() {
 
   // Global switch: disable deposits/withdrawals + show maintenance message
   const [moneyControlsLoading, setMoneyControlsLoading] = useState(true);
-  const [moneyDisabled, setMoneyDisabled] = useState(false);
-  const [moneyDisabledMessage, setMoneyDisabledMessage] = useState("");
+  const [depositsDisabled, setDepositsDisabled] = useState(false);
+  const [withdrawalsDisabled, setWithdrawalsDisabled] = useState(false);
+  const [depositsDisabledMessage, setDepositsDisabledMessage] = useState("");
+  const [withdrawalsDisabledMessage, setWithdrawalsDisabledMessage] = useState("");
   const [savingMoneyControls, setSavingMoneyControls] = useState(false);
   const [moneyControlsMeta, setMoneyControlsMeta] = useState<{
     updatedAt: string;
@@ -290,8 +292,10 @@ export default function AdminDashboard() {
 
         const data = await response.json();
         if (data?.moneyControls) {
-          setMoneyDisabled(Boolean(data.moneyControls.moneyDisabled));
-          setMoneyDisabledMessage(String(data.moneyControls.moneyDisabledMessage || ""));
+          setDepositsDisabled(Boolean(data.moneyControls.depositsDisabled));
+          setWithdrawalsDisabled(Boolean(data.moneyControls.withdrawalsDisabled));
+          setDepositsDisabledMessage(String(data.moneyControls.depositsDisabledMessage || ""));
+          setWithdrawalsDisabledMessage(String(data.moneyControls.withdrawalsDisabledMessage || ""));
           setMoneyControlsMeta({
             updatedAt: String(data.moneyControls.updatedAt),
             updatedBy: data.moneyControls.updatedBy ?? null,
@@ -315,8 +319,10 @@ export default function AdminDashboard() {
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          moneyDisabled,
-          moneyDisabledMessage,
+          depositsDisabled,
+          withdrawalsDisabled,
+          depositsDisabledMessage,
+          withdrawalsDisabledMessage,
           notifyUsers: true,
         }),
       });
@@ -328,8 +334,10 @@ export default function AdminDashboard() {
       }
 
       if (data?.moneyControls) {
-        setMoneyDisabled(Boolean(data.moneyControls.moneyDisabled));
-        setMoneyDisabledMessage(String(data.moneyControls.moneyDisabledMessage || ""));
+        setDepositsDisabled(Boolean(data.moneyControls.depositsDisabled));
+        setWithdrawalsDisabled(Boolean(data.moneyControls.withdrawalsDisabled));
+        setDepositsDisabledMessage(String(data.moneyControls.depositsDisabledMessage || ""));
+        setWithdrawalsDisabledMessage(String(data.moneyControls.withdrawalsDisabledMessage || ""));
         setMoneyControlsMeta({
           updatedAt: String(data.moneyControls.updatedAt),
           updatedBy: data.moneyControls.updatedBy ?? null,
@@ -1619,48 +1627,87 @@ export default function AdminDashboard() {
             <CardHeader>
               <CardTitle className="text-white flex items-center justify-between">
                 Money Functions
-                {moneyDisabled ? (
+                {depositsDisabled || withdrawalsDisabled ? (
                   <WifiOff className="h-4 w-4 text-red-400" />
                 ) : (
                   <Wifi className="h-4 w-4 text-green-400" />
                 )}
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  checked={moneyDisabled}
-                  onCheckedChange={(checked) => setMoneyDisabled(checked === true)}
-                  disabled={moneyControlsLoading || savingMoneyControls}
-                  className="mt-1 border-gray-600 data-[state=checked]:bg-red-600"
-                />
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-gray-200">
-                    Disable deposits & withdrawals
-                  </p>
-                  <p className="text-xs text-gray-400">
-                    Blocks deposit/withdraw APIs and shows the message to users.
-                  </p>
+            <CardContent className="space-y-6">
+              {/* Deposits Control */}
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    checked={depositsDisabled}
+                    onCheckedChange={(checked) => setDepositsDisabled(checked === true)}
+                    disabled={moneyControlsLoading || savingMoneyControls}
+                    className="mt-1 border-gray-600 data-[state=checked]:bg-red-600"
+                  />
+                  <div className="space-y-1 flex-1">
+                    <p className="text-sm font-medium text-gray-200">
+                      Disable deposits
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      Blocks deposit APIs and shows the message to users.
+                    </p>
+                  </div>
                 </div>
+
+                {depositsDisabled && (
+                  <div className="space-y-2 ml-7">
+                    <Label className="text-gray-300 text-xs">Deposit message</Label>
+                    <Textarea
+                      value={depositsDisabledMessage}
+                      onChange={(e) => setDepositsDisabledMessage(e.target.value)}
+                      placeholder="Deposits are temporarily disabled..."
+                      className="bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 text-sm"
+                      rows={3}
+                      disabled={moneyControlsLoading || savingMoneyControls}
+                    />
+                  </div>
+                )}
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-gray-300">Message shown to users</Label>
-                <Textarea
-                  value={moneyDisabledMessage}
-                  onChange={(e) => setMoneyDisabledMessage(e.target.value)}
-                  placeholder="The site is being updated..."
-                  className="bg-gray-800/50 border-gray-700 text-white placeholder-gray-500"
-                  rows={4}
-                  disabled={moneyControlsLoading || savingMoneyControls}
-                />
+              {/* Withdrawals Control */}
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    checked={withdrawalsDisabled}
+                    onCheckedChange={(checked) => setWithdrawalsDisabled(checked === true)}
+                    disabled={moneyControlsLoading || savingMoneyControls}
+                    className="mt-1 border-gray-600 data-[state=checked]:bg-red-600"
+                  />
+                  <div className="space-y-1 flex-1">
+                    <p className="text-sm font-medium text-gray-200">
+                      Disable withdrawals
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      Blocks withdrawal APIs and shows the message to users.
+                    </p>
+                  </div>
+                </div>
+
+                {withdrawalsDisabled && (
+                  <div className="space-y-2 ml-7">
+                    <Label className="text-gray-300 text-xs">Withdrawal message</Label>
+                    <Textarea
+                      value={withdrawalsDisabledMessage}
+                      onChange={(e) => setWithdrawalsDisabledMessage(e.target.value)}
+                      placeholder="Withdrawals are temporarily disabled..."
+                      className="bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 text-sm"
+                      rows={3}
+                      disabled={moneyControlsLoading || savingMoneyControls}
+                    />
+                  </div>
+                )}
               </div>
 
               <Button
                 onClick={saveMoneyControls}
                 disabled={moneyControlsLoading || savingMoneyControls}
                 className={`w-full ${
-                  moneyDisabled
+                  depositsDisabled || withdrawalsDisabled
                     ? "bg-red-600 hover:bg-red-700"
                     : "bg-green-600 hover:bg-green-700"
                 } text-white`}

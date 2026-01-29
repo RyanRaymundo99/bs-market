@@ -69,7 +69,7 @@ export async function sendEmail({
   let fromAddress;
   if (useResend) {
     // Use Resend's sandbox domain for testing if no verified domain is configured
-    fromAddress = process.env.FROM_EMAIL || "onboarding@resend.dev";
+    fromAddress = process.env.FROM_EMAIL || "suporte@bsmarket.com.br";
   } else if (useGmail) {
     fromAddress = process.env.EMAIL_SERVER_USER;
   } else {

@@ -24,26 +24,42 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const body = (await request.json()) as {
-      moneyDisabled?: boolean;
-      moneyDisabledMessage?: string;
+      depositsDisabled?: boolean;
+      withdrawalsDisabled?: boolean;
+      depositsDisabledMessage?: string;
+      withdrawalsDisabledMessage?: string;
       notifyUsers?: boolean;
     };
 
-    if (typeof body.moneyDisabled !== "boolean") {
+    if (typeof body.depositsDisabled !== "boolean") {
       return NextResponse.json(
-        { error: "moneyDisabled must be a boolean" },
+        { error: "depositsDisabled must be a boolean" },
         { status: 400 }
       );
     }
 
-    const message =
-      typeof body.moneyDisabledMessage === "string"
-        ? body.moneyDisabledMessage.trim()
-        : "";
+    if (typeof body.withdrawalsDisabled !== "boolean") {
+      return NextResponse.json(
+        { error: "withdrawalsDisabled must be a boolean" },
+        { status: 400 }
+      );
+    }
+
+    const depositsMessage =
+      typeof body.depositsDisabledMessage === "string"
+        ? body.depositsDisabledMessage.trim()
+        : undefined;
+
+    const withdrawalsMessage =
+      typeof body.withdrawalsDisabledMessage === "string"
+        ? body.withdrawalsDisabledMessage.trim()
+        : undefined;
 
     const { moneyControls, notifiedUsers } = await setMoneyControls({
-      moneyDisabled: body.moneyDisabled,
-      moneyDisabledMessage: message,
+      depositsDisabled: body.depositsDisabled,
+      withdrawalsDisabled: body.withdrawalsDisabled,
+      depositsDisabledMessage: depositsMessage,
+      withdrawalsDisabledMessage: withdrawalsMessage,
       updatedBy: adminSession.user.email || adminSession.userId,
       notifyUsers: Boolean(body.notifyUsers),
     });

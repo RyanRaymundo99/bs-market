@@ -37,9 +37,9 @@ const TradePage = () => {
   const { toast } = useToast();
   const { t, language } = useLanguage();
 
-  // Admin-controlled switch to disable deposits/withdrawals
-  const [moneyDisabled, setMoneyDisabled] = useState(false);
-  const [moneyDisabledMessage, setMoneyDisabledMessage] = useState<string>("");
+  // Admin-controlled switch to disable deposits
+  const [depositsDisabled, setDepositsDisabled] = useState(false);
+  const [depositsDisabledMessage, setDepositsDisabledMessage] = useState<string>("");
 
   // Swipe gesture state for mobile navigation
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -68,8 +68,8 @@ const TradePage = () => {
         if (!response.ok) return;
         const data = await response.json();
         if (data?.success) {
-          setMoneyDisabled(Boolean(data.moneyDisabled));
-          setMoneyDisabledMessage(String(data.moneyDisabledMessage || ""));
+          setDepositsDisabled(Boolean(data.depositsDisabled));
+          setDepositsDisabledMessage(String(data.depositsDisabledMessage || ""));
         }
       } catch (error) {
         console.error("Failed to load site status:", error);
@@ -496,11 +496,11 @@ const TradePage = () => {
   };
 
   const handleBuyConfirm = async () => {
-    if (moneyDisabled) {
+    if (depositsDisabled) {
       toast({
         title: language === "pt" ? "Indisponível" : "Unavailable",
         description:
-          moneyDisabledMessage ||
+          depositsDisabledMessage ||
           (language === "pt"
             ? "Depósitos temporariamente desativados."
             : "Deposits are temporarily disabled."),
@@ -741,11 +741,11 @@ const TradePage = () => {
 
   // Fetch crypto deposit address
   const fetchCryptoDepositAddress = async () => {
-    if (moneyDisabled) {
+    if (depositsDisabled) {
       toast({
         title: language === "pt" ? "Indisponível" : "Unavailable",
         description:
-          moneyDisabledMessage ||
+          depositsDisabledMessage ||
           (language === "pt"
             ? "Depósitos temporariamente desativados."
             : "Deposits are temporarily disabled."),
@@ -831,16 +831,16 @@ const TradePage = () => {
         className={`container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl ${isMobile ? "pb-16" : ""}`}
         style={isMobile ? { paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' } : undefined}
       >
-        {moneyDisabled ? (
+        {depositsDisabled ? (
           <div className="max-w-4xl mx-auto mb-6 rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4">
             <p className="text-sm font-medium text-yellow-200">
               {language === "pt" ? "Atualização da plataforma" : "Platform update"}
             </p>
             <p className="text-xs text-yellow-100/80 mt-1">
-              {moneyDisabledMessage ||
+              {depositsDisabledMessage ||
                 (language === "pt"
-                  ? "Depósitos e saques estão temporariamente desativados."
-                  : "Deposits and withdrawals are temporarily disabled.")}
+                  ? "Depósitos estão temporariamente desativados."
+                  : "Deposits are temporarily disabled.")}
             </p>
           </div>
         ) : null}
@@ -975,7 +975,7 @@ const TradePage = () => {
 
             <Button
               onClick={handleBuyConfirm}
-              disabled={buyUSDTAmount <= 0 || loading || moneyDisabled}
+              disabled={buyUSDTAmount <= 0 || loading || depositsDisabled}
               className="w-full h-12 sm:h-14 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors text-base sm:text-lg"
             >
               {loading ? (

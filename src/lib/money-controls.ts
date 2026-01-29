@@ -1,34 +1,101 @@
 import prisma from "@/lib/prisma";
 
 export type MoneyControls = {
-  moneyDisabled: boolean;
-  moneyDisabledMessage: string;
+  depositsDisabled: boolean;
+  withdrawalsDisabled: boolean;
+  depositsDisabledMessage: string;
+  withdrawalsDisabledMessage: string;
   updatedAt: Date;
   updatedBy: string | null;
 };
 
-const DEFAULT_MESSAGE =
-  "The site is being updated. Deposits and withdrawals are temporarily disabled. Soon you will be able to continue your business.";
+const DEFAULT_DEPOSITS_MESSAGE =
+  "Deposits are temporarily disabled. The site is being updated. Soon you will be able to continue your business.";
+const DEFAULT_WITHDRAWALS_MESSAGE =
+  "Withdrawals are temporarily disabled. The site is being updated. Soon you will be able to continue your business.";
 
 async function ensureMoneyControlsTable(): Promise<void> {
   // This project checks in a generated Prisma client and doesn't keep migrations in-repo.
   // To keep this feature deployable without regenerating Prisma, we store settings in a
   // dedicated Postgres table using raw SQL, created on-demand.
-  await prisma.$executeRaw`
-    CREATE TABLE IF NOT EXISTS "site_settings" (
-      "id" integer PRIMARY KEY,
-      "moneyDisabled" boolean NOT NULL DEFAULT false,
-      "moneyDisabledMessage" text NOT NULL DEFAULT 'The site is being updated. Deposits and withdrawals are temporarily disabled. Soon you will be able to continue your business.',
-      "updatedAt" timestamptz NOT NULL DEFAULT now(),
-      "updatedBy" text
-    );
+  
+  // First, check if the table exists and what columns it has
+  const tableExists = await prisma.$queryRaw<Array<{ exists: boolean }>>`
+    SELECT EXISTS (
+      SELECT FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_name = 'site_settings'
+    ) as exists;
   `;
 
-  await prisma.$executeRaw`
-    INSERT INTO "site_settings" ("id")
-    VALUES (1)
-    ON CONFLICT ("id") DO NOTHING;
-  `;
+  if (!tableExists[0]?.exists) {
+    // Create new table with separate flags
+    await prisma.$executeRaw`
+      CREATE TABLE "site_settings" (
+        "id" integer PRIMARY KEY,
+        "depositsDisabled" boolean NOT NULL DEFAULT false,
+        "withdrawalsDisabled" boolean NOT NULL DEFAULT false,
+        "depositsDisabledMessage" text NOT NULL DEFAULT ${DEFAULT_DEPOSITS_MESSAGE},
+        "withdrawalsDisabledMessage" text NOT NULL DEFAULT ${DEFAULT_WITHDRAWALS_MESSAGE},
+        "updatedAt" timestamptz NOT NULL DEFAULT now(),
+        "updatedBy" text
+      );
+    `;
+
+    await prisma.$executeRaw`
+      INSERT INTO "site_settings" ("id")
+      VALUES (1)
+      ON CONFLICT ("id") DO NOTHING;
+    `;
+  } else {
+    // Table exists - migrate from old schema if needed
+    // Check if old columns exist
+    const hasOldColumns = await prisma.$queryRaw<Array<{ exists: boolean }>>`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'site_settings'
+        AND column_name = 'moneyDisabled'
+      ) as exists;
+    `;
+
+    if (hasOldColumns[0]?.exists) {
+      // Migrate from old schema
+      await prisma.$executeRaw`
+        ALTER TABLE "site_settings"
+        ADD COLUMN IF NOT EXISTS "depositsDisabled" boolean NOT NULL DEFAULT false,
+        ADD COLUMN IF NOT EXISTS "withdrawalsDisabled" boolean NOT NULL DEFAULT false,
+        ADD COLUMN IF NOT EXISTS "depositsDisabledMessage" text NOT NULL DEFAULT ${DEFAULT_DEPOSITS_MESSAGE},
+        ADD COLUMN IF NOT EXISTS "withdrawalsDisabledMessage" text NOT NULL DEFAULT ${DEFAULT_WITHDRAWALS_MESSAGE};
+      `;
+
+      // Migrate data: if moneyDisabled was true, set both to true
+      await prisma.$executeRaw`
+        UPDATE "site_settings"
+        SET 
+          "depositsDisabled" = COALESCE("moneyDisabled", false),
+          "withdrawalsDisabled" = COALESCE("moneyDisabled", false),
+          "depositsDisabledMessage" = COALESCE("moneyDisabledMessage", ${DEFAULT_DEPOSITS_MESSAGE}),
+          "withdrawalsDisabledMessage" = COALESCE("moneyDisabledMessage", ${DEFAULT_WITHDRAWALS_MESSAGE})
+        WHERE "id" = 1;
+      `;
+    } else {
+      // Ensure new columns exist (in case migration was partial)
+      await prisma.$executeRaw`
+        ALTER TABLE "site_settings"
+        ADD COLUMN IF NOT EXISTS "depositsDisabled" boolean NOT NULL DEFAULT false,
+        ADD COLUMN IF NOT EXISTS "withdrawalsDisabled" boolean NOT NULL DEFAULT false,
+        ADD COLUMN IF NOT EXISTS "depositsDisabledMessage" text NOT NULL DEFAULT ${DEFAULT_DEPOSITS_MESSAGE},
+        ADD COLUMN IF NOT EXISTS "withdrawalsDisabledMessage" text NOT NULL DEFAULT ${DEFAULT_WITHDRAWALS_MESSAGE};
+      `;
+
+      await prisma.$executeRaw`
+        INSERT INTO "site_settings" ("id")
+        VALUES (1)
+        ON CONFLICT ("id") DO NOTHING;
+      `;
+    }
+  }
 }
 
 export async function getMoneyControls(): Promise<MoneyControls> {
@@ -36,13 +103,15 @@ export async function getMoneyControls(): Promise<MoneyControls> {
 
   const rows = await prisma.$queryRaw<
     Array<{
-      moneyDisabled: boolean;
-      moneyDisabledMessage: string;
+      depositsDisabled: boolean;
+      withdrawalsDisabled: boolean;
+      depositsDisabledMessage: string;
+      withdrawalsDisabledMessage: string;
       updatedAt: Date;
       updatedBy: string | null;
     }>
   >`
-    SELECT "moneyDisabled", "moneyDisabledMessage", "updatedAt", "updatedBy"
+    SELECT "depositsDisabled", "withdrawalsDisabled", "depositsDisabledMessage", "withdrawalsDisabledMessage", "updatedAt", "updatedBy"
     FROM "site_settings"
     WHERE "id" = 1
     LIMIT 1;
@@ -51,8 +120,10 @@ export async function getMoneyControls(): Promise<MoneyControls> {
   if (!rows[0]) {
     // Extremely defensive: should not happen because we insert id=1 above.
     return {
-      moneyDisabled: false,
-      moneyDisabledMessage: DEFAULT_MESSAGE,
+      depositsDisabled: false,
+      withdrawalsDisabled: false,
+      depositsDisabledMessage: DEFAULT_DEPOSITS_MESSAGE,
+      withdrawalsDisabledMessage: DEFAULT_WITHDRAWALS_MESSAGE,
       updatedAt: new Date(),
       updatedBy: null,
     };
@@ -62,8 +133,10 @@ export async function getMoneyControls(): Promise<MoneyControls> {
 }
 
 export async function setMoneyControls(params: {
-  moneyDisabled: boolean;
-  moneyDisabledMessage: string;
+  depositsDisabled: boolean;
+  withdrawalsDisabled: boolean;
+  depositsDisabledMessage?: string;
+  withdrawalsDisabledMessage?: string;
   updatedBy?: string | null;
   notifyUsers?: boolean;
 }): Promise<{ moneyControls: MoneyControls; notifiedUsers: number }> {
@@ -72,8 +145,10 @@ export async function setMoneyControls(params: {
   await prisma.$executeRaw`
     UPDATE "site_settings"
     SET
-      "moneyDisabled" = ${params.moneyDisabled},
-      "moneyDisabledMessage" = ${params.moneyDisabledMessage || DEFAULT_MESSAGE},
+      "depositsDisabled" = ${params.depositsDisabled},
+      "withdrawalsDisabled" = ${params.withdrawalsDisabled},
+      "depositsDisabledMessage" = ${params.depositsDisabledMessage || DEFAULT_DEPOSITS_MESSAGE},
+      "withdrawalsDisabledMessage" = ${params.withdrawalsDisabledMessage || DEFAULT_WITHDRAWALS_MESSAGE},
       "updatedAt" = now(),
       "updatedBy" = ${params.updatedBy ?? null}
     WHERE "id" = 1;
@@ -84,19 +159,37 @@ export async function setMoneyControls(params: {
   let notifiedUsers = 0;
   const shouldNotify =
     Boolean(params.notifyUsers) &&
-    (current.moneyDisabled !== next.moneyDisabled ||
-      current.moneyDisabledMessage !== next.moneyDisabledMessage);
+    (current.depositsDisabled !== next.depositsDisabled ||
+      current.withdrawalsDisabled !== next.withdrawalsDisabled ||
+      current.depositsDisabledMessage !== next.depositsDisabledMessage ||
+      current.withdrawalsDisabledMessage !== next.withdrawalsDisabledMessage);
 
   if (shouldNotify) {
     const users = await prisma.user.findMany({ select: { id: true } });
     if (users.length > 0) {
-      const title = next.moneyDisabled
+      // Build notification messages based on what changed
+      const changes: string[] = [];
+      if (next.depositsDisabled) {
+        changes.push("deposits");
+      }
+      if (next.withdrawalsDisabled) {
+        changes.push("withdrawals");
+      }
+
+      const title = changes.length > 0
         ? "Platform update in progress"
         : "Platform is back online";
 
-      const message = next.moneyDisabled
-        ? next.moneyDisabledMessage
-        : "Deposits and withdrawals are available again.";
+      let message = "";
+      if (changes.length === 2) {
+        message = next.depositsDisabledMessage || next.withdrawalsDisabledMessage || "Deposits and withdrawals are temporarily disabled.";
+      } else if (next.depositsDisabled) {
+        message = next.depositsDisabledMessage;
+      } else if (next.withdrawalsDisabled) {
+        message = next.withdrawalsDisabledMessage;
+      } else {
+        message = "Deposits and withdrawals are available again.";
+      }
 
       const data = users.map((u) => ({
         userId: u.id,
@@ -105,7 +198,8 @@ export async function setMoneyControls(params: {
         message,
         read: false,
         metadata: {
-          moneyDisabled: next.moneyDisabled,
+          depositsDisabled: next.depositsDisabled,
+          withdrawalsDisabled: next.withdrawalsDisabled,
           updatedAt: next.updatedAt.toISOString(),
           updatedBy: next.updatedBy,
         },

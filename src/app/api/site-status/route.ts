@@ -8,8 +8,10 @@ export async function GET() {
     return NextResponse.json(
       {
         success: true,
-        moneyDisabled: moneyControls.moneyDisabled,
-        moneyDisabledMessage: moneyControls.moneyDisabledMessage,
+        depositsDisabled: moneyControls.depositsDisabled,
+        withdrawalsDisabled: moneyControls.withdrawalsDisabled,
+        depositsDisabledMessage: moneyControls.depositsDisabledMessage,
+        withdrawalsDisabledMessage: moneyControls.withdrawalsDisabledMessage,
         updatedAt: moneyControls.updatedAt,
       },
       {

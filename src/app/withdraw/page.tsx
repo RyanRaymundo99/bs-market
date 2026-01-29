@@ -82,9 +82,9 @@ export default function WithdrawPage() {
   const [loading, setLoading] = useState(true);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  // Admin-controlled switch to disable deposits/withdrawals
-  const [moneyDisabled, setMoneyDisabled] = useState(false);
-  const [moneyDisabledMessage, setMoneyDisabledMessage] = useState<string>("");
+  // Admin-controlled switch to disable withdrawals
+  const [withdrawalsDisabled, setWithdrawalsDisabled] = useState(false);
+  const [withdrawalsDisabledMessage, setWithdrawalsDisabledMessage] = useState<string>("");
 
   // Swipe gesture state for mobile navigation
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -163,8 +163,8 @@ export default function WithdrawPage() {
         if (!response.ok) return;
         const data = await response.json();
         if (data?.success) {
-          setMoneyDisabled(Boolean(data.moneyDisabled));
-          setMoneyDisabledMessage(String(data.moneyDisabledMessage || ""));
+          setWithdrawalsDisabled(Boolean(data.withdrawalsDisabled));
+          setWithdrawalsDisabledMessage(String(data.withdrawalsDisabledMessage || ""));
         }
       } catch (error) {
         console.error("Failed to load site status:", error);
@@ -316,11 +316,11 @@ export default function WithdrawPage() {
 
   // Handle USDT withdrawal
   const handleUSDTWithdrawal = async () => {
-    if (moneyDisabled) {
+    if (withdrawalsDisabled) {
       toast({
         title: language === "pt" ? "Indisponível" : "Unavailable",
         description:
-          moneyDisabledMessage ||
+          withdrawalsDisabledMessage ||
           (language === "pt"
             ? "Saques temporariamente desativados."
             : "Withdrawals are temporarily disabled."),
@@ -421,11 +421,11 @@ export default function WithdrawPage() {
 
   // Handle PIX withdrawal
   const handlePIXWithdrawal = async () => {
-    if (moneyDisabled) {
+    if (withdrawalsDisabled) {
       toast({
         title: language === "pt" ? "Indisponível" : "Unavailable",
         description:
-          moneyDisabledMessage ||
+          withdrawalsDisabledMessage ||
           (language === "pt"
             ? "Saques temporariamente desativados."
             : "Withdrawals are temporarily disabled."),
@@ -617,7 +617,7 @@ export default function WithdrawPage() {
                   </p>
                 </div>
 
-                {moneyDisabled ? (
+                {withdrawalsDisabled ? (
                   <div className="mb-4 rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4">
                     <p className="text-sm font-medium text-yellow-200">
                       {language === "pt"
@@ -625,10 +625,10 @@ export default function WithdrawPage() {
                         : "Platform update"}
                     </p>
                     <p className="text-xs text-yellow-100/80 mt-1">
-                      {moneyDisabledMessage ||
+                      {withdrawalsDisabledMessage ||
                         (language === "pt"
-                          ? "Depósitos e saques estão temporariamente desativados."
-                          : "Deposits and withdrawals are temporarily disabled.")}
+                          ? "Saques estão temporariamente desativados."
+                          : "Withdrawals are temporarily disabled.")}
                     </p>
                   </div>
                 ) : null}
@@ -787,7 +787,7 @@ export default function WithdrawPage() {
                       <Button
                         onClick={handleUSDTWithdrawal}
                         disabled={
-                          moneyDisabled ||
+                          withdrawalsDisabled ||
                           processing ||
                           !usdtAmount ||
                           !walletAddress ||
@@ -899,7 +899,7 @@ export default function WithdrawPage() {
                       <Button
                         onClick={handlePIXWithdrawal}
                         disabled={
-                          moneyDisabled ||
+                          withdrawalsDisabled ||
                           processingPix ||
                           !pixAmount ||
                           !pixKey ||
