@@ -2168,12 +2168,12 @@ export default function AdminDashboard() {
 
           {/* Top Users & System Health */}
           <div className="space-y-4">
-            {/* Top Users */}
+            {/* Top Priority Users */}
             <Card className="bg-gray-900 border-gray-800">
               <CardHeader className="pb-3">
                 <CardTitle className="text-white flex items-center gap-2">
                   <TrendingUp className="h-5 w-5 text-green-400" />
-                  Top Usuários
+                  Top Priority Users
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -2186,7 +2186,7 @@ export default function AdminDashboard() {
                     topUsers.map((user, idx) => (
                       <div
                         key={user.id}
-                        className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-800/50 transition-colors cursor-pointer"
+                        className="flex items-center p-2 rounded-lg hover:bg-gray-800/50 transition-colors cursor-pointer"
                         onClick={() => router.push(`/admin/users/${user.id}`)}
                       >
                         <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -2201,11 +2201,6 @@ export default function AdminDashboard() {
                               {user.email}
                             </p>
                           </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-bold text-green-400">
-                            {formatCurrency(user.totalBalance || 0)}
-                          </p>
                         </div>
                       </div>
                     ))
