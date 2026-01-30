@@ -54,10 +54,10 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
           setDepositsDisabled(Boolean(data.depositsDisabled));
           setWithdrawalsDisabled(Boolean(data.withdrawalsDisabled));
           setDepositsDisabledMessage(
-            String(data.depositsDisabledMessage || ""),
+            String(data.depositsDisabledMessage || "")
           );
           setWithdrawalsDisabledMessage(
-            String(data.withdrawalsDisabledMessage || ""),
+            String(data.withdrawalsDisabledMessage || "")
           );
         }
       } catch (error) {
@@ -140,14 +140,14 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
                   {mounted
                     ? t(link.key)
                     : link.key === "trade"
-                      ? "Depositar"
-                      : link.key === "dashboard"
-                        ? "Dashboard"
-                        : link.key === "withdraw"
-                          ? "Sacar"
-                          : link.key === "profile"
-                            ? "Perfil"
-                            : link.key}
+                    ? "Depositar"
+                    : link.key === "dashboard"
+                    ? "Dashboard"
+                    : link.key === "withdraw"
+                    ? "Sacar"
+                    : link.key === "profile"
+                    ? "Perfil"
+                    : link.key}
                 </button>
               );
             })}
@@ -197,8 +197,8 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
                 ? t("loggingOut")
                 : t("logout")
               : isLoggingOut
-                ? "Saindo..."
-                : "Sair"}
+              ? "Saindo..."
+              : "Sair"}
           </Button>
         </div>
       </header>
@@ -255,18 +255,18 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
                     : "The platform is being updated. Deposits and withdrawals are temporarily disabled."
                   : "Platform update in progress.")
               : depositsDisabled
-                ? depositsDisabledMessage ||
-                  (mounted
-                    ? language === "pt"
-                      ? "Depósitos estão temporariamente desativados."
-                      : "Deposits are temporarily disabled."
-                    : "Deposits disabled.")
-                : withdrawalsDisabledMessage ||
-                  (mounted
-                    ? language === "pt"
-                      ? "Saques estão temporariamente desativados."
-                      : "Withdrawals are temporarily disabled."
-                    : "Withdrawals disabled.")}
+              ? depositsDisabledMessage ||
+                (mounted
+                  ? language === "pt"
+                    ? "Depósitos estão temporariamente desativados."
+                    : "Deposits are temporarily disabled."
+                  : "Deposits disabled.")
+              : withdrawalsDisabledMessage ||
+                (mounted
+                  ? language === "pt"
+                    ? "Saques estão temporariamente desativados."
+                    : "Withdrawals are temporarily disabled."
+                  : "Withdrawals disabled.")}
           </p>
         </div>
       ) : null}
@@ -317,14 +317,14 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
                       {mounted
                         ? t(link.key)
                         : link.key === "trade"
-                          ? "Depositar"
-                          : link.key === "dashboard"
-                            ? "Dashboard"
-                            : link.key === "withdraw"
-                              ? "Sacar"
-                              : link.key === "profile"
-                                ? "Perfil"
-                                : link.key}
+                        ? "Depositar"
+                        : link.key === "dashboard"
+                        ? "Dashboard"
+                        : link.key === "withdraw"
+                        ? "Sacar"
+                        : link.key === "profile"
+                        ? "Perfil"
+                        : link.key}
                     </span>
                   </button>
                 );
@@ -378,8 +378,8 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
                       ? t("loggingOut")
                       : t("logout")
                     : isLoggingOut
-                      ? "Saindo..."
-                      : "Sair"}
+                    ? "Saindo..."
+                    : "Sair"}
                 </span>
               </button>
             </div>

@@ -28,7 +28,5 @@ export function syncMobileMenuToBody(open: boolean): void {
   } else {
     document.body.classList.remove(BODY_CLASS);
   }
-  window.dispatchEvent(
-    new CustomEvent(EVENT_NAME, { detail: { open } }),
-  );
+  window.dispatchEvent(new CustomEvent(EVENT_NAME, { detail: { open } }));
 }

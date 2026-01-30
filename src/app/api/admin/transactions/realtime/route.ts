@@ -16,7 +16,10 @@ export async function GET(request: NextRequest) {
 
     // Get query parameters for pagination and filtering
     const { searchParams } = new URL(request.url);
-    const limit = Math.min(parseInt(searchParams.get("limit") || "200", 10) || 200, 500);
+    const limit = Math.min(
+      parseInt(searchParams.get("limit") || "200", 10) || 200,
+      500
+    );
     const since = searchParams.get("since"); // ISO timestamp for incremental updates
     const lastId = searchParams.get("lastId"); // Last transaction ID for pagination
 
@@ -190,7 +193,9 @@ export async function GET(request: NextRequest) {
         balance: balance,
         description: tx.description,
         date: tx.createdAt.toISOString(),
-        user: tx.user ? { name: tx.user.name || "", email: tx.user.email || "" } : null,
+        user: tx.user
+          ? { name: tx.user.name || "", email: tx.user.email || "" }
+          : null,
         userId: tx.userId,
         value: value,
         status: status,
@@ -214,7 +219,9 @@ export async function GET(request: NextRequest) {
         balance: 0,
         description: `Compra USDT (ordem sem transação)`,
         date: order.createdAt.toISOString(),
-        user: order.user ? { name: order.user.name || "", email: order.user.email || "" } : null,
+        user: order.user
+          ? { name: order.user.name || "", email: order.user.email || "" }
+          : null,
         userId: order.userId,
         value: total,
         status: order.status, // PENDING, FAILED, CANCELLED, EXECUTING, COMPLETED

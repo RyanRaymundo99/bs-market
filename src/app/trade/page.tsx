@@ -55,8 +55,8 @@ const TradePage = () => {
     const checkMobile = () => {
       setIsMobile(
         /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-          navigator.userAgent,
-        ) || window.innerWidth <= 768,
+          navigator.userAgent
+        ) || window.innerWidth <= 768
       );
     };
     checkMobile();
@@ -73,7 +73,7 @@ const TradePage = () => {
         if (data?.success) {
           setDepositsDisabled(Boolean(data.depositsDisabled));
           setDepositsDisabledMessage(
-            String(data.depositsDisabledMessage || ""),
+            String(data.depositsDisabledMessage || "")
           );
         }
       } catch (error) {
@@ -189,7 +189,7 @@ const TradePage = () => {
 
   // Track which transactions are in loading state (recently created, status being determined)
   const [loadingTransactions, setLoadingTransactions] = useState<Set<string>>(
-    new Set(),
+    new Set()
   );
 
   // Store PIX data by transaction ID so we can reopen the modal for pending payments
@@ -252,8 +252,14 @@ const TradePage = () => {
     let decimalPart: string;
 
     if (lastComma >= 0) {
-      integerPart = cleaned.slice(0, lastComma).replace(/\./g, "").replace(/\D/g, "") || "0";
-      decimalPart = cleaned.slice(lastComma + 1).replace(/\./g, "").replace(/\D/g, "").slice(0, 4);
+      integerPart =
+        cleaned.slice(0, lastComma).replace(/\./g, "").replace(/\D/g, "") ||
+        "0";
+      decimalPart = cleaned
+        .slice(lastComma + 1)
+        .replace(/\./g, "")
+        .replace(/\D/g, "")
+        .slice(0, 4);
     } else {
       integerPart = cleaned.replace(/\./g, "").replace(/\D/g, "") || "0";
       decimalPart = "";
@@ -329,7 +335,7 @@ const TradePage = () => {
                   "rejectionMessage",
                   language === "pt"
                     ? "Sua conta foi rejeitada. Entre em contato com o suporte."
-                    : "Your account has been rejected. Please contact support.",
+                    : "Your account has been rejected. Please contact support."
                 );
                 window.location.href = "/";
               }
@@ -410,7 +416,7 @@ const TradePage = () => {
           }
           const buyOrders = (data.orders as OrderResponse[])
             .filter(
-              (order) => order.type === "BUY" && order.baseCurrency === "USDT",
+              (order) => order.type === "BUY" && order.baseCurrency === "USDT"
             )
             .map((order) => {
               const total = parseFloat(order.total.toString());
@@ -483,7 +489,7 @@ const TradePage = () => {
               } catch (error) {
                 console.error(
                   "Error updating PIX data in localStorage:",
-                  error,
+                  error
                 );
               }
             }
@@ -580,12 +586,12 @@ const TradePage = () => {
                       0,
                       0,
                       canvas.width,
-                      canvas.height,
+                      canvas.height
                     );
                     const code = jsQR(
                       imageData.data,
                       imageData.width,
-                      imageData.height,
+                      imageData.height
                     );
                     resolve(code?.data || null);
                   } else {
@@ -612,7 +618,7 @@ const TradePage = () => {
               console.log("✅ Successfully decoded PIX code from QR image!");
               console.log(
                 "Decoded PIX code:",
-                decodedCode.substring(0, 50) + "...",
+                decodedCode.substring(0, 50) + "..."
               );
               pixCode = decodedCode;
             } else {
@@ -784,8 +790,8 @@ const TradePage = () => {
           error instanceof Error
             ? error.message
             : language === "pt"
-              ? "Falha ao obter endereço de depósito"
-              : "Failed to get deposit address",
+            ? "Falha ao obter endereço de depósito"
+            : "Failed to get deposit address",
         variant: "destructive",
       });
     } finally {
@@ -830,7 +836,9 @@ const TradePage = () => {
     >
       <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
       <div
-        className={`container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl ${isMobile ? "pb-16" : ""}`}
+        className={`container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl ${
+          isMobile ? "pb-16" : ""
+        }`}
         style={
           isMobile
             ? { paddingBottom: "calc(64px + env(safe-area-inset-bottom, 0px))" }
@@ -865,8 +873,8 @@ const TradePage = () => {
                 {depositMethod === "PIX"
                   ? `${t("buyUSDTViaPIX")} • ${t("fee")}`
                   : language === "pt"
-                    ? "Depositar USDT via Cripto"
-                    : "Deposit USDT via Crypto"}
+                  ? "Depositar USDT via Cripto"
+                  : "Deposit USDT via Crypto"}
               </p>
             </div>
 
@@ -1092,20 +1100,20 @@ const TradePage = () => {
                                   transaction.status === "COMPLETED"
                                     ? "bg-green-500/20 text-green-400 border-green-500/30"
                                     : transaction.status === "PENDING"
-                                      ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
-                                      : "bg-red-500/20 text-red-400 border-red-500/30"
+                                    ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
+                                    : "bg-red-500/20 text-red-400 border-red-500/30"
                                 }
                               >
                                 {transaction.status === "COMPLETED"
                                   ? t("completed")
                                   : transaction.status === "PENDING"
-                                    ? t("pending")
-                                    : t("failed")}
+                                  ? t("pending")
+                                  : t("failed")}
                               </Badge>
                             )}
                             <span className="text-xs text-gray-400">
                               {transaction.date.toLocaleDateString(
-                                language === "pt" ? "pt-BR" : "en-US",
+                                language === "pt" ? "pt-BR" : "en-US"
                               )}{" "}
                               {language === "pt" ? "às" : "at"}{" "}
                               {transaction.date.toLocaleTimeString(
@@ -1113,7 +1121,7 @@ const TradePage = () => {
                                 {
                                   hour: "2-digit",
                                   minute: "2-digit",
-                                },
+                                }
                               )}
                             </span>
                             {isPending && hasPixData && (
@@ -1187,7 +1195,7 @@ const TradePage = () => {
           if (!open && pixData) {
             // Mark transaction as loading when modal closes
             setLoadingTransactions((prev) =>
-              new Set(prev).add(pixData.transactionId),
+              new Set(prev).add(pixData.transactionId)
             );
 
             // Remove from loading after 8 seconds and refetch

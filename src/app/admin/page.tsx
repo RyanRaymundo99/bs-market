@@ -286,11 +286,11 @@ export default function AdminDashboard() {
   const [balanceConfirmStep, setBalanceConfirmStep] = useState(1);
   const [balanceUserId, setBalanceUserId] = useState("");
   const [balanceCurrency, setBalanceCurrency] = useState<"USDT" | "BRL">(
-    "USDT",
+    "USDT"
   );
   const [balanceAmount, setBalanceAmount] = useState("");
   const [balanceOperation, setBalanceOperation] = useState<"CREDIT" | "DEDUCT">(
-    "CREDIT",
+    "CREDIT"
   );
   const [balanceReason, setBalanceReason] = useState("");
   const [usersList, setUsersList] = useState<
@@ -320,7 +320,7 @@ export default function AdminDashboard() {
     Record<string, Array<{ date: string; value: number }>>
   >({});
   const [loadingHistory, setLoadingHistory] = useState<Record<string, boolean>>(
-    {},
+    {}
   );
 
   // New features states
@@ -339,7 +339,7 @@ export default function AdminDashboard() {
 
   // Transaction table enhancements
   const [selectedTransactions, setSelectedTransactions] = useState<Set<string>>(
-    new Set(),
+    new Set()
   );
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -371,13 +371,13 @@ export default function AdminDashboard() {
         if (data?.moneyControls) {
           setDepositsDisabled(Boolean(data.moneyControls.depositsDisabled));
           setWithdrawalsDisabled(
-            Boolean(data.moneyControls.withdrawalsDisabled),
+            Boolean(data.moneyControls.withdrawalsDisabled)
           );
           setDepositsDisabledMessage(
-            String(data.moneyControls.depositsDisabledMessage || ""),
+            String(data.moneyControls.depositsDisabledMessage || "")
           );
           setWithdrawalsDisabledMessage(
-            String(data.moneyControls.withdrawalsDisabledMessage || ""),
+            String(data.moneyControls.withdrawalsDisabledMessage || "")
           );
           setMoneyControlsMeta({
             updatedAt: String(data.moneyControls.updatedAt),
@@ -420,10 +420,10 @@ export default function AdminDashboard() {
         setDepositsDisabled(Boolean(data.moneyControls.depositsDisabled));
         setWithdrawalsDisabled(Boolean(data.moneyControls.withdrawalsDisabled));
         setDepositsDisabledMessage(
-          String(data.moneyControls.depositsDisabledMessage || ""),
+          String(data.moneyControls.depositsDisabledMessage || "")
         );
         setWithdrawalsDisabledMessage(
-          String(data.moneyControls.withdrawalsDisabledMessage || ""),
+          String(data.moneyControls.withdrawalsDisabledMessage || "")
         );
         setMoneyControlsMeta({
           updatedAt: String(data.moneyControls.updatedAt),
@@ -434,7 +434,7 @@ export default function AdminDashboard() {
       toast({
         title: "Atualizado",
         description: `Configuração salva. Usuários notificados: ${Number(
-          data?.notifiedUsers || 0,
+          data?.notifiedUsers || 0
         )}.`,
       });
     } catch (error) {
@@ -461,7 +461,7 @@ export default function AdminDashboard() {
 
       const url = new URL(
         "/api/admin/transactions/realtime",
-        window.location.origin,
+        window.location.origin
       );
       url.searchParams.set("limit", "200");
       if (since) {
@@ -484,7 +484,7 @@ export default function AdminDashboard() {
           setTransactions((prev) => {
             const existingIds = new Set(prev.map((t) => t.id));
             const newTransactions = data.transactions.filter(
-              (t: Transaction) => !existingIds.has(t.id),
+              (t: Transaction) => !existingIds.has(t.id)
             );
             return [...newTransactions, ...prev].slice(0, 100); // Keep max 100
           });
@@ -590,7 +590,7 @@ export default function AdminDashboard() {
     const now = new Date();
     const date = new Date(timestamp);
     const diffInMinutes = Math.floor(
-      (now.getTime() - date.getTime()) / (1000 * 60),
+      (now.getTime() - date.getTime()) / (1000 * 60)
     );
 
     if (diffInMinutes < 1) return "Agora";
@@ -609,7 +609,7 @@ export default function AdminDashboard() {
       try {
         const response = await fetch(
           `/api/admin/finance/history?metric=${metric}&days=${days}`,
-          { cache: "no-store" },
+          { cache: "no-store" }
         );
 
         if (!response.ok) {
@@ -627,7 +627,7 @@ export default function AdminDashboard() {
         setLoadingHistory((prev) => ({ ...prev, [metric]: false }));
       }
     },
-    [historyData],
+    [historyData]
   );
 
   const HistoryTooltipContent = ({
@@ -687,7 +687,11 @@ export default function AdminDashboard() {
             .reverse()
             .map((item, index) => {
               const date = new Date(item.date);
-              const dateStr = `${date.getDate().toString().padStart(2, "0")}/${(date.getMonth() + 1).toString().padStart(2, "0")}`;
+              const dateStr = `${date.getDate().toString().padStart(2, "0")}/${(
+                date.getMonth() + 1
+              )
+                .toString()
+                .padStart(2, "0")}`;
               const percentage =
                 maxValue > 0 ? (item.value / maxValue) * 100 : 0;
 
@@ -781,7 +785,7 @@ export default function AdminDashboard() {
         `/api/admin/transactions/${transactionDetails.id}/sync-status`,
         {
           method: "POST",
-        },
+        }
       );
 
       const data = await response.json();
@@ -793,7 +797,7 @@ export default function AdminDashboard() {
         });
         // Refresh transaction details by fetching from API
         const detailsResponse = await fetch(
-          `/api/admin/transactions/${transactionDetails.id}`,
+          `/api/admin/transactions/${transactionDetails.id}`
         );
         if (detailsResponse.ok) {
           const detailsData = await detailsResponse.json();
@@ -830,7 +834,7 @@ export default function AdminDashboard() {
         `/api/admin/transactions/${transactionDetails.id}/resend-receipt`,
         {
           method: "POST",
-        },
+        }
       );
 
       const data = await response.json();
@@ -844,7 +848,7 @@ export default function AdminDashboard() {
 
         // Refresh transaction details to update receipt status
         const detailsResponse = await fetch(
-          `/api/admin/transactions/${transactionDetails.id}`,
+          `/api/admin/transactions/${transactionDetails.id}`
         );
         if (detailsResponse.ok) {
           const detailsData = await detailsResponse.json();
@@ -884,7 +888,7 @@ export default function AdminDashboard() {
         `/api/admin/transactions/${transactionDetails.id}/mark-completed`,
         {
           method: "POST",
-        },
+        }
       );
 
       const data = await response.json();
@@ -898,7 +902,7 @@ export default function AdminDashboard() {
 
         // Refresh transaction details
         const detailsResponse = await fetch(
-          `/api/admin/transactions/${transactionDetails.id}`,
+          `/api/admin/transactions/${transactionDetails.id}`
         );
         if (detailsResponse.ok) {
           const detailsData = await detailsResponse.json();
@@ -910,7 +914,7 @@ export default function AdminDashboard() {
         }
       } else {
         throw new Error(
-          data.error || "Failed to mark transaction as completed",
+          data.error || "Failed to mark transaction as completed"
         );
       }
     } catch (error) {
@@ -966,7 +970,7 @@ export default function AdminDashboard() {
   // Handle transaction approval/rejection
   const handleTransactionAction = async (
     transactionId: string,
-    action: "approve" | "reject",
+    action: "approve" | "reject"
   ) => {
     setProcessingTransaction(transactionId);
     try {
@@ -975,7 +979,7 @@ export default function AdminDashboard() {
         `/api/admin/transactions/${transactionId}/mark-completed`,
         {
           method: "POST",
-        },
+        }
       );
 
       if (response.ok) {
@@ -984,13 +988,17 @@ export default function AdminDashboard() {
           title: "Sucesso",
           description:
             data.message ||
-            `Transação ${action === "approve" ? "aprovada" : "processada"} com sucesso!`,
+            `Transação ${
+              action === "approve" ? "aprovada" : "processada"
+            } com sucesso!`,
         });
         await fetchRealtimeTransactions();
         setAdminActivityLog((prev) => [
           {
             type: `transaction_${action}`,
-            description: `Transação ${transactionId.substring(0, 8)}... ${action === "approve" ? "aprovada" : "processada"}`,
+            description: `Transação ${transactionId.substring(0, 8)}... ${
+              action === "approve" ? "aprovada" : "processada"
+            }`,
             timestamp: new Date().toISOString(),
           },
           ...prev.slice(0, 49),
@@ -1006,7 +1014,9 @@ export default function AdminDashboard() {
         description:
           error instanceof Error
             ? error.message
-            : `Falha ao ${action === "approve" ? "aprovar" : "processar"} transação`,
+            : `Falha ao ${
+                action === "approve" ? "aprovar" : "processar"
+              } transação`,
       });
     } finally {
       setProcessingTransaction(null);
@@ -1025,13 +1035,15 @@ export default function AdminDashboard() {
     }
 
     const confirmed = window.confirm(
-      `Tem certeza que deseja ${action === "approve" ? "aprovar" : "rejeitar"} ${selectedTransactions.size} transação(ões)?`,
+      `Tem certeza que deseja ${
+        action === "approve" ? "aprovar" : "rejeitar"
+      } ${selectedTransactions.size} transação(ões)?`
     );
 
     if (!confirmed) return;
 
     const promises = Array.from(selectedTransactions).map((id) =>
-      handleTransactionAction(id, action),
+      handleTransactionAction(id, action)
     );
 
     await Promise.all(promises);
@@ -1047,8 +1059,8 @@ export default function AdminDashboard() {
       typeof tx.user === "string"
         ? tx.user
         : tx.user
-          ? `${tx.user.name} (${tx.user.email})`
-          : "N/A",
+        ? `${tx.user.name} (${tx.user.email})`
+        : "N/A",
       formatCurrency(tx.value || 0),
       getStatusLabel(tx.status),
     ]);
@@ -1061,7 +1073,9 @@ export default function AdminDashboard() {
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `transactions-${new Date().toISOString().split("T")[0]}.csv`;
+    link.download = `transactions-${
+      new Date().toISOString().split("T")[0]
+    }.csv`;
     link.click();
     URL.revokeObjectURL(link.href);
 
@@ -1090,7 +1104,7 @@ export default function AdminDashboard() {
       setSelectedTransactions(new Set());
     } else {
       setSelectedTransactions(
-        new Set(filteredAndSortedTransactions.map((tx) => tx.id)),
+        new Set(filteredAndSortedTransactions.map((tx) => tx.id))
       );
     }
   };
@@ -1107,8 +1121,8 @@ export default function AdminDashboard() {
         typeof transaction.user === "string"
           ? transaction.user
           : transaction.user
-            ? `${transaction.user.name} ${transaction.user.email}`
-            : "";
+          ? `${transaction.user.name} ${transaction.user.email}`
+          : "";
 
       // Search filter
       const matchesSearch =
@@ -1304,7 +1318,7 @@ export default function AdminDashboard() {
           "• Todas as transações\n" +
           "• Todos os saldos dos usuários\n\n" +
           "Esta ação NÃO pode ser desfeita!\n\n" +
-          "Tem certeza que deseja continuar?",
+          "Tem certeza que deseja continuar?"
       );
 
       if (!confirmed) {
@@ -1357,7 +1371,9 @@ export default function AdminDashboard() {
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = downloadUrl;
-      link.download = `transactions-${selectedMonth}-${selectedYear}.${format === "pdf" ? "pdf" : "xlsx"}`;
+      link.download = `transactions-${selectedMonth}-${selectedYear}.${
+        format === "pdf" ? "pdf" : "xlsx"
+      }`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -1413,7 +1429,9 @@ export default function AdminDashboard() {
             activities.push({
               type: "transaction",
               title: `Transação ${tx.type}`,
-              description: `${formatCurrency(tx.value || 0)} - ${tx.user?.name || "N/A"}`,
+              description: `${formatCurrency(tx.value || 0)} - ${
+                tx.user?.name || "N/A"
+              }`,
               timestamp: tx.date,
               link: "#",
               icon: DollarSign,
@@ -1439,7 +1457,7 @@ export default function AdminDashboard() {
 
       activities.sort(
         (a, b) =>
-          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
       );
       setRecentActivity(activities.slice(0, 10));
     } catch (error) {
@@ -1457,14 +1475,14 @@ export default function AdminDashboard() {
           ((data.users as UserData[]) || []).slice(0, 20).map(async (user) => {
             try {
               const balanceRes = await fetch(
-                `/api/admin/users/${user.id}?include=balance`,
+                `/api/admin/users/${user.id}?include=balance`
               );
               if (balanceRes.ok) {
                 const balanceData = await balanceRes.json();
                 const totalBalance =
                   ((balanceData.balances as BalanceData[]) || []).reduce(
                     (sum: number, b) => sum + (b.amount || 0),
-                    0,
+                    0
                   ) || 0;
                 return { ...user, totalBalance };
               }
@@ -1472,7 +1490,7 @@ export default function AdminDashboard() {
             } catch {
               return { ...user, totalBalance: 0 };
             }
-          }),
+          })
         );
 
         usersWithBalances.sort((a, b) => b.totalBalance - a.totalBalance);
@@ -1546,13 +1564,15 @@ export default function AdminDashboard() {
           ?.filter(
             (tx) =>
               tx.user?.name?.toLowerCase().includes(query.toLowerCase()) ||
-              tx.user?.email?.toLowerCase().includes(query.toLowerCase()),
+              tx.user?.email?.toLowerCase().includes(query.toLowerCase())
           )
           .slice(0, 3)
           .forEach((tx) => {
             results.push({
               type: "transaction",
-              title: `${getTransactionTypeLabel(tx.type)} - ${formatCurrency(tx.value || 0)}`,
+              title: `${getTransactionTypeLabel(tx.type)} - ${formatCurrency(
+                tx.value || 0
+              )}`,
               subtitle: tx.user?.name || "N/A",
               link: "#",
               icon: DollarSign,
@@ -1783,7 +1803,7 @@ export default function AdminDashboard() {
                             >
                               {m.toString().padStart(2, "0")}
                             </SelectItem>
-                          ),
+                          )
                         )}
                       </SelectContent>
                     </Select>
@@ -1799,7 +1819,7 @@ export default function AdminDashboard() {
                       <SelectContent className="bg-gray-900 border-gray-700">
                         {Array.from(
                           { length: 10 },
-                          (_, i) => new Date().getFullYear() - i,
+                          (_, i) => new Date().getFullYear() - i
                         ).map((y) => (
                           <SelectItem
                             key={y}
@@ -2192,10 +2212,10 @@ export default function AdminDashboard() {
                             activity.color === "blue"
                               ? "bg-blue-900/30"
                               : activity.color === "green"
-                                ? "bg-green-900/30"
-                                : activity.color === "orange"
-                                  ? "bg-orange-900/30"
-                                  : "bg-gray-800"
+                              ? "bg-green-900/30"
+                              : activity.color === "orange"
+                              ? "bg-orange-900/30"
+                              : "bg-gray-800"
                           }`}
                         >
                           <Icon
@@ -2203,10 +2223,10 @@ export default function AdminDashboard() {
                               activity.color === "blue"
                                 ? "text-blue-400"
                                 : activity.color === "green"
-                                  ? "text-green-400"
-                                  : activity.color === "orange"
-                                    ? "text-orange-400"
-                                    : "text-gray-400"
+                                ? "text-green-400"
+                                : activity.color === "orange"
+                                ? "text-orange-400"
+                                : "text-gray-400"
                             }`}
                           />
                         </div>
@@ -2426,10 +2446,10 @@ export default function AdminDashboard() {
                       <div className="text-lg lg:text-xl font-bold text-white">
                         {formatCurrency(financeStats.totalDeposits).replace(
                           "R$",
-                          "R$",
+                          "R$"
                         ).length > 15
                           ? formatCurrency(
-                              financeStats.totalDeposits,
+                              financeStats.totalDeposits
                             ).substring(0, 12) + "..."
                           : formatCurrency(financeStats.totalDeposits)}
                       </div>
@@ -2484,10 +2504,10 @@ export default function AdminDashboard() {
                       <div className="text-lg lg:text-xl font-bold text-white">
                         {formatCurrency(financeStats.totalWithdrawals).replace(
                           "R$",
-                          "R$",
+                          "R$"
                         ).length > 15
                           ? formatCurrency(
-                              financeStats.totalWithdrawals,
+                              financeStats.totalWithdrawals
                             ).substring(0, 12) + "..."
                           : formatCurrency(financeStats.totalWithdrawals)}
                       </div>
@@ -2541,11 +2561,11 @@ export default function AdminDashboard() {
                       <div className="text-lg lg:text-xl font-bold text-white">
                         {formatCurrency(financeStats.totalTrades).replace(
                           "R$",
-                          "R$",
+                          "R$"
                         ).length > 15
                           ? formatCurrency(financeStats.totalTrades).substring(
                               0,
-                              12,
+                              12
                             ) + "..."
                           : formatCurrency(financeStats.totalTrades)}
                       </div>
@@ -2599,10 +2619,10 @@ export default function AdminDashboard() {
                       <div className="text-lg lg:text-xl font-bold text-white">
                         {formatCurrency(financeStats.totalCommissions).replace(
                           "R$",
-                          "R$",
+                          "R$"
                         ).length > 15
                           ? formatCurrency(
-                              financeStats.totalCommissions,
+                              financeStats.totalCommissions
                             ).substring(0, 12) + "..."
                           : formatCurrency(financeStats.totalCommissions)}
                       </div>
@@ -2655,10 +2675,10 @@ export default function AdminDashboard() {
                     ) : (
                       <div className="text-lg lg:text-xl font-bold text-white">
                         {formatCurrency(
-                          financeStats.averageUserBalance,
+                          financeStats.averageUserBalance
                         ).replace("R$", "R$").length > 15
                           ? formatCurrency(
-                              financeStats.averageUserBalance,
+                              financeStats.averageUserBalance
                             ).substring(0, 12) + "..."
                           : formatCurrency(financeStats.averageUserBalance)}
                       </div>
@@ -3304,7 +3324,9 @@ export default function AdminDashboard() {
                           >
                             {!String(transaction.id).startsWith("order_") ? (
                               <Checkbox
-                                checked={selectedTransactions.has(transaction.id)}
+                                checked={selectedTransactions.has(
+                                  transaction.id
+                                )}
                                 onCheckedChange={() =>
                                   toggleTransactionSelection(transaction.id)
                                 }
@@ -3327,7 +3349,7 @@ export default function AdminDashboard() {
                                 hour: "2-digit",
                                 minute: "2-digit",
                                 second: "2-digit",
-                              },
+                              }
                             )}
                           </td>
                           <td className="py-3 px-4">
@@ -3336,16 +3358,16 @@ export default function AdminDashboard() {
                                 transaction.type === "DEPOSIT"
                                   ? "bg-green-900 text-green-300"
                                   : transaction.type === "WITHDRAWAL"
-                                    ? "bg-red-900 text-red-300"
-                                    : transaction.type === "FEE"
-                                      ? "bg-purple-900 text-purple-300"
-                                      : transaction.type === "BUY_CRYPTO"
-                                        ? "bg-emerald-900 text-emerald-300"
-                                        : transaction.type === "SELL_CRYPTO"
-                                          ? "bg-orange-900 text-orange-300"
-                                          : transaction.type === "REFUND"
-                                            ? "bg-gray-900 text-gray-300"
-                                            : "bg-gray-900 text-gray-300"
+                                  ? "bg-red-900 text-red-300"
+                                  : transaction.type === "FEE"
+                                  ? "bg-purple-900 text-purple-300"
+                                  : transaction.type === "BUY_CRYPTO"
+                                  ? "bg-emerald-900 text-emerald-300"
+                                  : transaction.type === "SELL_CRYPTO"
+                                  ? "bg-orange-900 text-orange-300"
+                                  : transaction.type === "REFUND"
+                                  ? "bg-gray-900 text-gray-300"
+                                  : "bg-gray-900 text-gray-300"
                               }`}
                             >
                               {getTransactionTypeLabel(transaction.type)}
@@ -3362,7 +3384,7 @@ export default function AdminDashboard() {
                                 onClick={() => {
                                   if (transaction.userId) {
                                     router.push(
-                                      `/admin/users/${transaction.userId}`,
+                                      `/admin/users/${transaction.userId}`
                                     );
                                   }
                                 }}
@@ -3379,8 +3401,8 @@ export default function AdminDashboard() {
                             {transaction.value && !isNaN(transaction.value)
                               ? formatCurrency(transaction.value)
                               : transaction.currency === "USDT"
-                                ? formatUSDT(Math.abs(transaction.amount || 0))
-                                : formatCurrency(0)}
+                              ? formatUSDT(Math.abs(transaction.amount || 0))
+                              : formatCurrency(0)}
                           </td>
                           <td className="py-3 px-4">
                             <div className="flex items-center gap-2">
@@ -3391,58 +3413,60 @@ export default function AdminDashboard() {
                                   transaction.status === "CONFIRMED"
                                     ? "bg-green-900 text-green-300"
                                     : transaction.status === "PENDING" ||
-                                        transaction.status === "PROCESSING" ||
-                                        transaction.status === "EXECUTING"
-                                      ? "bg-yellow-900 text-yellow-300"
-                                      : transaction.status === "REJECTED" ||
-                                          transaction.status === "FAILED" ||
-                                          transaction.status === "CANCELLED"
-                                        ? "bg-red-900 text-red-300"
-                                        : "bg-gray-900 text-gray-300"
+                                      transaction.status === "PROCESSING" ||
+                                      transaction.status === "EXECUTING"
+                                    ? "bg-yellow-900 text-yellow-300"
+                                    : transaction.status === "REJECTED" ||
+                                      transaction.status === "FAILED" ||
+                                      transaction.status === "CANCELLED"
+                                    ? "bg-red-900 text-red-300"
+                                    : "bg-gray-900 text-gray-300"
                                 }`}
                               >
                                 {getStatusLabel(transaction.status)}
                               </span>
                               {(transaction.status === "PENDING" ||
                                 transaction.status === "PROCESSING") &&
-                                !String(transaction.id).startsWith("order_") && (
-                                <div className="flex items-center gap-1">
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleTransactionAction(
-                                        transaction.id,
-                                        "approve",
-                                      );
-                                    }}
-                                    disabled={
-                                      processingTransaction === transaction.id
-                                    }
-                                    className="h-6 w-6 p-0 text-green-400 hover:text-green-300 hover:bg-green-900/30"
-                                  >
-                                    <CheckCircle className="h-3 w-3" />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleTransactionAction(
-                                        transaction.id,
-                                        "reject",
-                                      );
-                                    }}
-                                    disabled={
-                                      processingTransaction === transaction.id
-                                    }
-                                    className="h-6 w-6 p-0 text-red-400 hover:text-red-300 hover:bg-red-900/30"
-                                  >
-                                    <X className="h-3 w-3" />
-                                  </Button>
-                                </div>
-                              )}
+                                !String(transaction.id).startsWith(
+                                  "order_"
+                                ) && (
+                                  <div className="flex items-center gap-1">
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleTransactionAction(
+                                          transaction.id,
+                                          "approve"
+                                        );
+                                      }}
+                                      disabled={
+                                        processingTransaction === transaction.id
+                                      }
+                                      className="h-6 w-6 p-0 text-green-400 hover:text-green-300 hover:bg-green-900/30"
+                                    >
+                                      <CheckCircle className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleTransactionAction(
+                                          transaction.id,
+                                          "reject"
+                                        );
+                                      }}
+                                      disabled={
+                                        processingTransaction === transaction.id
+                                      }
+                                      className="h-6 w-6 p-0 text-red-400 hover:text-red-300 hover:bg-red-900/30"
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                )}
                             </div>
                           </td>
                         </tr>
@@ -3497,10 +3521,10 @@ export default function AdminDashboard() {
                             transactionDetails.status === "CONFIRMED"
                               ? "bg-green-900 text-green-300"
                               : transactionDetails.status === "PENDING" ||
-                                  transactionDetails.status === "PROCESSING" ||
-                                  transactionDetails.status === "EXECUTING"
-                                ? "bg-yellow-900 text-yellow-300"
-                                : "bg-red-900 text-red-300"
+                                transactionDetails.status === "PROCESSING" ||
+                                transactionDetails.status === "EXECUTING"
+                              ? "bg-yellow-900 text-yellow-300"
+                              : "bg-red-900 text-red-300"
                           }`}
                         >
                           {getStatusLabel(transactionDetails.status)}
@@ -3535,7 +3559,7 @@ export default function AdminDashboard() {
                     <p className="text-sm text-gray-400">Data</p>
                     <p className="text-white">
                       {new Date(transactionDetails.createdAt).toLocaleString(
-                        "pt-BR",
+                        "pt-BR"
                       )}
                     </p>
                   </div>
@@ -3585,7 +3609,7 @@ export default function AdminDashboard() {
                                         <p className="text-green-400 text-sm">
                                           Enviado em{" "}
                                           {new Date(
-                                            receiptStatus.sentAt,
+                                            receiptStatus.sentAt
                                           ).toLocaleString("pt-BR")}
                                         </p>
                                       </>
@@ -3707,7 +3731,7 @@ export default function AdminDashboard() {
                           <p className="text-sm text-gray-400">Executado em</p>
                           <p className="text-white">
                             {new Date(
-                              transactionDetails.order.executedAt,
+                              transactionDetails.order.executedAt
                             ).toLocaleString("pt-BR")}
                           </p>
                         </div>
@@ -3722,7 +3746,7 @@ export default function AdminDashboard() {
                         <p className="text-sm text-gray-400">Valor Total BRL</p>
                         <p className="text-white">
                           {formatCurrency(
-                            Number(transactionDetails.order.total),
+                            Number(transactionDetails.order.total)
                           )}
                         </p>
                       </div>
@@ -3731,7 +3755,7 @@ export default function AdminDashboard() {
                         <p className="text-white">
                           {formatCurrency(
                             Number(transactionDetails.order.total) /
-                              Number(transactionDetails.order.amount),
+                              Number(transactionDetails.order.amount)
                           )}{" "}
                           BRL/USDT
                         </p>
@@ -3758,7 +3782,7 @@ export default function AdminDashboard() {
                               </span>
                               <span className="text-white font-semibold">
                                 {Number(
-                                  transactionDetails.order.amount,
+                                  transactionDetails.order.amount
                                 ).toLocaleString("pt-BR", {
                                   minimumFractionDigits: 0,
                                   maximumFractionDigits: 8,
@@ -3773,7 +3797,7 @@ export default function AdminDashboard() {
                               <span className="text-white font-semibold">
                                 {formatCurrency(
                                   Number(transactionDetails.order.total) /
-                                    Number(transactionDetails.order.amount),
+                                    Number(transactionDetails.order.amount)
                                 )}{" "}
                                 BRL/USDT
                               </span>
@@ -3789,7 +3813,7 @@ export default function AdminDashboard() {
                                   <span className="text-gray-400">=</span>
                                   <span>
                                     {Number(
-                                      transactionDetails.order.amount,
+                                      transactionDetails.order.amount
                                     ).toLocaleString("pt-BR", {
                                       minimumFractionDigits: 0,
                                       maximumFractionDigits: 8,
@@ -3800,7 +3824,7 @@ export default function AdminDashboard() {
                                   <span>
                                     {formatCurrency(
                                       Number(transactionDetails.order.total) /
-                                        Number(transactionDetails.order.amount),
+                                        Number(transactionDetails.order.amount)
                                     )}
                                   </span>
                                 </div>
@@ -3808,7 +3832,7 @@ export default function AdminDashboard() {
                                   <span className="text-gray-400">=</span>
                                   <span className="text-green-400 font-bold">
                                     {formatCurrency(
-                                      Number(transactionDetails.order.total),
+                                      Number(transactionDetails.order.total)
                                     )}
                                   </span>
                                 </div>
@@ -3864,7 +3888,7 @@ export default function AdminDashboard() {
                         <p className="text-sm text-gray-400">Valor</p>
                         <p className="text-white">
                           {formatCurrency(
-                            Number(transactionDetails.deposit.amount),
+                            Number(transactionDetails.deposit.amount)
                           )}
                         </p>
                       </div>
@@ -3881,7 +3905,7 @@ export default function AdminDashboard() {
                           <p className="text-sm text-gray-400">Confirmado em</p>
                           <p className="text-white">
                             {new Date(
-                              transactionDetails.deposit.confirmedAt,
+                              transactionDetails.deposit.confirmedAt
                             ).toLocaleString("pt-BR")}
                           </p>
                         </div>
@@ -3955,7 +3979,7 @@ export default function AdminDashboard() {
                         <p className="text-sm text-gray-400">Valor</p>
                         <p className="text-white">
                           {formatCurrency(
-                            Number(transactionDetails.withdrawal.amount),
+                            Number(transactionDetails.withdrawal.amount)
                           )}
                         </p>
                       </div>
@@ -4224,8 +4248,8 @@ export default function AdminDashboard() {
                 {processingBalance
                   ? "Processando..."
                   : balanceOperation === "CREDIT"
-                    ? "Creditar"
-                    : "Deduzir"}
+                  ? "Creditar"
+                  : "Deduzir"}
               </Button>
             </div>
           </div>

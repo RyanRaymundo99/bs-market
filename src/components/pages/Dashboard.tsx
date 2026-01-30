@@ -115,7 +115,7 @@ export default function Dashboard() {
   const [userStatus, setUserStatus] = useState<UserStatus | null>(null);
   const [latestDeposit, setLatestDeposit] = useState<Deposit | null>(null);
   const [latestWithdrawal, setLatestWithdrawal] = useState<Withdrawal | null>(
-    null,
+    null
   );
   const [chartData, setChartData] = useState<
     Array<{ date: string; BRL: number; USDT: number }>
@@ -135,8 +135,8 @@ export default function Dashboard() {
     const checkMobile = () => {
       setIsMobile(
         /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-          navigator.userAgent,
-        ) || window.innerWidth <= 768,
+          navigator.userAgent
+        ) || window.innerWidth <= 768
       );
     };
     checkMobile();
@@ -291,7 +291,7 @@ export default function Dashboard() {
             "rejectionMessage",
             language === "pt"
               ? "Sua conta foi rejeitada. Entre em contato com o suporte."
-              : "Your account has been rejected. Please contact support.",
+              : "Your account has been rejected. Please contact support."
           );
           window.location.href = "/";
         }
@@ -350,7 +350,7 @@ export default function Dashboard() {
 
           // Find latest deposit (BUY_CRYPTO or DEPOSIT)
           const deposits = allTransactions.filter(
-            (t: Transaction) => t.type === "DEPOSIT" || t.type === "BUY_CRYPTO",
+            (t: Transaction) => t.type === "DEPOSIT" || t.type === "BUY_CRYPTO"
           );
           if (deposits.length > 0) {
             setLatestDeposit(deposits[0]);
@@ -358,8 +358,7 @@ export default function Dashboard() {
 
           // Find latest withdrawal
           const withdrawals = allTransactions.filter(
-            (t: Transaction) =>
-              t.type === "WITHDRAWAL" || t.type === "WITHDRAW",
+            (t: Transaction) => t.type === "WITHDRAWAL" || t.type === "WITHDRAW"
           );
           if (withdrawals.length > 0) {
             setLatestWithdrawal(withdrawals[0]);
@@ -385,7 +384,7 @@ export default function Dashboard() {
           (t: Transaction) => {
             const transactionDate = new Date(t.createdAt);
             return transactionDate >= sixDaysAgo && transactionDate <= today;
-          },
+          }
         );
 
         // Calculate previous balance (6 days ago) by reversing all transactions
@@ -635,7 +634,9 @@ export default function Dashboard() {
       <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
 
       <div
-        className={`container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl ${isMobile ? "pb-16" : ""}`}
+        className={`container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl ${
+          isMobile ? "pb-16" : ""
+        }`}
         style={
           isMobile
             ? { paddingBottom: "calc(64px + env(safe-area-inset-bottom, 0px))" }
@@ -740,7 +741,7 @@ export default function Dashboard() {
                               U${" "}
                               {formatUSDT(lastDataPoint.USDT).replace(
                                 " USDT",
-                                "",
+                                ""
                               )}
                             </div>
                             <div className="text-xs text-gray-500 mt-1">
@@ -829,10 +830,10 @@ export default function Dashboard() {
                                   const date = new Date(label);
                                   const day = String(date.getDate()).padStart(
                                     2,
-                                    "0",
+                                    "0"
                                   );
                                   const month = String(
-                                    date.getMonth() + 1,
+                                    date.getMonth() + 1
                                   ).padStart(2, "0");
                                   return `${day}/${month}`;
                                 })();
@@ -894,31 +895,31 @@ export default function Dashboard() {
             {(() => {
               // Calculate category stats
               const deposits = transactions.filter(
-                (t) => t.type === "DEPOSIT" || t.type === "BUY_CRYPTO",
+                (t) => t.type === "DEPOSIT" || t.type === "BUY_CRYPTO"
               );
               const withdrawals = transactions.filter(
-                (t) => t.type === "WITHDRAWAL" || t.type === "WITHDRAW",
+                (t) => t.type === "WITHDRAWAL" || t.type === "WITHDRAW"
               );
               const refunds = transactions.filter((t) => t.type === "REFUND");
 
               const totalDeposits = deposits.reduce(
                 (sum, t) => sum + Number(t.amount),
-                0,
+                0
               );
               const totalWithdrawals = withdrawals.reduce(
                 (sum, t) => sum + Number(t.amount),
-                0,
+                0
               );
               const totalRefunds = refunds.reduce(
                 (sum, t) => sum + Number(t.amount),
-                0,
+                0
               );
 
               const maxValue = Math.max(
                 totalDeposits,
                 totalWithdrawals,
                 totalRefunds,
-                1,
+                1
               );
 
               const categories = [
@@ -976,8 +977,8 @@ export default function Dashboard() {
                             ? "transação"
                             : "transaction"
                           : language === "pt"
-                            ? "transações"
-                            : "transactions"}
+                          ? "transações"
+                          : "transactions"}
                       </p>
                       <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
                         <div
@@ -1023,14 +1024,14 @@ export default function Dashboard() {
                     {
                       hour: "2-digit",
                       minute: "2-digit",
-                    },
+                    }
                   );
                   const dateStr = date.toLocaleDateString(
                     language === "pt" ? "pt-BR" : "en-US",
                     {
                       day: "2-digit",
                       month: "2-digit",
-                    },
+                    }
                   );
 
                   let icon = <ArrowUpRight className="w-4 h-4" />;
@@ -1045,7 +1046,7 @@ export default function Dashboard() {
                       ? formatCurrency(transaction.amount)
                       : formatUSDT(transaction.amount).replace(
                           " USDT",
-                          ` ${transaction.currency || "USDT"}`,
+                          ` ${transaction.currency || "USDT"}`
                         );
 
                   if (
@@ -1116,12 +1117,12 @@ export default function Dashboard() {
                                 transaction.status === "CONFIRMED"
                                   ? "bg-green-500/20 text-green-400"
                                   : transaction.status === "PENDING" ||
-                                      transaction.status === "Pendente"
-                                    ? "bg-yellow-500/20 text-yellow-400"
-                                    : transaction.status === "FAILED" ||
-                                        transaction.status === "REJECTED"
-                                      ? "bg-red-500/20 text-red-400"
-                                      : "bg-gray-500/20 text-gray-400"
+                                    transaction.status === "Pendente"
+                                  ? "bg-yellow-500/20 text-yellow-400"
+                                  : transaction.status === "FAILED" ||
+                                    transaction.status === "REJECTED"
+                                  ? "bg-red-500/20 text-red-400"
+                                  : "bg-gray-500/20 text-gray-400"
                               }`}
                             >
                               {transaction.status === "PENDING"
@@ -1129,18 +1130,18 @@ export default function Dashboard() {
                                   ? "Pendente"
                                   : "Pending"
                                 : transaction.status === "COMPLETED"
-                                  ? language === "pt"
-                                    ? "Concluído"
-                                    : "Completed"
-                                  : transaction.status === "APPROVED"
-                                    ? language === "pt"
-                                      ? "Aprovado"
-                                      : "Approved"
-                                    : transaction.status === "FAILED"
-                                      ? language === "pt"
-                                        ? "Falhou"
-                                        : "Failed"
-                                      : transaction.status}
+                                ? language === "pt"
+                                  ? "Concluído"
+                                  : "Completed"
+                                : transaction.status === "APPROVED"
+                                ? language === "pt"
+                                  ? "Aprovado"
+                                  : "Approved"
+                                : transaction.status === "FAILED"
+                                ? language === "pt"
+                                  ? "Falhou"
+                                  : "Failed"
+                                : transaction.status}
                             </span>
                           )}
                         </div>

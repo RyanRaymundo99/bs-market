@@ -100,8 +100,8 @@ export default function WithdrawPage() {
     const checkMobile = () => {
       setIsMobile(
         /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-          navigator.userAgent,
-        ) || window.innerWidth <= 768,
+          navigator.userAgent
+        ) || window.innerWidth <= 768
       );
     };
     checkMobile();
@@ -168,7 +168,7 @@ export default function WithdrawPage() {
         if (data?.success) {
           setWithdrawalsDisabled(Boolean(data.withdrawalsDisabled));
           setWithdrawalsDisabledMessage(
-            String(data.withdrawalsDisabledMessage || ""),
+            String(data.withdrawalsDisabledMessage || "")
           );
         }
       } catch (error) {
@@ -248,7 +248,7 @@ export default function WithdrawPage() {
                   "rejectionMessage",
                   language === "pt"
                     ? "Sua conta foi rejeitada. Entre em contato com o suporte."
-                    : "Your account has been rejected. Please contact support.",
+                    : "Your account has been rejected. Please contact support."
                 );
                 window.location.href = "/";
               }
@@ -488,8 +488,12 @@ export default function WithdrawPage() {
         const data = await response.json();
         setSuccessMessage(
           language === "pt"
-            ? `Saque PIX de ${formatBRL(parseFloat(pixAmount))} solicitado com sucesso! Protocolo: ${data.withdrawal.protocol}`
-            : `PIX withdrawal of ${formatBRL(parseFloat(pixAmount))} requested successfully! Protocol: ${data.withdrawal.protocol}`,
+            ? `Saque PIX de ${formatBRL(
+                parseFloat(pixAmount)
+              )} solicitado com sucesso! Protocolo: ${data.withdrawal.protocol}`
+            : `PIX withdrawal of ${formatBRL(
+                parseFloat(pixAmount)
+              )} requested successfully! Protocol: ${data.withdrawal.protocol}`
         );
         setShowSuccessModal(true);
         setPixAmount("");
@@ -508,8 +512,8 @@ export default function WithdrawPage() {
           error instanceof Error
             ? error.message
             : language === "pt"
-              ? "Não foi possível processar o saque"
-              : "Failed to process withdrawal",
+            ? "Não foi possível processar o saque"
+            : "Failed to process withdrawal",
         variant: "destructive",
       });
     } finally {
@@ -616,7 +620,9 @@ export default function WithdrawPage() {
     >
       <NavbarNew isLoggingOut={false} handleLogout={() => {}} />
       <div
-        className={`container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl ${isMobile ? "pb-16" : ""}`}
+        className={`container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl ${
+          isMobile ? "pb-16" : ""
+        }`}
         style={
           isMobile
             ? { paddingBottom: "calc(64px + env(safe-area-inset-bottom, 0px))" }
@@ -703,8 +709,8 @@ export default function WithdrawPage() {
                   {withdrawalType === "USDT"
                     ? t("sendUSDTToWallet")
                     : language === "pt"
-                      ? "Receba em reais na sua chave PIX"
-                      : "Receive in BRL to your PIX key"}
+                    ? "Receba em reais na sua chave PIX"
+                    : "Receive in BRL to your PIX key"}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4 sm:space-y-6">
@@ -1016,7 +1022,7 @@ export default function WithdrawPage() {
                               year: "numeric",
                               hour: "2-digit",
                               minute: "2-digit",
-                            },
+                            }
                           )}
                         </td>
                         <td className="py-3 px-4">
