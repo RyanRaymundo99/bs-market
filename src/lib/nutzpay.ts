@@ -165,12 +165,13 @@ export class NutzPayService {
 
       // Prepare the purchase payload according to NutzPay API
       // Mercado Pago requires amounts as numbers with exactly 2 decimal places
-      // We need to ensure no floating point precision issues
-      const purchasePayload: any = {
-        // Convert to string with fixed decimals, then back to number to ensure clean format
-        // This ensures we have exactly 2 decimal places without floating point artifacts
-        amount: formattedAmount, // Number with exactly 2 decimal places for BRL
-        usdt_amount: formattedUsdtAmount, // Number with exactly 4 decimal places for USDT
+      const rawAcquirer = (process.env.NUTZPAY_ACQUIRER || "mercadopago").trim();
+      const acquirer =
+        rawAcquirer.toLowerCase() === "cali" ? "mercadopago" : rawAcquirer;
+
+      const purchasePayload = {
+        amount: formattedAmount,
+        usdt_amount: formattedUsdtAmount,
         customer: {
           name: data.customer.name,
           document: data.customer.document,
@@ -183,13 +184,8 @@ export class NutzPayService {
           `${
             process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"
           }/api/webhooks/nutzpay`,
+        acquirer,
       };
-
-      // Add acquirer (required to avoid "Unsupported acquirer: cali" from NutzPay)
-      // "cali" is not supported - use mercadopago. Common: "mercadopago", "gerencianet"
-      const rawAcquirer = (process.env.NUTZPAY_ACQUIRER || "mercadopago").trim();
-      purchasePayload.acquirer =
-        rawAcquirer.toLowerCase() === "cali" ? "mercadopago" : rawAcquirer;
 
       const headers = this.getAuthHeaders();
 
