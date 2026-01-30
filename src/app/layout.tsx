@@ -6,6 +6,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { Providers } from "@/components/providers";
 import { GlobalKYCBanner } from "@/components/GlobalKYCBanner";
+import { FloatingSupportWidget } from "@/components/FloatingSupportWidget";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -103,6 +104,7 @@ export default function RootLayout({
         <Providers>
           <GlobalKYCBanner />
           {children}
+          <FloatingSupportWidget />
         </Providers>
         <Toaster />
         <Analytics />

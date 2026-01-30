@@ -23,6 +23,14 @@ function getClientIdentifier(request: NextRequest): string {
   return ip;
 }
 
+function isLocalhost(request: NextRequest): boolean {
+  const host =
+    request.headers.get("host") ||
+    request.headers.get("x-forwarded-host") ||
+    "";
+  return host.startsWith("localhost") || host.startsWith("127.0.0.1");
+}
+
 function isRateLimited(identifier: string): {
   limited: boolean;
   retryAfter?: number;
@@ -99,20 +107,22 @@ export async function POST(request: NextRequest) {
   try {
     const clientIdentifier = getClientIdentifier(request);
 
-    // Check rate limiting
-    const rateLimit = isRateLimited(clientIdentifier);
-    if (rateLimit.limited) {
-      return NextResponse.json(
-        {
-          error: rateLimit.retryAfter
-            ? `Muitas tentativas de login. Tente novamente em ${Math.ceil(
-                rateLimit.retryAfter / 60
-              )} minutos.`
-            : "Muitas tentativas de login. Por favor, aguarde um momento antes de tentar novamente.",
-          retryAfter: rateLimit.retryAfter,
-        },
-        { status: 429 }
-      );
+    // Skip rate limiting on localhost
+    if (!isLocalhost(request)) {
+      const rateLimit = isRateLimited(clientIdentifier);
+      if (rateLimit.limited) {
+        return NextResponse.json(
+          {
+            error: rateLimit.retryAfter
+              ? `Muitas tentativas de login. Tente novamente em ${Math.ceil(
+                  rateLimit.retryAfter / 60
+                )} minutos.`
+              : "Muitas tentativas de login. Por favor, aguarde um momento antes de tentar novamente.",
+            retryAfter: rateLimit.retryAfter,
+          },
+          { status: 429 }
+        );
+      }
     }
 
     const { cpf, password } = await request.json();
@@ -243,7 +253,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      recordFailedAttempt(clientIdentifier);
+      if (!isLocalhost(request)) recordFailedAttempt(clientIdentifier);
       return NextResponse.json(
         {
           error: `No account found with this ${searchType}. Please check your ${searchType} or create a new account.`,
@@ -293,7 +303,7 @@ export async function POST(request: NextRequest) {
         console.log(
           "This usually means the password was hashed differently or there's a mismatch"
         );
-        recordFailedAttempt(clientIdentifier);
+        if (!isLocalhost(request)) recordFailedAttempt(clientIdentifier);
         const attempts = loginAttempts.get(clientIdentifier);
         const remainingAttempts = MAX_LOGIN_ATTEMPTS - (attempts?.count || 0);
 

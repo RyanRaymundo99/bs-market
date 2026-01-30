@@ -44,6 +44,7 @@ import {
 } from "lucide-react";
 import NavbarNew from "@/components/ui/navbar-new";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useMobileMenuOpen } from "@/hooks/useMobileMenuOpen";
 import { formatUSDT, formatBRL } from "@/lib/format-currency";
 
 interface CryptoBalance {
@@ -91,6 +92,7 @@ export default function WithdrawPage() {
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const mobileMenuOpen = useMobileMenuOpen();
   const minSwipeDistance = 50;
 
   // Detect mobile device
@@ -1088,8 +1090,8 @@ export default function WithdrawPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Mobile Page Indicator - Bottom Navigation */}
-      {isMobile && (
+      {/* Mobile Page Indicator - Bottom Navigation (hidden when mobile menu is open) */}
+      {isMobile && !mobileMenuOpen && (
         <div
           className="fixed bottom-0 left-0 right-0 z-50"
           style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}

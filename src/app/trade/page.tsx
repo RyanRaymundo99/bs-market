@@ -29,6 +29,7 @@ import {
   Minus,
 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useMobileMenuOpen } from "@/hooks/useMobileMenuOpen";
 
 const TradePage = () => {
   const router = useRouter();
@@ -46,6 +47,7 @@ const TradePage = () => {
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const mobileMenuOpen = useMobileMenuOpen();
   const minSwipeDistance = 50;
 
   // Detect mobile device
@@ -240,30 +242,27 @@ const TradePage = () => {
   };
 
   // Format USDT input value (for display in input field)
+  // Brazilian format: dot = thousand separator (1.000 = 1000), comma = decimal (1,5 = 1.5)
   const formatUSDTInput = (value: string): string => {
-    // Remove all non-digit characters except comma and dot
     const cleaned = value.replace(/[^\d,.]/g, "");
-
-    // Handle empty
     if (!cleaned) return "";
 
-    // Replace comma with dot for parsing, then format
-    const normalized = cleaned.replace(",", ".");
-    const parts = normalized.split(".");
-    const integerPart = parts[0].replace(/\D/g, "");
-    const decimalPart = parts[1]?.replace(/\D/g, "").slice(0, 4) || ""; // USDT can have up to 4 decimals
+    const lastComma = cleaned.lastIndexOf(",");
+    let integerPart: string;
+    let decimalPart: string;
 
-    // Format integer part with thousand separators
-    const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-
-    // Combine parts
-    if (decimalPart) {
-      return `${formattedInteger},${decimalPart}`;
-    } else if (normalized.includes(".") || cleaned.includes(",")) {
-      return `${formattedInteger},`;
+    if (lastComma >= 0) {
+      integerPart = cleaned.slice(0, lastComma).replace(/\./g, "").replace(/\D/g, "") || "0";
+      decimalPart = cleaned.slice(lastComma + 1).replace(/\./g, "").replace(/\D/g, "").slice(0, 4);
     } else {
-      return formattedInteger;
+      integerPart = cleaned.replace(/\./g, "").replace(/\D/g, "") || "0";
+      decimalPart = "";
     }
+
+    const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    if (decimalPart) return `${formattedInteger},${decimalPart}`;
+    if (cleaned.endsWith(",")) return `${formattedInteger},`; // trailing comma while typing decimals
+    return formattedInteger;
   };
 
   // Parse USDT input value (convert formatted string to number)
@@ -1345,8 +1344,8 @@ const TradePage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Mobile Page Indicator - Bottom Navigation */}
-      {isMobile && (
+      {/* Mobile Page Indicator - Bottom Navigation (hidden when mobile menu is open) */}
+      {isMobile && !mobileMenuOpen && (
         <div
           className="fixed bottom-0 left-0 right-0 z-50"
           style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}

@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
 
     // Get query parameters for pagination and filtering
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get("limit") || "50");
+    const limit = Math.min(parseInt(searchParams.get("limit") || "200", 10) || 200, 500);
     const since = searchParams.get("since"); // ISO timestamp for incremental updates
     const lastId = searchParams.get("lastId"); // Last transaction ID for pagination
 
@@ -40,58 +40,76 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    // Get recent transactions (optimized query - only fetch what's needed)
-    const recentTransactions = await prisma.transaction.findMany({
-      where,
-      select: {
-        id: true,
-        type: true,
-        amount: true,
-        currency: true,
-        balance: true,
-        description: true,
-        createdAt: true,
-        userId: true,
-        metadata: true,
-        user: {
-          select: {
-            name: true,
-            email: true,
+    // Fetch transactions and orphan orders (orders with no linked transaction - e.g. failed/abandoned) in parallel
+    const [recentTransactions, orphanOrders] = await Promise.all([
+      prisma.transaction.findMany({
+        where,
+        select: {
+          id: true,
+          type: true,
+          amount: true,
+          currency: true,
+          balance: true,
+          description: true,
+          createdAt: true,
+          userId: true,
+          metadata: true,
+          user: {
+            select: {
+              name: true,
+              email: true,
+            },
+          },
+          deposit: {
+            select: {
+              status: true,
+              amount: true,
+              externalId: true,
+              confirmedAt: true,
+            },
+          },
+          withdrawal: {
+            select: {
+              status: true,
+              amount: true,
+              hash: true,
+              protocol: true,
+              network: true,
+            },
+          },
+          order: {
+            select: {
+              id: true,
+              status: true,
+              externalOrderId: true,
+              executedAt: true,
+              amount: true,
+              total: true,
+            },
           },
         },
-        deposit: {
-          select: {
-            status: true,
-            amount: true,
-            externalId: true,
-            confirmedAt: true,
+        orderBy: { createdAt: "desc" },
+        take: limit,
+      }),
+      // Orders that never got a Transaction (failed purchases, abandoned, etc.)
+      prisma.order.findMany({
+        where: { transactionId: null },
+        select: {
+          id: true,
+          status: true,
+          amount: true,
+          total: true,
+          createdAt: true,
+          userId: true,
+          externalOrderId: true,
+          user: {
+            select: { name: true, email: true },
           },
         },
-        withdrawal: {
-          select: {
-            status: true,
-            amount: true,
-            hash: true,
-            protocol: true,
-            network: true,
-          },
-        },
-        order: {
-          select: {
-            id: true,
-            status: true,
-            externalOrderId: true,
-            executedAt: true,
-            amount: true,
-            total: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-      take: limit,
-    });
+        orderBy: { createdAt: "desc" },
+        take: limit,
+      }),
+    ]);
 
     // Format transactions for the frontend (lightweight formatting)
     const formattedTransactions = recentTransactions.map((tx) => {
@@ -107,8 +125,10 @@ export async function GET(request: NextRequest) {
         const depositStatus = tx.deposit.status;
         if (depositStatus === "CONFIRMED") {
           status = "COMPLETED";
-        } else if (depositStatus === "REJECTED" || depositStatus === "CANCELLED") {
+        } else if (depositStatus === "REJECTED") {
           status = "REJECTED";
+        } else if (depositStatus === "CANCELLED") {
+          status = "CANCELLED";
         } else {
           // PENDING or any other status
           status = "PENDING";
@@ -119,8 +139,10 @@ export async function GET(request: NextRequest) {
         const withdrawalStatus = tx.withdrawal.status;
         if (withdrawalStatus === "COMPLETED") {
           status = "COMPLETED";
-        } else if (withdrawalStatus === "FAILED" || withdrawalStatus === "CANCELLED") {
-          status = "REJECTED";
+        } else if (withdrawalStatus === "FAILED") {
+          status = "FAILED";
+        } else if (withdrawalStatus === "CANCELLED") {
+          status = "CANCELLED";
         } else {
           // PENDING, PROCESSING, or any other status
           status = "PENDING";
@@ -131,8 +153,10 @@ export async function GET(request: NextRequest) {
         const orderStatus = tx.order.status;
         if (orderStatus === "COMPLETED") {
           status = "COMPLETED";
-        } else if (orderStatus === "FAILED" || orderStatus === "CANCELLED") {
-          status = "REJECTED";
+        } else if (orderStatus === "FAILED") {
+          status = "FAILED";
+        } else if (orderStatus === "CANCELLED") {
+          status = "CANCELLED";
         } else {
           // PENDING, EXECUTING, or any other status
           status = "PENDING";
@@ -178,10 +202,40 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    // Format orphan orders (no linked transaction) so they appear in the admin list (e.g. failed/abandoned purchases)
+    const formattedOrphans = orphanOrders.map((order) => {
+      const total = Number(order.total || 0);
+      const amount = Number(order.amount || 0);
+      return {
+        id: `order_${order.id}`,
+        type: "BUY_CRYPTO" as const,
+        amount,
+        currency: "USDT",
+        balance: 0,
+        description: `Compra USDT (ordem sem transação)`,
+        date: order.createdAt.toISOString(),
+        user: order.user ? { name: order.user.name || "", email: order.user.email || "" } : null,
+        userId: order.userId,
+        value: total,
+        status: order.status, // PENDING, FAILED, CANCELLED, EXECUTING, COMPLETED
+        relatedId: order.externalOrderId || order.id,
+        metadata: { _orphanOrder: true, orderId: order.id },
+        orderId: order.id,
+        depositId: null,
+        withdrawalId: null,
+      };
+    });
+
+    // Merge and sort by date desc, then take limit
+    const merged = [...formattedTransactions, ...formattedOrphans].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+    const transactions = merged.slice(0, limit);
+
     return NextResponse.json({
       success: true,
-      transactions: formattedTransactions,
-      count: formattedTransactions.length,
+      transactions,
+      count: transactions.length,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {

@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { syncMobileMenuToBody } from "@/hooks/useMobileMenuOpen";
 import { Button } from "@/components/ui/button";
 import {
   LogOut,
@@ -9,7 +10,6 @@ import {
   TrendingDown,
   BarChart3,
   User,
-  MessageCircle,
 } from "lucide-react";
 import { BalanceDisplay } from "./balance-display";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -21,7 +21,6 @@ const NAV_LINKS_KEYS = [
   { key: "trade", href: "/trade", icon: BarChart3 },
   { key: "withdraw", href: "/withdraw", icon: TrendingDown },
   { key: "profile", href: "/profile", icon: User },
-  { key: "contactSupport", href: "/profile#support", icon: MessageCircle },
 ];
 
 interface NavbarProps {
@@ -85,9 +84,10 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
     } else {
       document.body.style.overflow = "unset";
     }
-
+    syncMobileMenuToBody(isMobileMenuOpen);
     return () => {
       document.body.style.overflow = "unset";
+      syncMobileMenuToBody(false);
     };
   }, [isMobileMenuOpen]);
 
@@ -147,9 +147,7 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
                           ? "Sacar"
                           : link.key === "profile"
                             ? "Perfil"
-                            : link.key === "contactSupport"
-                              ? "Suporte"
-                              : link.key}
+                            : link.key}
                 </button>
               );
             })}
@@ -326,9 +324,7 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
                               ? "Sacar"
                               : link.key === "profile"
                                 ? "Perfil"
-                                : link.key === "contactSupport"
-                                  ? "Suporte"
-                                  : link.key}
+                                : link.key}
                     </span>
                   </button>
                 );

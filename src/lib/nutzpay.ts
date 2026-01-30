@@ -185,12 +185,11 @@ export class NutzPayService {
           }/api/webhooks/nutzpay`,
       };
 
-      // Add acquirer if configured (to override account default)
-      // Common values: "mercadopago", "gerencianet", etc.
-      // If not set, NutzPay will use account default (which may be unsupported)
-      if (process.env.NUTZPAY_ACQUIRER) {
-        purchasePayload.acquirer = process.env.NUTZPAY_ACQUIRER;
-      }
+      // Add acquirer (required to avoid "Unsupported acquirer: cali" from NutzPay)
+      // "cali" is not supported - use mercadopago. Common: "mercadopago", "gerencianet"
+      const rawAcquirer = (process.env.NUTZPAY_ACQUIRER || "mercadopago").trim();
+      purchasePayload.acquirer =
+        rawAcquirer.toLowerCase() === "cali" ? "mercadopago" : rawAcquirer;
 
       const headers = this.getAuthHeaders();
 

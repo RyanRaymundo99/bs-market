@@ -463,7 +463,7 @@ export default function AdminDashboard() {
         "/api/admin/transactions/realtime",
         window.location.origin,
       );
-      url.searchParams.set("limit", "50");
+      url.searchParams.set("limit", "200");
       if (since) {
         url.searchParams.set("since", since.toISOString());
       }
@@ -724,6 +724,15 @@ export default function AdminDashboard() {
   };
 
   const handleTransactionClick = async (transaction: Transaction) => {
+    // Orphan orders (failed/abandoned with no linked transaction) have id like "order_xxx"
+    if (String(transaction.id).startsWith("order_")) {
+      toast({
+        title: "Ordem sem transação",
+        description:
+          "Esta ordem não possui transação vinculada (ex.: compra falhou ou foi abandonada). Detalhes completos não disponíveis.",
+      });
+      return;
+    }
     setSelectedTransaction(transaction);
     setShowDetailsDialog(true);
     setDetailsLoading(true);
@@ -3106,6 +3115,18 @@ export default function AdminDashboard() {
                     >
                       Rejeitado
                     </SelectItem>
+                    <SelectItem
+                      value="FAILED"
+                      className="text-white hover:bg-gray-800"
+                    >
+                      Falhou
+                    </SelectItem>
+                    <SelectItem
+                      value="CANCELLED"
+                      className="text-white hover:bg-gray-800"
+                    >
+                      Cancelado
+                    </SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
@@ -3281,13 +3302,17 @@ export default function AdminDashboard() {
                             className="py-3 px-4"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <Checkbox
-                              checked={selectedTransactions.has(transaction.id)}
-                              onCheckedChange={() =>
-                                toggleTransactionSelection(transaction.id)
-                              }
-                              className="border-gray-600"
-                            />
+                            {!String(transaction.id).startsWith("order_") ? (
+                              <Checkbox
+                                checked={selectedTransactions.has(transaction.id)}
+                                onCheckedChange={() =>
+                                  toggleTransactionSelection(transaction.id)
+                                }
+                                className="border-gray-600"
+                              />
+                            ) : (
+                              <span className="text-gray-500">—</span>
+                            )}
                           </td>
                           <td
                             className="py-3 px-4 text-gray-300 cursor-pointer"
@@ -3379,7 +3404,8 @@ export default function AdminDashboard() {
                                 {getStatusLabel(transaction.status)}
                               </span>
                               {(transaction.status === "PENDING" ||
-                                transaction.status === "PROCESSING") && (
+                                transaction.status === "PROCESSING") &&
+                                !String(transaction.id).startsWith("order_") && (
                                 <div className="flex items-center gap-1">
                                   <Button
                                     size="sm"

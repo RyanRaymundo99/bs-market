@@ -29,8 +29,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { useMobileMenuOpen } from "@/hooks/useMobileMenuOpen";
 import NavbarNew from "@/components/ui/navbar-new";
-import KYCBanner from "@/components/ui/kyc-banner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { formatUSDT } from "@/lib/format-currency";
 import {
@@ -117,7 +117,6 @@ export default function Dashboard() {
   const [latestWithdrawal, setLatestWithdrawal] = useState<Withdrawal | null>(
     null,
   );
-  const [showKYCBanner, setShowKYCBanner] = useState(true);
   const [chartData, setChartData] = useState<
     Array<{ date: string; BRL: number; USDT: number }>
   >([]);
@@ -126,6 +125,7 @@ export default function Dashboard() {
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const mobileMenuOpen = useMobileMenuOpen();
 
   // Minimum swipe distance (in pixels)
   const minSwipeDistance = 50;
@@ -200,50 +200,6 @@ export default function Dashboard() {
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, [router]);
-
-  // Check if redirected from KYC submission
-  useEffect(() => {
-    const kycParam = searchParams.get("kyc");
-    if (kycParam === "pending") {
-      // Show banner if redirected from KYC submission
-      setShowKYCBanner(true);
-    }
-  }, [searchParams]);
-
-  // Check if APPROVED banner was already dismissed for this user
-  useEffect(() => {
-    if (userStatus?.id && userStatus?.kycStatus === "APPROVED") {
-      const dismissedKey = `kyc-approved-banner-dismissed-${userStatus.id}`;
-      const wasDismissed = localStorage.getItem(dismissedKey) === "true";
-      if (wasDismissed) {
-        setShowKYCBanner(false);
-      } else {
-        setShowKYCBanner(true);
-      }
-    } else if (userStatus?.kycStatus === "PENDING") {
-      // For PENDING, always show banner (permanent)
-      setShowKYCBanner(true);
-    } else if (userStatus?.kycStatus && userStatus.kycStatus !== "APPROVED") {
-      // For REJECTED, show banner normally
-      setShowKYCBanner(true);
-    }
-  }, [userStatus]);
-
-  // Handler to dismiss banner and save to localStorage with user ID
-  const handleDismissKYCBanner = () => {
-    if (userStatus?.id && userStatus?.kycStatus === "APPROVED") {
-      // For APPROVED status, mark as dismissed permanently for this user
-      const dismissedKey = `kyc-approved-banner-dismissed-${userStatus.id}`;
-      localStorage.setItem(dismissedKey, "true");
-      setShowKYCBanner(false);
-    } else if (userStatus?.kycStatus === "PENDING") {
-      // For PENDING status, do not allow dismissal (permanent banner)
-      return;
-    } else {
-      // For other statuses (REJECTED), just hide temporarily
-      setShowKYCBanner(false);
-    }
-  };
 
   // Format currency in Brazilian Real
   const formatCurrency = (value: number) => {
@@ -686,14 +642,7 @@ export default function Dashboard() {
             : undefined
         }
       >
-        {/* KYC Status Banner */}
-        {showKYCBanner && userStatus && (
-          <KYCBanner
-            status={userStatus.kycStatus as "PENDING" | "APPROVED" | "REJECTED"}
-            onDismiss={handleDismissKYCBanner}
-            showDismiss={userStatus.kycStatus !== "PENDING"}
-          />
-        )}
+        {/* KYC banner is shown once by GlobalKYCBanner in layout - no duplicate here */}
 
         {/* Main Balance Display - Centered Hero Section */}
         <div className="mb-6 sm:mb-8">
@@ -1218,8 +1167,8 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Mobile Page Indicator - Bottom Navigation */}
-      {isMobile && (
+      {/* Mobile Page Indicator - Bottom Navigation (hidden when mobile menu is open) */}
+      {isMobile && !mobileMenuOpen && (
         <div
           className="fixed bottom-0 left-0 right-0 z-50"
           style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}
