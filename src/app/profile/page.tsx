@@ -24,6 +24,7 @@ import {
   Edit,
   Save,
   X,
+  MessageCircle,
 } from "lucide-react";
 
 interface UserProfile {
@@ -296,8 +297,8 @@ export default function ProfilePage() {
           error instanceof Error
             ? error.message
             : language === "pt"
-            ? "Falha ao enviar para revisão"
-            : "Failed to submit for review",
+              ? "Falha ao enviar para revisão"
+              : "Failed to submit for review",
       });
     }
   };
@@ -629,14 +630,14 @@ export default function ProfilePage() {
                     <p>
                       <strong>{t("submitted")}:</strong>{" "}
                       {new Date(userProfile.kycSubmittedAt).toLocaleDateString(
-                        language === "pt" ? "pt-BR" : "en-US"
+                        language === "pt" ? "pt-BR" : "en-US",
                       )}
                     </p>
                     {userProfile.kycReviewedAt && (
                       <p>
                         <strong>{t("reviewed")}:</strong>{" "}
                         {new Date(userProfile.kycReviewedAt).toLocaleDateString(
-                          language === "pt" ? "pt-BR" : "en-US"
+                          language === "pt" ? "pt-BR" : "en-US",
                         )}
                       </p>
                     )}
@@ -859,8 +860,8 @@ export default function ProfilePage() {
                     {selectedFile.type === "front"
                       ? t("documentFront")
                       : selectedFile.type === "back"
-                      ? t("documentBack")
-                      : t("selfieWithDocument")}
+                        ? t("documentBack")
+                        : t("selfieWithDocument")}
                   </h3>
                   <Button
                     variant="ghost"
@@ -899,6 +900,42 @@ export default function ProfilePage() {
                 </Button>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Contact Support */}
+        <Card id="support" className="mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageCircle className="w-5 h-5" />
+              {t("contactSupport")}
+            </CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              {t("contactSupportDescription")}
+            </p>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-4">
+            <a
+              href={`https://wa.me/${process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "5511984284867"}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-3 rounded-lg bg-[#25D366]/20 text-[#25D366] hover:bg-[#25D366]/30 border border-[#25D366]/40 transition-colors"
+            >
+              <MessageCircle className="w-5 h-5" />
+              <span className="font-medium">{t("contactViaWhatsApp")}</span>
+              <span className="text-sm opacity-90">+55 11 98428-4867</span>
+            </a>
+            <a
+              href={`mailto:${process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "suporte@bsmarket.com.br"}`}
+              className="inline-flex items-center gap-2 px-4 py-3 rounded-lg bg-white/10 text-white hover:bg-white/20 border border-white/20 transition-colors"
+            >
+              <Mail className="w-5 h-5" />
+              <span className="font-medium">{t("contactViaEmail")}</span>
+              <span className="text-sm opacity-90 truncate max-w-[200px]">
+                {process.env.NEXT_PUBLIC_SUPPORT_EMAIL ||
+                  "suporte@bsmarket.com.br"}
+              </span>
+            </a>
           </CardContent>
         </Card>
       </div>

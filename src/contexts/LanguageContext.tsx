@@ -11,7 +11,7 @@ interface LanguageContextType {
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(
-  undefined
+  undefined,
 );
 
 // Comprehensive translations for the entire app
@@ -162,6 +162,11 @@ const translations = {
     quotesUpdated: "As cotações são atualizadas em tempo real",
     feeApplied: "Taxa de 3% aplicada em todas as operações",
     pixPayment: "Pagamento via PIX com confirmação automática",
+    contactSupport: "Fale com o Suporte",
+    contactSupportDescription:
+      "Dúvidas ou problemas? Entre em contato pelo WhatsApp ou e-mail.",
+    contactViaWhatsApp: "WhatsApp",
+    contactViaEmail: "E-mail",
   },
   en: {
     // Navigation
@@ -309,6 +314,11 @@ const translations = {
     quotesUpdated: "Quotes are updated in real time",
     feeApplied: "3% fee applied to all operations",
     pixPayment: "PIX payment with automatic confirmation",
+    contactSupport: "Contact Support",
+    contactSupportDescription:
+      "Questions or issues? Reach us via WhatsApp or email.",
+    contactViaWhatsApp: "WhatsApp",
+    contactViaEmail: "Email",
   },
 };
 

@@ -9,6 +9,7 @@ import {
   TrendingDown,
   BarChart3,
   User,
+  MessageCircle,
 } from "lucide-react";
 import { BalanceDisplay } from "./balance-display";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -20,6 +21,7 @@ const NAV_LINKS_KEYS = [
   { key: "trade", href: "/trade", icon: BarChart3 },
   { key: "withdraw", href: "/withdraw", icon: TrendingDown },
   { key: "profile", href: "/profile", icon: User },
+  { key: "contactSupport", href: "/profile#support", icon: MessageCircle },
 ];
 
 interface NavbarProps {
@@ -32,8 +34,10 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
   const [mounted, setMounted] = useState(false);
   const [depositsDisabled, setDepositsDisabled] = useState(false);
   const [withdrawalsDisabled, setWithdrawalsDisabled] = useState(false);
-  const [depositsDisabledMessage, setDepositsDisabledMessage] = useState<string>("");
-  const [withdrawalsDisabledMessage, setWithdrawalsDisabledMessage] = useState<string>("");
+  const [depositsDisabledMessage, setDepositsDisabledMessage] =
+    useState<string>("");
+  const [withdrawalsDisabledMessage, setWithdrawalsDisabledMessage] =
+    useState<string>("");
   const { language, setLanguage, t } = useLanguage();
 
   // Prevent hydration mismatch by only rendering translated content after mount
@@ -50,8 +54,12 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
         if (data?.success) {
           setDepositsDisabled(Boolean(data.depositsDisabled));
           setWithdrawalsDisabled(Boolean(data.withdrawalsDisabled));
-          setDepositsDisabledMessage(String(data.depositsDisabledMessage || ""));
-          setWithdrawalsDisabledMessage(String(data.withdrawalsDisabledMessage || ""));
+          setDepositsDisabledMessage(
+            String(data.depositsDisabledMessage || ""),
+          );
+          setWithdrawalsDisabledMessage(
+            String(data.withdrawalsDisabledMessage || ""),
+          );
         }
       } catch (error) {
         console.error("Failed to load site status:", error);
@@ -129,7 +137,19 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
                   className="text-white/80 hover:text-brand-300 font-medium transition-colors flex items-center gap-2 group cursor-pointer"
                 >
                   <IconComponent className="w-4 h-4 group-hover:text-brand-300 transition-colors" />
-                  {mounted ? t(link.key) : (link.key === "trade" ? "Depositar" : link.key === "dashboard" ? "Dashboard" : link.key === "withdraw" ? "Sacar" : link.key === "profile" ? "Perfil" : link.key)}
+                  {mounted
+                    ? t(link.key)
+                    : link.key === "trade"
+                      ? "Depositar"
+                      : link.key === "dashboard"
+                        ? "Dashboard"
+                        : link.key === "withdraw"
+                          ? "Sacar"
+                          : link.key === "profile"
+                            ? "Perfil"
+                            : link.key === "contactSupport"
+                              ? "Suporte"
+                              : link.key}
                 </button>
               );
             })}
@@ -174,7 +194,13 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
             className="gap-2 text-white hover:text-brand-300 hover:bg-white/10"
           >
             <LogOut className="w-4 h-4" />
-            {mounted ? (isLoggingOut ? t("loggingOut") : t("logout")) : (isLoggingOut ? "Saindo..." : "Sair")}
+            {mounted
+              ? isLoggingOut
+                ? t("loggingOut")
+                : t("logout")
+              : isLoggingOut
+                ? "Saindo..."
+                : "Sair"}
           </Button>
         </div>
       </header>
@@ -219,29 +245,30 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
         </div>
       </header>
 
-      {(depositsDisabled || withdrawalsDisabled) ? (
+      {depositsDisabled || withdrawalsDisabled ? (
         <div className="w-full border-b border-yellow-500/30 bg-yellow-500/10 px-4 py-2">
           <p className="text-xs text-yellow-200">
             {depositsDisabled && withdrawalsDisabled
-              ? depositsDisabledMessage || withdrawalsDisabledMessage ||
+              ? depositsDisabledMessage ||
+                withdrawalsDisabledMessage ||
                 (mounted
                   ? language === "pt"
                     ? "A plataforma está em atualização. Depósitos e saques estão temporariamente desativados."
                     : "The platform is being updated. Deposits and withdrawals are temporarily disabled."
                   : "Platform update in progress.")
               : depositsDisabled
-              ? depositsDisabledMessage ||
-                (mounted
-                  ? language === "pt"
-                    ? "Depósitos estão temporariamente desativados."
-                    : "Deposits are temporarily disabled."
-                  : "Deposits disabled.")
-              : withdrawalsDisabledMessage ||
-                (mounted
-                  ? language === "pt"
-                    ? "Saques estão temporariamente desativados."
-                    : "Withdrawals are temporarily disabled."
-                  : "Withdrawals disabled.")}
+                ? depositsDisabledMessage ||
+                  (mounted
+                    ? language === "pt"
+                      ? "Depósitos estão temporariamente desativados."
+                      : "Deposits are temporarily disabled."
+                    : "Deposits disabled.")
+                : withdrawalsDisabledMessage ||
+                  (mounted
+                    ? language === "pt"
+                      ? "Saques estão temporariamente desativados."
+                      : "Withdrawals are temporarily disabled."
+                    : "Withdrawals disabled.")}
           </p>
         </div>
       ) : null}
@@ -261,7 +288,9 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
       >
         {/* Mobile Menu Header */}
         <div className="flex items-center justify-between p-6 border-b border-white/10">
-          <span className="text-lg font-bold text-white">{mounted ? t("menu") : "Menu"}</span>
+          <span className="text-lg font-bold text-white">
+            {mounted ? t("menu") : "Menu"}
+          </span>
           <Button
             variant="ghost"
             size="sm"
@@ -286,7 +315,21 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
                     className="w-full flex items-center gap-3 p-3 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 group"
                   >
                     <IconComponent className="w-5 h-5 group-hover:text-brand-300 transition-colors" />
-                    <span className="font-medium">{mounted ? t(link.key) : (link.key === "trade" ? "Depositar" : link.key === "dashboard" ? "Dashboard" : link.key === "withdraw" ? "Sacar" : link.key === "profile" ? "Perfil" : link.key)}</span>
+                    <span className="font-medium">
+                      {mounted
+                        ? t(link.key)
+                        : link.key === "trade"
+                          ? "Depositar"
+                          : link.key === "dashboard"
+                            ? "Dashboard"
+                            : link.key === "withdraw"
+                              ? "Sacar"
+                              : link.key === "profile"
+                                ? "Perfil"
+                                : link.key === "contactSupport"
+                                  ? "Suporte"
+                                  : link.key}
+                    </span>
                   </button>
                 );
               })}
@@ -334,7 +377,13 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
               >
                 <LogOut className="w-5 h-5" />
                 <span className="font-medium">
-                  {mounted ? (isLoggingOut ? t("loggingOut") : t("logout")) : (isLoggingOut ? "Saindo..." : "Sair")}
+                  {mounted
+                    ? isLoggingOut
+                      ? t("loggingOut")
+                      : t("logout")
+                    : isLoggingOut
+                      ? "Saindo..."
+                      : "Sair"}
                 </span>
               </button>
             </div>
