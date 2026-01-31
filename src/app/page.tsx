@@ -6,335 +6,501 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  TrendingUp,
+  Zap,
   Shield,
-  BarChart3,
+  Coins,
   ArrowRight,
-  XCircle,
+  UserPlus,
+  CreditCard,
+  TrendingUp,
+  CheckCircle2,
+  MessageCircle,
+  Calculator,
+  ChevronDown,
+  ExternalLink,
+  Wallet,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import CalculatorModal from "@/components/ui/calculator-modal";
 
 const Home = () => {
   const { toast } = useToast();
-  const [showRejectionMessage, setShowRejectionMessage] = useState(false);
+  const [calculatorOpen, setCalculatorOpen] = useState(false);
+  const [faqOpen, setFaqOpen] = useState<number | null>(null);
 
   useEffect(() => {
-    // Check if there's a rejection message in sessionStorage
     const rejectionMessage = sessionStorage.getItem("rejectionMessage");
     if (rejectionMessage) {
-      // Show toast with rejection message
       toast({
         title: "Conta Rejeitada",
         description: rejectionMessage,
         variant: "destructive",
       });
-      // Clear the message from sessionStorage
       sessionStorage.removeItem("rejectionMessage");
-      setShowRejectionMessage(true);
     }
   }, [toast]);
 
   return (
-    <div className="relative min-h-screen bg-black text-white">
-      {/* Navigation */}
-      <nav className="border-b border-white/10 bg-black/60 backdrop-blur-[20px] supports-[backdrop-filter]:bg-black/60">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="overflow-hidden">
-            <Link href="/" className="flex items-center overflow-hidden">
-              <div className="h-16 overflow-hidden flex items-center">
+    <div className="relative min-h-screen bg-black text-white overflow-x-hidden home-bg">
+      <div className="fixed inset-0 z-0" aria-hidden>
+        <div className="home-bg-orb home-bg-orb-1" />
+        <div className="home-bg-orb home-bg-orb-2" />
+        <div className="home-bg-orb home-bg-orb-3" />
+        <div className="home-bg-orb home-bg-orb-4" />
+        <div className="home-bg-grid" />
+        <div className="home-bg-noise" />
+        <div className="home-bg-glass-frost" />
+      </div>
+      <div className="home-bg-glass" aria-hidden />
+
+      <div className="relative z-10 flex flex-col min-h-screen">
+        <header className="sticky top-0 z-20 shrink-0 border-b border-white/10 bg-black/90 backdrop-blur-md">
+          <nav className="container mx-auto px-4 md:px-8 lg:px-12 xl:px-16 max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px]">
+            <div className="flex items-center justify-between h-16 md:h-20">
+              <Link href="/" className="flex items-center shrink-0" aria-label="Build Strategy - Início">
                 <Image
                   src="/fullname-logo.svg"
                   alt="Build Strategy"
-                  width={400}
-                  height={500}
-                  className="-mt-24 img-blur"
+                  width={280}
+                  height={72}
+                  className="h-8 md:h-9 lg:h-10 w-auto object-contain"
                 />
-              </div>
-            </Link>
-          </div>
-          {/* Desktop links */}
-          <div className="hidden md:flex items-center space-x-4">
-            <Link href="/login">
-              <Button
-                variant="ghost"
-                className="text-white hover:text-brand-300 hover:bg-white/10 nav-blur"
-              >
-                Entrar
-              </Button>
-            </Link>
-            <Link href="/signup">
-              <Button className="bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-white/30 transition-all duration-200 backdrop-blur-[10px] relative overflow-hidden btn-blur">
-                {/* Mirror effect for button */}
-                <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-30 pointer-events-none rounded-md"></div>
-                <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-                <span className="relative z-10">Começar</span>
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </nav>
-
-      {/* Hero Section */}
-      <section className="container mx-auto px-4 py-20">
-        <div className="text-center space-y-8">
-          <h1 className="text-5xl md:text-7xl font-bold text-white">
-            <span className="text-gradient block text-blur">
-              Build Strategy
-            </span>
-          </h1>
-          <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-            A integração do mercado cripto com o sua finanças
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Link href="/signup">
-              <Button
-                size="lg"
-                className="bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-white/30 transition-all duration-200 backdrop-blur-[10px] relative overflow-hidden btn-blur"
-                style={{
-                  boxShadow: "inset 0 1px 0 0 rgba(255, 255, 255, 0.1)",
-                }}
-              >
-                {/* Mirror effect for button */}
-                <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-30 pointer-events-none rounded-md"></div>
-                <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-                <span className="relative z-10">Começar a Investir Agora</span>
-                <ArrowRight className="w-4 h-4 ml-2 relative z-10" />
-              </Button>
-            </Link>
-            <Link href="/login">
-              <Button
-                variant="outline"
-                size="lg"
-                className="bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-white/30 transition-all duration-200 backdrop-blur-[10px] relative overflow-hidden btn-blur"
-                style={{
-                  boxShadow: "inset 0 1px 0 0 rgba(255, 255, 255, 0.1)",
-                }}
-              >
-                {/* Mirror effect for button */}
-                <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-30 pointer-events-none rounded-md"></div>
-                <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-                <span className="relative z-10">Entrar</span>
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="container mx-auto px-4 py-20">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-white mb-4 text-blur">
-            Por Que Escolher a BS Consulting?
-          </h2>
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-            Nossa plataforma combina tecnologia de ponta com estratégias de
-            investimento comprovadas
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-8">
-          <Card className="bg-black/60 border border-white/10 rounded-xl shadow-2xl backdrop-blur-[20px] relative overflow-hidden card-blur">
-            {/* Mirror effect overlay */}
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-50"></div>
-            <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-            <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
-
-            <CardContent className="p-6 relative z-10">
-              <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center mb-4 border border-white/20 glass-blur">
-                <TrendingUp className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-2 text-blur">
-                Insights Impulsionados por IA
-              </h3>
-              <p className="text-gray-300">
-                Obtenha análise de mercado em tempo real e recomendações de
-                investimento personalizadas alimentadas por algoritmos avançados
-                de aprendizado de máquina.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-black/60 border border-white/10 rounded-xl shadow-2xl backdrop-blur-[20px] relative overflow-hidden card-blur">
-            {/* Mirror effect overlay */}
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-50"></div>
-            <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-            <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
-
-            <CardContent className="p-6 relative z-10">
-              <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center mb-4 border border-white/20 glass-blur">
-                <Shield className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-2 text-blur">
-                Seguro e Conforme
-              </h3>
-              <p className="text-gray-300">
-                Segurança de nível bancário com conformidade SOC 2. Seus
-                investimentos e dados são protegidos com criptografia de nível
-                empresarial.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-black/60 border border-white/10 rounded-xl shadow-2xl backdrop-blur-[20px] relative overflow-hidden card-blur">
-            {/* Mirror effect overlay */}
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-50"></div>
-            <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-            <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
-
-            <CardContent className="p-6 relative z-10">
-              <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center mb-4 border border-white/20 glass-blur">
-                <BarChart3 className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-2 text-blur">
-                Análises Avançadas
-              </h3>
-              <p className="text-gray-300">
-                Análises abrangentes de portfólio com métricas de desempenho
-                detalhadas, avaliação de risco e sugestões de otimização.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
-      {/* Stats Section */}
-      <section className="container mx-auto px-4 py-20">
-        <div className="grid md:grid-cols-4 gap-8 text-center">
-          <div className="bg-black/60 border border-white/10 rounded-xl p-6 shadow-2xl backdrop-blur-[20px] relative overflow-hidden card-blur">
-            {/* Mirror effect overlay */}
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-50"></div>
-            <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-            <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
-
-            <div className="text-4xl font-bold text-brand-300 mb-2 relative z-10 text-blur">
-              $2.5B+
-            </div>
-            <div className="text-gray-300 relative z-10">Ativos Sob Gestão</div>
-          </div>
-          <div className="bg-black/60 border border-white/10 rounded-xl p-6 shadow-2xl backdrop-blur-[20px] relative overflow-hidden card-blur">
-            {/* Mirror effect overlay */}
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-50"></div>
-            <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-            <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
-
-            <div className="text-4xl font-bold text-brand-300 mb-2 relative z-10 text-blur">
-              50K+
-            </div>
-            <div className="text-gray-300 relative z-10">
-              Investidores Ativos
-            </div>
-          </div>
-          <div className="bg-black/60 border border-white/10 rounded-xl p-6 shadow-2xl backdrop-blur-[20px] relative overflow-hidden card-blur">
-            {/* Mirror effect overlay */}
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-50"></div>
-            <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-            <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
-
-            <div className="text-4xl font-bold text-brand-300 mb-2 relative z-10 text-blur">
-              15.8%
-            </div>
-            <div className="text-gray-300 relative z-10">
-              Retorno Médio Anual
-            </div>
-          </div>
-          <div className="bg-black/60 border border-white/10 rounded-xl p-6 shadow-2xl backdrop-blur-[20px] relative overflow-hidden card-blur">
-            {/* Mirror effect overlay */}
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-50"></div>
-            <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-            <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
-
-            <div className="text-4xl font-bold text-brand-300 mb-2 relative z-10 text-blur">
-              99.9%
-            </div>
-            <div className="text-gray-300 relative z-10">
-              Confiabilidade de Uptime
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="container mx-auto px-4 py-20">
-        <Card className="bg-black/60 border border-white/10 rounded-xl shadow-2xl backdrop-blur-[20px] relative overflow-hidden card-blur">
-          {/* Mirror effect overlay */}
-          <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-50"></div>
-          <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-          <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-transparent via-white/20 to-transparent"></div>
-
-          <CardContent className="p-12 text-center relative z-10">
-            <h2 className="text-4xl font-bold text-white mb-4 text-blur">
-              Pronto para Começar Sua Jornada de Investimento?
-            </h2>
-            <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-              Junte-se a milhares de investidores que confiam no Build Strategy
-              para seu futuro financeiro. Comece com apenas R$ 100 e veja sua
-              riqueza crescer.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Link href="/signup">
-                <Button
-                  size="lg"
-                  className="bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-white/30 transition-all duration-200 backdrop-blur-[10px] relative overflow-hidden btn-blur"
-                  style={{
-                    boxShadow: "inset 0 1px 0 0 rgba(255, 255, 255, 0.1)",
-                  }}
-                >
-                  {/* Mirror effect for button */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-30 pointer-events-none rounded-md"></div>
-                  <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-                  <span className="relative z-10">Criar Conta Gratuita</span>
-                  <ArrowRight className="w-4 h-4 ml-2 relative z-10" />
-                </Button>
               </Link>
-              <Link href="/login">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-white/30 transition-all duration-200 backdrop-blur-[10px] relative overflow-hidden btn-blur"
-                  style={{
-                    boxShadow: "inset 0 1px 0 0 rgba(255, 255, 255, 0.1)",
-                  }}
-                >
-                  {/* Mirror effect for button */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-30 pointer-events-none rounded-md"></div>
-                  <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-                  <span className="relative z-10">Entrar</span>
-                </Button>
-              </Link>
+              <div className="flex items-center gap-2 sm:gap-3">
+                <Link href="/login">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-gray-300 hover:text-white hover:bg-white/10 rounded-lg h-9 px-4 md:h-10 md:px-5 text-sm font-medium"
+                  >
+                    Entrar
+                  </Button>
+                </Link>
+                <Link href="/signup">
+                  <Button
+                    size="sm"
+                    className="bg-brand-300 text-black hover:bg-brand-400 font-semibold rounded-xl h-9 px-4 md:h-10 md:px-6 text-sm shadow-[0_4px_14px_rgba(18,224,161,0.25)]"
+                  >
+                    Começar
+                  </Button>
+                </Link>
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      </section>
+          </nav>
+        </header>
 
-      {/* Footer */}
-      <footer className="border-t border-white/10 bg-black/60 backdrop-blur-[20px]">
-        <div className="container mx-auto px-4 py-12">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="flex items-center space-x-2 mb-4 md:mb-0">
-              <Link href="/" className="flex items-center">
-                <div className="h-14 overflow-hidden flex items-center">
-                  <Image
-                    src="/fullname-logo.svg"
-                    alt="Build Strategy"
-                    width={240}
-                    height={50}
-                    className="img-blur"
-                  />
+        <main className="flex-1 flex flex-col min-h-0">
+          {/* Hero: 50/50 split — left content, right image */}
+          <section className="flex-1 flex flex-col min-h-[calc(100vh-7rem)] md:min-h-[calc(100vh-8rem)] lg:grid lg:grid-cols-2 lg:min-h-[calc(100vh-7rem)] lg:items-stretch">
+            <div className="flex flex-col justify-center px-4 md:px-8 lg:px-12 xl:px-16 py-14 md:py-16 lg:py-20">
+              <div className="max-w-xl xl:max-w-2xl">
+                <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white tracking-tight leading-[1.05]">
+                  <span className="text-gradient drop-shadow-[0_0_24px_rgba(18,224,161,0.25)]">Build Strategy</span>
+                </h1>
+                <p className="mt-6 md:mt-8 text-lg md:text-xl text-gray-300 leading-relaxed max-w-lg">
+                  Compre e venda criptomoedas em reais. Depósito via PIX, saque em até 24h e taxas competitivas.
+                </p>
+                <div className="mt-10 md:mt-12 flex flex-col sm:flex-row sm:items-center gap-4">
+                  <Link href="/signup">
+                    <Button size="lg" className="w-full sm:w-auto bg-brand-300 text-black hover:bg-brand-400 font-semibold rounded-xl h-12 px-7 lg:h-14 lg:px-9 shadow-[0_8px_32px_rgba(18,224,161,0.2)] hover:shadow-[0_12px_40px_rgba(18,224,161,0.3)] transition-shadow">
+                      Criar conta grátis
+                      <ArrowRight className="ml-2 w-4 h-4" />
+                    </Button>
+                  </Link>
+                  <Link href="/login" className="flex items-center justify-center sm:justify-start text-gray-400 hover:text-white text-sm transition-colors py-1">
+                    Já tem conta? <span className="ml-1.5 font-semibold text-white">Entrar</span>
+                  </Link>
                 </div>
-              </Link>
+                <div className="mt-10 pt-8 border-t border-white/10">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-4">
+                    Condições
+                  </p>
+                  <p className="text-sm text-gray-400">
+                    Depósito mínimo 100 USDT · Taxa até 3% · PIX na hora
+                  </p>
+                  <div className="flex flex-wrap gap-x-6 gap-y-3 mt-5 text-sm text-gray-400">
+                    <span className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-brand-300 shrink-0" />
+                      Depósito PIX
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-brand-300 shrink-0" />
+                      Saque em BRL
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-brand-300 shrink-0" />
+                      2FA
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-brand-300 shrink-0" />
+                      Suporte em PT
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center space-x-6 text-sm text-gray-300">
-              <span>© 2024 Build Strategy. Todos os direitos reservados.</span>
-              <Link
-                href="/login"
-                className="hover:text-brand-300 transition-colors text-blur"
+            <div className="relative w-full min-h-[300px] md:min-h-[400px] lg:min-h-0 lg:h-full order-first lg:order-last">
+              <Image
+                src="/imgs/pexels-tima-miroshnichenko-7567443.jpg"
+                alt="Plataforma de trading"
+                fill
+                className="object-cover object-center"
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                priority
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent pointer-events-none" aria-hidden />
+              <div className="absolute bottom-0 left-0 right-0 p-4 md:p-5 lg:p-6 pointer-events-none">
+                <span className="inline-block rounded-lg bg-black/50 backdrop-blur-sm border border-white/10 px-4 py-2.5 text-sm font-medium text-white/95 shadow-lg">
+                  Interface simples para negociar USDT em reais
+                </span>
+              </div>
+            </div>
+          </section>
+
+          {/* How it works */}
+          <section id="como-funciona" className="container mx-auto px-4 md:px-6 lg:px-8 max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px] py-20 md:py-28 lg:py-32">
+            <p className="landing-section-label">Como funciona</p>
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mt-1 mb-3">
+              Três passos para começar
+            </h2>
+            <p className="text-gray-400 mb-12 lg:mb-16 max-w-xl text-base lg:text-lg leading-relaxed">
+              Cadastre-se, deposite via PIX e negocie 24/7. Simples assim.
+            </p>
+            <div className="relative w-full rounded-2xl overflow-hidden border border-white/10 aspect-[21/9] max-h-[200px] mb-12">
+              <Image
+                src="/imgs/pexels-alphatradezone-5784811.jpg"
+                alt="Trading e finanças"
+                fill
+                className="object-cover"
+                sizes="(max-width: 1280px) 100vw, 1280px"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent" />
+              <div className="absolute inset-0 flex items-center pl-6 md:pl-10">
+                <p className="text-white/95 text-sm md:text-base font-medium max-w-xl">
+                  Depósito via PIX na hora · Saque em BRL em até 24h
+                </p>
+              </div>
+            </div>
+            <div className="grid md:grid-cols-3 gap-8 lg:gap-10 xl:gap-12">
+              {[
+                { icon: UserPlus, step: "1", title: "Cadastre-se", desc: "Crie sua conta em minutos. Grátis e sem compromisso." },
+                { icon: CreditCard, step: "2", title: "Deposite via PIX", desc: "O valor cai na hora. Você começa a negociar na sequência." },
+                { icon: TrendingUp, step: "3", title: "Negocie 24/7", desc: "Compre e venda cripto a qualquer momento. Saque em BRL quando quiser." },
+              ].map(({ icon: Icon, step, title, desc }) => (
+                <div key={step} className="landing-card p-6 md:p-8 lg:p-10">
+                  <div className="w-12 h-12 rounded-xl bg-brand-300/20 flex items-center justify-center mb-5">
+                    <Icon className="w-6 h-6 text-brand-300" />
+                  </div>
+                  <p className="text-xs font-medium text-brand-300 uppercase tracking-wider mb-1">Passo {step}</p>
+                  <h3 className="text-lg font-semibold text-white mb-2">{title}</h3>
+                  <p className="text-gray-400 text-sm leading-relaxed">{desc}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Why us / Features */}
+          <section id="por-que" className="container mx-auto px-4 md:px-6 lg:px-8 max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px] py-20 md:py-28 lg:py-32">
+            <p className="landing-section-label">Por que a Build Strategy</p>
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mt-1 mb-3">
+              Exchange pensada para você
+            </h2>
+            <p className="text-gray-400 mb-12 lg:mb-16 max-w-xl text-base lg:text-lg leading-relaxed">
+              Liquidez, segurança e suporte em reais.
+            </p>
+            <div className="grid md:grid-cols-3 gap-8 lg:gap-10 xl:gap-12">
+              {[
+                { icon: Zap, title: "Negocie 24/7", desc: "Mercado aberto o tempo todo. Ordens rápidas e saque em BRL em até 24h." },
+                { icon: Shield, title: "Seguro e regulado", desc: "2FA, cold storage e criptografia. Seus ativos e dados protegidos." },
+                { icon: Coins, title: "Pares em BRL", desc: "Compre e venda em reais. Taxas competitivas e depósito via PIX." },
+              ].map(({ icon: Icon, title, desc }) => (
+                <div key={title} className="landing-card p-6 lg:p-8">
+                  <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center mb-5">
+                    <Icon className="w-5 h-5 text-brand-300" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white mb-2">{title}</h3>
+                  <p className="text-gray-400 text-sm leading-relaxed">{desc}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Stats */}
+          <section className="container mx-auto px-4 md:px-6 lg:px-8 max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px] py-20 md:py-28 lg:py-32">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 lg:gap-10">
+              {[
+                { value: "1.5M", label: "Volume negociado" },
+                { value: "2K", label: "Traders ativos" },
+                { value: "< 24h", label: "Saque em BRL" },
+                { value: "99,9%", label: "Uptime" },
+              ].map(({ value, label }) => (
+                <div key={label} className="landing-card p-6 lg:p-8 text-center">
+                  <p className="text-2xl md:text-3xl lg:text-4xl font-bold text-brand-300">{value}</p>
+                  <p className="text-sm text-gray-400 mt-1">{label}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Use cases */}
+          <section id="para-quem" className="container mx-auto px-4 md:px-6 lg:px-8 max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px] py-20 md:py-28 lg:py-32">
+            <p className="landing-section-label">Para quem é</p>
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mt-1 mb-3">
+              Do primeiro real ao trading ativo
+            </h2>
+            <p className="text-gray-400 mb-12 lg:mb-16 max-w-xl text-base lg:text-lg leading-relaxed">
+              Seja sua primeira compra em cripto ou seu dia a dia de trading.
+            </p>
+            <div className="grid md:grid-cols-3 gap-8 lg:gap-10 xl:gap-12">
+              <div className="landing-card p-6 lg:p-8 flex flex-col">
+                <h3 className="text-lg font-semibold text-white mb-2">Primeiro USDT</h3>
+                <p className="text-gray-400 text-sm flex-1">Comece com pouco. Compre USDT em reais, sem pressa.</p>
+                <Link href="/signup" className="mt-4 text-brand-300 font-medium text-sm inline-flex items-center gap-1 hover:underline">
+                  Abrir conta <ArrowRight className="w-3 h-3" />
+                </Link>
+              </div>
+              <div className="landing-card p-6 lg:p-8 flex flex-col">
+                <h3 className="text-lg font-semibold text-white mb-2">Trading ativo</h3>
+                <p className="text-gray-400 text-sm flex-1">Ordens rápidas e liquidez. Para quem opera com frequência.</p>
+                <Link href="/trade" className="mt-4 text-brand-300 font-medium text-sm inline-flex items-center gap-1 hover:underline">
+                  Ir para Trade <ArrowRight className="w-3 h-3" />
+                </Link>
+              </div>
+              <div className="landing-card p-6 lg:p-8 flex flex-col">
+                <h3 className="text-lg font-semibold text-white mb-2">Saque em reais</h3>
+                <p className="text-gray-400 text-sm flex-1">Converta em BRL e receba na conta em até 24h.</p>
+                <Link href="/withdraw" className="mt-4 text-brand-300 font-medium text-sm inline-flex items-center gap-1 hover:underline">
+                  Ver saques <ArrowRight className="w-3 h-3" />
+                </Link>
+              </div>
+            </div>
+          </section>
+
+          {/* Comparison */}
+          <section id="compare" className="container mx-auto px-4 md:px-6 lg:px-8 max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px] py-20 md:py-28 lg:py-32">
+            <p className="landing-section-label">Compare</p>
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mt-1 mb-2">
+              Build Strategy vs outras exchanges
+            </h2>
+            <p className="text-gray-400 mb-12 lg:mb-14 max-w-xl text-base lg:text-lg leading-relaxed">
+              Taxas, saque em BRL e suporte em português.
+            </p>
+            <div className="overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl">
+              <table className="w-full min-w-[520px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-white/10">
+                    <th className="p-4 font-medium text-gray-400" />
+                    <th className="p-4 font-semibold text-white bg-white/5">Build Strategy</th>
+                    <th className="p-4 font-medium text-gray-400">Outras</th>
+                  </tr>
+                </thead>
+                <tbody className="text-gray-400">
+                  {[
+                    ["Taxa", "≤ 3%", "> 3%"],
+                    ["Saque em BRL", "Até 24h", "Variável"],
+                    ["Depósito PIX", "Na hora", "Na hora"],
+                    ["Suporte em PT", "Sim", "Parcial ou não"],
+                  ].map(([feature, us, others], i) => (
+                    <tr key={i} className="border-b border-white/5">
+                      <td className="p-4 text-gray-500">{feature}</td>
+                      <td className="p-4 text-brand-300 font-medium">{us}</td>
+                      <td className="p-4">{others}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          {/* Testimonials */}
+          <section id="depoimentos" className="container mx-auto px-4 md:px-6 lg:px-8 max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px] py-20 md:py-28 lg:py-32">
+            <p className="landing-section-label">Depoimentos</p>
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mt-1 mb-3">
+              O que nossos usuários dizem
+            </h2>
+            <div className="grid md:grid-cols-3 gap-8 lg:gap-10 mt-10 lg:mt-12">
+              {[
+                { quote: "Consegui sacar em menos de 12h. Interface simples e suporte rápido.", name: "Ricardo M.", role: "Trader" },
+                { quote: "Comecei a operar no mesmo dia que depositei via PIX. Zero burocracia.", name: "Ana S.", role: "Primeira compra em cripto" },
+                { quote: "Taxas menores que as que eu pagava. Para quem opera todo dia faz diferença.", name: "Lucas F.", role: "Trader ativo" },
+              ].map(({ quote, name, role }) => (
+                <div key={name} className="landing-card p-6 lg:p-8">
+                  <p className="text-gray-300 text-sm leading-relaxed italic">&quot;{quote}&quot;</p>
+                  <div className="mt-4 flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-white text-sm font-medium">
+                      {name.charAt(0)}
+                    </div>
+                    <div>
+                      <p className="font-medium text-white text-sm">{name}</p>
+                      <p className="text-xs text-gray-500">{role}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Calculator + See platform */}
+          <section className="container mx-auto px-4 md:px-6 lg:px-8 max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px] py-20 md:py-28 lg:py-32">
+            <div className="grid md:grid-cols-2 gap-8 lg:gap-10">
+              <div className="landing-card p-6 md:p-8">
+                <Calculator className="w-10 h-10 text-brand-300 mb-4" />
+                <h3 className="text-xl font-semibold text-white mb-2">Quanto vale em USDT?</h3>
+                <p className="text-gray-400 text-sm mb-6">
+                  Simule em reais quanto você receberia em USDT antes de negociar.
+                </p>
+                <Button onClick={() => setCalculatorOpen(true)} variant="outline" className="border-white/20 text-white hover:bg-white/10 rounded-xl">
+                  Abrir calculadora <ArrowRight className="ml-2 w-4 h-4" />
+                </Button>
+              </div>
+              <div className="landing-card p-0 overflow-hidden flex flex-col md:flex-row">
+                <div className="relative w-full md:w-[42%] md:shrink-0 min-h-[200px] md:min-h-[240px]">
+                  <Image
+                    src="/imgs/pexels-alesiakozik-6770610.jpg"
+                    alt="Plataforma de trade"
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 40vw"
+                  />
+                  <div className="absolute inset-0 bg-black/50 pointer-events-none" aria-hidden />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent pointer-events-none" />
+                </div>
+                <div className="p-6 md:p-8 flex flex-col justify-center">
+                  <Wallet className="w-10 h-10 text-brand-300 mb-4" />
+                  <h3 className="text-xl font-semibold text-white mb-2">Conheça a plataforma</h3>
+                  <p className="text-gray-400 text-sm mb-6">
+                    Interface simples para comprar, vender e acompanhar em reais.
+                  </p>
+                  <Link href="/trade">
+                    <Button variant="outline" className="border-white/20 text-white hover:bg-white/10 rounded-xl w-full sm:w-auto">
+                      Ver área de trade <ExternalLink className="ml-2 w-4 h-4" />
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* FAQ */}
+          <section id="faq" className="container mx-auto px-4 md:px-6 lg:px-8 max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px] py-20 md:py-28 lg:py-32">
+            <p className="landing-section-label">Dúvidas</p>
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mt-1 mb-3">
+              Perguntas frequentes
+            </h2>
+            <p className="text-gray-400 mb-10 lg:mb-12 max-w-xl text-base lg:text-lg leading-relaxed">
+              Respostas rápidas para as dúvidas mais comuns.
+            </p>
+            <div className="max-w-2xl space-y-3">
+              {[
+                { q: "É seguro?", a: "Sim. Usamos 2FA, cold storage e criptografia de nível empresarial. Seus dados e fundos seguem os mesmos padrões de instituições financeiras." },
+                { q: "Como funciona o saque em reais?", a: "Você solicita o saque na plataforma e o valor é enviado para sua conta em até 24 horas úteis. Sem taxa extra para saques em BRL." },
+                { q: "Quanto tempo leva o PIX?", a: "O depósito via PIX é creditado na hora. Assim que o pagamento é confirmado, o valor já aparece para você negociar." },
+                { q: "Tem app?", a: "A plataforma é responsiva e funciona no navegador do celular. Você acessa de qualquer dispositivo para negociar 24/7." },
+                { q: "Qual o valor mínimo?", a: "O valor mínimo para depositar é 100 USDT. Para abrir conta não há custo." },
+              ].map((item, i) => (
+                <div key={i} className="landing-card overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setFaqOpen(faqOpen === i ? null : i)}
+                    className="w-full flex items-center justify-between p-4 text-left text-white font-medium hover:bg-white/5 transition-colors rounded-2xl"
+                  >
+                    {item.q}
+                    <ChevronDown className={`w-5 h-5 text-gray-400 shrink-0 transition-transform ${faqOpen === i ? "rotate-180" : ""}`} />
+                  </button>
+                  {faqOpen === i && (
+                    <div className="px-4 pb-4 text-gray-400 text-sm border-t border-white/10 pt-2 mx-4">
+                      {item.a}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Support */}
+          <section className="container mx-auto px-4 md:px-6 lg:px-8 max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px] py-20 md:py-28 lg:py-32">
+            <div className="landing-card p-6 md:p-8 lg:p-10 flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-brand-300/20 flex items-center justify-center shrink-0">
+                  <MessageCircle className="w-6 h-6 text-brand-300" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">Dúvidas? Fale com a gente</h3>
+                  <p className="text-gray-400 text-sm">Resposta em até 24h úteis. Suporte em português.</p>
+                </div>
+              </div>
+              <a
+                href={`https://wa.me/${process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "5511984284867"}`}
+                target="_blank"
+                rel="noopener noreferrer"
               >
-                Entrar
-              </Link>
+                <Button variant="outline" className="border-white/20 text-white hover:bg-white/10 rounded-xl">
+                  Acessar suporte
+                </Button>
+              </a>
             </div>
+          </section>
+
+          {/* CTA — image behind section covering whole extent, card on top */}
+          <section className="relative min-h-[70vh] md:min-h-[75vh] flex items-center justify-center overflow-hidden">
+            <div className="absolute inset-0 w-full h-full">
+              <Image
+                src="/imgs/pexels-alphatradezone-5784811.jpg"
+                alt=""
+                fill
+                className="object-cover object-center"
+                sizes="100vw"
+                priority={false}
+              />
+            </div>
+            <div className="absolute inset-0 bg-black/70 pointer-events-none" aria-hidden />
+            <div className="relative z-10 container mx-auto px-4 md:px-6 lg:px-8 max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px] py-20 md:py-28 lg:py-32">
+              <div className="rounded-2xl border border-white/20 bg-black/40 backdrop-blur-xl p-10 md:p-14 lg:p-16 text-center max-w-3xl mx-auto">
+                <p className="text-brand-300 text-sm font-medium mb-2">+ de 2.000 contas criadas este mês</p>
+                <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-3">
+                  Pronto para negociar cripto em reais?
+                </h2>
+                <p className="text-gray-400 max-w-xl mx-auto mb-8 leading-relaxed">
+                  Deposite via PIX, negocie 24/7 e saque em BRL quando quiser. Primeiro saque em até 24h ou suporte prioritário.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Link href="/signup">
+                    <Button size="lg" className="w-full sm:w-auto bg-brand-300 text-black hover:bg-brand-400 font-semibold rounded-xl h-12 px-6">
+                      Criar conta grátis
+                      <ArrowRight className="ml-2 w-4 h-4" />
+                    </Button>
+                  </Link>
+                  <Link href="/login">
+                    <Button size="lg" variant="outline" className="w-full sm:w-auto border-white/20 text-white hover:bg-white/10 rounded-xl h-12">
+                      Entrar
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </section>
+        </main>
+
+        <CalculatorModal isOpen={calculatorOpen} onClose={() => setCalculatorOpen(false)} />
+
+        <footer className="mt-auto border-t border-white/10 bg-black/50 backdrop-blur-xl">
+          <div className="container mx-auto px-4 md:px-6 lg:px-8 max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px] py-8 md:py-10">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+              <Link href="/" className="flex items-center">
+                <Image src="/fullname-logo.svg" alt="Build Strategy" width={260} height={64} className="h-12 md:h-14 w-auto opacity-90" />
+              </Link>
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-gray-400">
+                <Link href="/terms" className="hover:text-white transition-colors">Termos</Link>
+                <Link href="/privacy" className="hover:text-white transition-colors">Privacidade</Link>
+                <Link href="/login" className="hover:text-brand-300 transition-colors font-medium">Entrar</Link>
+              </div>
+            </div>
+            <p className="mt-6 text-xs text-gray-500">
+              © {new Date().getFullYear()} Build Strategy. Todos os direitos reservados.
+            </p>
           </div>
-        </div>
-      </footer>
+        </footer>
+      </div>
     </div>
   );
 };

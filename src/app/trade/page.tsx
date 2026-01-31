@@ -29,7 +29,6 @@ import {
   Minus,
 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useMobileMenuOpen } from "@/hooks/useMobileMenuOpen";
 
 const TradePage = () => {
   const router = useRouter();
@@ -38,16 +37,14 @@ const TradePage = () => {
   const { toast } = useToast();
   const { t, language } = useLanguage();
 
-  // Admin-controlled switch to disable deposits
-  const [depositsDisabled, setDepositsDisabled] = useState(false);
-  const [depositsDisabledMessage, setDepositsDisabledMessage] =
-    useState<string>("");
+  // Admin-controlled switch to disable deposits/withdrawals
+  const [moneyDisabled, setMoneyDisabled] = useState(false);
+  const [moneyDisabledMessage, setMoneyDisabledMessage] = useState<string>("");
 
   // Swipe gesture state for mobile navigation
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [isMobile, setIsMobile] = useState(false);
-  const mobileMenuOpen = useMobileMenuOpen();
   const minSwipeDistance = 50;
 
   // Detect mobile device
@@ -71,10 +68,8 @@ const TradePage = () => {
         if (!response.ok) return;
         const data = await response.json();
         if (data?.success) {
-          setDepositsDisabled(Boolean(data.depositsDisabled));
-          setDepositsDisabledMessage(
-            String(data.depositsDisabledMessage || "")
-          );
+          setMoneyDisabled(Boolean(data.moneyDisabled));
+          setMoneyDisabledMessage(String(data.moneyDisabledMessage || ""));
         }
       } catch (error) {
         console.error("Failed to load site status:", error);
@@ -242,33 +237,30 @@ const TradePage = () => {
   };
 
   // Format USDT input value (for display in input field)
-  // Brazilian format: dot = thousand separator (1.000 = 1000), comma = decimal (1,5 = 1.5)
   const formatUSDTInput = (value: string): string => {
+    // Remove all non-digit characters except comma and dot
     const cleaned = value.replace(/[^\d,.]/g, "");
+
+    // Handle empty
     if (!cleaned) return "";
 
-    const lastComma = cleaned.lastIndexOf(",");
-    let integerPart: string;
-    let decimalPart: string;
+    // Replace comma with dot for parsing, then format
+    const normalized = cleaned.replace(",", ".");
+    const parts = normalized.split(".");
+    const integerPart = parts[0].replace(/\D/g, "");
+    const decimalPart = parts[1]?.replace(/\D/g, "").slice(0, 4) || ""; // USDT can have up to 4 decimals
 
-    if (lastComma >= 0) {
-      integerPart =
-        cleaned.slice(0, lastComma).replace(/\./g, "").replace(/\D/g, "") ||
-        "0";
-      decimalPart = cleaned
-        .slice(lastComma + 1)
-        .replace(/\./g, "")
-        .replace(/\D/g, "")
-        .slice(0, 4);
-    } else {
-      integerPart = cleaned.replace(/\./g, "").replace(/\D/g, "") || "0";
-      decimalPart = "";
-    }
-
+    // Format integer part with thousand separators
     const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-    if (decimalPart) return `${formattedInteger},${decimalPart}`;
-    if (cleaned.endsWith(",")) return `${formattedInteger},`; // trailing comma while typing decimals
-    return formattedInteger;
+
+    // Combine parts
+    if (decimalPart) {
+      return `${formattedInteger},${decimalPart}`;
+    } else if (normalized.includes(".") || cleaned.includes(",")) {
+      return `${formattedInteger},`;
+    } else {
+      return formattedInteger;
+    }
   };
 
   // Parse USDT input value (convert formatted string to number)
@@ -504,11 +496,11 @@ const TradePage = () => {
   };
 
   const handleBuyConfirm = async () => {
-    if (depositsDisabled) {
+    if (moneyDisabled) {
       toast({
         title: language === "pt" ? "Indisponível" : "Unavailable",
         description:
-          depositsDisabledMessage ||
+          moneyDisabledMessage ||
           (language === "pt"
             ? "Depósitos temporariamente desativados."
             : "Deposits are temporarily disabled."),
@@ -749,11 +741,11 @@ const TradePage = () => {
 
   // Fetch crypto deposit address
   const fetchCryptoDepositAddress = async () => {
-    if (depositsDisabled) {
+    if (moneyDisabled) {
       toast({
         title: language === "pt" ? "Indisponível" : "Unavailable",
         description:
-          depositsDisabledMessage ||
+          moneyDisabledMessage ||
           (language === "pt"
             ? "Depósitos temporariamente desativados."
             : "Deposits are temporarily disabled."),
@@ -845,7 +837,7 @@ const TradePage = () => {
             : undefined
         }
       >
-        {depositsDisabled ? (
+        {moneyDisabled ? (
           <div className="max-w-4xl mx-auto mb-6 rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4">
             <p className="text-sm font-medium text-yellow-200">
               {language === "pt"
@@ -853,10 +845,10 @@ const TradePage = () => {
                 : "Platform update"}
             </p>
             <p className="text-xs text-yellow-100/80 mt-1">
-              {depositsDisabledMessage ||
+              {moneyDisabledMessage ||
                 (language === "pt"
-                  ? "Depósitos estão temporariamente desativados."
-                  : "Deposits are temporarily disabled.")}
+                  ? "Depósitos e saques estão temporariamente desativados."
+                  : "Deposits and withdrawals are temporarily disabled.")}
             </p>
           </div>
         ) : null}
@@ -995,7 +987,7 @@ const TradePage = () => {
 
                 <Button
                   onClick={handleBuyConfirm}
-                  disabled={buyUSDTAmount <= 0 || loading || depositsDisabled}
+                  disabled={buyUSDTAmount <= 0 || loading || moneyDisabled}
                   className="w-full h-12 sm:h-14 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors text-base sm:text-lg"
                 >
                   {loading ? (
@@ -1352,8 +1344,8 @@ const TradePage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Mobile Page Indicator - Bottom Navigation (hidden when mobile menu is open) */}
-      {isMobile && !mobileMenuOpen && (
+      {/* Mobile Page Indicator - Bottom Navigation */}
+      {isMobile && (
         <div
           className="fixed bottom-0 left-0 right-0 z-50"
           style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}
@@ -1364,7 +1356,7 @@ const TradePage = () => {
               <button
                 onClick={() => router.push("/trade")}
                 className={`relative px-3 sm:px-4 py-1.5 rounded-full text-xs font-medium transition-all touch-manipulation ${
-                  pathname === "/trade"
+                  pathname === "/trade" || pathname === "/deposit"
                     ? "bg-green-500 text-white"
                     : "text-gray-400 hover:text-white active:bg-gray-700/50"
                 }`}
