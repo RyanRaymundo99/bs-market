@@ -90,68 +90,45 @@ const Home = () => {
         </header>
 
         <main className="flex-1 flex flex-col min-h-0">
-          {/* Hero: 50/50 split — left content, right image */}
-          <section className="flex-1 flex flex-col min-h-[calc(100vh-7rem)] md:min-h-[calc(100vh-8rem)] lg:grid lg:grid-cols-2 lg:min-h-[calc(100vh-7rem)] lg:items-stretch">
-            <div className="flex flex-col justify-center px-4 md:px-8 lg:px-12 xl:px-16 py-14 md:py-16 lg:py-20">
-              <div className="max-w-xl xl:max-w-2xl">
-                <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white tracking-tight leading-[1.05]">
-                  <span className="text-gradient drop-shadow-[0_0_24px_rgba(18,224,161,0.25)]">Build Strategy</span>
-                </h1>
-                <p className="mt-6 md:mt-8 text-lg md:text-xl text-gray-300 leading-relaxed max-w-lg">
-                  Compre e venda criptomoedas em reais. Depósito via PIX, saque em até 24h e taxas competitivas.
-                </p>
-                <div className="mt-10 md:mt-12 flex flex-col sm:flex-row sm:items-center gap-4">
-                  <Link href="/signup">
-                    <Button size="lg" className="w-full sm:w-auto bg-brand-300 text-black hover:bg-brand-400 font-semibold rounded-xl h-12 px-7 lg:h-14 lg:px-9 shadow-[0_8px_32px_rgba(18,224,161,0.2)] hover:shadow-[0_12px_40px_rgba(18,224,161,0.3)] transition-shadow">
-                      Criar conta grátis
-                      <ArrowRight className="ml-2 w-4 h-4" />
-                    </Button>
-                  </Link>
-                  <Link href="/login" className="flex items-center justify-center sm:justify-start text-gray-400 hover:text-white text-sm transition-colors py-1">
-                    Já tem conta? <span className="ml-1.5 font-semibold text-white">Entrar</span>
-                  </Link>
-                </div>
-                <div className="mt-10 pt-8 border-t border-white/10">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-4">
-                    Condições
-                  </p>
-                  <p className="text-sm text-gray-400">
-                    Depósito mínimo 100 USDT · Taxa até 3% · PIX na hora
-                  </p>
-                  <div className="flex flex-wrap gap-x-6 gap-y-3 mt-5 text-sm text-gray-400">
-                    <span className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-brand-300 shrink-0" />
-                      Depósito PIX
-                    </span>
-                    <span className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-brand-300 shrink-0" />
-                      Saque em BRL
-                    </span>
-                    <span className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-brand-300 shrink-0" />
-                      2FA
-                    </span>
-                    <span className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-brand-300 shrink-0" />
-                      Suporte em PT
-                    </span>
-                  </div>
-                </div>
+          {/* Hero */}
+          <section className="container mx-auto px-4 md:px-6 lg:px-8 max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px] pt-16 md:pt-24 lg:pt-28 pb-20 md:pb-28 lg:pb-32">
+            <div className="max-w-2xl">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white tracking-tight leading-[1.05]">
+                <span className="text-gradient">Build Strategy</span>
+              </h1>
+              <p className="mt-6 md:mt-8 text-lg md:text-xl text-gray-400 leading-relaxed">
+                Compre e venda criptomoedas em reais. Depósito via PIX, saque em até 24h e taxas competitivas.
+              </p>
+              <div className="mt-10 md:mt-12 flex flex-col sm:flex-row sm:items-center gap-4">
+                <Link href="/signup">
+                  <Button size="lg" className="w-full sm:w-auto bg-brand-300 text-black hover:bg-brand-400 font-semibold rounded-xl h-12 px-6 lg:h-14 lg:px-8">
+                    Criar conta grátis
+                    <ArrowRight className="ml-2 w-4 h-4" />
+                  </Button>
+                </Link>
+                <Link href="/login" className="flex items-center justify-center sm:justify-start text-gray-400 hover:text-white text-sm transition-colors">
+                  Já tem conta? <span className="ml-1 font-medium text-white">Entrar</span>
+                </Link>
               </div>
-            </div>
-            <div className="relative w-full min-h-[300px] md:min-h-[400px] lg:min-h-0 lg:h-full order-first lg:order-last">
-              <Image
-                src="/imgs/pexels-tima-miroshnichenko-7567443.jpg"
-                alt="Plataforma de trading"
-                fill
-                className="object-cover object-center"
-                sizes="(max-width: 1024px) 100vw, 50vw"
-                priority
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent pointer-events-none" aria-hidden />
-              <div className="absolute bottom-0 left-0 right-0 p-4 md:p-5 lg:p-6 pointer-events-none">
-                <span className="inline-block rounded-lg bg-black/50 backdrop-blur-sm border border-white/10 px-4 py-2.5 text-sm font-medium text-white/95 shadow-lg">
-                  Interface simples para negociar USDT em reais
+              <p className="mt-8 text-sm text-gray-500">
+                Depósito mínimo 100 USDT · Taxa até 3% · PIX na hora
+              </p>
+              <div className="flex flex-wrap gap-5 lg:gap-8 mt-8 text-sm text-gray-500">
+                <span className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-brand-300 shrink-0" />
+                  Depósito PIX
+                </span>
+                <span className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-brand-300 shrink-0" />
+                  Saque em BRL
+                </span>
+                <span className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-brand-300 shrink-0" />
+                  2FA
+                </span>
+                <span className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-brand-300 shrink-0" />
+                  Suporte em PT
                 </span>
               </div>
             </div>
@@ -166,21 +143,6 @@ const Home = () => {
             <p className="text-gray-400 mb-12 lg:mb-16 max-w-xl text-base lg:text-lg leading-relaxed">
               Cadastre-se, deposite via PIX e negocie 24/7. Simples assim.
             </p>
-            <div className="relative w-full rounded-2xl overflow-hidden border border-white/10 aspect-[21/9] max-h-[200px] mb-12">
-              <Image
-                src="/imgs/pexels-alphatradezone-5784811.jpg"
-                alt="Trading e finanças"
-                fill
-                className="object-cover"
-                sizes="(max-width: 1280px) 100vw, 1280px"
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent" />
-              <div className="absolute inset-0 flex items-center pl-6 md:pl-10">
-                <p className="text-white/95 text-sm md:text-base font-medium max-w-xl">
-                  Depósito via PIX na hora · Saque em BRL em até 24h
-                </p>
-              </div>
-            </div>
             <div className="grid md:grid-cols-3 gap-8 lg:gap-10 xl:gap-12">
               {[
                 { icon: UserPlus, step: "1", title: "Cadastre-se", desc: "Crie sua conta em minutos. Grátis e sem compromisso." },
@@ -353,30 +315,17 @@ const Home = () => {
                   Abrir calculadora <ArrowRight className="ml-2 w-4 h-4" />
                 </Button>
               </div>
-              <div className="landing-card p-0 overflow-hidden flex flex-col md:flex-row">
-                <div className="relative w-full md:w-[42%] md:shrink-0 min-h-[200px] md:min-h-[240px]">
-                  <Image
-                    src="/imgs/pexels-alesiakozik-6770610.jpg"
-                    alt="Plataforma de trade"
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, 40vw"
-                  />
-                  <div className="absolute inset-0 bg-black/50 pointer-events-none" aria-hidden />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent pointer-events-none" />
-                </div>
-                <div className="p-6 md:p-8 flex flex-col justify-center">
-                  <Wallet className="w-10 h-10 text-brand-300 mb-4" />
-                  <h3 className="text-xl font-semibold text-white mb-2">Conheça a plataforma</h3>
-                  <p className="text-gray-400 text-sm mb-6">
-                    Interface simples para comprar, vender e acompanhar em reais.
-                  </p>
-                  <Link href="/trade">
-                    <Button variant="outline" className="border-white/20 text-white hover:bg-white/10 rounded-xl w-full sm:w-auto">
-                      Ver área de trade <ExternalLink className="ml-2 w-4 h-4" />
-                    </Button>
-                  </Link>
-                </div>
+              <div className="landing-card p-6 md:p-8">
+                <Wallet className="w-10 h-10 text-brand-300 mb-4" />
+                <h3 className="text-xl font-semibold text-white mb-2">Conheça a plataforma</h3>
+                <p className="text-gray-400 text-sm mb-6">
+                  Interface simples para comprar, vender e acompanhar em reais.
+                </p>
+                <Link href="/trade">
+                  <Button variant="outline" className="border-white/20 text-white hover:bg-white/10 rounded-xl w-full sm:w-auto">
+                    Ver área de trade <ExternalLink className="ml-2 w-4 h-4" />
+                  </Button>
+                </Link>
               </div>
             </div>
           </section>
@@ -441,41 +390,28 @@ const Home = () => {
             </div>
           </section>
 
-          {/* CTA — image behind section covering whole extent, card on top */}
-          <section className="relative min-h-[70vh] md:min-h-[75vh] flex items-center justify-center overflow-hidden">
-            <div className="absolute inset-0 w-full h-full">
-              <Image
-                src="/imgs/pexels-alphatradezone-5784811.jpg"
-                alt=""
-                fill
-                className="object-cover object-center"
-                sizes="100vw"
-                priority={false}
-              />
-            </div>
-            <div className="absolute inset-0 bg-black/70 pointer-events-none" aria-hidden />
-            <div className="relative z-10 container mx-auto px-4 md:px-6 lg:px-8 max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px] py-20 md:py-28 lg:py-32">
-              <div className="rounded-2xl border border-white/20 bg-black/40 backdrop-blur-xl p-10 md:p-14 lg:p-16 text-center max-w-3xl mx-auto">
-                <p className="text-brand-300 text-sm font-medium mb-2">+ de 2.000 contas criadas este mês</p>
-                <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-3">
-                  Pronto para negociar cripto em reais?
-                </h2>
-                <p className="text-gray-400 max-w-xl mx-auto mb-8 leading-relaxed">
-                  Deposite via PIX, negocie 24/7 e saque em BRL quando quiser. Primeiro saque em até 24h ou suporte prioritário.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Link href="/signup">
-                    <Button size="lg" className="w-full sm:w-auto bg-brand-300 text-black hover:bg-brand-400 font-semibold rounded-xl h-12 px-6">
-                      Criar conta grátis
-                      <ArrowRight className="ml-2 w-4 h-4" />
-                    </Button>
-                  </Link>
-                  <Link href="/login">
-                    <Button size="lg" variant="outline" className="w-full sm:w-auto border-white/20 text-white hover:bg-white/10 rounded-xl h-12">
-                      Entrar
-                    </Button>
-                  </Link>
-                </div>
+          {/* CTA */}
+          <section className="container mx-auto px-4 md:px-6 lg:px-8 max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px] py-20 md:py-28 lg:py-32">
+            <div className="rounded-2xl border border-brand-300/30 bg-brand-300/10 backdrop-blur-xl p-10 md:p-14 lg:p-16 text-center">
+              <p className="text-brand-300 text-sm font-medium mb-2">+ de 2.000 contas criadas este mês</p>
+              <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-3">
+                Pronto para negociar cripto em reais?
+              </h2>
+              <p className="text-gray-400 max-w-xl mx-auto mb-8 leading-relaxed">
+                Deposite via PIX, negocie 24/7 e saque em BRL quando quiser. Primeiro saque em até 24h ou suporte prioritário.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link href="/signup">
+                  <Button size="lg" className="w-full sm:w-auto bg-brand-300 text-black hover:bg-brand-400 font-semibold rounded-xl h-12 px-6">
+                    Criar conta grátis
+                    <ArrowRight className="ml-2 w-4 h-4" />
+                  </Button>
+                </Link>
+                <Link href="/login">
+                  <Button size="lg" variant="outline" className="w-full sm:w-auto border-white/20 text-white hover:bg-white/10 rounded-xl h-12">
+                    Entrar
+                  </Button>
+                </Link>
               </div>
             </div>
           </section>
