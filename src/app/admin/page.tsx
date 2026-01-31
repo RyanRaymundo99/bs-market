@@ -152,6 +152,50 @@ interface ChartData {
   trades: number;
 }
 
+interface ApiUserRecord {
+  id: string;
+  name?: string;
+  email?: string;
+  createdAt?: string;
+  totalBalance?: number;
+  kycSubmittedAt?: string;
+}
+
+interface ApiTxRecord {
+  type: string;
+  value?: number;
+  user?: { name?: string; email?: string };
+  date?: string;
+}
+
+interface ApiBalanceRecord {
+  amount?: number;
+}
+
+interface ActivityFeedItem {
+  type: string;
+  title: string;
+  description?: string;
+  timestamp: string;
+  link: string;
+  icon: React.ComponentType<{ className?: string }>;
+  color?: string;
+}
+
+interface QuickSearchResultItem {
+  type: string;
+  title: string;
+  subtitle?: string;
+  link: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+interface AdminLogItem {
+  type: string;
+  description: string;
+  timestamp: string;
+}
+
 interface TransactionDetails {
   id: string;
   type: string;
@@ -276,15 +320,15 @@ export default function AdminDashboard() {
   );
 
   // New features states
-  const [recentActivity, setRecentActivity] = useState<any[]>([]);
-  const [topUsers, setTopUsers] = useState<any[]>([]);
+  const [recentActivity, setRecentActivity] = useState<ActivityFeedItem[]>([]);
+  const [topUsers, setTopUsers] = useState<(ApiUserRecord & { totalBalance?: number })[]>([]);
   const [systemHealth, setSystemHealth] = useState({
     database: "checking",
     api: "checking",
   });
   const [quickSearchQuery, setQuickSearchQuery] = useState("");
   const [showQuickSearch, setShowQuickSearch] = useState(false);
-  const [quickSearchResults, setQuickSearchResults] = useState<any[]>([]);
+  const [quickSearchResults, setQuickSearchResults] = useState<QuickSearchResultItem[]>([]);
   const [loadingQuickSearch, setLoadingQuickSearch] = useState(false);
 
   // Transaction table enhancements
@@ -297,7 +341,7 @@ export default function AdminDashboard() {
     string | null
   >(null);
   const [chartDateRange, setChartDateRange] = useState<number>(30);
-  const [adminActivityLog, setAdminActivityLog] = useState<any[]>([]);
+  const [adminActivityLog, setAdminActivityLog] = useState<AdminLogItem[]>([]);
 
   const { toast } = useToast();
   const router = useRouter();
@@ -1327,16 +1371,16 @@ export default function AdminDashboard() {
         fetch("/api/admin/kyc?limit=5&status=PENDING"),
       ]);
 
-      const activities: any[] = [];
+      const activities: ActivityFeedItem[] = [];
 
       if (usersRes.ok) {
         const usersData = await usersRes.json();
-        usersData.users?.forEach((user: any) => {
+        usersData.users?.forEach((user: ApiUserRecord) => {
           activities.push({
             type: "user_registered",
             title: "Novo usuário registrado",
             description: `${user.name} (${user.email})`,
-            timestamp: user.createdAt,
+            timestamp: user.createdAt ?? "",
             link: `/admin/users/${user.id}`,
             icon: UserPlus,
             color: "blue",
@@ -1346,12 +1390,12 @@ export default function AdminDashboard() {
 
       if (transactionsRes.ok) {
         const txData = await transactionsRes.json();
-        txData.transactions?.slice(0, 3).forEach((tx: any) => {
+        txData.transactions?.slice(0, 3).forEach((tx: ApiTxRecord) => {
           activities.push({
             type: "transaction",
             title: `Transação ${tx.type}`,
             description: `${formatCurrency(tx.value || 0)} - ${tx.user?.name || "N/A"}`,
-            timestamp: tx.date,
+            timestamp: tx.date ?? "",
             link: "#",
             icon: DollarSign,
             color: tx.type === "DEPOSIT" ? "green" : "red",
@@ -1361,12 +1405,12 @@ export default function AdminDashboard() {
 
       if (kycRes.ok) {
         const kycData = await kycRes.json();
-        kycData.users?.slice(0, 2).forEach((user: any) => {
+        kycData.users?.slice(0, 2).forEach((user: ApiUserRecord) => {
           activities.push({
             type: "kyc_submitted",
             title: "KYC submetido",
             description: `${user.name} aguardando revisão`,
-            timestamp: user.kycSubmittedAt,
+            timestamp: user.kycSubmittedAt ?? "",
             link: `/admin/kyc`,
             icon: FileText,
             color: "orange",
@@ -1391,7 +1435,7 @@ export default function AdminDashboard() {
       if (response.ok) {
         const data = await response.json();
         const usersWithBalances = await Promise.all(
-          (data.users || []).slice(0, 20).map(async (user: any) => {
+          (data.users || []).slice(0, 20).map(async (user: ApiUserRecord) => {
             try {
               const balanceRes = await fetch(
                 `/api/admin/users/${user.id}?include=balance`,
@@ -1400,7 +1444,7 @@ export default function AdminDashboard() {
                 const balanceData = await balanceRes.json();
                 const totalBalance =
                   (balanceData.balances || []).reduce(
-                    (sum: number, b: any) => sum + (b.amount || 0),
+                    (sum: number, b: ApiBalanceRecord) => sum + (b.amount || 0),
                     0,
                   ) || 0;
                 return { ...user, totalBalance };
@@ -1457,18 +1501,18 @@ export default function AdminDashboard() {
         fetch(`/api/admin/transactions/realtime?limit=5`),
       ]);
 
-      const results: any[] = [];
+      const results: QuickSearchResultItem[] = [];
 
       if (usersRes.ok) {
         const usersData = await usersRes.json();
-        usersData.users?.forEach((user: any) => {
+        usersData.users?.forEach((user: ApiUserRecord) => {
           if (
             user.name?.toLowerCase().includes(query.toLowerCase()) ||
             user.email?.toLowerCase().includes(query.toLowerCase())
           ) {
             results.push({
               type: "user",
-              title: user.name,
+              title: user.name ?? "",
               subtitle: user.email,
               link: `/admin/users/${user.id}`,
               icon: Users,
@@ -1481,12 +1525,12 @@ export default function AdminDashboard() {
         const txData = await transactionsRes.json();
         txData.transactions
           ?.filter(
-            (tx: any) =>
+            (tx: ApiTxRecord) =>
               tx.user?.name?.toLowerCase().includes(query.toLowerCase()) ||
               tx.user?.email?.toLowerCase().includes(query.toLowerCase()),
           )
           .slice(0, 3)
-          .forEach((tx: any) => {
+          .forEach((tx: ApiTxRecord) => {
             results.push({
               type: "transaction",
               title: `${getTransactionTypeLabel(tx.type)} - ${formatCurrency(tx.value || 0)}`,
