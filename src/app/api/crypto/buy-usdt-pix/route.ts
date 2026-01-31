@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Admin-controlled switch to disable deposits
+    // Admin-controlled switch and limits
     const moneyControls = await getMoneyControls();
     if (moneyControls.depositsDisabled) {
       return NextResponse.json(
@@ -71,6 +71,7 @@ export async function POST(request: NextRequest) {
         { status: 503 }
       );
     }
+    const maxDepositUsdt = moneyControls.maxDepositUsdt ?? 2000;
 
     // Parse request body
     let requestBody;
@@ -123,6 +124,21 @@ export async function POST(request: NextRequest) {
     if (amountNum < 0.01) {
       return NextResponse.json(
         { error: "Amount must be at least R$ 0,01" },
+        { status: 400 }
+      );
+    }
+
+    // Enforce maximum deposit; above limit user must contact via WhatsApp
+    if (usdtAmountNum > maxDepositUsdt) {
+      const whatsappNumber =
+        process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "5511984284867";
+      return NextResponse.json(
+        {
+          error:
+            `O depósito máximo é ${maxDepositUsdt} USDT. Para valores maiores, entre em contato conosco via WhatsApp.`,
+          code: "DEPOSIT_LIMIT_EXCEEDED",
+          whatsappUrl: `https://wa.me/${whatsappNumber}`,
+        },
         { status: 400 }
       );
     }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { Decimal } from "@prisma/client/runtime/library";
 import { validateAdminSession } from "@/lib/admin-session";
 
 export async function GET(request: NextRequest) {
@@ -22,25 +23,50 @@ export async function GET(request: NextRequest) {
     );
     const since = searchParams.get("since"); // ISO timestamp for incremental updates
     const lastId = searchParams.get("lastId"); // Last transaction ID for pagination
+    const type = searchParams.get("type"); // Transaction type filter
+    const dateFrom = searchParams.get("dateFrom"); // ISO date start
+    const dateTo = searchParams.get("dateTo"); // ISO date end
+    const amountMin = searchParams.get("amountMin"); // Min amount (absolute)
+    const amountMax = searchParams.get("amountMax"); // Max amount (absolute)
 
-    // Build where clause
+    // Build where clause for transactions
     const where: {
-      createdAt?: { gt: Date };
+      createdAt?: { gte?: Date; lte?: Date; gt?: Date };
       id?: { gt: string };
+      type?: string;
+      amount?: { gte?: unknown; lte?: unknown };
     } = {};
 
     // If 'since' is provided, only get transactions after that time (for real-time updates)
     if (since) {
-      where.createdAt = {
-        gt: new Date(since),
-      };
+      where.createdAt = { gt: new Date(since) };
+    } else {
+      if (dateFrom || dateTo) {
+        where.createdAt = {};
+        if (dateFrom) where.createdAt.gte = new Date(dateFrom);
+        if (dateTo) {
+          const end = new Date(dateTo);
+          end.setHours(23, 59, 59, 999);
+          where.createdAt.lte = end;
+        }
+      }
     }
 
-    // If 'lastId' is provided, use cursor-based pagination
     if (lastId) {
-      where.id = {
-        gt: lastId,
-      };
+      where.id = { gt: lastId };
+    }
+
+    if (type && type !== "all") {
+      where.type = type;
+    }
+
+    if (amountMin != null && amountMin !== "" && !isNaN(Number(amountMin))) {
+      where.amount = where.amount || {};
+      (where.amount as { gte?: unknown }).gte = new Decimal(amountMin);
+    }
+    if (amountMax != null && amountMax !== "" && !isNaN(Number(amountMax))) {
+      where.amount = where.amount || {};
+      (where.amount as { lte?: unknown }).lte = new Decimal(amountMax);
     }
 
     // Fetch transactions and orphan orders (orders with no linked transaction - e.g. failed/abandoned) in parallel
@@ -96,7 +122,19 @@ export async function GET(request: NextRequest) {
       }),
       // Orders that never got a Transaction (failed purchases, abandoned, etc.)
       prisma.order.findMany({
-        where: { transactionId: null },
+        where: (() => {
+          const orderWhere: { transactionId: null; createdAt?: { gte?: Date; lte?: Date } } = { transactionId: null };
+          if (!since && (dateFrom || dateTo)) {
+            orderWhere.createdAt = {};
+            if (dateFrom) orderWhere.createdAt.gte = new Date(dateFrom);
+            if (dateTo) {
+              const end = new Date(dateTo);
+              end.setHours(23, 59, 59, 999);
+              orderWhere.createdAt.lte = end;
+            }
+          }
+          return orderWhere;
+        })(),
         select: {
           id: true,
           status: true,

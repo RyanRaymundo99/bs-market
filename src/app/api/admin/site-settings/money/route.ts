@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateAdminSession } from "@/lib/admin-session";
 import { getMoneyControls, setMoneyControls } from "@/lib/money-controls";
+import { writeAuditLog, getAuditLogIpAndAgent } from "@/lib/audit-log";
 
 export async function GET(request: NextRequest) {
   const adminSession = await validateAdminSession(request);
@@ -28,6 +29,10 @@ export async function PATCH(request: NextRequest) {
       withdrawalsDisabled?: boolean;
       depositsDisabledMessage?: string;
       withdrawalsDisabledMessage?: string;
+      maxDepositUsdt?: number;
+      maintenanceMessage?: string | null;
+      maintenanceStartAt?: string | null;
+      maintenanceEndAt?: string | null;
       notifyUsers?: boolean;
     };
 
@@ -55,13 +60,60 @@ export async function PATCH(request: NextRequest) {
         ? body.withdrawalsDisabledMessage.trim()
         : undefined;
 
+    const oldMoneyControls = await getMoneyControls();
+
+    const maxDepositUsdt =
+      typeof body.maxDepositUsdt === "number" && body.maxDepositUsdt > 0
+        ? body.maxDepositUsdt
+        : undefined;
+    const maintenanceMessage =
+      body.maintenanceMessage !== undefined ? body.maintenanceMessage : undefined;
+    const maintenanceStartAt =
+      body.maintenanceStartAt !== undefined ? body.maintenanceStartAt : undefined;
+    const maintenanceEndAt =
+      body.maintenanceEndAt !== undefined ? body.maintenanceEndAt : undefined;
+
     const { moneyControls, notifiedUsers } = await setMoneyControls({
       depositsDisabled: body.depositsDisabled,
       withdrawalsDisabled: body.withdrawalsDisabled,
       depositsDisabledMessage: depositsMessage,
       withdrawalsDisabledMessage: withdrawalsMessage,
+      maxDepositUsdt,
+      maintenanceMessage,
+      maintenanceStartAt,
+      maintenanceEndAt,
       updatedBy: adminSession.user.email || adminSession.userId,
       notifyUsers: Boolean(body.notifyUsers),
+    });
+
+    const { ipAddress, userAgent } = getAuditLogIpAndAgent(request);
+    await writeAuditLog({
+      adminId: adminSession.userId,
+      adminEmail: adminSession.user.email,
+      action: "money_controls_update",
+      resourceType: "money_controls",
+      oldValue: {
+        depositsDisabled: oldMoneyControls.depositsDisabled,
+        withdrawalsDisabled: oldMoneyControls.withdrawalsDisabled,
+        depositsDisabledMessage: oldMoneyControls.depositsDisabledMessage ?? null,
+        withdrawalsDisabledMessage: oldMoneyControls.withdrawalsDisabledMessage ?? null,
+        maxDepositUsdt: oldMoneyControls.maxDepositUsdt,
+        maintenanceMessage: oldMoneyControls.maintenanceMessage ?? null,
+        maintenanceStartAt: oldMoneyControls.maintenanceStartAt?.toISOString() ?? null,
+        maintenanceEndAt: oldMoneyControls.maintenanceEndAt?.toISOString() ?? null,
+      },
+      newValue: {
+        depositsDisabled: moneyControls.depositsDisabled,
+        withdrawalsDisabled: moneyControls.withdrawalsDisabled,
+        depositsDisabledMessage: moneyControls.depositsDisabledMessage ?? null,
+        withdrawalsDisabledMessage: moneyControls.withdrawalsDisabledMessage ?? null,
+        maxDepositUsdt: moneyControls.maxDepositUsdt,
+        maintenanceMessage: moneyControls.maintenanceMessage ?? null,
+        maintenanceStartAt: moneyControls.maintenanceStartAt?.toISOString() ?? null,
+        maintenanceEndAt: moneyControls.maintenanceEndAt?.toISOString() ?? null,
+      },
+      ipAddress,
+      userAgent,
     });
 
     return NextResponse.json({

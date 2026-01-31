@@ -4,6 +4,7 @@ import { validateAdminSession } from "@/lib/admin-session";
 import { LedgerService } from "@/lib/ledger";
 import { Decimal } from "@prisma/client/runtime/library";
 import { sendBalanceAdjustmentEmail } from "@/lib/receipt-email";
+import { writeAuditLog, getAuditLogIpAndAgent } from "@/lib/audit-log";
 
 const ledgerService = new LedgerService();
 
@@ -195,6 +196,19 @@ export async function POST(request: NextRequest) {
           // Don't fail the request if email fails
         });
     }
+
+    const { ipAddress, userAgent } = getAuditLogIpAndAgent(request);
+    await writeAuditLog({
+      adminId: adminSession.userId,
+      adminEmail: adminSession.user.email,
+      action: "balance_adjust",
+      resourceType: "balance",
+      resourceId: transaction.id,
+      oldValue: { balance: currentBalance.amount.toNumber(), currency },
+      newValue: { balance: updatedBalance.amount.toNumber(), currency, operation, reason: reason || null },
+      ipAddress,
+      userAgent,
+    });
 
     return NextResponse.json({
       success: true,

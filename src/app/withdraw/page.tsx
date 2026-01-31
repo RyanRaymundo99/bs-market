@@ -408,20 +408,13 @@ export default function WithdrawPage() {
     return isNaN(netAmount) || netAmount < 0 ? 0 : netAmount;
   };
 
-  // Calculate PIX fee (3%) and net amount
-  const PIX_FEE_RATE = 0.03;
-  const calculatePixFee = () => {
-    if (!pixAmount || parseFloat(pixAmount) <= 0) return 0;
-    const amount = parseFloat(pixAmount);
-    if (isNaN(amount)) return 0;
-    return amount * PIX_FEE_RATE;
-  };
+  // No fee on PIX withdrawals
+  const calculatePixFee = () => 0;
 
   const calculatePixNetAmount = () => {
     if (!pixAmount || parseFloat(pixAmount) <= 0) return 0;
     const amount = parseFloat(pixAmount);
-    if (isNaN(amount)) return 0;
-    return amount - amount * PIX_FEE_RATE;
+    return isNaN(amount) ? 0 : amount;
   };
 
   // Handle PIX withdrawal
@@ -913,29 +906,13 @@ export default function WithdrawPage() {
                         />
                       </div>
 
-                      {/* Fee Calculation */}
+                      {/* PIX withdrawal summary (no fee) */}
                       <div className="p-4 sm:p-6 bg-gray-800/30 rounded-xl border border-gray-700/50">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm text-gray-400">
-                            {language === "pt"
-                              ? "Valor do Saque"
-                              : "Withdrawal Amount"}
-                          </span>
-                          <span className="text-sm font-medium text-white">
-                            {formatBRL(pixAmount ? parseFloat(pixAmount) : 0)}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm text-gray-400">
-                            {language === "pt" ? "Taxa (3%)" : "Fee (3%)"}
-                          </span>
-                          <span className="text-sm font-medium text-red-400">
-                            -{formatBRL(calculatePixFee())}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between pt-2 border-t border-gray-700">
+                        <div className="flex items-center justify-between">
                           <span className="text-sm font-medium text-gray-300">
-                            {language === "pt" ? "Valor Líquido" : "Net Amount"}
+                            {language === "pt"
+                              ? "Valor a receber"
+                              : "Amount to receive"}
                           </span>
                           <span className="text-lg sm:text-xl font-bold text-green-400">
                             {formatBRL(calculatePixNetAmount())}

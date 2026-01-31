@@ -42,6 +42,7 @@ import {
   RefreshCw,
   Activity,
   AlertCircle,
+  ScrollText,
   CheckCircle2,
   Zap,
   UserPlus,
@@ -70,7 +71,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import NotificationBell from "@/components/admin/NotificationBell";
 import {
@@ -310,6 +311,10 @@ export default function AdminDashboard() {
     updatedAt: string;
     updatedBy: string | null;
   } | null>(null);
+  const [maxDepositUsdt, setMaxDepositUsdt] = useState(2000);
+  const [maintenanceMessage, setMaintenanceMessage] = useState("");
+  const [maintenanceStartAt, setMaintenanceStartAt] = useState("");
+  const [maintenanceEndAt, setMaintenanceEndAt] = useState("");
 
   // Historical data states for hover tooltips
   const [historyData, setHistoryData] = useState<
@@ -337,6 +342,10 @@ export default function AdminDashboard() {
   );
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [amountMin, setAmountMin] = useState("");
+  const [amountMax, setAmountMax] = useState("");
   const [processingTransaction, setProcessingTransaction] = useState<
     string | null
   >(null);
@@ -345,6 +354,41 @@ export default function AdminDashboard() {
 
   const { toast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Open transaction details from URL (e.g. from webhook logs: /admin?openTransaction=<id_or_external_id>)
+  useEffect(() => {
+    const openId = searchParams.get("openTransaction");
+    if (!openId) return;
+    const url = `/api/admin/transactions/${encodeURIComponent(openId)}`;
+    setShowDetailsDialog(true);
+    setDetailsLoading(true);
+    setTransactionDetails(null);
+    fetch(url)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.transaction) {
+          setTransactionDetails(data.transaction);
+          router.replace("/admin", { scroll: false });
+        } else {
+          setTransactionDetails(null);
+          toast({
+            variant: "destructive",
+            title: "Erro",
+            description: data.error || "Transação não encontrada",
+          });
+        }
+      })
+      .catch(() => {
+        setTransactionDetails(null);
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "Falha ao carregar detalhes da transação",
+        });
+      })
+      .finally(() => setDetailsLoading(false));
+  }, [searchParams, router]);
 
   useEffect(() => {
     const loadMoneyControls = async () => {
@@ -370,6 +414,24 @@ export default function AdminDashboard() {
           );
           setWithdrawalsDisabledMessage(
             String(data.moneyControls.withdrawalsDisabledMessage || ""),
+          );
+          setMaxDepositUsdt(Number(data.moneyControls.maxDepositUsdt) || 2000);
+          setMaintenanceMessage(
+            String(data.moneyControls.maintenanceMessage || ""),
+          );
+          setMaintenanceStartAt(
+            data.moneyControls.maintenanceStartAt
+              ? new Date(data.moneyControls.maintenanceStartAt)
+                  .toISOString()
+                  .slice(0, 16)
+              : "",
+          );
+          setMaintenanceEndAt(
+            data.moneyControls.maintenanceEndAt
+              ? new Date(data.moneyControls.maintenanceEndAt)
+                  .toISOString()
+                  .slice(0, 16)
+              : "",
           );
           setMoneyControlsMeta({
             updatedAt: String(data.moneyControls.updatedAt),
@@ -416,6 +478,24 @@ export default function AdminDashboard() {
         );
         setWithdrawalsDisabledMessage(
           String(data.moneyControls.withdrawalsDisabledMessage || ""),
+        );
+        setMaxDepositUsdt(Number(data.moneyControls.maxDepositUsdt) || 2000);
+        setMaintenanceMessage(
+          String(data.moneyControls.maintenanceMessage || ""),
+        );
+        setMaintenanceStartAt(
+          data.moneyControls.maintenanceStartAt
+            ? new Date(data.moneyControls.maintenanceStartAt)
+                .toISOString()
+                .slice(0, 16)
+            : "",
+        );
+        setMaintenanceEndAt(
+          data.moneyControls.maintenanceEndAt
+            ? new Date(data.moneyControls.maintenanceEndAt)
+                .toISOString()
+                .slice(0, 16)
+            : "",
         );
         setMoneyControlsMeta({
           updatedAt: String(data.moneyControls.updatedAt),
@@ -494,7 +574,9 @@ export default function AdminDashboard() {
         setTransactionsLoading(false);
       }
     }
-  }, []);
+  },
+    [typeFilter, dateFrom, dateTo, amountMin, amountMax],
+  );
 
   const fetchFinanceData = useCallback(async () => {
     try {
@@ -719,21 +801,85 @@ export default function AdminDashboard() {
     setSelectedTransaction(transaction);
     setShowDetailsDialog(true);
     setDetailsLoading(true);
+    setTransactionDetails(null);
+
+    const detailsUrl =
+      transaction.id.startsWith("order_") &&
+      transaction.id.length > "order_".length
+        ? `/api/admin/transactions/order/${transaction.id.slice("order_".length)}`
+        : `/api/admin/transactions/${transaction.id}`;
 
     try {
-      const response = await fetch(`/api/admin/transactions/${transaction.id}`);
-      if (response.ok) {
-        const data = await response.json();
+      const response = await fetch(detailsUrl);
+      let data: { success?: boolean; transaction?: TransactionDetails; error?: string } = {};
+      try {
+        data = await response.json();
+      } catch {
+        // Non-JSON response (e.g. 404 HTML page)
+      }
+      if (response.ok && data.success && data.transaction) {
         setTransactionDetails(data.transaction);
       } else {
-        throw new Error("Failed to fetch transaction details");
+        const userObj =
+          transaction.user && typeof transaction.user === "object"
+            ? transaction.user
+            : { name: "—", email: "—" };
+        const fallback: TransactionDetails = {
+          id: transaction.id,
+          type: transaction.type,
+          amount: Math.abs(transaction.value ?? transaction.amount ?? 0),
+          currency: transaction.currency ?? "BRL",
+          balance: 0,
+          description: "",
+          status: transaction.status,
+          createdAt:
+            typeof transaction.date === "string"
+              ? transaction.date
+              : new Date().toISOString(),
+          user: {
+            name: userObj.name ?? "—",
+            email: userObj.email ?? "—",
+          },
+        };
+        setTransactionDetails(fallback);
+        const apiMessage = data.error
+          ? `${data.error} Exibindo informações da lista.`
+          : "Detalhes completos não carregaram. Exibindo informações da lista.";
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: apiMessage,
+        });
       }
     } catch (error) {
       console.error("Error fetching transaction details:", error);
+      const userObj =
+        transaction.user && typeof transaction.user === "object"
+          ? transaction.user
+          : { name: "—", email: "—" };
+      const fallback: TransactionDetails = {
+        id: transaction.id,
+        type: transaction.type,
+        amount: Math.abs(transaction.value ?? transaction.amount ?? 0),
+        currency: transaction.currency ?? "BRL",
+        balance: 0,
+        description: "",
+        status: transaction.status,
+        createdAt:
+          typeof transaction.date === "string"
+            ? transaction.date
+            : new Date().toISOString(),
+        user: {
+          name: userObj.name ?? "—",
+          email: userObj.email ?? "—",
+        },
+      };
+      setTransactionDetails(fallback);
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Falha ao carregar detalhes da transação",
+        description:
+          "Falha ao carregar detalhes da transação. Exibindo informações da lista.",
       });
     } finally {
       setDetailsLoading(false);
@@ -757,6 +903,7 @@ export default function AdminDashboard() {
 
   const handleSyncStatus = async () => {
     if (!transactionDetails) return;
+    if (transactionDetails.id.startsWith("order_")) return;
 
     setSyncingStatus(true);
     try {
@@ -806,6 +953,7 @@ export default function AdminDashboard() {
 
   const handleResendReceipt = async () => {
     if (!transactionDetails) return;
+    if (transactionDetails.id.startsWith("order_")) return;
 
     setResendingReceipt(true);
     try {
@@ -853,6 +1001,7 @@ export default function AdminDashboard() {
 
   const handleMarkAsCompleted = async () => {
     if (!transactionDetails) return;
+    if (transactionDetails.id.startsWith("order_")) return;
 
     // Confirm action
     if (
@@ -946,11 +1095,23 @@ export default function AdminDashboard() {
     }
   };
 
-  // Handle transaction approval/rejection
+  // Handle transaction approval/rejection (skipConfirm = true when called from bulk action)
   const handleTransactionAction = async (
     transactionId: string,
     action: "approve" | "reject",
+    options?: { skipConfirm?: boolean },
   ) => {
+    if (action === "approve" && !options?.skipConfirm) {
+      const first = window.confirm(
+        "Tem certeza que deseja aprovar esta transação?",
+      );
+      if (!first) return;
+      const second = window.confirm(
+        "Confirmar novamente: deseja realmente marcar esta transação como concluída?",
+      );
+      if (!second) return;
+    }
+
     setProcessingTransaction(transactionId);
     try {
       // For now, use mark-completed endpoint. In the future, we might need separate approve/reject endpoints
@@ -1007,14 +1168,34 @@ export default function AdminDashboard() {
       return;
     }
 
-    const confirmed = window.confirm(
+    const firstConfirm = window.confirm(
       `Tem certeza que deseja ${action === "approve" ? "aprovar" : "rejeitar"} ${selectedTransactions.size} transação(ões)?`,
     );
+    if (!firstConfirm) return;
 
-    if (!confirmed) return;
+    if (action === "approve") {
+      const secondConfirm = window.confirm(
+        `Confirmar novamente: deseja realmente aprovar ${selectedTransactions.size} transação(ões)?`,
+      );
+      if (!secondConfirm) return;
+    }
 
-    const promises = Array.from(selectedTransactions).map((id) =>
-      handleTransactionAction(id, action),
+    // Only real transactions can be marked completed; exclude orphan orders (order_xxx)
+    const idsToProcess =
+      action === "approve"
+        ? Array.from(selectedTransactions).filter((id) => !id.startsWith("order_"))
+        : Array.from(selectedTransactions);
+    if (action === "approve" && idsToProcess.length < selectedTransactions.size) {
+      const skipped = selectedTransactions.size - idsToProcess.length;
+      toast({
+        title: "Aviso",
+        description: `${skipped} item(ns) ignorado(s) (ordem sem transação vinculada).`,
+        variant: "default",
+      });
+    }
+
+    const promises = idsToProcess.map((id) =>
+      handleTransactionAction(id, action, { skipConfirm: true }),
     );
 
     await Promise.all(promises);
@@ -1615,7 +1796,7 @@ export default function AdminDashboard() {
   // Don't block the entire page - show skeleton loaders instead
 
   return (
-    <div className="min-h-screen bg-black text-white p-4 lg:p-6">
+    <div className="min-h-full bg-black text-white">
       <div className="max-w-[1920px] mx-auto space-y-4 lg:space-y-6">
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -1698,7 +1879,6 @@ export default function AdminDashboard() {
                   </div>
                 )}
             </div>
-            <NotificationBell className="text-white hover:text-blue-400" />
             {/* Real-time status indicator */}
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-gray-900 border border-gray-700">
               {isPolling ? (
@@ -2012,6 +2192,18 @@ export default function AdminDashboard() {
             </Card>
           </Link>
 
+          <Link href="/admin/audit-log">
+            <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-amber-500 transition-all cursor-pointer h-full">
+              <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
+                <ScrollText className="w-6 h-6 text-amber-400 mb-2" />
+                <CardTitle className="text-sm text-white mb-1">
+                  Audit log
+                </CardTitle>
+                <p className="text-xs text-gray-400">Histórico de ações</p>
+              </CardContent>
+            </Card>
+          </Link>
+
           {/* Money Functions / Maintenance */}
           <Card className="bg-gray-900 border-gray-800">
             <CardHeader>
@@ -2103,6 +2295,67 @@ export default function AdminDashboard() {
                     />
                   </div>
                 )}
+              </div>
+
+              {/* Limits & fees */}
+              <div className="space-y-3">
+                <Label className="text-gray-300 text-sm font-medium">
+                  Max deposit (USDT)
+                </Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={100000}
+                  value={maxDepositUsdt}
+                  onChange={(e) =>
+                    setMaxDepositUsdt(Math.max(0, parseInt(e.target.value, 10) || 0))
+                  }
+                  disabled={moneyControlsLoading || savingMoneyControls}
+                  className="bg-gray-800/50 border-gray-700 text-white max-w-[160px]"
+                />
+                <p className="text-xs text-gray-500">
+                  Above this limit users are directed to contact support via WhatsApp.
+                </p>
+              </div>
+
+              {/* Scheduled maintenance */}
+              <div className="space-y-3">
+                <Label className="text-gray-300 text-sm font-medium">
+                  Scheduled maintenance
+                </Label>
+                <Textarea
+                  value={maintenanceMessage}
+                  onChange={(e) => setMaintenanceMessage(e.target.value)}
+                  placeholder="e.g. Maintenance on Sunday 2am–4am BRT"
+                  className="bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 text-sm"
+                  rows={2}
+                  disabled={moneyControlsLoading || savingMoneyControls}
+                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-gray-400 text-xs">Start (local)</Label>
+                    <Input
+                      type="datetime-local"
+                      value={maintenanceStartAt}
+                      onChange={(e) => setMaintenanceStartAt(e.target.value)}
+                      disabled={moneyControlsLoading || savingMoneyControls}
+                      className="bg-gray-800/50 border-gray-700 text-white text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-gray-400 text-xs">End (local)</Label>
+                    <Input
+                      type="datetime-local"
+                      value={maintenanceEndAt}
+                      onChange={(e) => setMaintenanceEndAt(e.target.value)}
+                      disabled={moneyControlsLoading || savingMoneyControls}
+                      className="bg-gray-800/50 border-gray-700 text-white text-sm"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500">
+                  When now is between start and end, the message is shown on the trade page.
+                </p>
               </div>
 
               <Button
@@ -2392,6 +2645,7 @@ export default function AdminDashboard() {
                 />
               }
               side="top"
+              hoverable
             >
               <Card
                 className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-green-500 transition-all duration-200 cursor-pointer h-full"
@@ -2450,6 +2704,7 @@ export default function AdminDashboard() {
                 />
               }
               side="top"
+              hoverable
             >
               <Card
                 className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-red-500 transition-all duration-200 cursor-pointer h-full"
@@ -2508,6 +2763,7 @@ export default function AdminDashboard() {
                 />
               }
               side="top"
+              hoverable
             >
               <Card
                 className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-blue-500 transition-all duration-200 cursor-pointer h-full"
@@ -2566,6 +2822,7 @@ export default function AdminDashboard() {
                 />
               }
               side="top"
+              hoverable
             >
               <Card
                 className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-purple-500 transition-all duration-200 cursor-pointer h-full"
@@ -2623,6 +2880,7 @@ export default function AdminDashboard() {
                 />
               }
               side="top"
+              hoverable
             >
               <Card
                 className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-yellow-500 transition-all duration-200 cursor-pointer h-full"
@@ -3127,27 +3385,64 @@ export default function AdminDashboard() {
                     >
                       Comissão
                     </SelectItem>
+                    <SelectItem
+                      value="BUY_CRYPTO"
+                      className="text-white hover:bg-gray-800"
+                    >
+                      Compra Crypto
+                    </SelectItem>
                   </SelectContent>
                 </Select>
+                <Input
+                  type="date"
+                  placeholder="De"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="w-36 bg-gray-800 border-gray-700 text-white text-sm"
+                />
+                <Input
+                  type="date"
+                  placeholder="Até"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="w-36 bg-gray-800 border-gray-700 text-white text-sm"
+                />
+                <Input
+                  type="number"
+                  placeholder="Valor mín."
+                  value={amountMin}
+                  onChange={(e) => setAmountMin(e.target.value)}
+                  className="w-28 bg-gray-800 border-gray-700 text-white text-sm"
+                  min={0}
+                  step="any"
+                />
+                <Input
+                  type="number"
+                  placeholder="Valor máx."
+                  value={amountMax}
+                  onChange={(e) => setAmountMax(e.target.value)}
+                  className="w-28 bg-gray-800 border-gray-700 text-white text-sm"
+                  min={0}
+                  step="any"
+                />
+                <Button
+                  size="sm"
+                  onClick={() => fetchRealtimeTransactions()}
+                  variant="outline"
+                  className="border-gray-600 text-gray-300 hover:bg-gray-800"
+                >
+                  <RefreshCw className="h-4 w-4 mr-1" />
+                  Aplicar
+                </Button>
                 {selectedTransactions.size > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      onClick={() => handleBulkAction("approve")}
-                      className="bg-green-600 hover:bg-green-700 text-white"
-                    >
-                      <CheckCircle className="h-4 w-4 mr-1" />
-                      Aprovar ({selectedTransactions.size})
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => handleBulkAction("reject")}
-                      className="bg-red-600 hover:bg-red-700 text-white"
-                    >
-                      <X className="h-4 w-4 mr-1" />
-                      Rejeitar ({selectedTransactions.size})
-                    </Button>
-                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => handleBulkAction("approve")}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-1" />
+                    Aprovar ({selectedTransactions.size})
+                  </Button>
                 )}
                 <Button
                   size="sm"
@@ -3160,13 +3455,22 @@ export default function AdminDashboard() {
                 </Button>
                 {(statusFilter !== "all" ||
                   typeFilter !== "all" ||
-                  searchTerm) && (
+                  searchTerm ||
+                  dateFrom ||
+                  dateTo ||
+                  amountMin ||
+                  amountMax) && (
                   <Button
                     size="sm"
                     onClick={() => {
                       setStatusFilter("all");
                       setTypeFilter("all");
                       setSearchTerm("");
+                      setDateFrom("");
+                      setDateTo("");
+                      setAmountMin("");
+                      setAmountMax("");
+                      fetchRealtimeTransactions();
                     }}
                     variant="ghost"
                     className="text-gray-400 hover:text-white"
@@ -3369,43 +3673,25 @@ export default function AdminDashboard() {
                                 {getStatusLabel(transaction.status)}
                               </span>
                               {(transaction.status === "PENDING" ||
-                                transaction.status === "PROCESSING") && (
-                                <div className="flex items-center gap-1">
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleTransactionAction(
-                                        transaction.id,
-                                        "approve",
-                                      );
-                                    }}
-                                    disabled={
-                                      processingTransaction === transaction.id
-                                    }
-                                    className="h-6 w-6 p-0 text-green-400 hover:text-green-300 hover:bg-green-900/30"
-                                  >
-                                    <CheckCircle className="h-3 w-3" />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleTransactionAction(
-                                        transaction.id,
-                                        "reject",
-                                      );
-                                    }}
-                                    disabled={
-                                      processingTransaction === transaction.id
-                                    }
-                                    className="h-6 w-6 p-0 text-red-400 hover:text-red-300 hover:bg-red-900/30"
-                                  >
-                                    <X className="h-3 w-3" />
-                                  </Button>
-                                </div>
+                                transaction.status === "PROCESSING") &&
+                                !transaction.id.startsWith("order_") && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleTransactionAction(
+                                      transaction.id,
+                                      "approve",
+                                    );
+                                  }}
+                                  disabled={
+                                    processingTransaction === transaction.id
+                                  }
+                                  className="h-6 w-6 p-0 text-green-400 hover:text-green-300 hover:bg-green-900/30"
+                                >
+                                  <CheckCircle className="h-3 w-3" />
+                                </Button>
                               )}
                             </div>
                           </td>
@@ -3472,7 +3758,8 @@ export default function AdminDashboard() {
                       </div>
                       {(transactionDetails.status === "PENDING" ||
                         transactionDetails.status === "PROCESSING" ||
-                        transactionDetails.status === "EXECUTING") && (
+                        transactionDetails.status === "EXECUTING") &&
+                        !transactionDetails.id.startsWith("order_") && (
                         <Button
                           onClick={handleMarkAsCompleted}
                           disabled={markingCompleted}
@@ -3503,6 +3790,14 @@ export default function AdminDashboard() {
                       )}
                     </p>
                   </div>
+                  {transactionDetails.description && (
+                    <div className="col-span-2">
+                      <p className="text-sm text-gray-400">Descrição</p>
+                      <p className="text-white text-sm">
+                        {transactionDetails.description}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* User Info */}
@@ -3521,9 +3816,10 @@ export default function AdminDashboard() {
                         {transactionDetails.user.email}
                       </p>
                     </div>
-                    {/* Receipt Email Status */}
+                    {/* Receipt Email Status - only for real transactions, not orphan orders */}
                     {(transactionDetails.type === "BUY_CRYPTO" ||
-                      transactionDetails.type === "WITHDRAWAL") && (
+                      transactionDetails.type === "WITHDRAWAL") &&
+                      !transactionDetails.id.startsWith("order_") && (
                       <div className="col-span-2 border-t border-gray-800 pt-4 mt-2">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
@@ -3663,6 +3959,16 @@ export default function AdminDashboard() {
                           <p className="text-sm text-gray-400">ID Externo</p>
                           <p className="text-white font-mono text-sm">
                             {transactionDetails.order.externalOrderId}
+                          </p>
+                        </div>
+                      )}
+                      {transactionDetails.order.createdAt && (
+                        <div>
+                          <p className="text-sm text-gray-400">Criado em</p>
+                          <p className="text-white">
+                            {new Date(
+                              transactionDetails.order.createdAt,
+                            ).toLocaleString("pt-BR")}
                           </p>
                         </div>
                       )}
@@ -3862,9 +4168,10 @@ export default function AdminDashboard() {
                         Detalhes do Saque
                       </h3>
                       <div className="flex gap-2">
-                        {transactionDetails.withdrawal.status === "PENDING" ||
-                        transactionDetails.withdrawal.status ===
-                          "PROCESSING" ? (
+                        {(transactionDetails.withdrawal.status === "PENDING" ||
+                          transactionDetails.withdrawal.status ===
+                            "PROCESSING") &&
+                        !transactionDetails.id.startsWith("order_") ? (
                           <>
                             <Button
                               onClick={handleSyncStatus}
@@ -3970,6 +4277,38 @@ export default function AdminDashboard() {
                     </pre>
                   </div>
                 )}
+
+                {/* Webhook logs link */}
+                <div className="border-t border-gray-800 pt-4 flex flex-wrap items-center gap-2">
+                  <Link
+                    href="/admin/webhook-logs"
+                    className="text-sm text-blue-400 hover:text-blue-300 hover:underline"
+                  >
+                    Ver logs de webhook
+                  </Link>
+                  {(transactionDetails.order?.externalOrderId ||
+                    (transactionDetails.metadata as Record<string, unknown>)
+                      ?.orderId) && (
+                    <span className="text-gray-500 text-xs">
+                      (ID externo / pedido para buscar nos logs)
+                    </span>
+                  )}
+                </div>
+
+                {/* Full log - complete transaction object */}
+                <div className="border-t border-gray-800 pt-4">
+                  <details className="group">
+                    <summary className="cursor-pointer list-none flex items-center gap-2 text-lg font-semibold mb-3 text-gray-300 hover:text-white">
+                      <span className="group-open:rotate-90 transition-transform inline-block">
+                        ▶
+                      </span>
+                      Log completo
+                    </summary>
+                    <pre className="bg-gray-800 p-4 rounded text-xs overflow-x-auto max-h-80 overflow-y-auto border border-gray-700">
+                      {JSON.stringify(transactionDetails, null, 2)}
+                    </pre>
+                  </details>
+                </div>
               </div>
             ) : (
               <div className="text-center py-8 text-gray-400">

@@ -53,6 +53,7 @@ model User {
   transactions   Transaction[]
   withdrawals    Withdrawal[]
   notifications  Notification[]
+  notes          UserNote[]
 
   @@map("user")
 }
@@ -391,4 +392,68 @@ model Notification {
   @@index([userId, read])
   @@index([createdAt])
   @@map("notification")
+}
+
+// Admin audit log (who did what, when)
+model AdminAuditLog {
+  id          String   @id @default(cuid())
+  adminId     String   // admin user id (e.g. admin_001)
+  adminEmail  String?
+  action      String   // e.g. "transaction_approve", "balance_adjust", "money_controls"
+  resourceType String  // e.g. "transaction", "user", "withdrawal"
+  resourceId  String?
+  oldValue    Json?    // previous state (optional)
+  newValue    Json?    // new state (optional)
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([adminId])
+  @@index([resourceType, resourceId])
+  @@index([createdAt])
+  @@map("admin_audit_log")
+}
+
+// Internal notes/tags on user accounts (support)
+model UserNote {
+  id        String   @id @default(cuid())
+  userId    String
+  adminId   String
+  note      String   @db.Text
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_note")
+}
+
+// Support issues queue (lightweight)
+model SupportIssue {
+  id            String   @id @default(cuid())
+  userId        String?
+  transactionId String?
+  title         String
+  description   String?   @db.Text
+  status        String   @default("open") // open, in_progress, resolved
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([status])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("support_issue")
+}
+
+// Communication log (emails sent to users)
+model CommunicationLog {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // receipt, notification, etc.
+  subject   String?
+  sentAt    DateTime @default(now())
+  metadata  Json?
+
+  @@index([userId])
+  @@index([sentAt])
+  @@map("communication_log")
 }

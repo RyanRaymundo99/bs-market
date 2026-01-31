@@ -5,6 +5,10 @@ export type MoneyControls = {
   withdrawalsDisabled: boolean;
   depositsDisabledMessage: string;
   withdrawalsDisabledMessage: string;
+  maxDepositUsdt: number;
+  maintenanceMessage: string | null;
+  maintenanceStartAt: Date | null;
+  maintenanceEndAt: Date | null;
   updatedAt: Date;
   updatedBy: string | null;
 };
@@ -29,7 +33,7 @@ async function ensureMoneyControlsTable(): Promise<void> {
   `;
 
   if (!tableExists[0]?.exists) {
-    // Create new table with separate flags
+    // Create new table with separate flags and limits/maintenance
     await prisma.$executeRaw`
       CREATE TABLE "site_settings" (
         "id" integer PRIMARY KEY,
@@ -37,6 +41,10 @@ async function ensureMoneyControlsTable(): Promise<void> {
         "withdrawalsDisabled" boolean NOT NULL DEFAULT false,
         "depositsDisabledMessage" text NOT NULL DEFAULT ${DEFAULT_DEPOSITS_MESSAGE},
         "withdrawalsDisabledMessage" text NOT NULL DEFAULT ${DEFAULT_WITHDRAWALS_MESSAGE},
+        "maxDepositUsdt" integer NOT NULL DEFAULT 2000,
+        "maintenanceMessage" text,
+        "maintenanceStartAt" timestamptz,
+        "maintenanceEndAt" timestamptz,
         "updatedAt" timestamptz NOT NULL DEFAULT now(),
         "updatedBy" text
       );
@@ -79,6 +87,13 @@ async function ensureMoneyControlsTable(): Promise<void> {
           "withdrawalsDisabledMessage" = COALESCE("moneyDisabledMessage", ${DEFAULT_WITHDRAWALS_MESSAGE})
         WHERE "id" = 1;
       `;
+      await prisma.$executeRawUnsafe(`
+        ALTER TABLE "site_settings"
+        ADD COLUMN IF NOT EXISTS "maxDepositUsdt" integer NOT NULL DEFAULT 2000,
+        ADD COLUMN IF NOT EXISTS "maintenanceMessage" text,
+        ADD COLUMN IF NOT EXISTS "maintenanceStartAt" timestamptz,
+        ADD COLUMN IF NOT EXISTS "maintenanceEndAt" timestamptz;
+      `);
     } else {
       // Ensure new columns exist (in case migration was partial)
       await prisma.$executeRawUnsafe(`
@@ -87,6 +102,13 @@ async function ensureMoneyControlsTable(): Promise<void> {
         ADD COLUMN IF NOT EXISTS "withdrawalsDisabled" boolean NOT NULL DEFAULT false,
         ADD COLUMN IF NOT EXISTS "depositsDisabledMessage" text NOT NULL DEFAULT '${DEFAULT_DEPOSITS_MESSAGE.replace(/'/g, "''")}',
         ADD COLUMN IF NOT EXISTS "withdrawalsDisabledMessage" text NOT NULL DEFAULT '${DEFAULT_WITHDRAWALS_MESSAGE.replace(/'/g, "''")}';
+      `);
+      await prisma.$executeRawUnsafe(`
+        ALTER TABLE "site_settings"
+        ADD COLUMN IF NOT EXISTS "maxDepositUsdt" integer NOT NULL DEFAULT 2000,
+        ADD COLUMN IF NOT EXISTS "maintenanceMessage" text,
+        ADD COLUMN IF NOT EXISTS "maintenanceStartAt" timestamptz,
+        ADD COLUMN IF NOT EXISTS "maintenanceEndAt" timestamptz;
       `);
 
       await prisma.$executeRaw`
@@ -107,11 +129,18 @@ export async function getMoneyControls(): Promise<MoneyControls> {
       withdrawalsDisabled: boolean;
       depositsDisabledMessage: string;
       withdrawalsDisabledMessage: string;
+      maxDepositUsdt: number | null;
+      maintenanceMessage: string | null;
+      maintenanceStartAt: Date | null;
+      maintenanceEndAt: Date | null;
       updatedAt: Date;
       updatedBy: string | null;
     }>
   >`
-    SELECT "depositsDisabled", "withdrawalsDisabled", "depositsDisabledMessage", "withdrawalsDisabledMessage", "updatedAt", "updatedBy"
+    SELECT "depositsDisabled", "withdrawalsDisabled", "depositsDisabledMessage", "withdrawalsDisabledMessage",
+           COALESCE("maxDepositUsdt", 2000)::int as "maxDepositUsdt",
+           "maintenanceMessage", "maintenanceStartAt", "maintenanceEndAt",
+           "updatedAt", "updatedBy"
     FROM "site_settings"
     WHERE "id" = 1
     LIMIT 1;
@@ -124,12 +153,20 @@ export async function getMoneyControls(): Promise<MoneyControls> {
       withdrawalsDisabled: false,
       depositsDisabledMessage: DEFAULT_DEPOSITS_MESSAGE,
       withdrawalsDisabledMessage: DEFAULT_WITHDRAWALS_MESSAGE,
+      maxDepositUsdt: 2000,
+      maintenanceMessage: null,
+      maintenanceStartAt: null,
+      maintenanceEndAt: null,
       updatedAt: new Date(),
       updatedBy: null,
     };
   }
 
-  return rows[0];
+  const r = rows[0];
+  return {
+    ...r,
+    maxDepositUsdt: r.maxDepositUsdt ?? 2000,
+  };
 }
 
 export async function setMoneyControls(params: {
@@ -137,18 +174,47 @@ export async function setMoneyControls(params: {
   withdrawalsDisabled: boolean;
   depositsDisabledMessage?: string;
   withdrawalsDisabledMessage?: string;
+  maxDepositUsdt?: number;
+  maintenanceMessage?: string | null;
+  maintenanceStartAt?: Date | string | null;
+  maintenanceEndAt?: Date | string | null;
   updatedBy?: string | null;
   notifyUsers?: boolean;
 }): Promise<{ moneyControls: MoneyControls; notifiedUsers: number }> {
   const current = await getMoneyControls();
+
+  const maxDeposit =
+    typeof params.maxDepositUsdt === "number" && params.maxDepositUsdt > 0
+      ? params.maxDepositUsdt
+      : current.maxDepositUsdt;
+  const maintenanceMsg =
+    params.maintenanceMessage !== undefined
+      ? params.maintenanceMessage
+      : current.maintenanceMessage;
+  const maintenanceStart =
+    params.maintenanceStartAt !== undefined
+      ? params.maintenanceStartAt
+        ? new Date(params.maintenanceStartAt)
+        : null
+      : current.maintenanceStartAt;
+  const maintenanceEnd =
+    params.maintenanceEndAt !== undefined
+      ? params.maintenanceEndAt
+        ? new Date(params.maintenanceEndAt)
+        : null
+      : current.maintenanceEndAt;
 
   await prisma.$executeRaw`
     UPDATE "site_settings"
     SET
       "depositsDisabled" = ${params.depositsDisabled},
       "withdrawalsDisabled" = ${params.withdrawalsDisabled},
-      "depositsDisabledMessage" = ${params.depositsDisabledMessage || DEFAULT_DEPOSITS_MESSAGE},
-      "withdrawalsDisabledMessage" = ${params.withdrawalsDisabledMessage || DEFAULT_WITHDRAWALS_MESSAGE},
+      "depositsDisabledMessage" = ${params.depositsDisabledMessage ?? current.depositsDisabledMessage},
+      "withdrawalsDisabledMessage" = ${params.withdrawalsDisabledMessage ?? current.withdrawalsDisabledMessage},
+      "maxDepositUsdt" = ${maxDeposit},
+      "maintenanceMessage" = ${maintenanceMsg},
+      "maintenanceStartAt" = ${maintenanceStart},
+      "maintenanceEndAt" = ${maintenanceEnd},
       "updatedAt" = now(),
       "updatedBy" = ${params.updatedBy ?? null}
     WHERE "id" = 1;

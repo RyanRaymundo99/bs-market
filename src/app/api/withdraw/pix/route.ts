@@ -116,9 +116,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calculate fee (3%)
-    const fee = amount * 0.03;
-    const netAmount = amount - fee;
+    // No fee on PIX withdrawals
+    const fee = 0;
+    const netAmount = amount;
 
     // Generate protocol number
     const protocol = `PIX${Date.now()}${Math.random()

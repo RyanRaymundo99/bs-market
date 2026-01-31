@@ -341,6 +341,48 @@ exports.Prisma.NotificationScalarFieldEnum = {
   readAt: 'readAt'
 };
 
+exports.Prisma.AdminAuditLogScalarFieldEnum = {
+  id: 'id',
+  adminId: 'adminId',
+  adminEmail: 'adminEmail',
+  action: 'action',
+  resourceType: 'resourceType',
+  resourceId: 'resourceId',
+  oldValue: 'oldValue',
+  newValue: 'newValue',
+  ipAddress: 'ipAddress',
+  userAgent: 'userAgent',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.UserNoteScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  adminId: 'adminId',
+  note: 'note',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.SupportIssueScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  transactionId: 'transactionId',
+  title: 'title',
+  description: 'description',
+  status: 'status',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.CommunicationLogScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  type: 'type',
+  subject: 'subject',
+  sentAt: 'sentAt',
+  metadata: 'metadata'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -468,7 +510,11 @@ exports.Prisma.ModelName = {
   P2PTrade: 'P2PTrade',
   Transaction: 'Transaction',
   WebhookEvent: 'WebhookEvent',
-  Notification: 'Notification'
+  Notification: 'Notification',
+  AdminAuditLog: 'AdminAuditLog',
+  UserNote: 'UserNote',
+  SupportIssue: 'SupportIssue',
+  CommunicationLog: 'CommunicationLog'
 };
 
 /**

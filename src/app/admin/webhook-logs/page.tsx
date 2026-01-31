@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import {
   Table,
@@ -12,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Eye, AlertCircle } from "lucide-react";
+import { RefreshCw, Eye, AlertCircle, ExternalLink } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -259,6 +260,25 @@ export default function WebhookLogsPage() {
                     {selectedWebhook.orderId || "-"}
                   </p>
                 </div>
+                {(selectedWebhook.transactionId || selectedWebhook.externalId) && (
+                  <div className="col-span-2">
+                    <Link
+                      href={`/admin?openTransaction=${encodeURIComponent(
+                        selectedWebhook.transactionId || selectedWebhook.externalId!
+                      )}`}
+                    >
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-2 border-gray-600 text-gray-300 hover:bg-gray-800"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        Ver transação no painel
+                      </Button>
+                    </Link>
+                  </div>
+                )}
                 <div>
                   <p className="text-sm text-gray-400 mb-1">IP Address</p>
                   <p className="text-white text-sm">

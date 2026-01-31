@@ -27,8 +27,11 @@ import {
   TrendingDown,
   Plus,
   Minus,
+  MessageCircle,
 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+
+const WHATSAPP_SUPPORT_URL = `https://wa.me/${process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "5511984284867"}`;
 
 const TradePage = () => {
   const router = useRouter();
@@ -37,9 +40,12 @@ const TradePage = () => {
   const { toast } = useToast();
   const { t, language } = useLanguage();
 
-  // Admin-controlled switch to disable deposits/withdrawals
+  // Admin-controlled switch and limits from site-status
   const [moneyDisabled, setMoneyDisabled] = useState(false);
   const [moneyDisabledMessage, setMoneyDisabledMessage] = useState<string>("");
+  const [maxDepositUsdt, setMaxDepositUsdt] = useState(2000);
+  const [inMaintenance, setInMaintenance] = useState(false);
+  const [maintenanceMessage, setMaintenanceMessage] = useState<string>("");
 
   // Swipe gesture state for mobile navigation
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -68,8 +74,11 @@ const TradePage = () => {
         if (!response.ok) return;
         const data = await response.json();
         if (data?.success) {
-          setMoneyDisabled(Boolean(data.moneyDisabled));
-          setMoneyDisabledMessage(String(data.moneyDisabledMessage || ""));
+          setMoneyDisabled(Boolean(data.depositsDisabled));
+          setMoneyDisabledMessage(String(data.depositsDisabledMessage || ""));
+          setMaxDepositUsdt(Number(data.maxDepositUsdt) || 2000);
+          setInMaintenance(Boolean(data.inMaintenance));
+          setMaintenanceMessage(String(data.maintenanceMessage || ""));
         }
       } catch (error) {
         console.error("Failed to load site status:", error);
@@ -516,6 +525,18 @@ const TradePage = () => {
       });
       return;
     }
+    if (buyUSDTAmount > MAX_DEPOSIT_USDT) {
+      const msg =
+        language === "pt"
+          ? `O depósito máximo é ${maxDepositUsdt} USDT. Para valores maiores, entre em contato conosco via WhatsApp.`
+          : `Maximum deposit is ${maxDepositUsdt} USDT. For larger amounts, please contact us via WhatsApp.`;
+      toast({
+        title: language === "pt" ? "Limite de depósito" : "Deposit limit",
+        description: msg,
+        variant: "destructive",
+      });
+      return;
+    }
 
     setLoading(true);
 
@@ -534,6 +555,18 @@ const TradePage = () => {
       const data = await response.json();
 
       if (!response.ok) {
+        if (data.code === "DEPOSIT_LIMIT_EXCEEDED") {
+          const msg =
+            language === "pt"
+              ? `O depósito máximo é ${maxDepositUsdt} USDT. Para valores maiores, entre em contato conosco via WhatsApp.`
+              : `Maximum deposit is ${maxDepositUsdt} USDT. For larger amounts, please contact us via WhatsApp.`;
+          toast({
+            title: language === "pt" ? "Limite de depósito" : "Deposit limit",
+            description: msg,
+            variant: "destructive",
+          });
+          return;
+        }
         throw new Error(data.error || "Erro ao processar compra");
       }
 
@@ -853,6 +886,15 @@ const TradePage = () => {
           </div>
         ) : null}
 
+        {inMaintenance && maintenanceMessage ? (
+          <div className="max-w-4xl mx-auto mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+            <p className="text-sm font-medium text-amber-200">
+              {language === "pt" ? "Manutenção programada" : "Scheduled maintenance"}
+            </p>
+            <p className="text-xs text-amber-100/80 mt-1">{maintenanceMessage}</p>
+          </div>
+        ) : null}
+
         {/* Purchase Card */}
         <Card className="rounded-xl sm:rounded-2xl border-gray-800 bg-gray-900/50 backdrop-blur-sm mb-6 sm:mb-8">
           <CardHeader className="pb-4">
@@ -936,6 +978,11 @@ const TradePage = () => {
                     inputMode="decimal"
                     className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition-all"
                   />
+                  <p className="mt-1.5 text-xs text-gray-400">
+                    {language === "pt"
+                      ? `Máximo ${maxDepositUsdt} USDT por depósito. Valores maiores: entre em contato via WhatsApp.`
+                      : `Maximum ${maxDepositUsdt} USDT per deposit. For larger amounts: contact us via WhatsApp.`}
+                  </p>
                 </div>
 
                 {/* Total BRL to pay with PIX icon */}
@@ -985,20 +1032,45 @@ const TradePage = () => {
                   </div>
                 </div>
 
-                <Button
-                  onClick={handleBuyConfirm}
-                  disabled={buyUSDTAmount <= 0 || loading || moneyDisabled}
-                  className="w-full h-12 sm:h-14 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors text-base sm:text-lg"
-                >
-                  {loading ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                      {language === "pt" ? "Processando..." : "Processing..."}
-                    </>
-                  ) : (
-                    t("confirmPurchase")
-                  )}
-                </Button>
+                {buyUSDTAmount > maxDepositUsdt ? (
+                  <div className="space-y-3">
+                    <p className="text-sm text-amber-400 text-center">
+                      {language === "pt"
+                        ? `Para depósitos acima de ${maxDepositUsdt} USDT, entre em contato conosco via WhatsApp.`
+                        : `For deposits above ${maxDepositUsdt} USDT, please contact us via WhatsApp.`}
+                    </p>
+                    <Button
+                      asChild
+                      className="w-full h-12 sm:h-14 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-colors text-base sm:text-lg flex items-center justify-center gap-2"
+                    >
+                      <a
+                        href={WHATSAPP_SUPPORT_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <MessageCircle className="w-5 h-5" />
+                        {language === "pt"
+                          ? "Falar no WhatsApp"
+                          : "Contact via WhatsApp"}
+                      </a>
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    onClick={handleBuyConfirm}
+                    disabled={buyUSDTAmount <= 0 || loading || moneyDisabled}
+                    className="w-full h-12 sm:h-14 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors text-base sm:text-lg"
+                  >
+                    {loading ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                        {language === "pt" ? "Processando..." : "Processing..."}
+                      </>
+                    ) : (
+                      t("confirmPurchase")
+                    )}
+                  </Button>
+                )}
               </>
             ) : (
               <>

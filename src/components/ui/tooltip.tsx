@@ -1,37 +1,72 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 
 interface TooltipProps {
   content: React.ReactNode;
   children: React.ReactElement;
   side?: "top" | "bottom" | "left" | "right";
   delay?: number;
+  /** If true, tooltip can be hovered (stays open when moving mouse to content). Good for rich content. */
+  hoverable?: boolean;
 }
 
-export function Tooltip({ content, children, side = "top", delay = 300 }: TooltipProps) {
+const HIDE_DELAY_MS = 300;
+
+export function Tooltip({ content, children, side = "top", delay = 300, hoverable = false }: TooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLDivElement>(null);
 
-  const showTooltip = () => {
+  const clearHideTimeout = () => {
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current);
+      hideTimeoutRef.current = null;
+    }
+  };
+
+  const showTooltip = useCallback(() => {
+    clearHideTimeout();
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
     timeoutRef.current = setTimeout(() => {
+      timeoutRef.current = null;
       setIsVisible(true);
-      updatePosition();
     }, delay);
-  };
+  }, [delay]);
 
-  const hideTooltip = () => {
+  const hideTooltip = useCallback(() => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
     }
-    setIsVisible(false);
-  };
+    if (hoverable) {
+      clearHideTimeout();
+      hideTimeoutRef.current = setTimeout(() => {
+        hideTimeoutRef.current = null;
+        setIsVisible(false);
+      }, HIDE_DELAY_MS);
+    } else {
+      setIsVisible(false);
+    }
+  }, [hoverable]);
+
+  const handleTooltipMouseEnter = useCallback(() => {
+    if (hoverable) {
+      clearHideTimeout();
+      setIsVisible(true);
+    }
+  }, [hoverable]);
+
+  const handleTooltipMouseLeave = useCallback(() => {
+    if (hoverable) {
+      hideTooltip();
+    }
+  }, [hoverable, hideTooltip]);
 
   const updatePosition = () => {
     if (!triggerRef.current || !tooltipRef.current) return;
@@ -79,12 +114,15 @@ export function Tooltip({ content, children, side = "top", delay = 300 }: Toolti
 
   useEffect(() => {
     if (isVisible) {
-      updatePosition();
+      const raf = requestAnimationFrame(() => {
+        updatePosition();
+      });
       const handleResize = () => updatePosition();
       const handleScroll = () => updatePosition();
       window.addEventListener("resize", handleResize);
       window.addEventListener("scroll", handleScroll, true);
       return () => {
+        cancelAnimationFrame(raf);
         window.removeEventListener("resize", handleResize);
         window.removeEventListener("scroll", handleScroll, true);
       };
@@ -94,9 +132,8 @@ export function Tooltip({ content, children, side = "top", delay = 300 }: Toolti
 
   useEffect(() => {
     return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
     };
   }, []);
 
@@ -115,8 +152,10 @@ export function Tooltip({ content, children, side = "top", delay = 300 }: Toolti
       {isVisible && (
         <div
           ref={tooltipRef}
-          className="fixed z-50 pointer-events-none"
+          className={`fixed z-50 ${hoverable ? "pointer-events-auto" : "pointer-events-none"}`}
           style={{ top: `${position.top}px`, left: `${position.left}px` }}
+          onMouseEnter={handleTooltipMouseEnter}
+          onMouseLeave={handleTooltipMouseLeave}
         >
           {content}
         </div>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { validateAdminSession } from "@/lib/admin-session";
+import { writeAuditLog, getAuditLogIpAndAgent } from "@/lib/audit-log";
 
 export async function POST(
   request: NextRequest,
@@ -179,6 +180,18 @@ export async function POST(
         { status: 400 }
       );
     }
+
+    const { ipAddress, userAgent } = getAuditLogIpAndAgent(request);
+    await writeAuditLog({
+      adminId: adminSession.userId,
+      adminEmail: adminSession.user.email,
+      action: "transaction_mark_completed",
+      resourceType: "transaction",
+      resourceId: transaction.id,
+      newValue: { type: transaction.type },
+      ipAddress,
+      userAgent,
+    });
 
     return NextResponse.json({
       success: true,
