@@ -59,6 +59,7 @@ import ImageAnalysisPanel from "@/components/admin/ImageAnalysisPanel";
 import NotificationBell from "@/components/admin/NotificationBell";
 import BackToDashboardButton from "@/components/admin/BackToDashboardButton";
 import KYCImage from "@/components/admin/KYCImage";
+import { KycImageZoomModal } from "@/components/admin/KycImageZoomModal";
 import {
   Table,
   TableBody,
@@ -938,7 +939,7 @@ const AdminKYCPage = () => {
                           className="w-full h-20"
                           onClick={() =>
                             handleImageClick(
-                              user.documentFront!,
+                              getKycImageSrc(user.documentFront),
                               "Frente",
                               "Frente do Documento"
                             )
@@ -954,7 +955,7 @@ const AdminKYCPage = () => {
                           className="w-full h-20"
                           onClick={() =>
                             handleImageClick(
-                              user.documentBack!,
+                              getKycImageSrc(user.documentBack),
                               "Verso",
                               "Verso do Documento"
                             )
@@ -970,7 +971,7 @@ const AdminKYCPage = () => {
                           className="w-full h-20"
                           onClick={() =>
                             handleImageClick(
-                              user.documentSelfie!,
+                              getKycImageSrc(user.documentSelfie),
                               "Selfie",
                               "Selfie com Documento"
                             )
@@ -1175,7 +1176,7 @@ const AdminKYCPage = () => {
                       selectedUser.documentFront
                         ? () =>
                             handleImageClick(
-                              selectedUser.documentFront!,
+                              getKycImageSrc(selectedUser.documentFront),
                               "Frente do Documento",
                               "Frente do Documento"
                             )
@@ -1196,7 +1197,7 @@ const AdminKYCPage = () => {
                       selectedUser.documentBack
                         ? () =>
                             handleImageClick(
-                              selectedUser.documentBack!,
+                              getKycImageSrc(selectedUser.documentBack),
                               "Verso do Documento",
                               "Verso do Documento"
                             )
@@ -1217,7 +1218,7 @@ const AdminKYCPage = () => {
                       selectedUser.documentSelfie
                         ? () =>
                             handleImageClick(
-                              selectedUser.documentSelfie!,
+                              getKycImageSrc(selectedUser.documentSelfie),
                               "Selfie com Documento",
                               "Selfie com Documento"
                             )
@@ -1372,30 +1373,15 @@ const AdminKYCPage = () => {
         </Dialog>
       )}
 
-      {/* Full-size Image Modal */}
+      {/* Full-size Image Modal with zoom */}
       {selectedImage && (
-        <Dialog
+        <KycImageZoomModal
           open={!!selectedImage}
-          onOpenChange={() => setSelectedImage(null)}
-        >
-          <DialogContent className="max-w-7xl max-h-[95vh] p-0 bg-gray-900 border-gray-700">
-            <DialogHeader className="p-6 pb-0">
-              <DialogTitle className="text-white text-xl">
-                {selectedImage.title}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="p-6 pt-4">
-              <div className="relative">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={selectedImage.src}
-                  alt={selectedImage.alt}
-                  className="w-full h-auto max-h-[80vh] object-contain rounded-lg border border-gray-600"
-                />
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+          onOpenChange={(open) => !open && setSelectedImage(null)}
+          src={selectedImage.src}
+          alt={selectedImage.alt}
+          title={selectedImage.title}
+        />
       )}
     </div>
   );

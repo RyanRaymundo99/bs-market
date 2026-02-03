@@ -67,6 +67,7 @@ import { formatUSDT, formatBRL } from "@/lib/format-currency";
 import { getKycImageSrc } from "@/lib/kyc-image-src";
 import KYCImage from "@/components/admin/KYCImage";
 import ImageAnalysisPanel from "@/components/admin/ImageAnalysisPanel";
+import { KycImageZoomModal } from "@/components/admin/KycImageZoomModal";
 import { ZoomIn } from "lucide-react";
 
 interface User {
@@ -2595,7 +2596,7 @@ export default function AdminUsersPage() {
                       viewingKYCUser.documentFront
                         ? () =>
                             handleKYCImageClick(
-                              viewingKYCUser.documentFront!,
+                              getKycImageSrc(viewingKYCUser.documentFront),
                               "Frente do Documento",
                               "Frente do Documento"
                             )
@@ -2616,7 +2617,7 @@ export default function AdminUsersPage() {
                       viewingKYCUser.documentBack
                         ? () =>
                             handleKYCImageClick(
-                              viewingKYCUser.documentBack!,
+                              getKycImageSrc(viewingKYCUser.documentBack),
                               "Verso do Documento",
                               "Verso do Documento"
                             )
@@ -2637,7 +2638,7 @@ export default function AdminUsersPage() {
                       viewingKYCUser.documentSelfie
                         ? () =>
                             handleKYCImageClick(
-                              viewingKYCUser.documentSelfie!,
+                              getKycImageSrc(viewingKYCUser.documentSelfie),
                               "Selfie com Documento",
                               "Selfie com Documento"
                             )
@@ -2829,30 +2830,15 @@ export default function AdminUsersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Full-size KYC Image Modal */}
+      {/* Full-size KYC Image Modal with zoom */}
       {selectedKYCImage && (
-        <Dialog
+        <KycImageZoomModal
           open={!!selectedKYCImage}
-          onOpenChange={() => setSelectedKYCImage(null)}
-        >
-          <DialogContent className="max-w-7xl max-h-[95vh] p-0 bg-gray-900 border-gray-700">
-            <DialogHeader className="p-6 pb-0">
-              <DialogTitle className="text-white text-xl">
-                {selectedKYCImage.title}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="p-6 pt-4">
-              <div className="relative">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={selectedKYCImage.src}
-                  alt={selectedKYCImage.alt}
-                  className="w-full h-auto max-h-[80vh] object-contain rounded-lg border border-gray-600"
-                />
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+          onOpenChange={(open) => !open && setSelectedKYCImage(null)}
+          src={selectedKYCImage.src}
+          alt={selectedKYCImage.alt}
+          title={selectedKYCImage.title}
+        />
       )}
     </div>
   );

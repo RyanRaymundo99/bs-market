@@ -42,6 +42,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { KycImageZoomModal } from "@/components/admin/KycImageZoomModal";
 
 interface UserDetails {
   id: string;
@@ -1180,7 +1181,7 @@ export default function AdminUserDetailsPage({
                       className="relative cursor-pointer group"
                       onClick={() =>
                         handleImageClick(
-                          user.documentFront!,
+                          getKycImageSrc(user.documentFront),
                           "Document Front",
                           "Document Front"
                         )
@@ -1215,7 +1216,7 @@ export default function AdminUserDetailsPage({
                       className="relative cursor-pointer group"
                       onClick={() =>
                         handleImageClick(
-                          user.documentBack!,
+                          getKycImageSrc(user.documentBack),
                           "Document Back",
                           "Document Back"
                         )
@@ -1250,7 +1251,7 @@ export default function AdminUserDetailsPage({
                       className="relative cursor-pointer group"
                       onClick={() =>
                         handleImageClick(
-                          user.documentSelfie!,
+                          getKycImageSrc(user.documentSelfie),
                           "Document Selfie",
                           "Document Selfie"
                         )
@@ -1293,29 +1294,15 @@ export default function AdminUserDetailsPage({
           </Card>
         )}
 
-        {/* Full-size Image Modal */}
+        {/* Full-size Image Modal with zoom */}
         {selectedImage && (
-          <Dialog
+          <KycImageZoomModal
             open={!!selectedImage}
-            onOpenChange={() => setSelectedImage(null)}
-          >
-            <DialogContent className="max-w-7xl max-h-[95vh] p-0 bg-gray-900 border-gray-700">
-              <DialogHeader className="p-6 pb-0">
-                <DialogTitle className="text-white text-xl">
-                  {selectedImage.title}
-                </DialogTitle>
-              </DialogHeader>
-              <div className="p-6 pt-4">
-                <div className="relative">
-                  <img
-                    src={selectedImage.src}
-                    alt={selectedImage.alt}
-                    className="w-full h-auto max-h-[80vh] object-contain rounded-lg border border-gray-600"
-                  />
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+            onOpenChange={(open) => !open && setSelectedImage(null)}
+            src={selectedImage.src}
+            alt={selectedImage.alt}
+            title={selectedImage.title}
+          />
         )}
       </div>
     </div>
