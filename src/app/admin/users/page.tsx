@@ -156,6 +156,13 @@ export default function AdminUsersPage() {
   );
   const [loadingKYCDocuments, setLoadingKYCDocuments] = useState(false);
   const [kycRejectionReason, setKycRejectionReason] = useState("");
+  const [kycResetReason, setKycResetReason] = useState("");
+  const [kycDocumentsToUpdate, setKycDocumentsToUpdate] = useState({
+    front: true,
+    back: true,
+    selfie: true,
+  });
+  const [showKYCResetDialog, setShowKYCResetDialog] = useState<string | null>(null);
   const [kycActionLoading, setKycActionLoading] = useState<string | null>(null);
   const [selectedKYCImage, setSelectedKYCImage] = useState<{
     src: string;
@@ -822,11 +829,16 @@ export default function AdminUsersPage() {
   const handleKYCReset = async (userId: string) => {
     try {
       setKycActionLoading(userId);
+      const docs: ("front" | "back" | "selfie")[] =
+        kycDocumentsToUpdate.front || kycDocumentsToUpdate.back || kycDocumentsToUpdate.selfie
+          ? (["front", "back", "selfie"] as const).filter((d) => kycDocumentsToUpdate[d])
+          : ["front", "back", "selfie"];
       const response = await fetch(`/api/admin/kyc/${userId}/reset`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          reason: kycRejectionReason?.trim() || undefined,
+          reason: kycResetReason?.trim() || undefined,
+          documentsToUpdate: docs,
         }),
       });
 
@@ -838,7 +850,9 @@ export default function AdminUsersPage() {
           description: "Status KYC redefinido para pendente para nova revisão",
         });
         fetchUsers();
-        // Update the viewing user if dialog is open
+        setShowKYCResetDialog(null);
+        setKycResetReason("");
+        setKycDocumentsToUpdate({ front: true, back: true, selfie: true });
         if (viewingKYCUser && viewingKYCUser.id === userId) {
           setViewingKYCUser({
             ...viewingKYCUser,
@@ -2752,13 +2766,99 @@ export default function AdminUsersPage() {
                   viewingKYCUser.kycStatus === "REJECTED") && (
                   <>
                     <Button
-                      onClick={() => handleKYCReset(viewingKYCUser.id)}
+                      onClick={() => {
+                        setShowKYCResetDialog(viewingKYCUser.id);
+                        setKycResetReason("");
+                        setKycDocumentsToUpdate({ front: true, back: true, selfie: true });
+                      }}
                       disabled={kycActionLoading === viewingKYCUser.id}
                       className="bg-orange-600 hover:bg-orange-700"
                     >
                       <Clock className="w-4 h-4 mr-2" />
                       Redefinir para Pendente
                     </Button>
+                    <Dialog
+                      open={showKYCResetDialog === viewingKYCUser.id}
+                      onOpenChange={(open) => !open && setShowKYCResetDialog(null)}
+                    >
+                      <DialogContent className="bg-gray-800 border-gray-700">
+                        <DialogHeader>
+                          <DialogTitle className="text-white">
+                            Redefinir KYC para Pendente
+                          </DialogTitle>
+                          <DialogDescription className="text-gray-400">
+                            O usuário será notificado para reenviar os documentos. Opcionalmente informe o motivo e marque quais imagens devem ser atualizadas.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div>
+                            <Label className="text-sm font-medium text-gray-300">
+                              Motivo (opcional)
+                            </Label>
+                            <Textarea
+                              value={kycResetReason}
+                              onChange={(e) => setKycResetReason(e.target.value)}
+                              placeholder="Ex.: imagem da frente ilegível..."
+                              className="w-full mt-1 p-3 border border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 bg-gray-700 text-white placeholder:text-gray-400"
+                              rows={2}
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-sm font-medium text-gray-300 block mb-2">
+                              Documentos a atualizar
+                            </Label>
+                            <div className="flex flex-col gap-2">
+                              <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                                <Checkbox
+                                  checked={kycDocumentsToUpdate.front}
+                                  onCheckedChange={(c) =>
+                                    setKycDocumentsToUpdate((p) => ({ ...p, front: !!c }))
+                                  }
+                                  className="border-gray-500 data-[state=checked]:bg-orange-600"
+                                />
+                                Frente do Documento
+                              </label>
+                              <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                                <Checkbox
+                                  checked={kycDocumentsToUpdate.back}
+                                  onCheckedChange={(c) =>
+                                    setKycDocumentsToUpdate((p) => ({ ...p, back: !!c }))
+                                  }
+                                  className="border-gray-500 data-[state=checked]:bg-orange-600"
+                                />
+                                Verso do Documento
+                              </label>
+                              <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                                <Checkbox
+                                  checked={kycDocumentsToUpdate.selfie}
+                                  onCheckedChange={(c) =>
+                                    setKycDocumentsToUpdate((p) => ({ ...p, selfie: !!c }))
+                                  }
+                                  className="border-gray-500 data-[state=checked]:bg-orange-600"
+                                />
+                                Selfie com Documento
+                              </label>
+                            </div>
+                          </div>
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="outline"
+                              onClick={() => setShowKYCResetDialog(null)}
+                              className="border-gray-600 text-white hover:bg-gray-700"
+                            >
+                              Cancelar
+                            </Button>
+                            <Button
+                              onClick={() => handleKYCReset(viewingKYCUser.id)}
+                              disabled={kycActionLoading === viewingKYCUser.id}
+                              className="bg-orange-600 hover:bg-orange-700"
+                            >
+                              Redefinir para Pendente
+                            </Button>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                     <Button
                       onClick={() => handleKYCApprove(viewingKYCUser.id)}
                       disabled={kycActionLoading === viewingKYCUser.id}

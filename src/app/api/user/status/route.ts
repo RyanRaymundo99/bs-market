@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
         kycSubmittedAt: session.user.kycSubmittedAt,
         kycReviewedAt: session.user.kycReviewedAt,
         kycRejectionReason: session.user.kycRejectionReason,
+        kycData: session.user.kycData,
       },
     });
   } catch (error) {

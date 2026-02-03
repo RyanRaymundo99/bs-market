@@ -18,31 +18,63 @@ export async function POST(
     }
 
     let reason: string | null = null;
+    let documentsToUpdate: ("front" | "back" | "selfie")[] = ["front", "back", "selfie"];
     try {
       const body = await request.json();
       if (typeof body?.reason === "string" && body.reason.trim()) {
         reason = body.reason.trim();
       }
+      if (Array.isArray(body?.documentsToUpdate) && body.documentsToUpdate.length > 0) {
+        const valid = body.documentsToUpdate.filter((d: string) =>
+          ["front", "back", "selfie"].includes(d)
+        ) as ("front" | "back" | "selfie")[];
+        if (valid.length > 0) documentsToUpdate = valid;
+      }
     } catch {
-      // No body or invalid JSON – reason stays null
+      // No body or invalid JSON – use defaults
     }
 
-    // Reset user KYC status to pending; store reason so user knows why to resend
+    const docLabels: Record<"front" | "back" | "selfie", string> = {
+      front: "Frente do Documento",
+      back: "Verso do Documento",
+      selfie: "Selfie com Documento",
+    };
+    const documentsLabel =
+      documentsToUpdate.length === 3
+        ? "documentos e fotos"
+        : documentsToUpdate.map((d) => docLabels[d]).join(", ");
+
+    // Get current kycData to merge
+    const existing = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { kycData: true },
+    });
+    const kycData = {
+      ...(typeof existing?.kycData === "object" && existing.kycData !== null
+        ? (existing.kycData as Record<string, unknown>)
+        : {}),
+      documentsToUpdate,
+    };
+
+    // Reset user KYC status to pending; store reason and which docs to update
     const user = await prisma.user.update({
       where: { id: userId },
       data: {
         kycStatus: "PENDING",
         kycReviewedAt: null,
         kycRejectionReason: reason,
+        kycData,
         updatedAt: new Date(),
       },
     });
 
     // Notify user to resend their documents (in-app)
     try {
-      const message = reason
-        ? `Sua verificação KYC foi redefinida para pendente. Por favor, reenvie seus documentos e fotos. Motivo: ${reason}`
-        : "Sua verificação KYC foi redefinida para pendente. Por favor, reenvie seus documentos e fotos para nova análise.";
+      const reasonPart = reason ? ` Motivo: ${reason}.` : "";
+      const message =
+        documentsToUpdate.length === 3
+          ? `Sua verificação KYC foi redefinida para pendente. Por favor, reenvie seus documentos e fotos.${reasonPart}`
+          : `Sua verificação KYC foi redefinida para pendente. Por favor, reenvie: ${documentsLabel}.${reasonPart}`;
       await prisma.notification.create({
         data: {
           userId,
@@ -52,6 +84,7 @@ export async function POST(
           metadata: {
             kycStatus: "PENDING",
             reason: reason ?? undefined,
+            documentsToUpdate,
             resetAt: new Date().toISOString(),
             resetBy: adminSession.userId,
           },
@@ -68,6 +101,10 @@ export async function POST(
         const reasonBlock = reason
           ? `<div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px 16px; margin: 16px 0; border-radius: 4px;"><p style="color: #92400e; margin: 0; font-size: 14px;"><strong>Motivo:</strong> ${reason}</p></div>`
           : "";
+        const docsBlock =
+          documentsToUpdate.length < 3
+            ? `<div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px 16px; margin: 16px 0; border-radius: 4px;"><p style="color: #1e40af; margin: 0 0 6px; font-size: 14px; font-weight: 600;">Documentos a atualizar:</p><p style="color: #1e3a8a; margin: 0; font-size: 14px;">${documentsToUpdate.map((d) => docLabels[d]).join(", ")}</p></div>`
+            : "";
         const html = `
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -91,8 +128,9 @@ export async function POST(
             <td style="padding: 40px;">
               <h2 style="color: #1f2937; margin: 0 0 20px; font-size: 22px; font-weight: 600;">Olá, ${user.name || "Usuário"}!</h2>
               <p style="color: #4b5563; margin: 0 0 16px; font-size: 16px; line-height: 1.6;">
-                Sua verificação KYC foi redefinida para <strong>pendente</strong>. Por favor, acesse seu perfil e reenvie as fotos dos seus documentos para nova análise.
+                Sua verificação KYC foi redefinida para <strong>pendente</strong>. Por favor, acesse seu perfil e reenvie ${documentsToUpdate.length === 3 ? "as fotos dos seus documentos" : "os seguintes documentos: " + documentsToUpdate.map((d) => docLabels[d]).join(", ")} para nova análise.
               </p>
+              ${docsBlock}
               ${reasonBlock}
               <p style="color: #4b5563; margin: 16px 0 0; font-size: 16px; line-height: 1.6;">
                 Assim que enviar, sua solicitação será analisada novamente. Em caso de dúvidas, entre em contato com o suporte.
@@ -111,7 +149,11 @@ export async function POST(
   </table>
 </body>
 </html>`;
-        const text = `BS Market - Reenvie seus documentos KYC\n\nOlá, ${user.name || "Usuário"}!\n\nSua verificação KYC foi redefinida para pendente. Por favor, acesse seu perfil e reenvie as fotos dos seus documentos.${reason ? `\n\nMotivo: ${reason}` : ""}\n\nObrigado por usar o BS Market.\n© ${new Date().getFullYear()} BS Market.`;
+        const textDocs =
+          documentsToUpdate.length < 3
+            ? `\nDocumentos a atualizar: ${documentsToUpdate.map((d) => docLabels[d]).join(", ")}`
+            : "";
+        const text = `BS Market - Reenvie seus documentos KYC\n\nOlá, ${user.name || "Usuário"}!\n\nSua verificação KYC foi redefinida para pendente. Por favor, acesse seu perfil e reenvie ${documentsToUpdate.length === 3 ? "as fotos dos seus documentos" : "os documentos indicados"}.${textDocs}${reason ? `\n\nMotivo: ${reason}` : ""}\n\nObrigado por usar o BS Market.\n© ${new Date().getFullYear()} BS Market.`;
         await sendEmail({ to: user.email, subject, text, html });
       } catch (emailError) {
         console.error("Error sending KYC reset email:", emailError);

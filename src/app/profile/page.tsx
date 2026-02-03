@@ -41,6 +41,7 @@ interface UserProfile {
   kycSubmittedAt: string | null;
   kycReviewedAt: string | null;
   kycRejectionReason: string | null;
+  kycData?: { documentsToUpdate?: ("front" | "back" | "selfie")[] } | null;
 }
 
 interface KYCDocuments {
@@ -372,8 +373,16 @@ export default function ProfilePage() {
 
   const shouldShowEditableFields = isPending || (!isApproved && editing);
 
+  const documentsToUpdate =
+    (userProfile?.kycData as { documentsToUpdate?: ("front" | "back" | "selfie")[] } | undefined)
+      ?.documentsToUpdate ?? [];
+  const needsUpdateFront = documentsToUpdate.length === 0 || documentsToUpdate.includes("front");
+  const needsUpdateBack = documentsToUpdate.length === 0 || documentsToUpdate.includes("back");
+  const needsUpdateSelfie = documentsToUpdate.length === 0 || documentsToUpdate.includes("selfie");
   const needsResendDocs =
-    isPending && !!userProfile?.kycRejectionReason?.trim();
+    isPending &&
+    (!!userProfile?.kycRejectionReason?.trim() ||
+      (Array.isArray(documentsToUpdate) && documentsToUpdate.length > 0));
   const hasAllDocs =
     !!kycDocuments?.documentFront &&
     !!kycDocuments?.documentBack &&
@@ -434,6 +443,22 @@ export default function ProfilePage() {
                   <p className="text-sm text-muted-foreground mt-1">
                     {t("resendDocsMessage")}
                   </p>
+                  {documentsToUpdate.length > 0 && documentsToUpdate.length < 3 && (
+                    <div className="mt-2 p-2 rounded-lg bg-background/80 border border-border">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Documentos a atualizar
+                      </p>
+                      <p className="text-sm text-foreground mt-0.5">
+                        {documentsToUpdate.map((d) =>
+                          d === "front"
+                            ? t("documentFront")
+                            : d === "back"
+                              ? t("documentBack")
+                              : t("selfieWithDocument")
+                        ).join(", ")}
+                      </p>
+                    </div>
+                  )}
                   {userProfile?.kycRejectionReason && (
                     <div className="mt-3 p-3 rounded-lg bg-background/80 border border-border">
                       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -690,11 +715,16 @@ export default function ProfilePage() {
             <div className="grid gap-6 md:grid-cols-3">
               {/* Step 1: Document Front */}
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/20 text-sm font-semibold text-primary">
                     {t("step")} 1
                   </span>
                   <Label className="text-base">{t("documentFront")}</Label>
+                  {needsResendDocs && needsUpdateFront && (
+                    <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-400">
+                      Requer atualização
+                    </Badge>
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground pl-10">
                   {t("documentFrontTip")}
@@ -775,11 +805,16 @@ export default function ProfilePage() {
 
               {/* Step 2: Document Back */}
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/20 text-sm font-semibold text-primary">
                     {t("step")} 2
                   </span>
                   <Label className="text-base">{t("documentBack")}</Label>
+                  {needsResendDocs && needsUpdateBack && (
+                    <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-400">
+                      Requer atualização
+                    </Badge>
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground pl-10">
                   {t("documentBackTip")}
@@ -860,11 +895,16 @@ export default function ProfilePage() {
 
               {/* Step 3: Selfie */}
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/20 text-sm font-semibold text-primary">
                     {t("step")} 3
                   </span>
                   <Label className="text-base">{t("selfieWithDocument")}</Label>
+                  {needsResendDocs && needsUpdateSelfie && (
+                    <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-400">
+                      Requer atualização
+                    </Badge>
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground pl-10">
                   {t("selfieTip")}
