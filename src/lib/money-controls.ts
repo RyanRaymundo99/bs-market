@@ -34,13 +34,16 @@ async function ensureMoneyControlsTable(): Promise<void> {
 
   if (!tableExists[0]?.exists) {
     // Create new table with separate flags and limits/maintenance
-    await prisma.$executeRaw`
+    // Use Unsafe with escaped strings to avoid PostgreSQL 42P02 (parameter $1) in DDL
+    const depositsMsg = DEFAULT_DEPOSITS_MESSAGE.replace(/'/g, "''");
+    const withdrawalsMsg = DEFAULT_WITHDRAWALS_MESSAGE.replace(/'/g, "''");
+    await prisma.$executeRawUnsafe(`
       CREATE TABLE "site_settings" (
         "id" integer PRIMARY KEY,
         "depositsDisabled" boolean NOT NULL DEFAULT false,
         "withdrawalsDisabled" boolean NOT NULL DEFAULT false,
-        "depositsDisabledMessage" text NOT NULL DEFAULT ${DEFAULT_DEPOSITS_MESSAGE},
-        "withdrawalsDisabledMessage" text NOT NULL DEFAULT ${DEFAULT_WITHDRAWALS_MESSAGE},
+        "depositsDisabledMessage" text NOT NULL DEFAULT '${depositsMsg}',
+        "withdrawalsDisabledMessage" text NOT NULL DEFAULT '${withdrawalsMsg}',
         "maxDepositUsdt" integer NOT NULL DEFAULT 2000,
         "maintenanceMessage" text,
         "maintenanceStartAt" timestamptz,
@@ -48,13 +51,13 @@ async function ensureMoneyControlsTable(): Promise<void> {
         "updatedAt" timestamptz NOT NULL DEFAULT now(),
         "updatedBy" text
       );
-    `;
+    `);
 
-    await prisma.$executeRaw`
+    await prisma.$executeRawUnsafe(`
       INSERT INTO "site_settings" ("id")
       VALUES (1)
       ON CONFLICT ("id") DO NOTHING;
-    `;
+    `);
   } else {
     // Table exists - migrate from old schema if needed
     // Check if old columns exist
@@ -77,16 +80,18 @@ async function ensureMoneyControlsTable(): Promise<void> {
         ADD COLUMN IF NOT EXISTS "withdrawalsDisabledMessage" text NOT NULL DEFAULT '${DEFAULT_WITHDRAWALS_MESSAGE.replace(/'/g, "''")}';
       `);
 
-      // Migrate data: if moneyDisabled was true, set both to true
-      await prisma.$executeRaw`
+      // Migrate data: if moneyDisabled was true, set both to true (Unsafe to avoid 42P02)
+      const depositsMsg = DEFAULT_DEPOSITS_MESSAGE.replace(/'/g, "''");
+      const withdrawalsMsg = DEFAULT_WITHDRAWALS_MESSAGE.replace(/'/g, "''");
+      await prisma.$executeRawUnsafe(`
         UPDATE "site_settings"
         SET 
           "depositsDisabled" = COALESCE("moneyDisabled", false),
           "withdrawalsDisabled" = COALESCE("moneyDisabled", false),
-          "depositsDisabledMessage" = COALESCE("moneyDisabledMessage", ${DEFAULT_DEPOSITS_MESSAGE}),
-          "withdrawalsDisabledMessage" = COALESCE("moneyDisabledMessage", ${DEFAULT_WITHDRAWALS_MESSAGE})
+          "depositsDisabledMessage" = COALESCE("moneyDisabledMessage", '${depositsMsg}'),
+          "withdrawalsDisabledMessage" = COALESCE("moneyDisabledMessage", '${withdrawalsMsg}')
         WHERE "id" = 1;
-      `;
+      `);
       await prisma.$executeRawUnsafe(`
         ALTER TABLE "site_settings"
         ADD COLUMN IF NOT EXISTS "maxDepositUsdt" integer NOT NULL DEFAULT 2000,
@@ -111,11 +116,11 @@ async function ensureMoneyControlsTable(): Promise<void> {
         ADD COLUMN IF NOT EXISTS "maintenanceEndAt" timestamptz;
       `);
 
-      await prisma.$executeRaw`
+      await prisma.$executeRawUnsafe(`
         INSERT INTO "site_settings" ("id")
         VALUES (1)
         ON CONFLICT ("id") DO NOTHING;
-      `;
+      `);
     }
   }
 }
@@ -123,7 +128,7 @@ async function ensureMoneyControlsTable(): Promise<void> {
 export async function getMoneyControls(): Promise<MoneyControls> {
   await ensureMoneyControlsTable();
 
-  const rows = await prisma.$queryRaw<
+  const rows = await prisma.$queryRawUnsafe<
     Array<{
       depositsDisabled: boolean;
       withdrawalsDisabled: boolean;
@@ -136,15 +141,15 @@ export async function getMoneyControls(): Promise<MoneyControls> {
       updatedAt: Date;
       updatedBy: string | null;
     }>
-  >`
-    SELECT "depositsDisabled", "withdrawalsDisabled", "depositsDisabledMessage", "withdrawalsDisabledMessage",
-           COALESCE("maxDepositUsdt", 2000)::int as "maxDepositUsdt",
-           "maintenanceMessage", "maintenanceStartAt", "maintenanceEndAt",
-           "updatedAt", "updatedBy"
-    FROM "site_settings"
-    WHERE "id" = 1
-    LIMIT 1;
-  `;
+  >(
+    `SELECT "depositsDisabled", "withdrawalsDisabled", "depositsDisabledMessage", "withdrawalsDisabledMessage",
+            COALESCE("maxDepositUsdt", 2000)::int as "maxDepositUsdt",
+            "maintenanceMessage", "maintenanceStartAt", "maintenanceEndAt",
+            "updatedAt", "updatedBy"
+     FROM "site_settings"
+     WHERE "id" = 1
+     LIMIT 1`
+  );
 
   if (!rows[0]) {
     // Extremely defensive: should not happen because we insert id=1 above.
