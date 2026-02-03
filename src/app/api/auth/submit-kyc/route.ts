@@ -5,6 +5,11 @@ import { join } from "path";
 import { existsSync } from "fs";
 import { cookies } from "next/headers";
 import { put } from "@vercel/blob";
+import {
+  getAdminAlertSettings,
+  sendAdminAlertToAll,
+} from "@/lib/admin-alert-email";
+import { heicToJpegBuffer, isHeicFile } from "@/lib/heic-to-jpeg";
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,7 +24,9 @@ export async function POST(request: NextRequest) {
     // CNPJ documents
     const contratoSocial = formData.get("contratoSocial") as File | null;
     const cartaoCNPJ = formData.get("cartaoCNPJ") as File | null;
-    const cnhSocioControlado = formData.get("cnhSocioControlado") as File | null;
+    const cnhSocioControlado = formData.get(
+      "cnhSocioControlado"
+    ) as File | null;
 
     // Detect if this is a CNPJ submission
     const cleanCpf = cpf?.replace(/\D/g, "") || "";
@@ -174,7 +181,7 @@ export async function POST(request: NextRequest) {
     // Use Vercel Blob Storage for production, filesystem for localhost
     const isVercel = process.env.VERCEL === "1";
     const timestamp = Date.now();
-    
+
     let frontUrl: string | undefined;
     let backUrl: string | undefined;
     let selfieUrl: string | undefined;
@@ -196,10 +203,16 @@ export async function POST(request: NextRequest) {
         }
         return "bin";
       };
-      
-      const contratoFilename = `contrato_social_${timestamp}.${getFileExtension(contratoSocial!)}`;
-      const cartaoFilename = `cartao_cnpj_${timestamp}.${getFileExtension(cartaoCNPJ!)}`;
-      const cnhFilename = `cnh_socio_${timestamp}.${getFileExtension(cnhSocioControlado!)}`;
+
+      const contratoFilename = `contrato_social_${timestamp}.${getFileExtension(
+        contratoSocial!
+      )}`;
+      const cartaoFilename = `cartao_cnpj_${timestamp}.${getFileExtension(
+        cartaoCNPJ!
+      )}`;
+      const cnhFilename = `cnh_socio_${timestamp}.${getFileExtension(
+        cnhSocioControlado!
+      )}`;
 
       if (isVercel) {
         try {
@@ -235,7 +248,8 @@ export async function POST(request: NextRequest) {
           console.error("KYC Submission - CNPJ Blob upload error:", blobError);
           return NextResponse.json(
             {
-              error: "Não foi possível fazer upload dos documentos. Por favor, tente novamente.",
+              error:
+                "Não foi possível fazer upload dos documentos. Por favor, tente novamente.",
             },
             { status: 500 }
           );
@@ -258,9 +272,13 @@ export async function POST(request: NextRequest) {
           const cartaoPath = join(uploadsDir, cartaoFilename);
           const cnhPath = join(uploadsDir, cnhFilename);
 
-          const contratoBuffer = Buffer.from(await contratoSocial!.arrayBuffer());
+          const contratoBuffer = Buffer.from(
+            await contratoSocial!.arrayBuffer()
+          );
           const cartaoBuffer = Buffer.from(await cartaoCNPJ!.arrayBuffer());
-          const cnhBuffer = Buffer.from(await cnhSocioControlado!.arrayBuffer());
+          const cnhBuffer = Buffer.from(
+            await cnhSocioControlado!.arrayBuffer()
+          );
 
           await writeFile(contratoPath, contratoBuffer);
           await writeFile(cartaoPath, cartaoBuffer);
@@ -273,44 +291,55 @@ export async function POST(request: NextRequest) {
           console.error("KYC Submission - CNPJ File save error:", fileError);
           return NextResponse.json(
             {
-              error: "Não foi possível salvar os arquivos. Por favor, tente novamente.",
+              error:
+                "Não foi possível salvar os arquivos. Por favor, tente novamente.",
             },
             { status: 500 }
           );
         }
       }
     } else {
-      // Handle CPF documents
-      const frontFilename = `front_${timestamp}.${documentFront!.name.split(".").pop()}`;
-      const backFilename = `back_${timestamp}.${documentBack!.name.split(".").pop()}`;
-      const selfieFilename = `selfie_${timestamp}.${documentSelfie!.name.split(".").pop()}`;
+      // Handle CPF documents — convert HEIC to JPEG so browsers can display
+      const ext = (f: File) =>
+        isHeicFile(f) ? "jpg" : f.name.split(".").pop() || "jpg";
+      const frontFilename = `front_${timestamp}.${ext(documentFront!)}`;
+      const backFilename = `back_${timestamp}.${ext(documentBack!)}`;
+      const selfieFilename = `selfie_${timestamp}.${ext(documentSelfie!)}`;
+
+      const prepareFile = async (file: File) => {
+        let body: Buffer | File = Buffer.from(await file.arrayBuffer());
+        let contentType = file.type;
+        if (isHeicFile(file) && body.length > 0) {
+          body = await heicToJpegBuffer(body);
+          contentType = "image/jpeg";
+        }
+        return { body, contentType };
+      };
 
       if (isVercel) {
         // Use Vercel Blob Storage for production
         try {
+          const [frontPrepared, backPrepared, selfiePrepared] =
+            await Promise.all([
+              prepareFile(documentFront!),
+              prepareFile(documentBack!),
+              prepareFile(documentSelfie!),
+            ]);
+
           const frontBlob = await put(
             `kyc/${user.id}/${frontFilename}`,
-            documentFront!,
-            {
-              access: "public",
-              contentType: documentFront!.type,
-            }
+            frontPrepared.body,
+            { access: "public", contentType: frontPrepared.contentType }
           );
           const backBlob = await put(
             `kyc/${user.id}/${backFilename}`,
-            documentBack!,
-            {
-              access: "public",
-              contentType: documentBack!.type,
-            }
+            backPrepared.body,
+            { access: "public", contentType: backPrepared.contentType }
           );
           const selfieBlob = await put(
             `kyc/${user.id}/${selfieFilename}`,
-            documentSelfie!,
-            {
-              access: "public",
-              contentType: documentSelfie!.type,
-            }
+            selfiePrepared.body,
+            { access: "public", contentType: selfiePrepared.contentType }
           );
 
           frontUrl = frontBlob.url;
@@ -327,7 +356,8 @@ export async function POST(request: NextRequest) {
           console.error("KYC Submission - Blob upload error:", blobError);
           return NextResponse.json(
             {
-              error: "Não foi possível fazer upload dos documentos. Por favor, tente novamente.",
+              error:
+                "Não foi possível fazer upload dos documentos. Por favor, tente novamente.",
             },
             { status: 500 }
           );
@@ -350,9 +380,21 @@ export async function POST(request: NextRequest) {
           const backPath = join(uploadsDir, backFilename);
           const selfiePath = join(uploadsDir, selfieFilename);
 
-          const frontBuffer = Buffer.from(await documentFront!.arrayBuffer());
-          const backBuffer = Buffer.from(await documentBack!.arrayBuffer());
-          const selfieBuffer = Buffer.from(await documentSelfie!.arrayBuffer());
+          let frontBuffer: Buffer = Buffer.from(
+            await documentFront!.arrayBuffer()
+          );
+          let backBuffer: Buffer = Buffer.from(
+            await documentBack!.arrayBuffer()
+          );
+          let selfieBuffer: Buffer = Buffer.from(
+            await documentSelfie!.arrayBuffer()
+          );
+          if (isHeicFile(documentFront!) && frontBuffer.length > 0)
+            frontBuffer = await heicToJpegBuffer(frontBuffer);
+          if (isHeicFile(documentBack!) && backBuffer.length > 0)
+            backBuffer = await heicToJpegBuffer(backBuffer);
+          if (isHeicFile(documentSelfie!) && selfieBuffer.length > 0)
+            selfieBuffer = await heicToJpegBuffer(selfieBuffer);
 
           await writeFile(frontPath, frontBuffer);
           await writeFile(backPath, backBuffer);
@@ -372,7 +414,8 @@ export async function POST(request: NextRequest) {
           console.error("KYC Submission - File system error:", fileError);
           return NextResponse.json(
             {
-              error: "Não foi possível salvar os arquivos. Por favor, tente novamente.",
+              error:
+                "Não foi possível salvar os arquivos. Por favor, tente novamente.",
             },
             { status: 500 }
           );
@@ -416,9 +459,14 @@ export async function POST(request: NextRequest) {
       } else {
         // CPF documents
         if (documentType) {
-          updateData.documentType = documentType as "RG" | "HABILITACAO" | "CNH" | "PASSPORT";
+          updateData.documentType = documentType as
+            | "RG"
+            | "HABILITACAO"
+            | "CNH"
+            | "PASSPORT";
         }
-        if (finalDocumentNumber) updateData.documentNumber = finalDocumentNumber;
+        if (finalDocumentNumber)
+          updateData.documentNumber = finalDocumentNumber;
         if (frontUrl) updateData.documentFront = frontUrl;
         if (backUrl) updateData.documentBack = backUrl;
         if (selfieUrl) updateData.documentSelfie = selfieUrl;
@@ -426,9 +474,9 @@ export async function POST(request: NextRequest) {
 
       // If this is the first KYC submission, update the status
       const hasExistingKYC = isCNPJ
-        ? (user.contratoSocial || user.cartaoCNPJ || user.cnhSocioControlado)
-        : (user.documentFront || user.documentBack || user.documentSelfie);
-      
+        ? user.contratoSocial || user.cartaoCNPJ || user.cnhSocioControlado
+        : user.documentFront || user.documentBack || user.documentSelfie;
+
       if (!hasExistingKYC) {
         updateData.kycStatus = "PENDING";
         updateData.kycSubmittedAt = new Date();
@@ -464,6 +512,21 @@ export async function POST(request: NextRequest) {
         kycStatus: updatedUser.kycStatus,
         kycSubmittedAt: updatedUser.kycSubmittedAt,
       });
+
+      // Notify admin email when KYC is submitted (ready for validation) - non-blocking
+      if (!hasExistingKYC && updatedUser.kycStatus === "PENDING") {
+        getAdminAlertSettings()
+          .then((settings) => {
+            if (settings.notifyKycReady && settings.emails?.length) {
+              return sendAdminAlertToAll(
+                settings,
+                "KYC submitted – ready for validation",
+                `${user.name} (${user.email}) has submitted KYC documents and is ready for review. User ID: ${user.id}.`
+              );
+            }
+          })
+          .catch((err) => console.error("Admin KYC alert:", err));
+      }
 
       // Verify the update actually saved the documents
       if (isCNPJ) {

@@ -37,6 +37,9 @@ interface WebhookEvent {
   userAgent: string | null;
   createdAt: string;
   payload: Record<string, unknown>;
+  userName?: string | null;
+  userEmail?: string | null;
+  transactionType?: string | null;
 }
 
 export default function WebhookLogsPage() {
@@ -179,6 +182,33 @@ export default function WebhookLogsPage() {
                     {formatDate(webhook.createdAt)}
                   </TableCell>
                   <TableCell>{getEventTypeBadge(webhook.eventType)}</TableCell>
+                  <TableCell>
+                    {webhook.transactionType ? (
+                      <Badge
+                        variant="outline"
+                        className={
+                          webhook.transactionType === "Deposit"
+                            ? "border-green-500 text-green-400"
+                            : webhook.transactionType === "Withdrawal"
+                              ? "border-amber-500 text-amber-400"
+                              : "border-blue-500 text-blue-400"
+                        }
+                      >
+                        {webhook.transactionType}
+                      </Badge>
+                    ) : (
+                      <span className="text-gray-500">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-gray-300 text-sm">
+                    {webhook.userName ?? webhook.userEmail ? (
+                      <span title={webhook.userEmail ?? undefined}>
+                        {webhook.userName || webhook.userEmail || "—"}
+                      </span>
+                    ) : (
+                      "—"
+                    )}
+                  </TableCell>
                   <TableCell className="text-gray-300 text-sm font-mono">
                     {webhook.transactionId || webhook.externalId || "-"}
                   </TableCell>
@@ -259,6 +289,23 @@ export default function WebhookLogsPage() {
                   <p className="text-white font-mono text-sm">
                     {selectedWebhook.orderId || "-"}
                   </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-400 mb-1">Tipo</p>
+                  <p className="text-white">
+                    {selectedWebhook.transactionType || "-"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-400 mb-1">Usuário</p>
+                  <p className="text-white text-sm">
+                    {selectedWebhook.userName || selectedWebhook.userEmail || "-"}
+                  </p>
+                  {selectedWebhook.userEmail && (
+                    <p className="text-gray-400 text-xs mt-0.5">
+                      {selectedWebhook.userEmail}
+                    </p>
+                  )}
                 </div>
                 {(selectedWebhook.transactionId || selectedWebhook.externalId) && (
                   <div className="col-span-2">

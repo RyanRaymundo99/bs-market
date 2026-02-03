@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { Prisma } from "../../prisma/generated/client";
 
 export type AuditResourceType =
   | "transaction"
@@ -33,8 +34,14 @@ export async function writeAuditLog(params: WriteAuditLogParams): Promise<void> 
         action: params.action,
         resourceType: params.resourceType,
         resourceId: params.resourceId ?? null,
-        oldValue: params.oldValue != null ? (params.oldValue as object) : null,
-        newValue: params.newValue != null ? (params.newValue as object) : null,
+        oldValue:
+          params.oldValue != null
+            ? (params.oldValue as Prisma.InputJsonValue)
+            : Prisma.JsonNull,
+        newValue:
+          params.newValue != null
+            ? (params.newValue as Prisma.InputJsonValue)
+            : Prisma.JsonNull,
         ipAddress: params.ipAddress ?? null,
         userAgent: params.userAgent ?? null,
       },

@@ -167,6 +167,22 @@ const translations = {
       "Dúvidas ou problemas? Entre em contato pelo WhatsApp ou e-mail.",
     contactViaWhatsApp: "WhatsApp",
     contactViaEmail: "E-mail",
+    // KYC resend flow
+    resendDocsTitle: "Precisamos de novas fotos",
+    resendDocsMessage:
+      "Por favor, reenvie as fotos dos seus documentos conforme indicado abaixo. Após enviar, sua solicitação será analisada novamente.",
+    goToDocuments: "Enviar documentos",
+    kycSectionSubtitleResend:
+      "Substitua as fotos abaixo (se necessário) e clique em Enviar para revisão quando estiver pronto.",
+    kycSectionSubtitleFirst:
+      "Envie os 3 itens abaixo para concluir sua verificação. Fotos claras e legíveis aceleram a aprovação.",
+    step: "Passo",
+    replacePhoto: "Substituir",
+    documentFrontTip: "Foto clara da frente do RG ou CNH",
+    documentBackTip: "Foto clara do verso do documento",
+    selfieTip: "Selfie segurando o documento com o rosto visível",
+    formatsAccepted: "Formatos: JPG, PNG ou HEIC",
+    allThreeRequired: "Os 3 itens são obrigatórios para enviar para revisão.",
   },
   en: {
     // Navigation
@@ -319,6 +335,22 @@ const translations = {
       "Questions or issues? Reach us via WhatsApp or email.",
     contactViaWhatsApp: "WhatsApp",
     contactViaEmail: "Email",
+    // KYC resend flow
+    resendDocsTitle: "We need new photos",
+    resendDocsMessage:
+      "Please resend your document photos as indicated below. Once submitted, your request will be reviewed again.",
+    goToDocuments: "Submit documents",
+    kycSectionSubtitleResend:
+      "Replace the photos below if needed, then click Submit for review when ready.",
+    kycSectionSubtitleFirst:
+      "Upload all 3 items below to complete your verification. Clear, readable photos speed up approval.",
+    step: "Step",
+    replacePhoto: "Replace",
+    documentFrontTip: "Clear photo of the front of your ID or driver's license",
+    documentBackTip: "Clear photo of the back of the document",
+    selfieTip: "Selfie holding the document with your face visible",
+    formatsAccepted: "Formats: JPG, PNG or HEIC",
+    allThreeRequired: "All 3 items are required to submit for review.",
   },
 };
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -233,13 +233,14 @@ interface TransactionDetails {
     id: string;
     status: string;
     externalOrderId?: string | null;
+    createdAt?: string | null;
     executedAt?: string | null;
     amount: string | number;
     total: string | number;
   } | null;
 }
 
-export default function AdminDashboard() {
+function AdminDashboardContent() {
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     pendingApprovals: 0,
@@ -1797,72 +1798,69 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-full bg-black text-white">
-      <div className="max-w-[1920px] mx-auto space-y-4 lg:space-y-6">
-        {/* Header */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div className="max-w-[1920px] mx-auto space-y-8">
+        {/* Page header */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-white">
-              Admin Dashboard
+            <h1 className="text-2xl font-bold tracking-tight text-white lg:text-3xl">
+              Dashboard
             </h1>
-            <p className="text-gray-400 text-sm mt-0.5">
-              BS Market Administration Panel
+            <p className="mt-1 text-sm text-gray-400">
+              Visão geral e configurações
             </p>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Quick Search */}
-            <div className="relative quick-search-container">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Buscar rapidamente..."
-                  value={quickSearchQuery}
-                  onChange={(e) => {
-                    setQuickSearchQuery(e.target.value);
-                    setShowQuickSearch(true);
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative quick-search-container order-first w-full sm:order-none sm:w-52">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Input
+                placeholder="Buscar..."
+                value={quickSearchQuery}
+                onChange={(e) => {
+                  setQuickSearchQuery(e.target.value);
+                  setShowQuickSearch(true);
+                }}
+                onFocus={() => setShowQuickSearch(true)}
+                className="h-9 pl-9 pr-8 bg-gray-900 border-gray-700 text-white placeholder-gray-400 text-sm"
+              />
+              {quickSearchQuery && (
+                <X
+                  className="absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 cursor-pointer text-gray-400 hover:text-white"
+                  onClick={() => {
+                    setQuickSearchQuery("");
+                    setShowQuickSearch(false);
+                    setQuickSearchResults([]);
                   }}
-                  onFocus={() => setShowQuickSearch(true)}
-                  className="pl-10 pr-10 w-64 bg-gray-900 border-gray-700 text-white placeholder-gray-400"
                 />
-                {quickSearchQuery && (
-                  <X
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 cursor-pointer hover:text-white"
-                    onClick={() => {
-                      setQuickSearchQuery("");
-                      setShowQuickSearch(false);
-                      setQuickSearchResults([]);
-                    }}
-                  />
-                )}
-              </div>
+              )}
               {showQuickSearch &&
                 (quickSearchQuery.length >= 2 ||
                   quickSearchResults.length > 0) && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-gray-900 border border-gray-700 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
+                  <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-auto rounded-lg border border-gray-700 bg-gray-900 shadow-xl">
                     {loadingQuickSearch ? (
-                      <div className="p-4 text-center">
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500 mx-auto"></div>
+                      <div className="flex items-center justify-center p-4">
+                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
                       </div>
                     ) : quickSearchResults.length > 0 ? (
-                      <div className="py-2">
+                      <div className="py-1">
                         {quickSearchResults.map((result, idx) => {
                           const Icon = result.icon;
                           return (
                             <div
                               key={idx}
-                              className="px-4 py-2 hover:bg-gray-800 cursor-pointer flex items-center gap-3"
+                              className="flex cursor-pointer items-center gap-3 px-3 py-2 hover:bg-gray-800"
                               onClick={() => {
                                 router.push(result.link);
                                 setShowQuickSearch(false);
                                 setQuickSearchQuery("");
                               }}
                             >
-                              <Icon className="h-4 w-4 text-gray-400" />
-                              <div className="flex-1">
-                                <p className="text-sm text-white">
+                              <Icon className="h-4 w-4 flex-shrink-0 text-gray-400" />
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm text-white">
                                   {result.title}
                                 </p>
                                 {result.subtitle && (
-                                  <p className="text-xs text-gray-400">
+                                  <p className="truncate text-xs text-gray-400">
                                     {result.subtitle}
                                   </p>
                                 )}
@@ -1872,69 +1870,68 @@ export default function AdminDashboard() {
                         })}
                       </div>
                     ) : quickSearchQuery.length >= 2 ? (
-                      <div className="p-4 text-center text-gray-400 text-sm">
-                        Nenhum resultado encontrado
-                      </div>
+                      <p className="p-3 text-center text-sm text-gray-400">
+                        Nenhum resultado
+                      </p>
                     ) : null}
                   </div>
                 )}
             </div>
-            {/* Real-time status indicator */}
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-gray-900 border border-gray-700">
+            <div className="flex items-center gap-1.5 rounded-lg border border-gray-700 bg-gray-900/80 px-2 py-1.5">
               {isPolling ? (
                 <>
-                  <Wifi className="w-4 h-4 text-green-400 animate-pulse" />
+                  <Wifi className="h-4 w-4 text-green-400 animate-pulse" />
                   <span className="text-xs text-gray-300">Live</span>
                 </>
               ) : (
                 <>
-                  <WifiOff className="w-4 h-4 text-gray-500" />
+                  <WifiOff className="h-4 w-4 text-gray-500" />
                   <span className="text-xs text-gray-500">Offline</span>
                 </>
               )}
             </div>
             <Button
+              size="sm"
               onClick={fetchStats}
               variant="outline"
-              className="border-gray-700 text-white hover:bg-gray-800"
+              className="h-9 border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white"
             >
-              <TrendingUp className="w-4 h-4 mr-2" />
-              Refresh
+              <RefreshCw className="h-4 w-4 mr-1.5" />
+              Atualizar
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
+                  size="sm"
                   variant="outline"
-                  className="border-gray-700 text-white hover:bg-gray-800"
+                  className="h-9 border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white"
                   disabled={downloadingReport}
                 >
-                  <FileDown className="w-4 h-4 mr-2" />
-                  {downloadingReport ? "Gerando..." : "Relatórios"}
+                  <FileDown className="h-4 w-4 mr-1.5" />
+                  {downloadingReport ? "…" : "Relatórios"}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="end"
-                className="w-56 bg-gray-900 border-gray-700"
+                className="w-56 border-gray-700 bg-gray-900"
               >
                 <DropdownMenuLabel className="text-white">
                   <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    Selecionar Período
+                    <Calendar className="h-4 w-4" />
+                    Período
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-gray-700" />
-                <div className="p-2 space-y-2">
+                <div className="space-y-2 p-2">
                   <div className="flex gap-2">
                     <Select
                       value={String(selectedMonth)}
-                      onValueChange={(value) =>
-                        setSelectedMonth(parseInt(value))
-                      }
+                      onValueChange={(v) => setSelectedMonth(parseInt(v))}
                     >
-                      <SelectTrigger className="w-24 h-8 bg-gray-800 border-gray-700 text-white">
+                      <SelectTrigger className="h-8 w-24 border-gray-700 bg-gray-800 text-white">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-gray-900 border-gray-700">
+                      <SelectContent className="border-gray-700 bg-gray-900">
                         {Array.from({ length: 12 }, (_, i) => i + 1).map(
                           (m) => (
                             <SelectItem
@@ -1942,7 +1939,7 @@ export default function AdminDashboard() {
                               value={String(m)}
                               className="text-white hover:bg-gray-800"
                             >
-                              {m.toString().padStart(2, "0")}
+                              {String(m).padStart(2, "0")}
                             </SelectItem>
                           ),
                         )}
@@ -1950,14 +1947,12 @@ export default function AdminDashboard() {
                     </Select>
                     <Select
                       value={String(selectedYear)}
-                      onValueChange={(value) =>
-                        setSelectedYear(parseInt(value))
-                      }
+                      onValueChange={(v) => setSelectedYear(parseInt(v))}
                     >
-                      <SelectTrigger className="w-28 h-8 bg-gray-800 border-gray-700 text-white">
+                      <SelectTrigger className="h-8 w-28 border-gray-700 bg-gray-800 text-white">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-gray-900 border-gray-700">
+                      <SelectContent className="border-gray-700 bg-gray-900">
                         {Array.from(
                           { length: 10 },
                           (_, i) => new Date().getFullYear() - i,
@@ -1977,39 +1972,40 @@ export default function AdminDashboard() {
                 <DropdownMenuSeparator className="bg-gray-700" />
                 <DropdownMenuItem
                   onClick={() => handleDownloadReport("pdf")}
-                  className="text-white hover:bg-gray-800 cursor-pointer"
                   disabled={downloadingReport}
+                  className="cursor-pointer text-gray-300 hover:bg-gray-800 hover:text-white focus:bg-gray-800 focus:text-white"
                 >
-                  <FileText className="w-4 h-4 mr-2" />
-                  Download PDF
+                  <FileText className="mr-2 h-4 w-4" />
+                  PDF
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => handleDownloadReport("excel")}
-                  className="text-white hover:bg-gray-800 cursor-pointer"
                   disabled={downloadingReport}
+                  className="cursor-pointer text-gray-300 hover:bg-gray-800 hover:text-white focus:bg-gray-800 focus:text-white"
                 >
-                  <FileDown className="w-4 h-4 mr-2" />
-                  Download Excel
+                  <FileDown className="mr-2 h-4 w-4" />
+                  Excel
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <Button
+              size="sm"
               onClick={handleResetFinance}
               variant="outline"
-              className="border-red-700 text-red-400 hover:bg-red-900 hover:text-red-300"
+              className="h-9 border-red-800/50 text-red-400 hover:bg-red-900/30 hover:text-red-300"
             >
-              <Shield className="w-4 h-4 mr-2" />
+              <Shield className="h-4 w-4 mr-1.5" />
               Reset Finance
-            </Button>
-            <Button onClick={handleLogout} variant="destructive">
-              <Shield className="w-4 h-4 mr-2" />
-              Logout
             </Button>
           </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 lg:gap-4">
+        {/* Métricas */}
+        <section>
+          <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-gray-500">
+            Métricas
+          </h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7">
           {/* Total Users */}
           <Link href="/admin/users">
             <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-blue-500 transition-all duration-200 cursor-pointer group h-full">
@@ -2142,10 +2138,15 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
           </Link>
-        </div>
+          </div>
+        </section>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 lg:gap-4">
+        {/* Atalhos */}
+        <section>
+          <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-gray-500">
+            Atalhos
+          </h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6">
           <Link href="/admin/users">
             <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-blue-500 transition-all cursor-pointer h-full">
               <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
@@ -2203,12 +2204,18 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
           </Link>
+          </div>
+        </section>
 
-          {/* Money Functions / Maintenance */}
+        {/* Configuração da plataforma */}
+        <section>
+          <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-gray-500">
+            Configuração da plataforma
+          </h2>
           <Card className="bg-gray-900 border-gray-800">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center justify-between">
-                Money Functions
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center justify-between text-base text-white">
+                Depósitos e saques
                 {depositsDisabled || withdrawalsDisabled ? (
                   <WifiOff className="h-4 w-4 text-red-400" />
                 ) : (
@@ -2228,20 +2235,20 @@ export default function AdminDashboard() {
                     disabled={moneyControlsLoading || savingMoneyControls}
                     className="mt-1 border-gray-600 data-[state=checked]:bg-red-600"
                   />
-                  <div className="space-y-1 flex-1">
+                  <div className="flex-1 space-y-1">
                     <p className="text-sm font-medium text-gray-200">
-                      Disable deposits
+                      Desativar depósitos
                     </p>
                     <p className="text-xs text-gray-400">
-                      Blocks deposit APIs and shows the message to users.
+                      Bloqueia APIs de depósito e exibe a mensagem aos usuários.
                     </p>
                   </div>
                 </div>
 
                 {depositsDisabled && (
-                  <div className="space-y-2 ml-7">
-                    <Label className="text-gray-300 text-xs">
-                      Deposit message
+                  <div className="ml-7 space-y-2">
+                    <Label className="text-xs text-gray-300">
+                      Mensagem de depósito
                     </Label>
                     <Textarea
                       value={depositsDisabledMessage}
@@ -2268,20 +2275,20 @@ export default function AdminDashboard() {
                     disabled={moneyControlsLoading || savingMoneyControls}
                     className="mt-1 border-gray-600 data-[state=checked]:bg-red-600"
                   />
-                  <div className="space-y-1 flex-1">
+                  <div className="flex-1 space-y-1">
                     <p className="text-sm font-medium text-gray-200">
-                      Disable withdrawals
+                      Desativar saques
                     </p>
                     <p className="text-xs text-gray-400">
-                      Blocks withdrawal APIs and shows the message to users.
+                      Bloqueia APIs de saque e exibe a mensagem aos usuários.
                     </p>
                   </div>
                 </div>
 
                 {withdrawalsDisabled && (
-                  <div className="space-y-2 ml-7">
-                    <Label className="text-gray-300 text-xs">
-                      Withdrawal message
+                  <div className="ml-7 space-y-2">
+                    <Label className="text-xs text-gray-300">
+                      Mensagem de saque
                     </Label>
                     <Textarea
                       value={withdrawalsDisabledMessage}
@@ -2297,10 +2304,14 @@ export default function AdminDashboard() {
                 )}
               </div>
 
-              {/* Limits & fees */}
+              <div className="border-t border-gray-800 pt-6">
+                <p className="mb-4 text-sm font-medium text-gray-300">
+                  Limites e manutenção
+                </p>
+              </div>
               <div className="space-y-3">
                 <Label className="text-gray-300 text-sm font-medium">
-                  Max deposit (USDT)
+                  Máx. depósito (USDT)
                 </Label>
                 <Input
                   type="number"
@@ -2318,10 +2329,10 @@ export default function AdminDashboard() {
                 </p>
               </div>
 
-              {/* Scheduled maintenance */}
+              {/* Manutenção programada */}
               <div className="space-y-3">
-                <Label className="text-gray-300 text-sm font-medium">
-                  Scheduled maintenance
+                <Label className="text-sm font-medium text-gray-300">
+                  Manutenção programada
                 </Label>
                 <Textarea
                   value={maintenanceMessage}
@@ -2333,7 +2344,7 @@ export default function AdminDashboard() {
                 />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-gray-400 text-xs">Start (local)</Label>
+                    <Label className="text-xs text-gray-400">Início (local)</Label>
                     <Input
                       type="datetime-local"
                       value={maintenanceStartAt}
@@ -2343,7 +2354,7 @@ export default function AdminDashboard() {
                     />
                   </div>
                   <div>
-                    <Label className="text-gray-400 text-xs">End (local)</Label>
+                    <Label className="text-xs text-gray-400">Fim (local)</Label>
                     <Input
                       type="datetime-local"
                       value={maintenanceEndAt}
@@ -2354,7 +2365,7 @@ export default function AdminDashboard() {
                   </div>
                 </div>
                 <p className="text-xs text-gray-500">
-                  When now is between start and end, the message is shown on the trade page.
+                  Mensagem exibida na página de trade quando estiver no período.
                 </p>
               </div>
 
@@ -2367,13 +2378,13 @@ export default function AdminDashboard() {
                     : "bg-green-600 hover:bg-green-700"
                 } text-white`}
               >
-                <Send className="w-4 h-4 mr-2" />
-                {savingMoneyControls ? "Saving..." : "Save & Notify Users"}
+                <Send className="mr-2 h-4 w-4" />
+                {savingMoneyControls ? "Salvando…" : "Salvar e notificar usuários"}
               </Button>
 
               {moneyControlsMeta?.updatedAt ? (
                 <p className="text-xs text-gray-500">
-                  Last update:{" "}
+                  Última atualização:{" "}
                   {new Date(moneyControlsMeta.updatedAt).toLocaleString()}{" "}
                   {moneyControlsMeta.updatedBy
                     ? `(${moneyControlsMeta.updatedBy})`
@@ -2382,11 +2393,14 @@ export default function AdminDashboard() {
               ) : null}
             </CardContent>
           </Card>
-        </div>
+        </section>
 
-        {/* New Features Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Recent Activity */}
+        {/* Atividade e transações */}
+        <section>
+          <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-gray-500">
+            Atividade e transações
+          </h2>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <Card className="bg-gray-900 border-gray-800 lg:col-span-2">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -2584,6 +2598,7 @@ export default function AdminDashboard() {
             </Card>
           </div>
         </div>
+        </section>
 
         {/* Admin Activity Log */}
         {adminActivityLog.length > 0 && (
@@ -2623,16 +2638,15 @@ export default function AdminDashboard() {
           </Card>
         )}
 
-        {/* Finance Overview */}
+        {/* Visão financeira */}
+        <section>
+          <h2 className="mb-1 text-sm font-medium uppercase tracking-wider text-gray-500">
+            Visão financeira
+          </h2>
+          <p className="mb-4 text-sm text-gray-400">
+            Movimentação financeira em tempo real
+          </p>
         <div className="space-y-4">
-          <div>
-            <h2 className="text-xl lg:text-2xl font-bold text-white">
-              Finance Overview
-            </h2>
-            <p className="text-gray-400 text-sm mt-0.5">
-              Acompanhe a movimentação financeira da plataforma em tempo real
-            </p>
-          </div>
 
           {/* Finance Stats Grid */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 lg:gap-4">
@@ -3299,13 +3313,19 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
           </div>
+        </div>
+        </section>
 
-          {/* Detailed Transactions Table */}
+        {/* Transações */}
+        <section>
+          <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-gray-500">
+            Transações
+          </h2>
           <Card className="bg-gray-900 border-gray-800">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-white">
-                  Tabela Detalhada de Transações
+                  Tabela detalhada
                 </CardTitle>
                 <Button
                   onClick={handleOpenBalanceDialog}
@@ -3703,7 +3723,7 @@ export default function AdminDashboard() {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </section>
 
         {/* Transaction Details Dialog */}
         <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
@@ -4286,9 +4306,11 @@ export default function AdminDashboard() {
                   >
                     Ver logs de webhook
                   </Link>
-                  {(transactionDetails.order?.externalOrderId ||
-                    (transactionDetails.metadata as Record<string, unknown>)
-                      ?.orderId) && (
+                  {Boolean(
+                    transactionDetails.order?.externalOrderId ||
+                      (transactionDetails.metadata as Record<string, unknown>)
+                        ?.orderId,
+                  ) && (
                     <span className="text-gray-500 text-xs">
                       (ID externo / pedido para buscar nos logs)
                     </span>
@@ -4623,5 +4645,19 @@ export default function AdminDashboard() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function AdminDashboard() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-screen">
+          Carregando...
+        </div>
+      }
+    >
+      <AdminDashboardContent />
+    </Suspense>
   );
 }

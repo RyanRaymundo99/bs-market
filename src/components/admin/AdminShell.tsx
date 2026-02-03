@@ -8,12 +8,14 @@ import {
   Users,
   FileText,
   Mail,
+  Send,
   Webhook,
   ScrollText,
   Shield,
   LogOut,
   ChevronRight,
   Menu,
+  Database,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,8 +32,10 @@ const SIDEBAR_LINKS = [
   { href: "/admin/users", label: "Usuários", icon: Users },
   { href: "/admin/kyc", label: "KYC", icon: FileText },
   { href: "/admin/notification-center", label: "Notificações", icon: Mail },
+  { href: "/admin/sent-emails", label: "Emails enviados", icon: Send },
   { href: "/admin/webhook-logs", label: "Webhooks", icon: Webhook },
   { href: "/admin/audit-log", label: "Audit log", icon: ScrollText },
+  { href: "/admin/backup", label: "Backup / Restore", icon: Database },
 ] as const;
 
 function NavLinks({

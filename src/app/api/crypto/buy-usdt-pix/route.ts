@@ -5,6 +5,10 @@ import { ledgerService } from "@/lib/ledger";
 import { Decimal } from "@prisma/client/runtime/library";
 import { sendPurchaseReceipt } from "@/lib/receipt-email";
 import { getMoneyControls } from "@/lib/money-controls";
+import {
+  getAdminAlertSettings,
+  sendAdminAlertToAll,
+} from "@/lib/admin-alert-email";
 
 export async function POST(request: NextRequest) {
   try {
@@ -159,6 +163,21 @@ export async function POST(request: NextRequest) {
       amountString: amountNum.toFixed(2),
       usdtAmountString: usdtAmountNum.toFixed(4),
     });
+
+    // Notify admin email on deposit attempts over 500 USDT (non-blocking)
+    if (usdtAmountNum > 500) {
+      getAdminAlertSettings()
+        .then((settings) => {
+          if (settings.notifyDepositOver500 && settings.emails?.length) {
+            return sendAdminAlertToAll(
+              settings,
+              `Deposit attempt over 500 USDT: ${usdtAmountNum.toFixed(2)} USDT`,
+              `User ${user.email} (${user.name}) attempted a deposit of ${usdtAmountNum.toFixed(2)} USDT (R$ ${amountNum.toFixed(2)}).`
+            );
+          }
+        })
+        .catch((err) => console.error("Admin deposit alert:", err));
+    }
 
     // Validate user has required information
     if (!user.name || !user.email) {

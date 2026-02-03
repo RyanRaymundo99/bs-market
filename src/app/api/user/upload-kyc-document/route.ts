@@ -4,6 +4,7 @@ import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
 import { put } from "@vercel/blob";
+import { heicToJpegBuffer, isHeicFile } from "@/lib/heic-to-jpeg";
 
 export async function POST(request: NextRequest) {
   try {
@@ -44,16 +45,21 @@ export async function POST(request: NextRequest) {
     // Use Vercel Blob Storage for production, filesystem for localhost
     const isVercel = process.env.VERCEL === "1";
     const timestamp = Date.now();
-    const filename = `${type}_${timestamp}.${file.name.split(".").pop()}`;
+    const ext = isHeicFile(file) ? "jpg" : file.name.split(".").pop() || "jpg";
+    const filename = `${type}_${timestamp}.${ext}`;
     let relativePath: string;
+
+    let buffer: Buffer = Buffer.from(await file.arrayBuffer());
+    if (isHeicFile(file) && buffer.length > 0) {
+      buffer = await heicToJpegBuffer(buffer);
+    }
 
     if (isVercel) {
       // Use Vercel Blob Storage for production
       try {
-        // Vercel Blob accepts File objects directly from FormData
-        const blob = await put(`kyc/${user.id}/${filename}`, file, {
+        const blob = await put(`kyc/${user.id}/${filename}`, buffer, {
           access: "public",
-          contentType: file.type,
+          contentType: isHeicFile(file) ? "image/jpeg" : file.type,
         });
         relativePath = blob.url;
 
@@ -91,7 +97,6 @@ export async function POST(request: NextRequest) {
         }
 
         const filePath = join(uploadDir, filename);
-        const buffer = Buffer.from(await file.arrayBuffer());
         await writeFile(filePath, buffer);
 
         // Verify file was written

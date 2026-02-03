@@ -1,5 +1,6 @@
 "use server";
 import { sendEmail } from "./email";
+import { logSentEmailByEmail } from "./communication-log";
 
 // Helper function to generate bank-style HTML receipt template
 function generateBankReceiptHTML({
@@ -296,6 +297,12 @@ Seus USDT foram creditados na sua conta e já estão disponíveis para uso.
 
     if (result.success) {
       console.log(`✅ Purchase receipt sent to ${data.userEmail}`);
+      await logSentEmailByEmail({
+        userEmail: data.userEmail,
+        type: "receipt",
+        subject,
+        metadata: { kind: "purchase_receipt" },
+      });
     } else {
       console.error(`❌ Failed to send purchase receipt: ${result.message}`);
     }
@@ -398,6 +405,12 @@ Chave PIX: ${data.pixKey}
 
     if (result.success) {
       console.log(`✅ PIX withdrawal receipt sent to ${data.userEmail}`);
+      await logSentEmailByEmail({
+        userEmail: data.userEmail,
+        type: "receipt",
+        subject,
+        metadata: { kind: "pix_withdrawal_receipt" },
+      });
     } else {
       console.error(
         `❌ Failed to send PIX withdrawal receipt: ${result.message}`
@@ -507,6 +520,12 @@ ${data.transactionHash ? `Hash da Transação: ${data.transactionHash}` : ""}
 
     if (result.success) {
       console.log(`✅ Withdrawal receipt sent to ${data.userEmail}`);
+      await logSentEmailByEmail({
+        userEmail: data.userEmail,
+        type: "receipt",
+        subject,
+        metadata: { kind: "withdrawal_receipt" },
+      });
     } else {
       console.error(`❌ Failed to send withdrawal receipt: ${result.message}`);
     }
@@ -620,6 +639,12 @@ ${data.reason ? `Motivo: ${data.reason}` : ""}
       console.log(
         `✅ Balance adjustment email sent to ${data.userEmail} (${data.operation})`
       );
+      await logSentEmailByEmail({
+        userEmail: data.userEmail,
+        type: "receipt",
+        subject,
+        metadata: { kind: "balance_adjustment", operation: data.operation },
+      });
     } else {
       console.error(
         `❌ Failed to send balance adjustment email: ${result.message}`

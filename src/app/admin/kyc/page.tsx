@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { getKycImageSrc } from "@/lib/kyc-image-src";
 import {
   CheckCircle,
   XCircle,
@@ -141,7 +142,7 @@ const AdminKYCPage = () => {
         (user) =>
           user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.cpf.includes(searchTerm),
+          user.cpf.includes(searchTerm)
       );
     }
 
@@ -263,6 +264,10 @@ const AdminKYCPage = () => {
       setActionLoading(userId);
       const response = await fetch(`/api/admin/kyc/${userId}/reset`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reason: rejectionReason?.trim() || undefined,
+        }),
       });
 
       const data = await response.json();
@@ -326,7 +331,9 @@ const AdminKYCPage = () => {
 
     toast({
       title: "Aprovação em lote concluída",
-      description: `Aprovados: ${successCount}${failCount > 0 ? ` | Falhas: ${failCount}` : ""}`,
+      description: `Aprovados: ${successCount}${
+        failCount > 0 ? ` | Falhas: ${failCount}` : ""
+      }`,
     });
 
     setSelectedUsers(new Set());
@@ -926,14 +933,14 @@ const AdminKYCPage = () => {
                     {user.documentFront && (
                       <div className="flex-1">
                         <KYCImage
-                          src={user.documentFront}
+                          src={getKycImageSrc(user.documentFront)}
                           alt="Frente"
                           className="w-full h-20"
                           onClick={() =>
                             handleImageClick(
                               user.documentFront!,
                               "Frente",
-                              "Frente do Documento",
+                              "Frente do Documento"
                             )
                           }
                         />
@@ -942,14 +949,14 @@ const AdminKYCPage = () => {
                     {user.documentBack && (
                       <div className="flex-1">
                         <KYCImage
-                          src={user.documentBack}
+                          src={getKycImageSrc(user.documentBack)}
                           alt="Verso"
                           className="w-full h-20"
                           onClick={() =>
                             handleImageClick(
                               user.documentBack!,
                               "Verso",
-                              "Verso do Documento",
+                              "Verso do Documento"
                             )
                           }
                         />
@@ -958,14 +965,14 @@ const AdminKYCPage = () => {
                     {user.documentSelfie && (
                       <div className="flex-1">
                         <KYCImage
-                          src={user.documentSelfie}
+                          src={getKycImageSrc(user.documentSelfie)}
                           alt="Selfie"
                           className="w-full h-20"
                           onClick={() =>
                             handleImageClick(
                               user.documentSelfie!,
                               "Selfie",
-                              "Selfie com Documento",
+                              "Selfie com Documento"
                             )
                           }
                         />
@@ -1161,7 +1168,7 @@ const AdminKYCPage = () => {
                     <ZoomIn className="w-4 h-4 text-gray-400" />
                   </h4>
                   <KYCImage
-                    src={selectedUser.documentFront}
+                    src={getKycImageSrc(selectedUser.documentFront)}
                     alt="Frente do Documento"
                     className="w-full h-48"
                     onClick={
@@ -1170,7 +1177,7 @@ const AdminKYCPage = () => {
                             handleImageClick(
                               selectedUser.documentFront!,
                               "Frente do Documento",
-                              "Frente do Documento",
+                              "Frente do Documento"
                             )
                         : undefined
                     }
@@ -1182,7 +1189,7 @@ const AdminKYCPage = () => {
                     <ZoomIn className="w-4 h-4 text-gray-400" />
                   </h4>
                   <KYCImage
-                    src={selectedUser.documentBack}
+                    src={getKycImageSrc(selectedUser.documentBack)}
                     alt="Verso do Documento"
                     className="w-full h-48"
                     onClick={
@@ -1191,7 +1198,7 @@ const AdminKYCPage = () => {
                             handleImageClick(
                               selectedUser.documentBack!,
                               "Verso do Documento",
-                              "Verso do Documento",
+                              "Verso do Documento"
                             )
                         : undefined
                     }
@@ -1203,7 +1210,7 @@ const AdminKYCPage = () => {
                     <ZoomIn className="w-4 h-4 text-gray-400" />
                   </h4>
                   <KYCImage
-                    src={selectedUser.documentSelfie}
+                    src={getKycImageSrc(selectedUser.documentSelfie)}
                     alt="Selfie com Documento"
                     className="w-full h-48"
                     onClick={
@@ -1212,7 +1219,7 @@ const AdminKYCPage = () => {
                             handleImageClick(
                               selectedUser.documentSelfie!,
                               "Selfie com Documento",
-                              "Selfie com Documento",
+                              "Selfie com Documento"
                             )
                         : undefined
                     }

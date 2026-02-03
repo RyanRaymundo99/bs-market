@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import BackToDashboardButton from "@/components/admin/BackToDashboardButton";
 import { formatUSDT, formatBRL } from "@/lib/format-currency";
+import { getKycImageSrc } from "@/lib/kyc-image-src";
 import {
   User,
   Mail,
@@ -98,9 +99,13 @@ export default function AdminUserDetailsPage({
   const [editForm, setEditForm] = useState({ name: "", phone: "", cpf: "" });
   const [saving, setSaving] = useState(false);
   const [showBalanceDialog, setShowBalanceDialog] = useState(false);
-  const [balanceAdjustment, setBalanceAdjustment] = useState({ amount: "", reason: "" });
+  const [balanceAdjustment, setBalanceAdjustment] = useState({
+    amount: "",
+    reason: "",
+  });
   const [adjustingBalance, setAdjustingBalance] = useState(false);
-  const [showBalanceConfirmDialog, setShowBalanceConfirmDialog] = useState(false);
+  const [showBalanceConfirmDialog, setShowBalanceConfirmDialog] =
+    useState(false);
   const [balanceConfirmStep, setBalanceConfirmStep] = useState(1);
   const [showEditConfirmDialog, setShowEditConfirmDialog] = useState(false);
   const [editConfirmStep, setEditConfirmStep] = useState(1);
@@ -114,15 +119,20 @@ export default function AdminUserDetailsPage({
       try {
         const { id } = await params;
         setUserId(id);
-        
+
         // Fetch all data in parallel (including exchange rate)
-        const [userResponse, balanceResponse, transactionsResponse, rateResponse] = await Promise.all([
+        const [
+          userResponse,
+          balanceResponse,
+          transactionsResponse,
+          rateResponse,
+        ] = await Promise.all([
           fetch(`/api/admin/users/${id}`),
           fetch(`/api/admin/users/${id}?include=balance`),
           fetch(`/api/admin/users/${id}?include=transactions`),
           fetch("/api/crypto/usdt-rate"),
         ]);
-        
+
         // Set exchange rate
         if (rateResponse.ok) {
           const rateData = await rateResponse.json();
@@ -189,11 +199,14 @@ export default function AdminUserDetailsPage({
     if (!userId) return;
     setSaving(true);
     try {
-      const response = await fetch(`/api/admin/users/${userId}/update-profile`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editForm),
-      });
+      const response = await fetch(
+        `/api/admin/users/${userId}/update-profile`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(editForm),
+        }
+      );
 
       if (response.ok) {
         const data = await response.json();
@@ -254,17 +267,17 @@ export default function AdminUserDetailsPage({
           fetch(`/api/admin/users/${userId}?include=balance`),
           fetch("/api/crypto/usdt-rate"),
         ]);
-        
+
         if (balanceResponse.ok) {
           const balanceData = await balanceResponse.json();
           setBalances(balanceData.balances || []);
         }
-        
+
         if (rateResponse.ok) {
           const rateData = await rateResponse.json();
           setUsdtToBrlRate(rateData.rate || null);
         }
-        
+
         setShowBalanceDialog(false);
         setBalanceAdjustment({ amount: "", reason: "" });
         toast({
@@ -319,7 +332,7 @@ export default function AdminUserDetailsPage({
         // Store session in localStorage (required by Dashboard component)
         localStorage.setItem("auth-session", data.user.id);
         sessionStorage.setItem("just-logged-in", "true");
-        
+
         // Store in sessionStorage to indicate we're impersonating
         sessionStorage.setItem("admin-impersonating", "true");
 
@@ -352,11 +365,17 @@ export default function AdminUserDetailsPage({
     const digits = phone.replace(/\D/g, "");
     // Format Brazilian phone: +55 (XX) XXXXX-XXXX
     if (digits.length === 13 && digits.startsWith("55")) {
-      return `+${digits.slice(0, 2)} (${digits.slice(2, 4)}) ${digits.slice(4, 9)}-${digits.slice(9)}`;
+      return `+${digits.slice(0, 2)} (${digits.slice(2, 4)}) ${digits.slice(
+        4,
+        9
+      )}-${digits.slice(9)}`;
     }
     // Format if it starts with +55
     if (phone.startsWith("+55") && digits.length === 13) {
-      return `+${digits.slice(0, 2)} (${digits.slice(2, 4)}) ${digits.slice(4, 9)}-${digits.slice(9)}`;
+      return `+${digits.slice(0, 2)} (${digits.slice(2, 4)}) ${digits.slice(
+        4,
+        9
+      )}-${digits.slice(9)}`;
     }
     // Return original if can't format
     return phone;
@@ -368,28 +387,40 @@ export default function AdminUserDetailsPage({
     const digits = cpf.replace(/\D/g, "");
     // Format CPF: XXX.XXX.XXX-XX
     if (digits.length === 11) {
-      return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+      return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(
+        6,
+        9
+      )}-${digits.slice(9)}`;
     }
     // Format CNPJ: XX.XXX.XXX/XXXX-XX
     if (digits.length === 14) {
-      return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12)}`;
+      return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(
+        5,
+        8
+      )}/${digits.slice(8, 12)}-${digits.slice(12)}`;
     }
     // Return original if can't format
     return cpf;
   };
 
-  const formatCurrency = (amount: number | string, currency: string = "USDT") => {
+  const formatCurrency = (
+    amount: number | string,
+    currency: string = "USDT"
+  ) => {
     if (currency === "BRL") {
       return formatBRL(amount);
     }
     return formatUSDT(amount);
   };
 
-  const formatTransactionAmount = (amount: number | string, currency: string) => {
+  const formatTransactionAmount = (
+    amount: number | string,
+    currency: string
+  ) => {
     const numAmount = Number(amount);
     const sign = numAmount >= 0 ? "+" : "-";
     const absAmount = Math.abs(numAmount);
-    
+
     if (currency === "BRL") {
       return `${sign}${formatBRL(absAmount).replace("R$ ", "")} BRL`;
     }
@@ -483,26 +514,38 @@ export default function AdminUserDetailsPage({
                 {isEditing ? (
                   <>
                     <div>
-                      <Label className="text-sm font-medium text-gray-300">Nome Completo</Label>
+                      <Label className="text-sm font-medium text-gray-300">
+                        Nome Completo
+                      </Label>
                       <Input
                         value={editForm.name}
-                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, name: e.target.value })
+                        }
                         className="mt-1 bg-gray-700 border-gray-600 text-white"
                       />
                     </div>
                     <div>
-                      <Label className="text-sm font-medium text-gray-300">Telefone</Label>
+                      <Label className="text-sm font-medium text-gray-300">
+                        Telefone
+                      </Label>
                       <Input
                         value={editForm.phone}
-                        onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, phone: e.target.value })
+                        }
                         className="mt-1 bg-gray-700 border-gray-600 text-white"
                       />
                     </div>
                     <div>
-                      <Label className="text-sm font-medium text-gray-300">CPF/CNPJ</Label>
+                      <Label className="text-sm font-medium text-gray-300">
+                        CPF/CNPJ
+                      </Label>
                       <Input
                         value={editForm.cpf}
-                        onChange={(e) => setEditForm({ ...editForm, cpf: e.target.value })}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, cpf: e.target.value })
+                        }
                         className="mt-1 bg-gray-700 border-gray-600 text-white"
                       />
                     </div>
@@ -712,24 +755,31 @@ export default function AdminUserDetailsPage({
                 balances.map((balance) => {
                   // For BRL, calculate from USDT with 2% discount
                   if (balance.currency === "BRL") {
-                    const usdtBalance = balances.find(b => b.currency === "USDT");
+                    const usdtBalance = balances.find(
+                      (b) => b.currency === "USDT"
+                    );
                     if (usdtBalance && usdtToBrlRate) {
                       // Calculate BRL = USDT * rate * 0.98 (2% discount)
-                      const calculatedBrl = Number(usdtBalance.amount) * usdtToBrlRate * 0.98;
+                      const calculatedBrl =
+                        Number(usdtBalance.amount) * usdtToBrlRate * 0.98;
                       return (
                         <div
                           key={balance.currency}
                           className="bg-gray-800 rounded-lg p-4 border border-gray-700"
                         >
                           <div className="text-sm text-gray-400 mb-1">
-                            {balance.currency} <span className="text-xs text-gray-500">(calculado)</span>
+                            {balance.currency}{" "}
+                            <span className="text-xs text-gray-500">
+                              (calculado)
+                            </span>
                           </div>
                           <div className="text-2xl font-bold text-white">
                             {formatCurrency(calculatedBrl, "BRL")}
                           </div>
                           {balance.locked > 0 && (
                             <div className="text-xs text-yellow-500 mt-1">
-                              Bloqueado: {formatCurrency(balance.locked, balance.currency)}
+                              Bloqueado:{" "}
+                              {formatCurrency(balance.locked, balance.currency)}
                             </div>
                           )}
                         </div>
@@ -741,13 +791,16 @@ export default function AdminUserDetailsPage({
                         key={balance.currency}
                         className="bg-gray-800 rounded-lg p-4 border border-gray-700"
                       >
-                        <div className="text-sm text-gray-400 mb-1">{balance.currency}</div>
+                        <div className="text-sm text-gray-400 mb-1">
+                          {balance.currency}
+                        </div>
                         <div className="text-2xl font-bold text-white">
                           {formatCurrency(balance.amount, "BRL")}
                         </div>
                         {balance.locked > 0 && (
                           <div className="text-xs text-yellow-500 mt-1">
-                            Bloqueado: {formatCurrency(balance.locked, balance.currency)}
+                            Bloqueado:{" "}
+                            {formatCurrency(balance.locked, balance.currency)}
                           </div>
                         )}
                       </div>
@@ -759,13 +812,16 @@ export default function AdminUserDetailsPage({
                       key={balance.currency}
                       className="bg-gray-800 rounded-lg p-4 border border-gray-700"
                     >
-                      <div className="text-sm text-gray-400 mb-1">{balance.currency}</div>
+                      <div className="text-sm text-gray-400 mb-1">
+                        {balance.currency}
+                      </div>
                       <div className="text-2xl font-bold text-white">
                         {formatCurrency(balance.amount, "USDT")}
                       </div>
                       {balance.locked > 0 && (
                         <div className="text-xs text-yellow-500 mt-1">
-                          Bloqueado: {formatCurrency(balance.locked, balance.currency)}
+                          Bloqueado:{" "}
+                          {formatCurrency(balance.locked, balance.currency)}
                         </div>
                       )}
                     </div>
@@ -818,7 +874,11 @@ export default function AdminUserDetailsPage({
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className={`font-medium ${getTransactionColor(tx.type)}`}>
+                      <div
+                        className={`font-medium ${getTransactionColor(
+                          tx.type
+                        )}`}
+                      >
                         {formatTransactionAmount(tx.amount, tx.currency)}
                       </div>
                       <Badge
@@ -849,21 +909,28 @@ export default function AdminUserDetailsPage({
         <Dialog open={showBalanceDialog} onOpenChange={setShowBalanceDialog}>
           <DialogContent className="bg-gray-900 border-gray-700">
             <DialogHeader>
-              <DialogTitle className="text-white">Ajustar Saldo do Usuário</DialogTitle>
+              <DialogTitle className="text-white">
+                Ajustar Saldo do Usuário
+              </DialogTitle>
               <DialogDescription className="text-gray-400">
                 Adicione ou remova saldo da conta de {user.name}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 pt-4">
               <div>
-                <Label className="text-gray-300">Valor (use negativo para remover)</Label>
+                <Label className="text-gray-300">
+                  Valor (use negativo para remover)
+                </Label>
                 <Input
                   type="number"
                   step="0.01"
                   placeholder="Ex: 100.00 ou -50.00"
                   value={balanceAdjustment.amount}
                   onChange={(e) =>
-                    setBalanceAdjustment({ ...balanceAdjustment, amount: e.target.value })
+                    setBalanceAdjustment({
+                      ...balanceAdjustment,
+                      amount: e.target.value,
+                    })
                   }
                   className="mt-1 bg-gray-800 border-gray-600 text-white"
                 />
@@ -874,7 +941,10 @@ export default function AdminUserDetailsPage({
                   placeholder="Motivo do ajuste..."
                   value={balanceAdjustment.reason}
                   onChange={(e) =>
-                    setBalanceAdjustment({ ...balanceAdjustment, reason: e.target.value })
+                    setBalanceAdjustment({
+                      ...balanceAdjustment,
+                      reason: e.target.value,
+                    })
                   }
                   className="mt-1 bg-gray-800 border-gray-600 text-white"
                 />
@@ -900,36 +970,64 @@ export default function AdminUserDetailsPage({
         </Dialog>
 
         {/* Balance Adjustment Confirmation Dialog */}
-        <Dialog open={showBalanceConfirmDialog} onOpenChange={(open) => {
-          if (!open) {
-            setShowBalanceConfirmDialog(false);
-            setBalanceConfirmStep(1);
-          }
-        }}>
+        <Dialog
+          open={showBalanceConfirmDialog}
+          onOpenChange={(open) => {
+            if (!open) {
+              setShowBalanceConfirmDialog(false);
+              setBalanceConfirmStep(1);
+            }
+          }}
+        >
           <DialogContent className="bg-gray-900 border-gray-800">
             <DialogHeader>
               <DialogTitle className="text-white">
-                {balanceConfirmStep === 1 ? "Confirmar Ajuste de Saldo" : "Confirmação Final"}
+                {balanceConfirmStep === 1
+                  ? "Confirmar Ajuste de Saldo"
+                  : "Confirmação Final"}
               </DialogTitle>
               <DialogDescription className="text-gray-400">
                 {balanceConfirmStep === 1 ? (
                   <>
-                    Você está prestes a ajustar o saldo do usuário <strong className="text-white">{user?.name}</strong>.
-                    <br /><br />
-                    <strong>Valor:</strong> {balanceAdjustment.amount.startsWith("-") ? "Remover" : "Adicionar"} {Math.abs(parseFloat(balanceAdjustment.amount) || 0).toFixed(2)} USDT
+                    Você está prestes a ajustar o saldo do usuário{" "}
+                    <strong className="text-white">{user?.name}</strong>.
                     <br />
-                    <strong>Motivo:</strong> {balanceAdjustment.reason || "Não especificado"}
-                    <br /><br />
+                    <br />
+                    <strong>Valor:</strong>{" "}
+                    {balanceAdjustment.amount.startsWith("-")
+                      ? "Remover"
+                      : "Adicionar"}{" "}
+                    {Math.abs(
+                      parseFloat(balanceAdjustment.amount) || 0
+                    ).toFixed(2)}{" "}
+                    USDT
+                    <br />
+                    <strong>Motivo:</strong>{" "}
+                    {balanceAdjustment.reason || "Não especificado"}
+                    <br />
+                    <br />
                     Esta ação alterará o saldo do usuário. Deseja continuar?
                   </>
                 ) : (
                   <>
-                    <strong className="text-red-400">ATENÇÃO:</strong> Esta é a confirmação final.
-                    <br /><br />
-                    Você confirma que deseja ajustar o saldo do usuário <strong className="text-white">{user?.name}</strong>?
-                    <br /><br />
-                    <strong>Valor:</strong> {balanceAdjustment.amount.startsWith("-") ? "Remover" : "Adicionar"} {Math.abs(parseFloat(balanceAdjustment.amount) || 0).toFixed(2)} USDT
-                    <br /><br />
+                    <strong className="text-red-400">ATENÇÃO:</strong> Esta é a
+                    confirmação final.
+                    <br />
+                    <br />
+                    Você confirma que deseja ajustar o saldo do usuário{" "}
+                    <strong className="text-white">{user?.name}</strong>?
+                    <br />
+                    <br />
+                    <strong>Valor:</strong>{" "}
+                    {balanceAdjustment.amount.startsWith("-")
+                      ? "Remover"
+                      : "Adicionar"}{" "}
+                    {Math.abs(
+                      parseFloat(balanceAdjustment.amount) || 0
+                    ).toFixed(2)}{" "}
+                    USDT
+                    <br />
+                    <br />
                     Clique em &quot;Confirmar&quot; novamente para prosseguir.
                   </>
                 )}
@@ -948,39 +1046,56 @@ export default function AdminUserDetailsPage({
               </Button>
               <Button
                 onClick={handleBalanceConfirm}
-                className={balanceConfirmStep === 1 ? "bg-yellow-600 hover:bg-yellow-700" : "bg-red-600 hover:bg-red-700"}
+                className={
+                  balanceConfirmStep === 1
+                    ? "bg-yellow-600 hover:bg-yellow-700"
+                    : "bg-red-600 hover:bg-red-700"
+                }
               >
-                {balanceConfirmStep === 1 ? "Sim, Continuar" : "Confirmar Ajuste"}
+                {balanceConfirmStep === 1
+                  ? "Sim, Continuar"
+                  : "Confirmar Ajuste"}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
         {/* Edit Profile Confirmation Dialog */}
-        <Dialog open={showEditConfirmDialog} onOpenChange={(open) => {
-          if (!open) {
-            setShowEditConfirmDialog(false);
-            setEditConfirmStep(1);
-          }
-        }}>
+        <Dialog
+          open={showEditConfirmDialog}
+          onOpenChange={(open) => {
+            if (!open) {
+              setShowEditConfirmDialog(false);
+              setEditConfirmStep(1);
+            }
+          }}
+        >
           <DialogContent className="bg-gray-900 border-gray-800">
             <DialogHeader>
               <DialogTitle className="text-white">
-                {editConfirmStep === 1 ? "Confirmar Edição" : "Confirmação Final"}
+                {editConfirmStep === 1
+                  ? "Confirmar Edição"
+                  : "Confirmação Final"}
               </DialogTitle>
               <DialogDescription className="text-gray-400">
                 {editConfirmStep === 1 ? (
                   <>
-                    Você está prestes a editar as informações do usuário <strong className="text-white">{user?.name}</strong>.
-                    <br /><br />
+                    Você está prestes a editar as informações do usuário{" "}
+                    <strong className="text-white">{user?.name}</strong>.
+                    <br />
+                    <br />
                     Esta ação alterará os dados do usuário. Deseja continuar?
                   </>
                 ) : (
                   <>
-                    <strong className="text-red-400">ATENÇÃO:</strong> Esta é a confirmação final.
-                    <br /><br />
-                    Você confirma que deseja editar as informações do usuário <strong className="text-white">{user?.name}</strong>?
-                    <br /><br />
+                    <strong className="text-red-400">ATENÇÃO:</strong> Esta é a
+                    confirmação final.
+                    <br />
+                    <br />
+                    Você confirma que deseja editar as informações do usuário{" "}
+                    <strong className="text-white">{user?.name}</strong>?
+                    <br />
+                    <br />
                     Clique em &quot;Confirmar&quot; novamente para prosseguir.
                   </>
                 )}
@@ -999,7 +1114,11 @@ export default function AdminUserDetailsPage({
               </Button>
               <Button
                 onClick={handleEditConfirm}
-                className={editConfirmStep === 1 ? "bg-yellow-600 hover:bg-yellow-700" : "bg-red-600 hover:bg-red-700"}
+                className={
+                  editConfirmStep === 1
+                    ? "bg-yellow-600 hover:bg-yellow-700"
+                    : "bg-red-600 hover:bg-red-700"
+                }
               >
                 {editConfirmStep === 1 ? "Sim, Continuar" : "Confirmar Edição"}
               </Button>
@@ -1068,7 +1187,7 @@ export default function AdminUserDetailsPage({
                       }
                     >
                       <img
-                        src={user.documentFront}
+                        src={getKycImageSrc(user.documentFront)}
                         alt="Document Front"
                         className="w-full h-48 object-cover rounded-lg border border-gray-600 group-hover:border-blue-500 transition-colors"
                         onError={(e) => {
@@ -1103,7 +1222,7 @@ export default function AdminUserDetailsPage({
                       }
                     >
                       <img
-                        src={user.documentBack}
+                        src={getKycImageSrc(user.documentBack)}
                         alt="Document Back"
                         className="w-full h-48 object-cover rounded-lg border border-gray-600 group-hover:border-blue-500 transition-colors"
                         onError={(e) => {
@@ -1138,7 +1257,7 @@ export default function AdminUserDetailsPage({
                       }
                     >
                       <img
-                        src={user.documentSelfie}
+                        src={getKycImageSrc(user.documentSelfie)}
                         alt="Document Selfie"
                         className="w-full h-48 object-cover rounded-lg border border-gray-600 group-hover:border-blue-500 transition-colors"
                         onError={(e) => {

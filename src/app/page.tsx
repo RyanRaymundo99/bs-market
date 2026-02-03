@@ -46,7 +46,6 @@ const Home = () => {
         <div className="home-bg-orb home-bg-orb-2" />
         <div className="home-bg-orb home-bg-orb-3" />
         <div className="home-bg-orb home-bg-orb-4" />
-        <div className="home-bg-grid" />
         <div className="home-bg-noise" />
         <div className="home-bg-glass-frost" />
       </div>
@@ -55,22 +54,22 @@ const Home = () => {
       <div className="relative z-10 flex flex-col min-h-screen">
         <header className="sticky top-0 z-20 shrink-0 border-b border-white/10 bg-black/90 backdrop-blur-md">
           <nav className="container mx-auto px-4 md:px-8 lg:px-12 xl:px-16 max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px]">
-            <div className="flex items-center justify-between h-16 md:h-20">
+            <div className="flex items-center justify-between h-20 md:h-24 py-2 md:py-3">
               <Link href="/" className="flex items-center shrink-0" aria-label="Build Strategy - Início">
                 <Image
                   src="/fullname-logo.svg"
                   alt="Build Strategy"
-                  width={280}
-                  height={72}
-                  className="h-8 md:h-9 lg:h-10 w-auto object-contain"
+                  width={380}
+                  height={22}
+                  className="h-14 sm:h-16 md:h-20 lg:h-[88px] xl:h-[96px] w-auto object-contain"
                 />
               </Link>
-              <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex items-center gap-1 sm:gap-1.5">
                 <Link href="/login">
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-gray-300 hover:text-white hover:bg-white/10 rounded-lg h-9 px-4 md:h-10 md:px-5 text-sm font-medium"
+                    className="text-gray-300 hover:text-white hover:bg-white/10 rounded-md h-7 px-2 md:px-3 text-[11px] font-medium"
                   >
                     Entrar
                   </Button>
@@ -78,7 +77,7 @@ const Home = () => {
                 <Link href="/signup">
                   <Button
                     size="sm"
-                    className="bg-brand-300 text-black hover:bg-brand-400 font-semibold rounded-xl h-9 px-4 md:h-10 md:px-6 text-sm shadow-[0_4px_14px_rgba(18,224,161,0.25)]"
+                    className="bg-brand-300 text-black hover:bg-brand-400 font-semibold rounded-md h-7 px-2 md:px-3 text-[11px] shadow-[0_1px_4px_rgba(18,224,161,0.2)]"
                   >
                     Começar
                   </Button>
@@ -89,46 +88,50 @@ const Home = () => {
         </header>
 
         <main className="flex-1 flex flex-col min-h-0">
-          {/* Hero */}
-          <section className="container mx-auto px-4 md:px-6 lg:px-8 max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px] pt-16 md:pt-24 lg:pt-28 pb-20 md:pb-28 lg:pb-32">
-            <div className="max-w-2xl">
-              <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white tracking-tight leading-[1.05]">
-                <span className="text-gradient">Build Strategy</span>
-              </h1>
-              <p className="mt-6 md:mt-8 text-lg md:text-xl text-gray-400 leading-relaxed">
-                Compre e venda criptomoedas em reais. Depósito via PIX, saque em até 24h e taxas competitivas.
-              </p>
-              <div className="mt-10 md:mt-12 flex flex-col sm:flex-row sm:items-center gap-4">
-                <Link href="/signup">
-                  <Button size="lg" className="w-full sm:w-auto bg-brand-300 text-black hover:bg-brand-400 font-semibold rounded-xl h-12 px-6 lg:h-14 lg:px-8">
-                    Criar conta grátis
-                    <ArrowRight className="ml-2 w-4 h-4" />
-                  </Button>
-                </Link>
-                <Link href="/login" className="flex items-center justify-center sm:justify-start text-gray-400 hover:text-white text-sm transition-colors">
-                  Já tem conta? <span className="ml-1 font-medium text-white">Entrar</span>
-                </Link>
-              </div>
-              <p className="mt-8 text-sm text-gray-500">
-                Depósito mínimo 100 USDT · Taxa até 3% · PIX na hora
-              </p>
-              <div className="flex flex-wrap gap-5 lg:gap-8 mt-8 text-sm text-gray-500">
-                <span className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-brand-300 shrink-0" />
-                  Depósito PIX
-                </span>
-                <span className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-brand-300 shrink-0" />
-                  Saque em BRL
-                </span>
-                <span className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-brand-300 shrink-0" />
-                  2FA
-                </span>
-                <span className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-brand-300 shrink-0" />
-                  Suporte em PT
-                </span>
+          {/* Hero — background image only in this section */}
+          <section className="relative min-h-[85vh] flex flex-col justify-center">
+            <div className="absolute inset-0 hero-bg-image" aria-hidden />
+            <div className="container relative z-10 mx-auto px-4 md:px-6 lg:px-8 max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px] pt-16 md:pt-24 lg:pt-28 pb-20 md:pb-28 lg:pb-32">
+              <div className="max-w-2xl">
+                <p className="text-brand-300 text-sm font-medium uppercase tracking-widest mb-3">Compre e venda cripto</p>
+                <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white tracking-tight leading-[1.05]">
+                  <span className="text-gradient">Build Strategy</span>
+                </h1>
+                <p className="mt-6 md:mt-8 text-lg md:text-xl text-gray-300 leading-relaxed">
+                  Compre e venda criptomoedas em reais. Depósito via PIX, saque em até 24h e taxas competitivas.
+                </p>
+                <div className="mt-10 md:mt-12 flex flex-col sm:flex-row sm:items-center gap-4">
+                  <Link href="/signup">
+                    <Button size="lg" className="w-full sm:w-auto bg-brand-300 text-black hover:bg-brand-400 font-semibold rounded-xl h-12 px-6 lg:h-14 lg:px-8">
+                      Criar conta grátis
+                      <ArrowRight className="ml-2 w-4 h-4" />
+                    </Button>
+                  </Link>
+                  <Link href="/login" className="flex items-center justify-center sm:justify-start text-gray-400 hover:text-white text-sm transition-colors">
+                    Já tem conta? <span className="ml-1 font-medium text-white">Entrar</span>
+                  </Link>
+                </div>
+                <p className="mt-8 text-sm text-gray-500">
+                  Depósito mínimo 100 USDT · Taxa até 3% · PIX na hora
+                </p>
+                <div className="flex flex-wrap gap-5 lg:gap-8 mt-8 text-sm text-gray-500">
+                  <span className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-brand-300 shrink-0" />
+                    Depósito PIX
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-brand-300 shrink-0" />
+                    Saque em BRL
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-brand-300 shrink-0" />
+                    2FA
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-brand-300 shrink-0" />
+                    Suporte em PT
+                  </span>
+                </div>
               </div>
             </div>
           </section>
@@ -204,35 +207,38 @@ const Home = () => {
           </section>
 
           {/* Use cases */}
-          <section id="para-quem" className="container mx-auto px-4 md:px-6 lg:px-8 max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px] py-20 md:py-28 lg:py-32">
-            <p className="landing-section-label">Para quem é</p>
-            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mt-1 mb-3">
-              Do primeiro real ao trading ativo
-            </h2>
-            <p className="text-gray-400 mb-12 lg:mb-16 max-w-xl text-base lg:text-lg leading-relaxed">
-              Seja sua primeira compra em cripto ou seu dia a dia de trading.
-            </p>
-            <div className="grid md:grid-cols-3 gap-8 lg:gap-10 xl:gap-12">
-              <div className="landing-card p-6 lg:p-8 flex flex-col">
-                <h3 className="text-lg font-semibold text-white mb-2">Primeiro USDT</h3>
-                <p className="text-gray-400 text-sm flex-1">Comece com pouco. Compre USDT em reais, sem pressa.</p>
-                <Link href="/signup" className="mt-4 text-brand-300 font-medium text-sm inline-flex items-center gap-1 hover:underline">
-                  Abrir conta <ArrowRight className="w-3 h-3" />
-                </Link>
-              </div>
-              <div className="landing-card p-6 lg:p-8 flex flex-col">
-                <h3 className="text-lg font-semibold text-white mb-2">Trading ativo</h3>
-                <p className="text-gray-400 text-sm flex-1">Ordens rápidas e liquidez. Para quem opera com frequência.</p>
-                <Link href="/trade" className="mt-4 text-brand-300 font-medium text-sm inline-flex items-center gap-1 hover:underline">
-                  Ir para Trade <ArrowRight className="w-3 h-3" />
-                </Link>
-              </div>
-              <div className="landing-card p-6 lg:p-8 flex flex-col">
-                <h3 className="text-lg font-semibold text-white mb-2">Saque em reais</h3>
-                <p className="text-gray-400 text-sm flex-1">Converta em BRL e receba na conta em até 24h.</p>
-                <Link href="/withdraw" className="mt-4 text-brand-300 font-medium text-sm inline-flex items-center gap-1 hover:underline">
-                  Ver saques <ArrowRight className="w-3 h-3" />
-                </Link>
+          <section id="para-quem" className="relative py-20 md:py-28 lg:py-32">
+            <div className="absolute inset-0 para-quem-bg-image" aria-hidden />
+            <div className="container relative z-10 mx-auto px-4 md:px-6 lg:px-8 max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px]">
+              <p className="landing-section-label">Para quem é</p>
+              <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mt-1 mb-3">
+                Do primeiro real ao trading ativo
+              </h2>
+              <p className="text-gray-400 mb-12 lg:mb-16 max-w-xl text-base lg:text-lg leading-relaxed">
+                Seja sua primeira compra em cripto ou seu dia a dia de trading.
+              </p>
+              <div className="grid md:grid-cols-3 gap-8 lg:gap-10 xl:gap-12">
+                <div className="landing-card p-6 lg:p-8 flex flex-col">
+                  <h3 className="text-lg font-semibold text-white mb-2">Primeiro USDT</h3>
+                  <p className="text-gray-400 text-sm flex-1">Comece com pouco. Compre USDT em reais, sem pressa.</p>
+                  <Link href="/signup" className="mt-4 text-brand-300 font-medium text-sm inline-flex items-center gap-1 hover:underline">
+                    Abrir conta <ArrowRight className="w-3 h-3" />
+                  </Link>
+                </div>
+                <div className="landing-card p-6 lg:p-8 flex flex-col">
+                  <h3 className="text-lg font-semibold text-white mb-2">Trading ativo</h3>
+                  <p className="text-gray-400 text-sm flex-1">Ordens rápidas e liquidez. Para quem opera com frequência.</p>
+                  <Link href="/trade" className="mt-4 text-brand-300 font-medium text-sm inline-flex items-center gap-1 hover:underline">
+                    Ir para Trade <ArrowRight className="w-3 h-3" />
+                  </Link>
+                </div>
+                <div className="landing-card p-6 lg:p-8 flex flex-col">
+                  <h3 className="text-lg font-semibold text-white mb-2">Saque em reais</h3>
+                  <p className="text-gray-400 text-sm flex-1">Converta em BRL e receba na conta em até 24h.</p>
+                  <Link href="/withdraw" className="mt-4 text-brand-300 font-medium text-sm inline-flex items-center gap-1 hover:underline">
+                    Ver saques <ArrowRight className="w-3 h-3" />
+                  </Link>
+                </div>
               </div>
             </div>
           </section>
@@ -274,16 +280,19 @@ const Home = () => {
           </section>
 
           {/* Testimonials */}
-          <section id="depoimentos" className="container mx-auto px-4 md:px-6 lg:px-8 max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px] py-20 md:py-28 lg:py-32">
-            <p className="landing-section-label">Depoimentos</p>
-            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mt-1 mb-3">
-              O que nossos usuários dizem
-            </h2>
-            <div className="grid md:grid-cols-3 gap-8 lg:gap-10 mt-10 lg:mt-12">
+          <section id="depoimentos" className="relative py-20 md:py-28 lg:py-32">
+            <div className="absolute inset-0 depoimentos-bg-image" aria-hidden />
+            <div className="container relative z-10 mx-auto px-4 md:px-6 lg:px-8 max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px]">
+              <p className="landing-section-label">Depoimentos</p>
+              <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mt-1 mb-3">
+                O que nossos usuários dizem
+              </h2>
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10 mt-10 lg:mt-12">
               {[
                 { quote: "Consegui sacar em menos de 12h. Interface simples e suporte rápido.", name: "Ricardo M.", role: "Trader" },
                 { quote: "Comecei a operar no mesmo dia que depositei via PIX. Zero burocracia.", name: "Ana S.", role: "Primeira compra em cripto" },
                 { quote: "Taxas menores que as que eu pagava. Para quem opera todo dia faz diferença.", name: "Lucas F.", role: "Trader ativo" },
+                { quote: "Suporte em português e resolução rápida. Recomendo para quem está começando.", name: "Marina C.", role: "Investidora" },
               ].map(({ quote, name, role }) => (
                 <div key={name} className="landing-card p-6 lg:p-8">
                   <p className="text-gray-300 text-sm leading-relaxed italic">&quot;{quote}&quot;</p>
@@ -298,6 +307,7 @@ const Home = () => {
                   </div>
                 </div>
               ))}
+              </div>
             </div>
           </section>
 
@@ -391,26 +401,36 @@ const Home = () => {
 
           {/* CTA */}
           <section className="container mx-auto px-4 md:px-6 lg:px-8 max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px] py-20 md:py-28 lg:py-32">
-            <div className="rounded-2xl border border-brand-300/30 bg-brand-300/10 backdrop-blur-xl p-10 md:p-14 lg:p-16 text-center">
-              <p className="text-brand-300 text-sm font-medium mb-2">+ de 2.000 contas criadas este mês</p>
-              <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-3">
-                Pronto para negociar cripto em reais?
-              </h2>
-              <p className="text-gray-400 max-w-xl mx-auto mb-8 leading-relaxed">
-                Deposite via PIX, negocie 24/7 e saque em BRL quando quiser. Primeiro saque em até 24h ou suporte prioritário.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link href="/signup">
-                  <Button size="lg" className="w-full sm:w-auto bg-brand-300 text-black hover:bg-brand-400 font-semibold rounded-xl h-12 px-6">
-                    Criar conta grátis
-                    <ArrowRight className="ml-2 w-4 h-4" />
-                  </Button>
-                </Link>
-                <Link href="/login">
-                  <Button size="lg" variant="outline" className="w-full sm:w-auto border-white/20 text-white hover:bg-white/10 rounded-xl h-12">
-                    Entrar
-                  </Button>
-                </Link>
+            <div className="relative rounded-2xl border border-brand-300/30 overflow-hidden min-h-[380px] md:min-h-[340px]">
+              <Image
+                src="/imgs/gigi-PDHwGhByXOM-unsplash.jpg"
+                alt="Negocie cripto em reais"
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, 1280px"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/60 to-black/40" />
+              <div className="relative z-10 p-10 md:p-14 lg:p-16 flex flex-col justify-center max-w-2xl">
+                <p className="text-brand-300 text-sm font-medium mb-2">+ de 2.000 contas criadas este mês</p>
+                <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-3">
+                  Pronto para negociar cripto em reais?
+                </h2>
+                <p className="text-gray-300 max-w-xl mb-8 leading-relaxed">
+                  Deposite via PIX, negocie 24/7 e saque em BRL quando quiser. Primeiro saque em até 24h ou suporte prioritário.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <Link href="/signup">
+                    <Button size="lg" className="w-full sm:w-auto bg-brand-300 text-black hover:bg-brand-400 font-semibold rounded-xl h-12 px-6">
+                      Criar conta grátis
+                      <ArrowRight className="ml-2 w-4 h-4" />
+                    </Button>
+                  </Link>
+                  <Link href="/login">
+                    <Button size="lg" variant="outline" className="w-full sm:w-auto border-white/20 text-white hover:bg-white/10 rounded-xl h-12">
+                      Entrar
+                    </Button>
+                  </Link>
+                </div>
               </div>
             </div>
           </section>

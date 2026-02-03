@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { validateAdminSession } from "@/lib/admin-session";
 import { sendEmail } from "@/lib/email";
+import { logSentEmail } from "@/lib/communication-log";
 
 export async function POST(request: NextRequest) {
   try {
@@ -175,6 +176,14 @@ Este é um email automático, por favor não responda.
             },
           },
         });
+        if (emailResult.success) {
+          await logSentEmail({
+            userId: user.id,
+            type: "notification",
+            subject: `BS Market - ${subject}`,
+            metadata: { notificationId: notification.id },
+          });
+        }
       } catch (emailError) {
         console.error("Error sending email:", emailError);
         emailResult = {

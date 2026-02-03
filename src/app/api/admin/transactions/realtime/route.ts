@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import type { Prisma } from "../../../../../../prisma/generated/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { validateAdminSession } from "@/lib/admin-session";
 
@@ -30,12 +31,7 @@ export async function GET(request: NextRequest) {
     const amountMax = searchParams.get("amountMax"); // Max amount (absolute)
 
     // Build where clause for transactions
-    const where: {
-      createdAt?: { gte?: Date; lte?: Date; gt?: Date };
-      id?: { gt: string };
-      type?: string;
-      amount?: { gte?: unknown; lte?: unknown };
-    } = {};
+    const where: Prisma.TransactionWhereInput = {};
 
     // If 'since' is provided, only get transactions after that time (for real-time updates)
     if (since) {
@@ -57,7 +53,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (type && type !== "all") {
-      where.type = type;
+      where.type = type as Prisma.TransactionWhereInput["type"];
     }
 
     if (amountMin != null && amountMin !== "" && !isNaN(Number(amountMin))) {

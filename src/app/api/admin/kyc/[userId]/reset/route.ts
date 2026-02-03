@@ -16,16 +16,49 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Reset user KYC status to pending
+    let reason: string | null = null;
+    try {
+      const body = await request.json();
+      if (typeof body?.reason === "string" && body.reason.trim()) {
+        reason = body.reason.trim();
+      }
+    } catch {
+      // No body or invalid JSON – reason stays null
+    }
+
+    // Reset user KYC status to pending; store reason so user knows why to resend
     const user = await prisma.user.update({
       where: { id: userId },
       data: {
         kycStatus: "PENDING",
         kycReviewedAt: null,
-        kycRejectionReason: null,
+        kycRejectionReason: reason,
         updatedAt: new Date(),
       },
     });
+
+    // Notify user to resend their documents (in-app)
+    try {
+      const message = reason
+        ? `Sua verificação KYC foi redefinida para pendente. Por favor, reenvie seus documentos e fotos. Motivo: ${reason}`
+        : "Sua verificação KYC foi redefinida para pendente. Por favor, reenvie seus documentos e fotos para nova análise.";
+      await prisma.notification.create({
+        data: {
+          userId,
+          type: "kyc_reset_to_pending",
+          title: "KYC: reenvie seus documentos",
+          message,
+          metadata: {
+            kycStatus: "PENDING",
+            reason: reason ?? undefined,
+            resetAt: new Date().toISOString(),
+            resetBy: adminSession.userId,
+          },
+        },
+      });
+    } catch (notificationError) {
+      console.error("Failed to create KYC reset notification:", notificationError);
+    }
 
     return NextResponse.json({
       success: true,

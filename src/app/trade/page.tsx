@@ -246,30 +246,28 @@ const TradePage = () => {
   };
 
   // Format USDT input value (for display in input field)
+  // Brazilian format: dot = thousands separator, comma = decimal separator (e.g. 10.000,50)
   const formatUSDTInput = (value: string): string => {
-    // Remove all non-digit characters except comma and dot
+    // Keep only digits, comma, and dot
     const cleaned = value.replace(/[^\d,.]/g, "");
 
-    // Handle empty
     if (!cleaned) return "";
 
-    // Replace comma with dot for parsing, then format
-    const normalized = cleaned.replace(",", ".");
-    const parts = normalized.split(".");
-    const integerPart = parts[0].replace(/\D/g, "");
-    const decimalPart = parts[1]?.replace(/\D/g, "").slice(0, 4) || ""; // USDT can have up to 4 decimals
+    // Split by comma so we don't confuse thousand dots with decimal point
+    const [intPartStr, ...decParts] = cleaned.split(",");
+    const decimalPart = (decParts.join("") || "").replace(/\D/g, "").slice(0, 4); // max 4 decimals
 
-    // Format integer part with thousand separators
-    const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    // Integer part: strip all non-digits (removes thousand dots), then add thousand separators
+    const integerDigits = (intPartStr || "").replace(/\D/g, "");
+    const formattedInteger = integerDigits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 
-    // Combine parts
     if (decimalPart) {
       return `${formattedInteger},${decimalPart}`;
-    } else if (normalized.includes(".") || cleaned.includes(",")) {
-      return `${formattedInteger},`;
-    } else {
-      return formattedInteger;
     }
+    if (cleaned.includes(",")) {
+      return `${formattedInteger},`;
+    }
+    return formattedInteger;
   };
 
   // Parse USDT input value (convert formatted string to number)
@@ -525,7 +523,7 @@ const TradePage = () => {
       });
       return;
     }
-    if (buyUSDTAmount > MAX_DEPOSIT_USDT) {
+    if (buyUSDTAmount > maxDepositUsdt) {
       const msg =
         language === "pt"
           ? `O depósito máximo é ${maxDepositUsdt} USDT. Para valores maiores, entre em contato conosco via WhatsApp.`

@@ -448,6 +448,101 @@
   background-color: #000;
 }
 
+.home-bg-image {
+  position: absolute;
+  inset: 0;
+  background-image: url("/imgs/vitalii-khodzinskyi-UZwaWf6lrNY-unsplash.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+
+.home-bg-image::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.75) 0%,
+    rgba(0, 0, 0, 0.5) 40%,
+    rgba(0, 0, 0, 0.7) 100%
+  );
+  pointer-events: none;
+}
+
+/* Hero section only — image and overlay, scoped to hero */
+.hero-bg-image {
+  position: absolute;
+  inset: 0;
+  background-image: url("/imgs/becca-tapert-QofjUnxy9LY-unsplash.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+
+.hero-bg-image::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.75) 0%,
+    rgba(0, 0, 0, 0.5) 40%,
+    rgba(0, 0, 0, 0.7) 100%
+  );
+  pointer-events: none;
+}
+
+/* "Para quem é" section background */
+.para-quem-bg-image {
+  position: absolute;
+  inset: 0;
+  background-image: url("/imgs/guilherme-stecanella-4jy1DQKmX2w-unsplash.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+
+.para-quem-bg-image::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.8) 0%,
+    rgba(0, 0, 0, 0.65) 50%,
+    rgba(0, 0, 0, 0.8) 100%
+  );
+  pointer-events: none;
+}
+
+/* Depoimentos (Testimonials) section background */
+.depoimentos-bg-image {
+  position: absolute;
+  inset: 0;
+  background-image: url("/imgs/samuel-cruz-gjwBBhPPvOs-unsplash.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+
+.depoimentos-bg-image::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.82) 0%,
+    rgba(0, 0, 0, 0.7) 50%,
+    rgba(0, 0, 0, 0.82) 100%
+  );
+  pointer-events: none;
+}
+
 .home-bg-orb {
   position: absolute;
   border-radius: 50%;
@@ -511,16 +606,6 @@
   0%, 100% { transform: translate(0, 0) scale(1); }
   33% { transform: translate(3%, -2%) scale(1.05); }
   66% { transform: translate(-2%, 2%) scale(0.98); }
-}
-
-.home-bg-grid {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(18, 224, 161, 0.12) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(18, 224, 161, 0.12) 1px, transparent 1px);
-  background-size: 48px 48px;
-  pointer-events: none;
 }
 
 .home-bg-glass-frost {

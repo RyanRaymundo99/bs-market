@@ -64,6 +64,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatUSDT, formatBRL } from "@/lib/format-currency";
+import { getKycImageSrc } from "@/lib/kyc-image-src";
 import KYCImage from "@/components/admin/KYCImage";
 import ImageAnalysisPanel from "@/components/admin/ImageAnalysisPanel";
 import { ZoomIn } from "lucide-react";
@@ -111,12 +112,12 @@ interface UserWithDetails extends User {
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [usersWithDetails, setUsersWithDetails] = useState<UserWithDetails[]>(
-    [],
+    []
   );
   const [filteredUsers, setFilteredUsers] = useState<UserWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingDetails, setLoadingDetails] = useState<Record<string, boolean>>(
-    {},
+    {}
   );
   const [processingUser, setProcessingUser] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
@@ -150,7 +151,7 @@ export default function AdminUsersPage() {
   const [loadingTransactions, setLoadingTransactions] = useState(false);
   const [showKYCDialog, setShowKYCDialog] = useState(false);
   const [viewingKYCUser, setViewingKYCUser] = useState<UserWithDetails | null>(
-    null,
+    null
   );
   const [loadingKYCDocuments, setLoadingKYCDocuments] = useState(false);
   const [kycRejectionReason, setKycRejectionReason] = useState("");
@@ -168,10 +169,10 @@ export default function AdminUsersPage() {
     const total = users.length;
     const pending = users.filter((u) => u.approvalStatus === "PENDING").length;
     const approved = users.filter(
-      (u) => u.approvalStatus === "APPROVED",
+      (u) => u.approvalStatus === "APPROVED"
     ).length;
     const rejected = users.filter(
-      (u) => u.approvalStatus === "REJECTED",
+      (u) => u.approvalStatus === "REJECTED"
     ).length;
     const kycPending = users.filter((u) => u.kycStatus === "PENDING").length;
     const kycApproved = users.filter((u) => u.kycStatus === "APPROVED").length;
@@ -209,7 +210,7 @@ export default function AdminUsersPage() {
         setLoading(false);
       }
     },
-    [toast],
+    [toast]
   );
 
   const fetchUserDetails = useCallback(
@@ -243,7 +244,7 @@ export default function AdminUsersPage() {
                       txData?.transactions?.[0]?.createdAt || undefined,
                     transactions: txData?.transactions || [],
                   }
-                : u,
+                : u
             );
           }
           return prev;
@@ -258,7 +259,7 @@ export default function AdminUsersPage() {
         });
       }
     },
-    [loadingDetails],
+    [loadingDetails]
   );
 
   const toggleUserExpansion = useCallback(
@@ -278,7 +279,7 @@ export default function AdminUsersPage() {
         return next;
       });
     },
-    [usersWithDetails, loadingDetails, fetchUserDetails],
+    [usersWithDetails, loadingDetails, fetchUserDetails]
   );
 
   useEffect(() => {
@@ -318,7 +319,7 @@ export default function AdminUsersPage() {
     // Apply status filter
     if (statusFilter !== "ALL") {
       filtered = filtered.filter(
-        (user) => user.approvalStatus === statusFilter,
+        (user) => user.approvalStatus === statusFilter
       );
     }
 
@@ -330,7 +331,7 @@ export default function AdminUsersPage() {
           user.name.toLowerCase().includes(query) ||
           user.email.toLowerCase().includes(query) ||
           user.cpf?.toLowerCase().includes(query) ||
-          user.phone?.toLowerCase().includes(query),
+          user.phone?.toLowerCase().includes(query)
       );
     }
 
@@ -339,7 +340,7 @@ export default function AdminUsersPage() {
 
   const handleApproval = async (
     userId: string,
-    action: "approve" | "reject",
+    action: "approve" | "reject"
   ) => {
     setProcessingUser(userId);
     try {
@@ -440,7 +441,7 @@ export default function AdminUsersPage() {
 
   const openDeleteDialog = (user: User) => {
     const confirmed = window.confirm(
-      `Tem certeza que deseja deletar permanentemente o usuário ${user.name} (${user.email})?\n\nEsta ação não pode ser desfeita e irá deletar todos os dados do usuário.`,
+      `Tem certeza que deseja deletar permanentemente o usuário ${user.name} (${user.email})?\n\nEsta ação não pode ser desfeita e irá deletar todos os dados do usuário.`
     );
     if (confirmed) {
       handleDeleteUser(user.id);
@@ -492,7 +493,7 @@ export default function AdminUsersPage() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify(editFormData),
-        },
+        }
       );
 
       if (response.ok) {
@@ -601,7 +602,9 @@ export default function AdminUsersPage() {
 
       toast({
         title: "Emails Enviados",
-        description: `Enviados com sucesso: ${successCount}${failCount > 0 ? ` | Falhas: ${failCount}` : ""}`,
+        description: `Enviados com sucesso: ${successCount}${
+          failCount > 0 ? ` | Falhas: ${failCount}` : ""
+        }`,
       });
 
       // Reset form
@@ -663,7 +666,7 @@ export default function AdminUsersPage() {
       setLoadingTransactions(true);
       try {
         const response = await fetch(
-          `/api/admin/users/${user.id}?include=transactions`,
+          `/api/admin/users/${user.id}?include=transactions`
         );
         if (response.ok) {
           const data = await response.json();
@@ -820,6 +823,10 @@ export default function AdminUsersPage() {
       setKycActionLoading(userId);
       const response = await fetch(`/api/admin/kyc/${userId}/reset`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reason: kycRejectionReason?.trim() || undefined,
+        }),
       });
 
       const data = await response.json();
@@ -904,7 +911,7 @@ export default function AdminUsersPage() {
   };
 
   const formatPhoneForWhatsApp = (
-    phone: string | null | undefined,
+    phone: string | null | undefined
   ): string | null => {
     if (!phone) return null;
     // Remove all non-digit characters
@@ -1005,7 +1012,7 @@ export default function AdminUsersPage() {
   };
 
   const getTotalBalance = (
-    balances: { currency: string; amount: number }[] = [],
+    balances: { currency: string; amount: number }[] = []
   ) => {
     const usdtBalance = balances.find((b) => b.currency === "USDT");
     return usdtBalance ? Number(usdtBalance.amount) : 0;
@@ -1236,15 +1243,15 @@ export default function AdminUsersPage() {
                 {searchQuery
                   ? "Nenhum usuário encontrado"
                   : statusFilter === "ALL"
-                    ? "Nenhum usuário encontrado"
-                    : `Nenhum usuário ${statusFilter.toLowerCase()} encontrado`}
+                  ? "Nenhum usuário encontrado"
+                  : `Nenhum usuário ${statusFilter.toLowerCase()} encontrado`}
               </h3>
               <p className="text-gray-400">
                 {searchQuery
                   ? "Tente ajustar sua busca"
                   : statusFilter === "ALL"
-                    ? "Não há usuários para exibir no momento."
-                    : `Não há usuários com status ${statusFilter.toLowerCase()} no momento.`}
+                  ? "Não há usuários para exibir no momento."
+                  : `Não há usuários com status ${statusFilter.toLowerCase()} no momento.`}
               </p>
             </CardContent>
           </Card>
@@ -2151,7 +2158,7 @@ export default function AdminUsersPage() {
               <Select
                 value={emailRecipients}
                 onValueChange={(
-                  value: "all" | "filtered" | "selected" | "individual",
+                  value: "all" | "filtered" | "selected" | "individual"
                 ) => setEmailRecipients(value)}
               >
                 <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
@@ -2287,14 +2294,10 @@ export default function AdminUsersPage() {
                   {(emailRecipients === "all"
                     ? usersWithDetails
                     : emailRecipients === "filtered"
-                      ? filteredUsers
-                      : emailRecipients === "individual"
-                        ? usersWithDetails.filter((u) =>
-                            selectedUsers.has(u.id),
-                          )
-                        : usersWithDetails.filter((u) =>
-                            selectedUsers.has(u.id),
-                          )
+                    ? filteredUsers
+                    : emailRecipients === "individual"
+                    ? usersWithDetails.filter((u) => selectedUsers.has(u.id))
+                    : usersWithDetails.filter((u) => selectedUsers.has(u.id))
                   )
                     .slice(0, 10)
                     .map((user) => (
@@ -2409,7 +2412,9 @@ export default function AdminUsersPage() {
                               {getTransactionTypeLabel(tx.type)}
                             </span>
                             <span
-                              className={`text-xs px-2 py-0.5 rounded ${getStatusColor(tx.status)}`}
+                              className={`text-xs px-2 py-0.5 rounded ${getStatusColor(
+                                tx.status
+                              )}`}
                             >
                               {getStatusLabel(tx.status)}
                             </span>
@@ -2440,7 +2445,7 @@ export default function AdminUsersPage() {
                               ? formatBRL(Number(tx.amount)).replace("R$ ", "")
                               : formatUSDT(Number(tx.amount)).replace(
                                   " USDT",
-                                  "",
+                                  ""
                                 )}
                           </span>
                           <p className="text-xs text-gray-400 mt-1">
@@ -2583,7 +2588,7 @@ export default function AdminUsersPage() {
                     <ZoomIn className="w-4 h-4 text-gray-400" />
                   </h4>
                   <KYCImage
-                    src={viewingKYCUser.documentFront}
+                    src={getKycImageSrc(viewingKYCUser.documentFront)}
                     alt="Frente do Documento"
                     className="w-full h-48"
                     onClick={
@@ -2592,7 +2597,7 @@ export default function AdminUsersPage() {
                             handleKYCImageClick(
                               viewingKYCUser.documentFront!,
                               "Frente do Documento",
-                              "Frente do Documento",
+                              "Frente do Documento"
                             )
                         : undefined
                     }
@@ -2604,7 +2609,7 @@ export default function AdminUsersPage() {
                     <ZoomIn className="w-4 h-4 text-gray-400" />
                   </h4>
                   <KYCImage
-                    src={viewingKYCUser.documentBack}
+                    src={getKycImageSrc(viewingKYCUser.documentBack)}
                     alt="Verso do Documento"
                     className="w-full h-48"
                     onClick={
@@ -2613,7 +2618,7 @@ export default function AdminUsersPage() {
                             handleKYCImageClick(
                               viewingKYCUser.documentBack!,
                               "Verso do Documento",
-                              "Verso do Documento",
+                              "Verso do Documento"
                             )
                         : undefined
                     }
@@ -2625,7 +2630,7 @@ export default function AdminUsersPage() {
                     <ZoomIn className="w-4 h-4 text-gray-400" />
                   </h4>
                   <KYCImage
-                    src={viewingKYCUser.documentSelfie}
+                    src={getKycImageSrc(viewingKYCUser.documentSelfie)}
                     alt="Selfie com Documento"
                     className="w-full h-48"
                     onClick={
@@ -2634,7 +2639,7 @@ export default function AdminUsersPage() {
                             handleKYCImageClick(
                               viewingKYCUser.documentSelfie!,
                               "Selfie com Documento",
-                              "Selfie com Documento",
+                              "Selfie com Documento"
                             )
                         : undefined
                     }

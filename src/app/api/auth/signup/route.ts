@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { hash } from "bcryptjs";
 import { DocumentValidator } from "@/lib/utils/document-validation";
+import {
+  getAdminAlertSettings,
+  sendAdminAlertToAll,
+} from "@/lib/admin-alert-email";
 
 export async function POST(request: NextRequest) {
   try {
@@ -78,6 +82,19 @@ export async function POST(request: NextRequest) {
           locked: 0,
         },
       });
+
+      // Notify admin email when new account is created (ready for approval) - non-blocking
+      getAdminAlertSettings()
+        .then((settings) => {
+          if (settings.notifyNewAccount && settings.emails?.length) {
+            return sendAdminAlertToAll(
+              settings,
+              "New account created – ready for approval",
+              `${user.name} (${user.email}) has registered and is pending approval. User ID: ${user.id}.`
+            );
+          }
+        })
+        .catch((err) => console.error("Admin new-account alert:", err));
 
       // Create a session for the user
       const sessionId = `session-${Date.now()}-${Math.random()

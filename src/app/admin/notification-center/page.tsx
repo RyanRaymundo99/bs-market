@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,6 +44,9 @@ import {
   XCircle,
   Eye,
   MoreVertical,
+  Save,
+  Plus,
+  X,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import BackToDashboardButton from "@/components/admin/BackToDashboardButton";
@@ -105,12 +108,89 @@ export default function NotificationCenterPage() {
   const [sendEmail, setSendEmail] = useState(true);
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
+  const [alertSettings, setAlertSettings] = useState<{
+    emails: string[];
+    notifyDepositOver500: boolean;
+    notifyWithdrawOver500: boolean;
+    notifyNewAccount: boolean;
+    notifyKycReady: boolean;
+  }>({
+    emails: ["rian981265@gmail.com"],
+    notifyDepositOver500: true,
+    notifyWithdrawOver500: true,
+    notifyNewAccount: true,
+    notifyKycReady: true,
+  });
+  const [loadingAlertSettings, setLoadingAlertSettings] = useState(true);
+  const [savingAlertSettings, setSavingAlertSettings] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm]);
+
+  useEffect(() => {
+    const fetchAlertSettings = async () => {
+      try {
+        setLoadingAlertSettings(true);
+        const response = await fetch("/api/admin/notifications/alert-settings");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.settings) {
+            const emails = Array.isArray(data.settings.emails) && data.settings.emails.length > 0
+              ? data.settings.emails
+              : ["rian981265@gmail.com"];
+            setAlertSettings({
+              emails,
+              notifyDepositOver500: data.settings.notifyDepositOver500 ?? true,
+              notifyWithdrawOver500: data.settings.notifyWithdrawOver500 ?? true,
+              notifyNewAccount: data.settings.notifyNewAccount ?? true,
+              notifyKycReady: data.settings.notifyKycReady ?? true,
+            });
+          }
+        }
+      } catch {
+        // ignore
+      } finally {
+        setLoadingAlertSettings(false);
+      }
+    };
+    fetchAlertSettings();
+  }, []);
+
+  const saveAlertSettings = async () => {
+    try {
+      setSavingAlertSettings(true);
+      const emailsToSave = alertSettings.emails.map((e) => e.trim()).filter(Boolean);
+      const response = await fetch("/api/admin/notifications/alert-settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...alertSettings,
+          emails: emailsToSave.length > 0 ? emailsToSave : ["rian981265@gmail.com"],
+        }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        toast({
+          title: "Salvo",
+          description: "Configurações de alertas por email salvas.",
+        });
+      } else {
+        throw new Error(data.error ?? "Falha ao salvar");
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description:
+          error instanceof Error ? error.message : "Falha ao salvar alertas.",
+      });
+    } finally {
+      setSavingAlertSettings(false);
+    }
+  };
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -476,6 +556,168 @@ export default function NotificationCenterPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Email alerts – notify admin on high-value and key events */}
+        <Card className="bg-gray-900 border-gray-800">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <Mail className="w-5 h-5" />
+              Alertas por email
+            </CardTitle>
+            <p className="text-gray-400 text-sm">
+              Receba um email nos endereços abaixo quando esses eventos acontecerem.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {loadingAlertSettings ? (
+              <p className="text-gray-400">Carregando...</p>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label className="text-gray-300">Emails para notificar</Label>
+                  <div className="space-y-2">
+                    {alertSettings.emails.map((email, i) => (
+                      <div key={i} className="flex gap-2 items-center">
+                        <Input
+                          type="email"
+                          value={email}
+                          onChange={(e) => {
+                            const next = [...alertSettings.emails];
+                            next[i] = e.target.value;
+                            setAlertSettings((s) => ({ ...s, emails: next }));
+                          }}
+                          placeholder="email@exemplo.com"
+                          className="bg-gray-800 border-gray-700 text-white flex-1 max-w-md"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="text-gray-400 hover:text-red-400 shrink-0"
+                          onClick={() => {
+                            const next = alertSettings.emails.filter((_, j) => j !== i);
+                            setAlertSettings((s) => ({
+                              ...s,
+                              emails: next.length > 0 ? next : [""],
+                            }));
+                          }}
+                          title="Remover"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="border-gray-600 text-gray-300 hover:bg-gray-800"
+                    onClick={() =>
+                      setAlertSettings((s) => ({ ...s, emails: [...s.emails, ""] }))
+                    }
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Adicionar email
+                  </Button>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <Label className="text-gray-300">Notificar quando:</Label>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="deposit-over-500"
+                      checked={alertSettings.notifyDepositOver500}
+                      onCheckedChange={(checked) =>
+                        setAlertSettings((s) => ({
+                          ...s,
+                          notifyDepositOver500: checked === true,
+                        }))
+                      }
+                      className="border-gray-600 data-[state=checked]:bg-blue-600"
+                    />
+                    <label
+                      htmlFor="deposit-over-500"
+                      className="text-gray-300 cursor-pointer"
+                    >
+                      Tentativa de depósito acima de 500 USDT
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="withdraw-over-500"
+                      checked={alertSettings.notifyWithdrawOver500}
+                      onCheckedChange={(checked) =>
+                        setAlertSettings((s) => ({
+                          ...s,
+                          notifyWithdrawOver500: checked === true,
+                        }))
+                      }
+                      className="border-gray-600 data-[state=checked]:bg-blue-600"
+                    />
+                    <label
+                      htmlFor="withdraw-over-500"
+                      className="text-gray-300 cursor-pointer"
+                    >
+                      Tentativa de saque acima de 500 USDT
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="new-account"
+                      checked={alertSettings.notifyNewAccount}
+                      onCheckedChange={(checked) =>
+                        setAlertSettings((s) => ({
+                          ...s,
+                          notifyNewAccount: checked === true,
+                        }))
+                      }
+                      className="border-gray-600 data-[state=checked]:bg-blue-600"
+                    />
+                    <label
+                      htmlFor="new-account"
+                      className="text-gray-300 cursor-pointer"
+                    >
+                      Nova conta criada (aguardando aprovação)
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="kyc-ready"
+                      checked={alertSettings.notifyKycReady}
+                      onCheckedChange={(checked) =>
+                        setAlertSettings((s) => ({
+                          ...s,
+                          notifyKycReady: checked === true,
+                        }))
+                      }
+                      className="border-gray-600 data-[state=checked]:bg-blue-600"
+                    />
+                    <label
+                      htmlFor="kyc-ready"
+                      className="text-gray-300 cursor-pointer"
+                    >
+                      KYC enviado (pronto para validação)
+                    </label>
+                  </div>
+                </div>
+                <Button
+                  onClick={saveAlertSettings}
+                  disabled={savingAlertSettings}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {savingAlertSettings ? (
+                    <>Salvando...</>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      Salvar alertas
+                    </>
+                  )}
+                </Button>
+              </>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Filters */}
         <Card className="bg-gray-900 border-gray-800">

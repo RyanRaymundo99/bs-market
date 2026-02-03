@@ -98,6 +98,11 @@ export type SupportIssue = $Result.DefaultSelection<Prisma.$SupportIssuePayload>
  * 
  */
 export type CommunicationLog = $Result.DefaultSelection<Prisma.$CommunicationLogPayload>
+/**
+ * Model AdminAlertSettings
+ * 
+ */
+export type AdminAlertSettings = $Result.DefaultSelection<Prisma.$AdminAlertSettingsPayload>
 
 /**
  * Enums
@@ -289,7 +294,7 @@ export const TransactionType: typeof $Enums.TransactionType
  */
 export class PrismaClient<
   ClientOptions extends Prisma.PrismaClientOptions = Prisma.PrismaClientOptions,
-  const U = 'log' extends keyof ClientOptions ? ClientOptions['log'] extends Array<Prisma.LogLevel | Prisma.LogDefinition> ? Prisma.GetEvents<ClientOptions['log']> : never : never,
+  U = 'log' extends keyof ClientOptions ? ClientOptions['log'] extends Array<Prisma.LogLevel | Prisma.LogDefinition> ? Prisma.GetEvents<ClientOptions['log']> : never : never,
   ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs
 > {
   [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['other'] }
@@ -321,6 +326,13 @@ export class PrismaClient<
    * Disconnect from the database
    */
   $disconnect(): $Utils.JsPromise<void>;
+
+  /**
+   * Add a middleware
+   * @deprecated since 4.16.0. For new code, prefer client extensions instead.
+   * @see https://pris.ly/d/extensions
+   */
+  $use(cb: Prisma.Middleware): void
 
 /**
    * Executes a prepared raw query and returns the number of affected rows.
@@ -560,6 +572,16 @@ export class PrismaClient<
     * ```
     */
   get communicationLog(): Prisma.CommunicationLogDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.adminAlertSettings`: Exposes CRUD operations for the **AdminAlertSettings** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more AdminAlertSettings
+    * const adminAlertSettings = await prisma.adminAlertSettings.findMany()
+    * ```
+    */
+  get adminAlertSettings(): Prisma.AdminAlertSettingsDelegate<ExtArgs, ClientOptions>;
 }
 
 export namespace Prisma {
@@ -618,8 +640,8 @@ export namespace Prisma {
   export import Exact = $Public.Exact
 
   /**
-   * Prisma Client JS version: 6.17.1
-   * Query Engine version: 272a37d34178c2894197e17273bf937f25acdeac
+   * Prisma Client JS version: 6.12.0
+   * Query Engine version: 8047c96bbd92db98a2abc7c9323ce77c02c89dbc
    */
   export type PrismaVersion = {
     client: string
@@ -1016,7 +1038,8 @@ export namespace Prisma {
     AdminAuditLog: 'AdminAuditLog',
     UserNote: 'UserNote',
     SupportIssue: 'SupportIssue',
-    CommunicationLog: 'CommunicationLog'
+    CommunicationLog: 'CommunicationLog',
+    AdminAlertSettings: 'AdminAlertSettings'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -1035,7 +1058,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "user" | "session" | "account" | "verification" | "balance" | "deposit" | "withdrawal" | "order" | "p2POffer" | "p2PTrade" | "transaction" | "webhookEvent" | "notification" | "adminAuditLog" | "userNote" | "supportIssue" | "communicationLog"
+      modelProps: "user" | "session" | "account" | "verification" | "balance" | "deposit" | "withdrawal" | "order" | "p2POffer" | "p2PTrade" | "transaction" | "webhookEvent" | "notification" | "adminAuditLog" | "userNote" | "supportIssue" | "communicationLog" | "adminAlertSettings"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -2297,6 +2320,80 @@ export namespace Prisma {
           }
         }
       }
+      AdminAlertSettings: {
+        payload: Prisma.$AdminAlertSettingsPayload<ExtArgs>
+        fields: Prisma.AdminAlertSettingsFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.AdminAlertSettingsFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AdminAlertSettingsPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.AdminAlertSettingsFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AdminAlertSettingsPayload>
+          }
+          findFirst: {
+            args: Prisma.AdminAlertSettingsFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AdminAlertSettingsPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.AdminAlertSettingsFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AdminAlertSettingsPayload>
+          }
+          findMany: {
+            args: Prisma.AdminAlertSettingsFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AdminAlertSettingsPayload>[]
+          }
+          create: {
+            args: Prisma.AdminAlertSettingsCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AdminAlertSettingsPayload>
+          }
+          createMany: {
+            args: Prisma.AdminAlertSettingsCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.AdminAlertSettingsCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AdminAlertSettingsPayload>[]
+          }
+          delete: {
+            args: Prisma.AdminAlertSettingsDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AdminAlertSettingsPayload>
+          }
+          update: {
+            args: Prisma.AdminAlertSettingsUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AdminAlertSettingsPayload>
+          }
+          deleteMany: {
+            args: Prisma.AdminAlertSettingsDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.AdminAlertSettingsUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.AdminAlertSettingsUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AdminAlertSettingsPayload>[]
+          }
+          upsert: {
+            args: Prisma.AdminAlertSettingsUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AdminAlertSettingsPayload>
+          }
+          aggregate: {
+            args: Prisma.AdminAlertSettingsAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateAdminAlertSettings>
+          }
+          groupBy: {
+            args: Prisma.AdminAlertSettingsGroupByArgs<ExtArgs>
+            result: $Utils.Optional<AdminAlertSettingsGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.AdminAlertSettingsCountArgs<ExtArgs>
+            result: $Utils.Optional<AdminAlertSettingsCountAggregateOutputType> | number
+          }
+        }
+      }
     }
   } & {
     other: {
@@ -2340,24 +2437,16 @@ export namespace Prisma {
     /**
      * @example
      * ```
-     * // Shorthand for `emit: 'stdout'`
+     * // Defaults to stdout
      * log: ['query', 'info', 'warn', 'error']
      * 
-     * // Emit as events only
+     * // Emit as events
      * log: [
-     *   { emit: 'event', level: 'query' },
-     *   { emit: 'event', level: 'info' },
-     *   { emit: 'event', level: 'warn' }
-     *   { emit: 'event', level: 'error' }
+     *   { emit: 'stdout', level: 'query' },
+     *   { emit: 'stdout', level: 'info' },
+     *   { emit: 'stdout', level: 'warn' }
+     *   { emit: 'stdout', level: 'error' }
      * ]
-     * 
-     * / Emit as events and log to stdout
-     * og: [
-     *  { emit: 'stdout', level: 'query' },
-     *  { emit: 'stdout', level: 'info' },
-     *  { emit: 'stdout', level: 'warn' }
-     *  { emit: 'stdout', level: 'error' }
-     * 
      * ```
      * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client/logging#the-log-option).
      */
@@ -2372,10 +2461,6 @@ export namespace Prisma {
       timeout?: number
       isolationLevel?: Prisma.TransactionIsolationLevel
     }
-    /**
-     * Instance of a Driver Adapter, e.g., like one provided by `@prisma/adapter-planetscale`
-     */
-    adapter?: runtime.SqlDriverAdapterFactory | null
     /**
      * Global configuration for omitting model fields by default.
      * 
@@ -2410,6 +2495,7 @@ export namespace Prisma {
     userNote?: UserNoteOmit
     supportIssue?: SupportIssueOmit
     communicationLog?: CommunicationLogOmit
+    adminAlertSettings?: AdminAlertSettingsOmit
   }
 
   /* Types for Logging */
@@ -2419,15 +2505,10 @@ export namespace Prisma {
     emit: 'stdout' | 'event'
   }
 
-  export type CheckIsLogLevel<T> = T extends LogLevel ? T : never;
-
-  export type GetLogType<T> = CheckIsLogLevel<
-    T extends LogDefinition ? T['level'] : T
-  >;
-
-  export type GetEvents<T extends any[]> = T extends Array<LogLevel | LogDefinition>
-    ? GetLogType<T[number]>
-    : never;
+  export type GetLogType<T extends LogLevel | LogDefinition> = T extends LogDefinition ? T['emit'] extends 'event' ? T['level'] : never : never
+  export type GetEvents<T extends any> = T extends Array<LogLevel | LogDefinition> ?
+    GetLogType<T[0]> | GetLogType<T[1]> | GetLogType<T[2]> | GetLogType<T[3]>
+    : never
 
   export type QueryEvent = {
     timestamp: Date
@@ -2468,6 +2549,25 @@ export namespace Prisma {
     | 'findRaw'
     | 'groupBy'
 
+  /**
+   * These options are being passed into the middleware as "params"
+   */
+  export type MiddlewareParams = {
+    model?: ModelName
+    action: PrismaAction
+    args: any
+    dataPath: string[]
+    runInTransaction: boolean
+  }
+
+  /**
+   * The `T` type makes sure, that the `return proceed` is not forgotten in the middleware implementation
+   */
+  export type Middleware<T = any> = (
+    params: MiddlewareParams,
+    next: (params: MiddlewareParams) => $Utils.JsPromise<T>,
+  ) => $Utils.JsPromise<T>
+
   // tested in getLogLevel.test.ts
   export function getLogLevel(log: Array<LogLevel | LogDefinition>): LogLevel | undefined;
 
@@ -2502,6 +2602,7 @@ export namespace Prisma {
     withdrawals: number
     notifications: number
     notes: number
+    communicationLogs: number
   }
 
   export type UserCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -2517,6 +2618,7 @@ export namespace Prisma {
     withdrawals?: boolean | UserCountOutputTypeCountWithdrawalsArgs
     notifications?: boolean | UserCountOutputTypeCountNotificationsArgs
     notes?: boolean | UserCountOutputTypeCountNotesArgs
+    communicationLogs?: boolean | UserCountOutputTypeCountCommunicationLogsArgs
   }
 
   // Custom InputTypes
@@ -2612,6 +2714,13 @@ export namespace Prisma {
    */
   export type UserCountOutputTypeCountNotesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: UserNoteWhereInput
+  }
+
+  /**
+   * UserCountOutputType without action
+   */
+  export type UserCountOutputTypeCountCommunicationLogsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CommunicationLogWhereInput
   }
 
 
@@ -3010,6 +3119,7 @@ export namespace Prisma {
     withdrawals?: boolean | User$withdrawalsArgs<ExtArgs>
     notifications?: boolean | User$notificationsArgs<ExtArgs>
     notes?: boolean | User$notesArgs<ExtArgs>
+    communicationLogs?: boolean | User$communicationLogsArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["user"]>
 
@@ -3123,6 +3233,7 @@ export namespace Prisma {
     withdrawals?: boolean | User$withdrawalsArgs<ExtArgs>
     notifications?: boolean | User$notificationsArgs<ExtArgs>
     notes?: boolean | User$notesArgs<ExtArgs>
+    communicationLogs?: boolean | User$communicationLogsArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type UserIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
@@ -3143,6 +3254,7 @@ export namespace Prisma {
       withdrawals: Prisma.$WithdrawalPayload<ExtArgs>[]
       notifications: Prisma.$NotificationPayload<ExtArgs>[]
       notes: Prisma.$UserNotePayload<ExtArgs>[]
+      communicationLogs: Prisma.$CommunicationLogPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -3580,6 +3692,7 @@ export namespace Prisma {
     withdrawals<T extends User$withdrawalsArgs<ExtArgs> = {}>(args?: Subset<T, User$withdrawalsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$WithdrawalPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     notifications<T extends User$notificationsArgs<ExtArgs> = {}>(args?: Subset<T, User$notificationsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$NotificationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     notes<T extends User$notesArgs<ExtArgs> = {}>(args?: Subset<T, User$notesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$UserNotePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    communicationLogs<T extends User$communicationLogsArgs<ExtArgs> = {}>(args?: Subset<T, User$communicationLogsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CommunicationLogPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -4311,6 +4424,30 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: UserNoteScalarFieldEnum | UserNoteScalarFieldEnum[]
+  }
+
+  /**
+   * User.communicationLogs
+   */
+  export type User$communicationLogsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CommunicationLog
+     */
+    select?: CommunicationLogSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the CommunicationLog
+     */
+    omit?: CommunicationLogOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CommunicationLogInclude<ExtArgs> | null
+    where?: CommunicationLogWhereInput
+    orderBy?: CommunicationLogOrderByWithRelationInput | CommunicationLogOrderByWithRelationInput[]
+    cursor?: CommunicationLogWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: CommunicationLogScalarFieldEnum | CommunicationLogScalarFieldEnum[]
   }
 
   /**
@@ -22040,6 +22177,7 @@ export namespace Prisma {
     subject?: boolean
     sentAt?: boolean
     metadata?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["communicationLog"]>
 
   export type CommunicationLogSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -22049,6 +22187,7 @@ export namespace Prisma {
     subject?: boolean
     sentAt?: boolean
     metadata?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["communicationLog"]>
 
   export type CommunicationLogSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -22058,6 +22197,7 @@ export namespace Prisma {
     subject?: boolean
     sentAt?: boolean
     metadata?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["communicationLog"]>
 
   export type CommunicationLogSelectScalar = {
@@ -22070,10 +22210,21 @@ export namespace Prisma {
   }
 
   export type CommunicationLogOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "type" | "subject" | "sentAt" | "metadata", ExtArgs["result"]["communicationLog"]>
+  export type CommunicationLogInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
+  export type CommunicationLogIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
+  export type CommunicationLogIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
 
   export type $CommunicationLogPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "CommunicationLog"
-    objects: {}
+    objects: {
+      user: Prisma.$UserPayload<ExtArgs>
+    }
     scalars: $Extensions.GetPayloadResult<{
       id: string
       userId: string
@@ -22475,6 +22626,7 @@ export namespace Prisma {
    */
   export interface Prisma__CommunicationLogClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
+    user<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -22527,6 +22679,10 @@ export namespace Prisma {
      */
     omit?: CommunicationLogOmit<ExtArgs> | null
     /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CommunicationLogInclude<ExtArgs> | null
+    /**
      * Filter, which CommunicationLog to fetch.
      */
     where: CommunicationLogWhereUniqueInput
@@ -22545,6 +22701,10 @@ export namespace Prisma {
      */
     omit?: CommunicationLogOmit<ExtArgs> | null
     /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CommunicationLogInclude<ExtArgs> | null
+    /**
      * Filter, which CommunicationLog to fetch.
      */
     where: CommunicationLogWhereUniqueInput
@@ -22562,6 +22722,10 @@ export namespace Prisma {
      * Omit specific fields from the CommunicationLog
      */
     omit?: CommunicationLogOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CommunicationLogInclude<ExtArgs> | null
     /**
      * Filter, which CommunicationLog to fetch.
      */
@@ -22611,6 +22775,10 @@ export namespace Prisma {
      */
     omit?: CommunicationLogOmit<ExtArgs> | null
     /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CommunicationLogInclude<ExtArgs> | null
+    /**
      * Filter, which CommunicationLog to fetch.
      */
     where?: CommunicationLogWhereInput
@@ -22659,6 +22827,10 @@ export namespace Prisma {
      */
     omit?: CommunicationLogOmit<ExtArgs> | null
     /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CommunicationLogInclude<ExtArgs> | null
+    /**
      * Filter, which CommunicationLogs to fetch.
      */
     where?: CommunicationLogWhereInput
@@ -22702,6 +22874,10 @@ export namespace Prisma {
      */
     omit?: CommunicationLogOmit<ExtArgs> | null
     /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CommunicationLogInclude<ExtArgs> | null
+    /**
      * The data needed to create a CommunicationLog.
      */
     data: XOR<CommunicationLogCreateInput, CommunicationLogUncheckedCreateInput>
@@ -22735,6 +22911,10 @@ export namespace Prisma {
      */
     data: CommunicationLogCreateManyInput | CommunicationLogCreateManyInput[]
     skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CommunicationLogIncludeCreateManyAndReturn<ExtArgs> | null
   }
 
   /**
@@ -22749,6 +22929,10 @@ export namespace Prisma {
      * Omit specific fields from the CommunicationLog
      */
     omit?: CommunicationLogOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CommunicationLogInclude<ExtArgs> | null
     /**
      * The data needed to update a CommunicationLog.
      */
@@ -22801,6 +22985,10 @@ export namespace Prisma {
      * Limit how many CommunicationLogs to update.
      */
     limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CommunicationLogIncludeUpdateManyAndReturn<ExtArgs> | null
   }
 
   /**
@@ -22815,6 +23003,10 @@ export namespace Prisma {
      * Omit specific fields from the CommunicationLog
      */
     omit?: CommunicationLogOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CommunicationLogInclude<ExtArgs> | null
     /**
      * The filter to search for the CommunicationLog to update in case it exists.
      */
@@ -22841,6 +23033,10 @@ export namespace Prisma {
      * Omit specific fields from the CommunicationLog
      */
     omit?: CommunicationLogOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CommunicationLogInclude<ExtArgs> | null
     /**
      * Filter which CommunicationLog to delete.
      */
@@ -22873,6 +23069,1040 @@ export namespace Prisma {
      * Omit specific fields from the CommunicationLog
      */
     omit?: CommunicationLogOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CommunicationLogInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model AdminAlertSettings
+   */
+
+  export type AggregateAdminAlertSettings = {
+    _count: AdminAlertSettingsCountAggregateOutputType | null
+    _min: AdminAlertSettingsMinAggregateOutputType | null
+    _max: AdminAlertSettingsMaxAggregateOutputType | null
+  }
+
+  export type AdminAlertSettingsMinAggregateOutputType = {
+    id: string | null
+    email: string | null
+    notifyDepositOver500: boolean | null
+    notifyWithdrawOver500: boolean | null
+    notifyNewAccount: boolean | null
+    notifyKycReady: boolean | null
+    updatedAt: Date | null
+  }
+
+  export type AdminAlertSettingsMaxAggregateOutputType = {
+    id: string | null
+    email: string | null
+    notifyDepositOver500: boolean | null
+    notifyWithdrawOver500: boolean | null
+    notifyNewAccount: boolean | null
+    notifyKycReady: boolean | null
+    updatedAt: Date | null
+  }
+
+  export type AdminAlertSettingsCountAggregateOutputType = {
+    id: number
+    email: number
+    emails: number
+    notifyDepositOver500: number
+    notifyWithdrawOver500: number
+    notifyNewAccount: number
+    notifyKycReady: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type AdminAlertSettingsMinAggregateInputType = {
+    id?: true
+    email?: true
+    notifyDepositOver500?: true
+    notifyWithdrawOver500?: true
+    notifyNewAccount?: true
+    notifyKycReady?: true
+    updatedAt?: true
+  }
+
+  export type AdminAlertSettingsMaxAggregateInputType = {
+    id?: true
+    email?: true
+    notifyDepositOver500?: true
+    notifyWithdrawOver500?: true
+    notifyNewAccount?: true
+    notifyKycReady?: true
+    updatedAt?: true
+  }
+
+  export type AdminAlertSettingsCountAggregateInputType = {
+    id?: true
+    email?: true
+    emails?: true
+    notifyDepositOver500?: true
+    notifyWithdrawOver500?: true
+    notifyNewAccount?: true
+    notifyKycReady?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type AdminAlertSettingsAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which AdminAlertSettings to aggregate.
+     */
+    where?: AdminAlertSettingsWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of AdminAlertSettings to fetch.
+     */
+    orderBy?: AdminAlertSettingsOrderByWithRelationInput | AdminAlertSettingsOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: AdminAlertSettingsWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` AdminAlertSettings from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` AdminAlertSettings.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned AdminAlertSettings
+    **/
+    _count?: true | AdminAlertSettingsCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: AdminAlertSettingsMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: AdminAlertSettingsMaxAggregateInputType
+  }
+
+  export type GetAdminAlertSettingsAggregateType<T extends AdminAlertSettingsAggregateArgs> = {
+        [P in keyof T & keyof AggregateAdminAlertSettings]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateAdminAlertSettings[P]>
+      : GetScalarType<T[P], AggregateAdminAlertSettings[P]>
+  }
+
+
+
+
+  export type AdminAlertSettingsGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: AdminAlertSettingsWhereInput
+    orderBy?: AdminAlertSettingsOrderByWithAggregationInput | AdminAlertSettingsOrderByWithAggregationInput[]
+    by: AdminAlertSettingsScalarFieldEnum[] | AdminAlertSettingsScalarFieldEnum
+    having?: AdminAlertSettingsScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: AdminAlertSettingsCountAggregateInputType | true
+    _min?: AdminAlertSettingsMinAggregateInputType
+    _max?: AdminAlertSettingsMaxAggregateInputType
+  }
+
+  export type AdminAlertSettingsGroupByOutputType = {
+    id: string
+    email: string | null
+    emails: JsonValue | null
+    notifyDepositOver500: boolean
+    notifyWithdrawOver500: boolean
+    notifyNewAccount: boolean
+    notifyKycReady: boolean
+    updatedAt: Date
+    _count: AdminAlertSettingsCountAggregateOutputType | null
+    _min: AdminAlertSettingsMinAggregateOutputType | null
+    _max: AdminAlertSettingsMaxAggregateOutputType | null
+  }
+
+  type GetAdminAlertSettingsGroupByPayload<T extends AdminAlertSettingsGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<AdminAlertSettingsGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof AdminAlertSettingsGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], AdminAlertSettingsGroupByOutputType[P]>
+            : GetScalarType<T[P], AdminAlertSettingsGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type AdminAlertSettingsSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    email?: boolean
+    emails?: boolean
+    notifyDepositOver500?: boolean
+    notifyWithdrawOver500?: boolean
+    notifyNewAccount?: boolean
+    notifyKycReady?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["adminAlertSettings"]>
+
+  export type AdminAlertSettingsSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    email?: boolean
+    emails?: boolean
+    notifyDepositOver500?: boolean
+    notifyWithdrawOver500?: boolean
+    notifyNewAccount?: boolean
+    notifyKycReady?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["adminAlertSettings"]>
+
+  export type AdminAlertSettingsSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    email?: boolean
+    emails?: boolean
+    notifyDepositOver500?: boolean
+    notifyWithdrawOver500?: boolean
+    notifyNewAccount?: boolean
+    notifyKycReady?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["adminAlertSettings"]>
+
+  export type AdminAlertSettingsSelectScalar = {
+    id?: boolean
+    email?: boolean
+    emails?: boolean
+    notifyDepositOver500?: boolean
+    notifyWithdrawOver500?: boolean
+    notifyNewAccount?: boolean
+    notifyKycReady?: boolean
+    updatedAt?: boolean
+  }
+
+  export type AdminAlertSettingsOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "email" | "emails" | "notifyDepositOver500" | "notifyWithdrawOver500" | "notifyNewAccount" | "notifyKycReady" | "updatedAt", ExtArgs["result"]["adminAlertSettings"]>
+
+  export type $AdminAlertSettingsPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "AdminAlertSettings"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      email: string | null
+      emails: Prisma.JsonValue | null
+      notifyDepositOver500: boolean
+      notifyWithdrawOver500: boolean
+      notifyNewAccount: boolean
+      notifyKycReady: boolean
+      updatedAt: Date
+    }, ExtArgs["result"]["adminAlertSettings"]>
+    composites: {}
+  }
+
+  type AdminAlertSettingsGetPayload<S extends boolean | null | undefined | AdminAlertSettingsDefaultArgs> = $Result.GetResult<Prisma.$AdminAlertSettingsPayload, S>
+
+  type AdminAlertSettingsCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<AdminAlertSettingsFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: AdminAlertSettingsCountAggregateInputType | true
+    }
+
+  export interface AdminAlertSettingsDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['AdminAlertSettings'], meta: { name: 'AdminAlertSettings' } }
+    /**
+     * Find zero or one AdminAlertSettings that matches the filter.
+     * @param {AdminAlertSettingsFindUniqueArgs} args - Arguments to find a AdminAlertSettings
+     * @example
+     * // Get one AdminAlertSettings
+     * const adminAlertSettings = await prisma.adminAlertSettings.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends AdminAlertSettingsFindUniqueArgs>(args: SelectSubset<T, AdminAlertSettingsFindUniqueArgs<ExtArgs>>): Prisma__AdminAlertSettingsClient<$Result.GetResult<Prisma.$AdminAlertSettingsPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one AdminAlertSettings that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {AdminAlertSettingsFindUniqueOrThrowArgs} args - Arguments to find a AdminAlertSettings
+     * @example
+     * // Get one AdminAlertSettings
+     * const adminAlertSettings = await prisma.adminAlertSettings.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends AdminAlertSettingsFindUniqueOrThrowArgs>(args: SelectSubset<T, AdminAlertSettingsFindUniqueOrThrowArgs<ExtArgs>>): Prisma__AdminAlertSettingsClient<$Result.GetResult<Prisma.$AdminAlertSettingsPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first AdminAlertSettings that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AdminAlertSettingsFindFirstArgs} args - Arguments to find a AdminAlertSettings
+     * @example
+     * // Get one AdminAlertSettings
+     * const adminAlertSettings = await prisma.adminAlertSettings.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends AdminAlertSettingsFindFirstArgs>(args?: SelectSubset<T, AdminAlertSettingsFindFirstArgs<ExtArgs>>): Prisma__AdminAlertSettingsClient<$Result.GetResult<Prisma.$AdminAlertSettingsPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first AdminAlertSettings that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AdminAlertSettingsFindFirstOrThrowArgs} args - Arguments to find a AdminAlertSettings
+     * @example
+     * // Get one AdminAlertSettings
+     * const adminAlertSettings = await prisma.adminAlertSettings.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends AdminAlertSettingsFindFirstOrThrowArgs>(args?: SelectSubset<T, AdminAlertSettingsFindFirstOrThrowArgs<ExtArgs>>): Prisma__AdminAlertSettingsClient<$Result.GetResult<Prisma.$AdminAlertSettingsPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more AdminAlertSettings that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AdminAlertSettingsFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all AdminAlertSettings
+     * const adminAlertSettings = await prisma.adminAlertSettings.findMany()
+     * 
+     * // Get first 10 AdminAlertSettings
+     * const adminAlertSettings = await prisma.adminAlertSettings.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const adminAlertSettingsWithIdOnly = await prisma.adminAlertSettings.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends AdminAlertSettingsFindManyArgs>(args?: SelectSubset<T, AdminAlertSettingsFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AdminAlertSettingsPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a AdminAlertSettings.
+     * @param {AdminAlertSettingsCreateArgs} args - Arguments to create a AdminAlertSettings.
+     * @example
+     * // Create one AdminAlertSettings
+     * const AdminAlertSettings = await prisma.adminAlertSettings.create({
+     *   data: {
+     *     // ... data to create a AdminAlertSettings
+     *   }
+     * })
+     * 
+     */
+    create<T extends AdminAlertSettingsCreateArgs>(args: SelectSubset<T, AdminAlertSettingsCreateArgs<ExtArgs>>): Prisma__AdminAlertSettingsClient<$Result.GetResult<Prisma.$AdminAlertSettingsPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many AdminAlertSettings.
+     * @param {AdminAlertSettingsCreateManyArgs} args - Arguments to create many AdminAlertSettings.
+     * @example
+     * // Create many AdminAlertSettings
+     * const adminAlertSettings = await prisma.adminAlertSettings.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends AdminAlertSettingsCreateManyArgs>(args?: SelectSubset<T, AdminAlertSettingsCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many AdminAlertSettings and returns the data saved in the database.
+     * @param {AdminAlertSettingsCreateManyAndReturnArgs} args - Arguments to create many AdminAlertSettings.
+     * @example
+     * // Create many AdminAlertSettings
+     * const adminAlertSettings = await prisma.adminAlertSettings.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many AdminAlertSettings and only return the `id`
+     * const adminAlertSettingsWithIdOnly = await prisma.adminAlertSettings.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends AdminAlertSettingsCreateManyAndReturnArgs>(args?: SelectSubset<T, AdminAlertSettingsCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AdminAlertSettingsPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a AdminAlertSettings.
+     * @param {AdminAlertSettingsDeleteArgs} args - Arguments to delete one AdminAlertSettings.
+     * @example
+     * // Delete one AdminAlertSettings
+     * const AdminAlertSettings = await prisma.adminAlertSettings.delete({
+     *   where: {
+     *     // ... filter to delete one AdminAlertSettings
+     *   }
+     * })
+     * 
+     */
+    delete<T extends AdminAlertSettingsDeleteArgs>(args: SelectSubset<T, AdminAlertSettingsDeleteArgs<ExtArgs>>): Prisma__AdminAlertSettingsClient<$Result.GetResult<Prisma.$AdminAlertSettingsPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one AdminAlertSettings.
+     * @param {AdminAlertSettingsUpdateArgs} args - Arguments to update one AdminAlertSettings.
+     * @example
+     * // Update one AdminAlertSettings
+     * const adminAlertSettings = await prisma.adminAlertSettings.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends AdminAlertSettingsUpdateArgs>(args: SelectSubset<T, AdminAlertSettingsUpdateArgs<ExtArgs>>): Prisma__AdminAlertSettingsClient<$Result.GetResult<Prisma.$AdminAlertSettingsPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more AdminAlertSettings.
+     * @param {AdminAlertSettingsDeleteManyArgs} args - Arguments to filter AdminAlertSettings to delete.
+     * @example
+     * // Delete a few AdminAlertSettings
+     * const { count } = await prisma.adminAlertSettings.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends AdminAlertSettingsDeleteManyArgs>(args?: SelectSubset<T, AdminAlertSettingsDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more AdminAlertSettings.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AdminAlertSettingsUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many AdminAlertSettings
+     * const adminAlertSettings = await prisma.adminAlertSettings.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends AdminAlertSettingsUpdateManyArgs>(args: SelectSubset<T, AdminAlertSettingsUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more AdminAlertSettings and returns the data updated in the database.
+     * @param {AdminAlertSettingsUpdateManyAndReturnArgs} args - Arguments to update many AdminAlertSettings.
+     * @example
+     * // Update many AdminAlertSettings
+     * const adminAlertSettings = await prisma.adminAlertSettings.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more AdminAlertSettings and only return the `id`
+     * const adminAlertSettingsWithIdOnly = await prisma.adminAlertSettings.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends AdminAlertSettingsUpdateManyAndReturnArgs>(args: SelectSubset<T, AdminAlertSettingsUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AdminAlertSettingsPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one AdminAlertSettings.
+     * @param {AdminAlertSettingsUpsertArgs} args - Arguments to update or create a AdminAlertSettings.
+     * @example
+     * // Update or create a AdminAlertSettings
+     * const adminAlertSettings = await prisma.adminAlertSettings.upsert({
+     *   create: {
+     *     // ... data to create a AdminAlertSettings
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the AdminAlertSettings we want to update
+     *   }
+     * })
+     */
+    upsert<T extends AdminAlertSettingsUpsertArgs>(args: SelectSubset<T, AdminAlertSettingsUpsertArgs<ExtArgs>>): Prisma__AdminAlertSettingsClient<$Result.GetResult<Prisma.$AdminAlertSettingsPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of AdminAlertSettings.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AdminAlertSettingsCountArgs} args - Arguments to filter AdminAlertSettings to count.
+     * @example
+     * // Count the number of AdminAlertSettings
+     * const count = await prisma.adminAlertSettings.count({
+     *   where: {
+     *     // ... the filter for the AdminAlertSettings we want to count
+     *   }
+     * })
+    **/
+    count<T extends AdminAlertSettingsCountArgs>(
+      args?: Subset<T, AdminAlertSettingsCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], AdminAlertSettingsCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a AdminAlertSettings.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AdminAlertSettingsAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends AdminAlertSettingsAggregateArgs>(args: Subset<T, AdminAlertSettingsAggregateArgs>): Prisma.PrismaPromise<GetAdminAlertSettingsAggregateType<T>>
+
+    /**
+     * Group by AdminAlertSettings.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AdminAlertSettingsGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends AdminAlertSettingsGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: AdminAlertSettingsGroupByArgs['orderBy'] }
+        : { orderBy?: AdminAlertSettingsGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, AdminAlertSettingsGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetAdminAlertSettingsGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the AdminAlertSettings model
+   */
+  readonly fields: AdminAlertSettingsFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for AdminAlertSettings.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__AdminAlertSettingsClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the AdminAlertSettings model
+   */
+  interface AdminAlertSettingsFieldRefs {
+    readonly id: FieldRef<"AdminAlertSettings", 'String'>
+    readonly email: FieldRef<"AdminAlertSettings", 'String'>
+    readonly emails: FieldRef<"AdminAlertSettings", 'Json'>
+    readonly notifyDepositOver500: FieldRef<"AdminAlertSettings", 'Boolean'>
+    readonly notifyWithdrawOver500: FieldRef<"AdminAlertSettings", 'Boolean'>
+    readonly notifyNewAccount: FieldRef<"AdminAlertSettings", 'Boolean'>
+    readonly notifyKycReady: FieldRef<"AdminAlertSettings", 'Boolean'>
+    readonly updatedAt: FieldRef<"AdminAlertSettings", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * AdminAlertSettings findUnique
+   */
+  export type AdminAlertSettingsFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AdminAlertSettings
+     */
+    select?: AdminAlertSettingsSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AdminAlertSettings
+     */
+    omit?: AdminAlertSettingsOmit<ExtArgs> | null
+    /**
+     * Filter, which AdminAlertSettings to fetch.
+     */
+    where: AdminAlertSettingsWhereUniqueInput
+  }
+
+  /**
+   * AdminAlertSettings findUniqueOrThrow
+   */
+  export type AdminAlertSettingsFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AdminAlertSettings
+     */
+    select?: AdminAlertSettingsSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AdminAlertSettings
+     */
+    omit?: AdminAlertSettingsOmit<ExtArgs> | null
+    /**
+     * Filter, which AdminAlertSettings to fetch.
+     */
+    where: AdminAlertSettingsWhereUniqueInput
+  }
+
+  /**
+   * AdminAlertSettings findFirst
+   */
+  export type AdminAlertSettingsFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AdminAlertSettings
+     */
+    select?: AdminAlertSettingsSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AdminAlertSettings
+     */
+    omit?: AdminAlertSettingsOmit<ExtArgs> | null
+    /**
+     * Filter, which AdminAlertSettings to fetch.
+     */
+    where?: AdminAlertSettingsWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of AdminAlertSettings to fetch.
+     */
+    orderBy?: AdminAlertSettingsOrderByWithRelationInput | AdminAlertSettingsOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for AdminAlertSettings.
+     */
+    cursor?: AdminAlertSettingsWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` AdminAlertSettings from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` AdminAlertSettings.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of AdminAlertSettings.
+     */
+    distinct?: AdminAlertSettingsScalarFieldEnum | AdminAlertSettingsScalarFieldEnum[]
+  }
+
+  /**
+   * AdminAlertSettings findFirstOrThrow
+   */
+  export type AdminAlertSettingsFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AdminAlertSettings
+     */
+    select?: AdminAlertSettingsSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AdminAlertSettings
+     */
+    omit?: AdminAlertSettingsOmit<ExtArgs> | null
+    /**
+     * Filter, which AdminAlertSettings to fetch.
+     */
+    where?: AdminAlertSettingsWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of AdminAlertSettings to fetch.
+     */
+    orderBy?: AdminAlertSettingsOrderByWithRelationInput | AdminAlertSettingsOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for AdminAlertSettings.
+     */
+    cursor?: AdminAlertSettingsWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` AdminAlertSettings from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` AdminAlertSettings.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of AdminAlertSettings.
+     */
+    distinct?: AdminAlertSettingsScalarFieldEnum | AdminAlertSettingsScalarFieldEnum[]
+  }
+
+  /**
+   * AdminAlertSettings findMany
+   */
+  export type AdminAlertSettingsFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AdminAlertSettings
+     */
+    select?: AdminAlertSettingsSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AdminAlertSettings
+     */
+    omit?: AdminAlertSettingsOmit<ExtArgs> | null
+    /**
+     * Filter, which AdminAlertSettings to fetch.
+     */
+    where?: AdminAlertSettingsWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of AdminAlertSettings to fetch.
+     */
+    orderBy?: AdminAlertSettingsOrderByWithRelationInput | AdminAlertSettingsOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing AdminAlertSettings.
+     */
+    cursor?: AdminAlertSettingsWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` AdminAlertSettings from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` AdminAlertSettings.
+     */
+    skip?: number
+    distinct?: AdminAlertSettingsScalarFieldEnum | AdminAlertSettingsScalarFieldEnum[]
+  }
+
+  /**
+   * AdminAlertSettings create
+   */
+  export type AdminAlertSettingsCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AdminAlertSettings
+     */
+    select?: AdminAlertSettingsSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AdminAlertSettings
+     */
+    omit?: AdminAlertSettingsOmit<ExtArgs> | null
+    /**
+     * The data needed to create a AdminAlertSettings.
+     */
+    data: XOR<AdminAlertSettingsCreateInput, AdminAlertSettingsUncheckedCreateInput>
+  }
+
+  /**
+   * AdminAlertSettings createMany
+   */
+  export type AdminAlertSettingsCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many AdminAlertSettings.
+     */
+    data: AdminAlertSettingsCreateManyInput | AdminAlertSettingsCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * AdminAlertSettings createManyAndReturn
+   */
+  export type AdminAlertSettingsCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AdminAlertSettings
+     */
+    select?: AdminAlertSettingsSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the AdminAlertSettings
+     */
+    omit?: AdminAlertSettingsOmit<ExtArgs> | null
+    /**
+     * The data used to create many AdminAlertSettings.
+     */
+    data: AdminAlertSettingsCreateManyInput | AdminAlertSettingsCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * AdminAlertSettings update
+   */
+  export type AdminAlertSettingsUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AdminAlertSettings
+     */
+    select?: AdminAlertSettingsSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AdminAlertSettings
+     */
+    omit?: AdminAlertSettingsOmit<ExtArgs> | null
+    /**
+     * The data needed to update a AdminAlertSettings.
+     */
+    data: XOR<AdminAlertSettingsUpdateInput, AdminAlertSettingsUncheckedUpdateInput>
+    /**
+     * Choose, which AdminAlertSettings to update.
+     */
+    where: AdminAlertSettingsWhereUniqueInput
+  }
+
+  /**
+   * AdminAlertSettings updateMany
+   */
+  export type AdminAlertSettingsUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update AdminAlertSettings.
+     */
+    data: XOR<AdminAlertSettingsUpdateManyMutationInput, AdminAlertSettingsUncheckedUpdateManyInput>
+    /**
+     * Filter which AdminAlertSettings to update
+     */
+    where?: AdminAlertSettingsWhereInput
+    /**
+     * Limit how many AdminAlertSettings to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * AdminAlertSettings updateManyAndReturn
+   */
+  export type AdminAlertSettingsUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AdminAlertSettings
+     */
+    select?: AdminAlertSettingsSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the AdminAlertSettings
+     */
+    omit?: AdminAlertSettingsOmit<ExtArgs> | null
+    /**
+     * The data used to update AdminAlertSettings.
+     */
+    data: XOR<AdminAlertSettingsUpdateManyMutationInput, AdminAlertSettingsUncheckedUpdateManyInput>
+    /**
+     * Filter which AdminAlertSettings to update
+     */
+    where?: AdminAlertSettingsWhereInput
+    /**
+     * Limit how many AdminAlertSettings to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * AdminAlertSettings upsert
+   */
+  export type AdminAlertSettingsUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AdminAlertSettings
+     */
+    select?: AdminAlertSettingsSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AdminAlertSettings
+     */
+    omit?: AdminAlertSettingsOmit<ExtArgs> | null
+    /**
+     * The filter to search for the AdminAlertSettings to update in case it exists.
+     */
+    where: AdminAlertSettingsWhereUniqueInput
+    /**
+     * In case the AdminAlertSettings found by the `where` argument doesn't exist, create a new AdminAlertSettings with this data.
+     */
+    create: XOR<AdminAlertSettingsCreateInput, AdminAlertSettingsUncheckedCreateInput>
+    /**
+     * In case the AdminAlertSettings was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<AdminAlertSettingsUpdateInput, AdminAlertSettingsUncheckedUpdateInput>
+  }
+
+  /**
+   * AdminAlertSettings delete
+   */
+  export type AdminAlertSettingsDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AdminAlertSettings
+     */
+    select?: AdminAlertSettingsSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AdminAlertSettings
+     */
+    omit?: AdminAlertSettingsOmit<ExtArgs> | null
+    /**
+     * Filter which AdminAlertSettings to delete.
+     */
+    where: AdminAlertSettingsWhereUniqueInput
+  }
+
+  /**
+   * AdminAlertSettings deleteMany
+   */
+  export type AdminAlertSettingsDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which AdminAlertSettings to delete
+     */
+    where?: AdminAlertSettingsWhereInput
+    /**
+     * Limit how many AdminAlertSettings to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * AdminAlertSettings without action
+   */
+  export type AdminAlertSettingsDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AdminAlertSettings
+     */
+    select?: AdminAlertSettingsSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AdminAlertSettings
+     */
+    omit?: AdminAlertSettingsOmit<ExtArgs> | null
   }
 
 
@@ -23202,6 +24432,20 @@ export namespace Prisma {
   };
 
   export type CommunicationLogScalarFieldEnum = (typeof CommunicationLogScalarFieldEnum)[keyof typeof CommunicationLogScalarFieldEnum]
+
+
+  export const AdminAlertSettingsScalarFieldEnum: {
+    id: 'id',
+    email: 'email',
+    emails: 'emails',
+    notifyDepositOver500: 'notifyDepositOver500',
+    notifyWithdrawOver500: 'notifyWithdrawOver500',
+    notifyNewAccount: 'notifyNewAccount',
+    notifyKycReady: 'notifyKycReady',
+    updatedAt: 'updatedAt'
+  };
+
+  export type AdminAlertSettingsScalarFieldEnum = (typeof AdminAlertSettingsScalarFieldEnum)[keyof typeof AdminAlertSettingsScalarFieldEnum]
 
 
   export const SortOrder: {
@@ -23564,6 +24808,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalListRelationFilter
     notifications?: NotificationListRelationFilter
     notes?: UserNoteListRelationFilter
+    communicationLogs?: CommunicationLogListRelationFilter
   }
 
   export type UserOrderByWithRelationInput = {
@@ -23608,6 +24853,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalOrderByRelationAggregateInput
     notifications?: NotificationOrderByRelationAggregateInput
     notes?: UserNoteOrderByRelationAggregateInput
+    communicationLogs?: CommunicationLogOrderByRelationAggregateInput
   }
 
   export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -23655,6 +24901,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalListRelationFilter
     notifications?: NotificationListRelationFilter
     notes?: UserNoteListRelationFilter
+    communicationLogs?: CommunicationLogListRelationFilter
   }, "id" | "email" | "cpf" | "phone">
 
   export type UserOrderByWithAggregationInput = {
@@ -25116,6 +26363,7 @@ export namespace Prisma {
     subject?: StringNullableFilter<"CommunicationLog"> | string | null
     sentAt?: DateTimeFilter<"CommunicationLog"> | Date | string
     metadata?: JsonNullableFilter<"CommunicationLog">
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
   }
 
   export type CommunicationLogOrderByWithRelationInput = {
@@ -25125,6 +26373,7 @@ export namespace Prisma {
     subject?: SortOrderInput | SortOrder
     sentAt?: SortOrder
     metadata?: SortOrderInput | SortOrder
+    user?: UserOrderByWithRelationInput
   }
 
   export type CommunicationLogWhereUniqueInput = Prisma.AtLeast<{
@@ -25137,6 +26386,7 @@ export namespace Prisma {
     subject?: StringNullableFilter<"CommunicationLog"> | string | null
     sentAt?: DateTimeFilter<"CommunicationLog"> | Date | string
     metadata?: JsonNullableFilter<"CommunicationLog">
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
   }, "id">
 
   export type CommunicationLogOrderByWithAggregationInput = {
@@ -25161,6 +26411,73 @@ export namespace Prisma {
     subject?: StringNullableWithAggregatesFilter<"CommunicationLog"> | string | null
     sentAt?: DateTimeWithAggregatesFilter<"CommunicationLog"> | Date | string
     metadata?: JsonNullableWithAggregatesFilter<"CommunicationLog">
+  }
+
+  export type AdminAlertSettingsWhereInput = {
+    AND?: AdminAlertSettingsWhereInput | AdminAlertSettingsWhereInput[]
+    OR?: AdminAlertSettingsWhereInput[]
+    NOT?: AdminAlertSettingsWhereInput | AdminAlertSettingsWhereInput[]
+    id?: StringFilter<"AdminAlertSettings"> | string
+    email?: StringNullableFilter<"AdminAlertSettings"> | string | null
+    emails?: JsonNullableFilter<"AdminAlertSettings">
+    notifyDepositOver500?: BoolFilter<"AdminAlertSettings"> | boolean
+    notifyWithdrawOver500?: BoolFilter<"AdminAlertSettings"> | boolean
+    notifyNewAccount?: BoolFilter<"AdminAlertSettings"> | boolean
+    notifyKycReady?: BoolFilter<"AdminAlertSettings"> | boolean
+    updatedAt?: DateTimeFilter<"AdminAlertSettings"> | Date | string
+  }
+
+  export type AdminAlertSettingsOrderByWithRelationInput = {
+    id?: SortOrder
+    email?: SortOrderInput | SortOrder
+    emails?: SortOrderInput | SortOrder
+    notifyDepositOver500?: SortOrder
+    notifyWithdrawOver500?: SortOrder
+    notifyNewAccount?: SortOrder
+    notifyKycReady?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type AdminAlertSettingsWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: AdminAlertSettingsWhereInput | AdminAlertSettingsWhereInput[]
+    OR?: AdminAlertSettingsWhereInput[]
+    NOT?: AdminAlertSettingsWhereInput | AdminAlertSettingsWhereInput[]
+    email?: StringNullableFilter<"AdminAlertSettings"> | string | null
+    emails?: JsonNullableFilter<"AdminAlertSettings">
+    notifyDepositOver500?: BoolFilter<"AdminAlertSettings"> | boolean
+    notifyWithdrawOver500?: BoolFilter<"AdminAlertSettings"> | boolean
+    notifyNewAccount?: BoolFilter<"AdminAlertSettings"> | boolean
+    notifyKycReady?: BoolFilter<"AdminAlertSettings"> | boolean
+    updatedAt?: DateTimeFilter<"AdminAlertSettings"> | Date | string
+  }, "id">
+
+  export type AdminAlertSettingsOrderByWithAggregationInput = {
+    id?: SortOrder
+    email?: SortOrderInput | SortOrder
+    emails?: SortOrderInput | SortOrder
+    notifyDepositOver500?: SortOrder
+    notifyWithdrawOver500?: SortOrder
+    notifyNewAccount?: SortOrder
+    notifyKycReady?: SortOrder
+    updatedAt?: SortOrder
+    _count?: AdminAlertSettingsCountOrderByAggregateInput
+    _max?: AdminAlertSettingsMaxOrderByAggregateInput
+    _min?: AdminAlertSettingsMinOrderByAggregateInput
+  }
+
+  export type AdminAlertSettingsScalarWhereWithAggregatesInput = {
+    AND?: AdminAlertSettingsScalarWhereWithAggregatesInput | AdminAlertSettingsScalarWhereWithAggregatesInput[]
+    OR?: AdminAlertSettingsScalarWhereWithAggregatesInput[]
+    NOT?: AdminAlertSettingsScalarWhereWithAggregatesInput | AdminAlertSettingsScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"AdminAlertSettings"> | string
+    email?: StringNullableWithAggregatesFilter<"AdminAlertSettings"> | string | null
+    emails?: JsonNullableWithAggregatesFilter<"AdminAlertSettings">
+    notifyDepositOver500?: BoolWithAggregatesFilter<"AdminAlertSettings"> | boolean
+    notifyWithdrawOver500?: BoolWithAggregatesFilter<"AdminAlertSettings"> | boolean
+    notifyNewAccount?: BoolWithAggregatesFilter<"AdminAlertSettings"> | boolean
+    notifyKycReady?: BoolWithAggregatesFilter<"AdminAlertSettings"> | boolean
+    updatedAt?: DateTimeWithAggregatesFilter<"AdminAlertSettings"> | Date | string
   }
 
   export type UserCreateInput = {
@@ -25205,6 +26522,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalCreateNestedManyWithoutUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     notes?: UserNoteCreateNestedManyWithoutUserInput
+    communicationLogs?: CommunicationLogCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateInput = {
@@ -25249,6 +26567,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalUncheckedCreateNestedManyWithoutUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     notes?: UserNoteUncheckedCreateNestedManyWithoutUserInput
+    communicationLogs?: CommunicationLogUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserUpdateInput = {
@@ -25293,6 +26612,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalUpdateManyWithoutUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     notes?: UserNoteUpdateManyWithoutUserNestedInput
+    communicationLogs?: CommunicationLogUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateInput = {
@@ -25337,6 +26657,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalUncheckedUpdateManyWithoutUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     notes?: UserNoteUncheckedUpdateManyWithoutUserNestedInput
+    communicationLogs?: CommunicationLogUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type UserCreateManyInput = {
@@ -26997,11 +28318,11 @@ export namespace Prisma {
 
   export type CommunicationLogCreateInput = {
     id?: string
-    userId: string
     type: string
     subject?: string | null
     sentAt?: Date | string
     metadata?: NullableJsonNullValueInput | InputJsonValue
+    user: UserCreateNestedOneWithoutCommunicationLogsInput
   }
 
   export type CommunicationLogUncheckedCreateInput = {
@@ -27015,11 +28336,11 @@ export namespace Prisma {
 
   export type CommunicationLogUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
-    userId?: StringFieldUpdateOperationsInput | string
     type?: StringFieldUpdateOperationsInput | string
     subject?: NullableStringFieldUpdateOperationsInput | string | null
     sentAt?: DateTimeFieldUpdateOperationsInput | Date | string
     metadata?: NullableJsonNullValueInput | InputJsonValue
+    user?: UserUpdateOneRequiredWithoutCommunicationLogsNestedInput
   }
 
   export type CommunicationLogUncheckedUpdateInput = {
@@ -27042,7 +28363,6 @@ export namespace Prisma {
 
   export type CommunicationLogUpdateManyMutationInput = {
     id?: StringFieldUpdateOperationsInput | string
-    userId?: StringFieldUpdateOperationsInput | string
     type?: StringFieldUpdateOperationsInput | string
     subject?: NullableStringFieldUpdateOperationsInput | string | null
     sentAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -27056,6 +28376,83 @@ export namespace Prisma {
     subject?: NullableStringFieldUpdateOperationsInput | string | null
     sentAt?: DateTimeFieldUpdateOperationsInput | Date | string
     metadata?: NullableJsonNullValueInput | InputJsonValue
+  }
+
+  export type AdminAlertSettingsCreateInput = {
+    id?: string
+    email?: string | null
+    emails?: NullableJsonNullValueInput | InputJsonValue
+    notifyDepositOver500?: boolean
+    notifyWithdrawOver500?: boolean
+    notifyNewAccount?: boolean
+    notifyKycReady?: boolean
+    updatedAt?: Date | string
+  }
+
+  export type AdminAlertSettingsUncheckedCreateInput = {
+    id?: string
+    email?: string | null
+    emails?: NullableJsonNullValueInput | InputJsonValue
+    notifyDepositOver500?: boolean
+    notifyWithdrawOver500?: boolean
+    notifyNewAccount?: boolean
+    notifyKycReady?: boolean
+    updatedAt?: Date | string
+  }
+
+  export type AdminAlertSettingsUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    emails?: NullableJsonNullValueInput | InputJsonValue
+    notifyDepositOver500?: BoolFieldUpdateOperationsInput | boolean
+    notifyWithdrawOver500?: BoolFieldUpdateOperationsInput | boolean
+    notifyNewAccount?: BoolFieldUpdateOperationsInput | boolean
+    notifyKycReady?: BoolFieldUpdateOperationsInput | boolean
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type AdminAlertSettingsUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    emails?: NullableJsonNullValueInput | InputJsonValue
+    notifyDepositOver500?: BoolFieldUpdateOperationsInput | boolean
+    notifyWithdrawOver500?: BoolFieldUpdateOperationsInput | boolean
+    notifyNewAccount?: BoolFieldUpdateOperationsInput | boolean
+    notifyKycReady?: BoolFieldUpdateOperationsInput | boolean
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type AdminAlertSettingsCreateManyInput = {
+    id?: string
+    email?: string | null
+    emails?: NullableJsonNullValueInput | InputJsonValue
+    notifyDepositOver500?: boolean
+    notifyWithdrawOver500?: boolean
+    notifyNewAccount?: boolean
+    notifyKycReady?: boolean
+    updatedAt?: Date | string
+  }
+
+  export type AdminAlertSettingsUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    emails?: NullableJsonNullValueInput | InputJsonValue
+    notifyDepositOver500?: BoolFieldUpdateOperationsInput | boolean
+    notifyWithdrawOver500?: BoolFieldUpdateOperationsInput | boolean
+    notifyNewAccount?: BoolFieldUpdateOperationsInput | boolean
+    notifyKycReady?: BoolFieldUpdateOperationsInput | boolean
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type AdminAlertSettingsUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    emails?: NullableJsonNullValueInput | InputJsonValue
+    notifyDepositOver500?: BoolFieldUpdateOperationsInput | boolean
+    notifyWithdrawOver500?: BoolFieldUpdateOperationsInput | boolean
+    notifyNewAccount?: BoolFieldUpdateOperationsInput | boolean
+    notifyKycReady?: BoolFieldUpdateOperationsInput | boolean
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type StringFilter<$PrismaModel = never> = {
@@ -27233,6 +28630,12 @@ export namespace Prisma {
     none?: UserNoteWhereInput
   }
 
+  export type CommunicationLogListRelationFilter = {
+    every?: CommunicationLogWhereInput
+    some?: CommunicationLogWhereInput
+    none?: CommunicationLogWhereInput
+  }
+
   export type SortOrderInput = {
     sort: SortOrder
     nulls?: NullsOrder
@@ -27279,6 +28682,10 @@ export namespace Prisma {
   }
 
   export type UserNoteOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type CommunicationLogOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -28607,6 +30014,37 @@ export namespace Prisma {
     sentAt?: SortOrder
   }
 
+  export type AdminAlertSettingsCountOrderByAggregateInput = {
+    id?: SortOrder
+    email?: SortOrder
+    emails?: SortOrder
+    notifyDepositOver500?: SortOrder
+    notifyWithdrawOver500?: SortOrder
+    notifyNewAccount?: SortOrder
+    notifyKycReady?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type AdminAlertSettingsMaxOrderByAggregateInput = {
+    id?: SortOrder
+    email?: SortOrder
+    notifyDepositOver500?: SortOrder
+    notifyWithdrawOver500?: SortOrder
+    notifyNewAccount?: SortOrder
+    notifyKycReady?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type AdminAlertSettingsMinOrderByAggregateInput = {
+    id?: SortOrder
+    email?: SortOrder
+    notifyDepositOver500?: SortOrder
+    notifyWithdrawOver500?: SortOrder
+    notifyNewAccount?: SortOrder
+    notifyKycReady?: SortOrder
+    updatedAt?: SortOrder
+  }
+
   export type UserCreatetwoFactorBackupCodesInput = {
     set: string[]
   }
@@ -28695,6 +30133,13 @@ export namespace Prisma {
     connect?: UserNoteWhereUniqueInput | UserNoteWhereUniqueInput[]
   }
 
+  export type CommunicationLogCreateNestedManyWithoutUserInput = {
+    create?: XOR<CommunicationLogCreateWithoutUserInput, CommunicationLogUncheckedCreateWithoutUserInput> | CommunicationLogCreateWithoutUserInput[] | CommunicationLogUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: CommunicationLogCreateOrConnectWithoutUserInput | CommunicationLogCreateOrConnectWithoutUserInput[]
+    createMany?: CommunicationLogCreateManyUserInputEnvelope
+    connect?: CommunicationLogWhereUniqueInput | CommunicationLogWhereUniqueInput[]
+  }
+
   export type AccountUncheckedCreateNestedManyWithoutUserInput = {
     create?: XOR<AccountCreateWithoutUserInput, AccountUncheckedCreateWithoutUserInput> | AccountCreateWithoutUserInput[] | AccountUncheckedCreateWithoutUserInput[]
     connectOrCreate?: AccountCreateOrConnectWithoutUserInput | AccountCreateOrConnectWithoutUserInput[]
@@ -28777,6 +30222,13 @@ export namespace Prisma {
     connectOrCreate?: UserNoteCreateOrConnectWithoutUserInput | UserNoteCreateOrConnectWithoutUserInput[]
     createMany?: UserNoteCreateManyUserInputEnvelope
     connect?: UserNoteWhereUniqueInput | UserNoteWhereUniqueInput[]
+  }
+
+  export type CommunicationLogUncheckedCreateNestedManyWithoutUserInput = {
+    create?: XOR<CommunicationLogCreateWithoutUserInput, CommunicationLogUncheckedCreateWithoutUserInput> | CommunicationLogCreateWithoutUserInput[] | CommunicationLogUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: CommunicationLogCreateOrConnectWithoutUserInput | CommunicationLogCreateOrConnectWithoutUserInput[]
+    createMany?: CommunicationLogCreateManyUserInputEnvelope
+    connect?: CommunicationLogWhereUniqueInput | CommunicationLogWhereUniqueInput[]
   }
 
   export type StringFieldUpdateOperationsInput = {
@@ -28984,6 +30436,20 @@ export namespace Prisma {
     deleteMany?: UserNoteScalarWhereInput | UserNoteScalarWhereInput[]
   }
 
+  export type CommunicationLogUpdateManyWithoutUserNestedInput = {
+    create?: XOR<CommunicationLogCreateWithoutUserInput, CommunicationLogUncheckedCreateWithoutUserInput> | CommunicationLogCreateWithoutUserInput[] | CommunicationLogUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: CommunicationLogCreateOrConnectWithoutUserInput | CommunicationLogCreateOrConnectWithoutUserInput[]
+    upsert?: CommunicationLogUpsertWithWhereUniqueWithoutUserInput | CommunicationLogUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: CommunicationLogCreateManyUserInputEnvelope
+    set?: CommunicationLogWhereUniqueInput | CommunicationLogWhereUniqueInput[]
+    disconnect?: CommunicationLogWhereUniqueInput | CommunicationLogWhereUniqueInput[]
+    delete?: CommunicationLogWhereUniqueInput | CommunicationLogWhereUniqueInput[]
+    connect?: CommunicationLogWhereUniqueInput | CommunicationLogWhereUniqueInput[]
+    update?: CommunicationLogUpdateWithWhereUniqueWithoutUserInput | CommunicationLogUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: CommunicationLogUpdateManyWithWhereWithoutUserInput | CommunicationLogUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: CommunicationLogScalarWhereInput | CommunicationLogScalarWhereInput[]
+  }
+
   export type AccountUncheckedUpdateManyWithoutUserNestedInput = {
     create?: XOR<AccountCreateWithoutUserInput, AccountUncheckedCreateWithoutUserInput> | AccountCreateWithoutUserInput[] | AccountUncheckedCreateWithoutUserInput[]
     connectOrCreate?: AccountCreateOrConnectWithoutUserInput | AccountCreateOrConnectWithoutUserInput[]
@@ -29150,6 +30616,20 @@ export namespace Prisma {
     update?: UserNoteUpdateWithWhereUniqueWithoutUserInput | UserNoteUpdateWithWhereUniqueWithoutUserInput[]
     updateMany?: UserNoteUpdateManyWithWhereWithoutUserInput | UserNoteUpdateManyWithWhereWithoutUserInput[]
     deleteMany?: UserNoteScalarWhereInput | UserNoteScalarWhereInput[]
+  }
+
+  export type CommunicationLogUncheckedUpdateManyWithoutUserNestedInput = {
+    create?: XOR<CommunicationLogCreateWithoutUserInput, CommunicationLogUncheckedCreateWithoutUserInput> | CommunicationLogCreateWithoutUserInput[] | CommunicationLogUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: CommunicationLogCreateOrConnectWithoutUserInput | CommunicationLogCreateOrConnectWithoutUserInput[]
+    upsert?: CommunicationLogUpsertWithWhereUniqueWithoutUserInput | CommunicationLogUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: CommunicationLogCreateManyUserInputEnvelope
+    set?: CommunicationLogWhereUniqueInput | CommunicationLogWhereUniqueInput[]
+    disconnect?: CommunicationLogWhereUniqueInput | CommunicationLogWhereUniqueInput[]
+    delete?: CommunicationLogWhereUniqueInput | CommunicationLogWhereUniqueInput[]
+    connect?: CommunicationLogWhereUniqueInput | CommunicationLogWhereUniqueInput[]
+    update?: CommunicationLogUpdateWithWhereUniqueWithoutUserInput | CommunicationLogUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: CommunicationLogUpdateManyWithWhereWithoutUserInput | CommunicationLogUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: CommunicationLogScalarWhereInput | CommunicationLogScalarWhereInput[]
   }
 
   export type UserCreateNestedOneWithoutSessionsInput = {
@@ -29678,6 +31158,20 @@ export namespace Prisma {
     upsert?: UserUpsertWithoutNotesInput
     connect?: UserWhereUniqueInput
     update?: XOR<XOR<UserUpdateToOneWithWhereWithoutNotesInput, UserUpdateWithoutNotesInput>, UserUncheckedUpdateWithoutNotesInput>
+  }
+
+  export type UserCreateNestedOneWithoutCommunicationLogsInput = {
+    create?: XOR<UserCreateWithoutCommunicationLogsInput, UserUncheckedCreateWithoutCommunicationLogsInput>
+    connectOrCreate?: UserCreateOrConnectWithoutCommunicationLogsInput
+    connect?: UserWhereUniqueInput
+  }
+
+  export type UserUpdateOneRequiredWithoutCommunicationLogsNestedInput = {
+    create?: XOR<UserCreateWithoutCommunicationLogsInput, UserUncheckedCreateWithoutCommunicationLogsInput>
+    connectOrCreate?: UserCreateOrConnectWithoutCommunicationLogsInput
+    upsert?: UserUpsertWithoutCommunicationLogsInput
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutCommunicationLogsInput, UserUpdateWithoutCommunicationLogsInput>, UserUncheckedUpdateWithoutCommunicationLogsInput>
   }
 
   export type NestedStringFilter<$PrismaModel = never> = {
@@ -30651,6 +32145,32 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
+  export type CommunicationLogCreateWithoutUserInput = {
+    id?: string
+    type: string
+    subject?: string | null
+    sentAt?: Date | string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+  }
+
+  export type CommunicationLogUncheckedCreateWithoutUserInput = {
+    id?: string
+    type: string
+    subject?: string | null
+    sentAt?: Date | string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+  }
+
+  export type CommunicationLogCreateOrConnectWithoutUserInput = {
+    where: CommunicationLogWhereUniqueInput
+    create: XOR<CommunicationLogCreateWithoutUserInput, CommunicationLogUncheckedCreateWithoutUserInput>
+  }
+
+  export type CommunicationLogCreateManyUserInputEnvelope = {
+    data: CommunicationLogCreateManyUserInput | CommunicationLogCreateManyUserInput[]
+    skipDuplicates?: boolean
+  }
+
   export type AccountUpsertWithWhereUniqueWithoutUserInput = {
     where: AccountWhereUniqueInput
     update: XOR<AccountUpdateWithoutUserInput, AccountUncheckedUpdateWithoutUserInput>
@@ -31043,6 +32563,34 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"UserNote"> | Date | string
   }
 
+  export type CommunicationLogUpsertWithWhereUniqueWithoutUserInput = {
+    where: CommunicationLogWhereUniqueInput
+    update: XOR<CommunicationLogUpdateWithoutUserInput, CommunicationLogUncheckedUpdateWithoutUserInput>
+    create: XOR<CommunicationLogCreateWithoutUserInput, CommunicationLogUncheckedCreateWithoutUserInput>
+  }
+
+  export type CommunicationLogUpdateWithWhereUniqueWithoutUserInput = {
+    where: CommunicationLogWhereUniqueInput
+    data: XOR<CommunicationLogUpdateWithoutUserInput, CommunicationLogUncheckedUpdateWithoutUserInput>
+  }
+
+  export type CommunicationLogUpdateManyWithWhereWithoutUserInput = {
+    where: CommunicationLogScalarWhereInput
+    data: XOR<CommunicationLogUpdateManyMutationInput, CommunicationLogUncheckedUpdateManyWithoutUserInput>
+  }
+
+  export type CommunicationLogScalarWhereInput = {
+    AND?: CommunicationLogScalarWhereInput | CommunicationLogScalarWhereInput[]
+    OR?: CommunicationLogScalarWhereInput[]
+    NOT?: CommunicationLogScalarWhereInput | CommunicationLogScalarWhereInput[]
+    id?: StringFilter<"CommunicationLog"> | string
+    userId?: StringFilter<"CommunicationLog"> | string
+    type?: StringFilter<"CommunicationLog"> | string
+    subject?: StringNullableFilter<"CommunicationLog"> | string | null
+    sentAt?: DateTimeFilter<"CommunicationLog"> | Date | string
+    metadata?: JsonNullableFilter<"CommunicationLog">
+  }
+
   export type UserCreateWithoutSessionsInput = {
     id: string
     name: string
@@ -31084,6 +32632,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalCreateNestedManyWithoutUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     notes?: UserNoteCreateNestedManyWithoutUserInput
+    communicationLogs?: CommunicationLogCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutSessionsInput = {
@@ -31127,6 +32676,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalUncheckedCreateNestedManyWithoutUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     notes?: UserNoteUncheckedCreateNestedManyWithoutUserInput
+    communicationLogs?: CommunicationLogUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutSessionsInput = {
@@ -31186,6 +32736,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalUpdateManyWithoutUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     notes?: UserNoteUpdateManyWithoutUserNestedInput
+    communicationLogs?: CommunicationLogUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutSessionsInput = {
@@ -31229,6 +32780,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalUncheckedUpdateManyWithoutUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     notes?: UserNoteUncheckedUpdateManyWithoutUserNestedInput
+    communicationLogs?: CommunicationLogUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type UserCreateWithoutAccountsInput = {
@@ -31272,6 +32824,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalCreateNestedManyWithoutUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     notes?: UserNoteCreateNestedManyWithoutUserInput
+    communicationLogs?: CommunicationLogCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutAccountsInput = {
@@ -31315,6 +32868,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalUncheckedCreateNestedManyWithoutUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     notes?: UserNoteUncheckedCreateNestedManyWithoutUserInput
+    communicationLogs?: CommunicationLogUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutAccountsInput = {
@@ -31374,6 +32928,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalUpdateManyWithoutUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     notes?: UserNoteUpdateManyWithoutUserNestedInput
+    communicationLogs?: CommunicationLogUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutAccountsInput = {
@@ -31417,6 +32972,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalUncheckedUpdateManyWithoutUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     notes?: UserNoteUncheckedUpdateManyWithoutUserNestedInput
+    communicationLogs?: CommunicationLogUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type UserCreateWithoutBalancesInput = {
@@ -31460,6 +33016,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalCreateNestedManyWithoutUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     notes?: UserNoteCreateNestedManyWithoutUserInput
+    communicationLogs?: CommunicationLogCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutBalancesInput = {
@@ -31503,6 +33060,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalUncheckedCreateNestedManyWithoutUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     notes?: UserNoteUncheckedCreateNestedManyWithoutUserInput
+    communicationLogs?: CommunicationLogUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutBalancesInput = {
@@ -31562,6 +33120,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalUpdateManyWithoutUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     notes?: UserNoteUpdateManyWithoutUserNestedInput
+    communicationLogs?: CommunicationLogUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutBalancesInput = {
@@ -31605,6 +33164,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalUncheckedUpdateManyWithoutUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     notes?: UserNoteUncheckedUpdateManyWithoutUserNestedInput
+    communicationLogs?: CommunicationLogUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type TransactionCreateWithoutDepositInput = {
@@ -31685,6 +33245,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalCreateNestedManyWithoutUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     notes?: UserNoteCreateNestedManyWithoutUserInput
+    communicationLogs?: CommunicationLogCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutDepositsInput = {
@@ -31728,6 +33289,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalUncheckedCreateNestedManyWithoutUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     notes?: UserNoteUncheckedCreateNestedManyWithoutUserInput
+    communicationLogs?: CommunicationLogUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutDepositsInput = {
@@ -31830,6 +33392,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalUpdateManyWithoutUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     notes?: UserNoteUpdateManyWithoutUserNestedInput
+    communicationLogs?: CommunicationLogUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutDepositsInput = {
@@ -31873,6 +33436,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalUncheckedUpdateManyWithoutUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     notes?: UserNoteUncheckedUpdateManyWithoutUserNestedInput
+    communicationLogs?: CommunicationLogUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type TransactionCreateWithoutWithdrawalInput = {
@@ -31953,6 +33517,7 @@ export namespace Prisma {
     transactions?: TransactionCreateNestedManyWithoutUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     notes?: UserNoteCreateNestedManyWithoutUserInput
+    communicationLogs?: CommunicationLogCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutWithdrawalsInput = {
@@ -31996,6 +33561,7 @@ export namespace Prisma {
     transactions?: TransactionUncheckedCreateNestedManyWithoutUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     notes?: UserNoteUncheckedCreateNestedManyWithoutUserInput
+    communicationLogs?: CommunicationLogUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutWithdrawalsInput = {
@@ -32098,6 +33664,7 @@ export namespace Prisma {
     transactions?: TransactionUpdateManyWithoutUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     notes?: UserNoteUpdateManyWithoutUserNestedInput
+    communicationLogs?: CommunicationLogUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutWithdrawalsInput = {
@@ -32141,6 +33708,7 @@ export namespace Prisma {
     transactions?: TransactionUncheckedUpdateManyWithoutUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     notes?: UserNoteUncheckedUpdateManyWithoutUserNestedInput
+    communicationLogs?: CommunicationLogUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type TransactionCreateWithoutOrderInput = {
@@ -32221,6 +33789,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalCreateNestedManyWithoutUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     notes?: UserNoteCreateNestedManyWithoutUserInput
+    communicationLogs?: CommunicationLogCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutOrdersInput = {
@@ -32264,6 +33833,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalUncheckedCreateNestedManyWithoutUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     notes?: UserNoteUncheckedCreateNestedManyWithoutUserInput
+    communicationLogs?: CommunicationLogUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutOrdersInput = {
@@ -32366,6 +33936,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalUpdateManyWithoutUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     notes?: UserNoteUpdateManyWithoutUserNestedInput
+    communicationLogs?: CommunicationLogUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutOrdersInput = {
@@ -32409,6 +33980,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalUncheckedUpdateManyWithoutUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     notes?: UserNoteUncheckedUpdateManyWithoutUserNestedInput
+    communicationLogs?: CommunicationLogUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type UserCreateWithoutP2pOffersInput = {
@@ -32452,6 +34024,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalCreateNestedManyWithoutUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     notes?: UserNoteCreateNestedManyWithoutUserInput
+    communicationLogs?: CommunicationLogCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutP2pOffersInput = {
@@ -32495,6 +34068,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalUncheckedCreateNestedManyWithoutUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     notes?: UserNoteUncheckedCreateNestedManyWithoutUserInput
+    communicationLogs?: CommunicationLogUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutP2pOffersInput = {
@@ -32600,6 +34174,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalUpdateManyWithoutUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     notes?: UserNoteUpdateManyWithoutUserNestedInput
+    communicationLogs?: CommunicationLogUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutP2pOffersInput = {
@@ -32643,6 +34218,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalUncheckedUpdateManyWithoutUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     notes?: UserNoteUncheckedUpdateManyWithoutUserNestedInput
+    communicationLogs?: CommunicationLogUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type P2PTradeUpsertWithWhereUniqueWithoutOfferInput = {
@@ -32702,6 +34278,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalCreateNestedManyWithoutUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     notes?: UserNoteCreateNestedManyWithoutUserInput
+    communicationLogs?: CommunicationLogCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutBuyerTradesInput = {
@@ -32745,6 +34322,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalUncheckedCreateNestedManyWithoutUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     notes?: UserNoteUncheckedCreateNestedManyWithoutUserInput
+    communicationLogs?: CommunicationLogUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutBuyerTradesInput = {
@@ -32871,6 +34449,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalCreateNestedManyWithoutUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     notes?: UserNoteCreateNestedManyWithoutUserInput
+    communicationLogs?: CommunicationLogCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutSellerTradesInput = {
@@ -32914,6 +34493,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalUncheckedCreateNestedManyWithoutUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     notes?: UserNoteUncheckedCreateNestedManyWithoutUserInput
+    communicationLogs?: CommunicationLogUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutSellerTradesInput = {
@@ -33010,6 +34590,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalUpdateManyWithoutUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     notes?: UserNoteUpdateManyWithoutUserNestedInput
+    communicationLogs?: CommunicationLogUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutBuyerTradesInput = {
@@ -33053,6 +34634,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalUncheckedUpdateManyWithoutUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     notes?: UserNoteUncheckedUpdateManyWithoutUserNestedInput
+    communicationLogs?: CommunicationLogUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type TransactionUpsertWithoutBuyerTradeInput = {
@@ -33197,6 +34779,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalUpdateManyWithoutUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     notes?: UserNoteUpdateManyWithoutUserNestedInput
+    communicationLogs?: CommunicationLogUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutSellerTradesInput = {
@@ -33240,6 +34823,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalUncheckedUpdateManyWithoutUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     notes?: UserNoteUncheckedUpdateManyWithoutUserNestedInput
+    communicationLogs?: CommunicationLogUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type TransactionUpsertWithoutSellerTradeInput = {
@@ -33490,6 +35074,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalCreateNestedManyWithoutUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
     notes?: UserNoteCreateNestedManyWithoutUserInput
+    communicationLogs?: CommunicationLogCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutTransactionsInput = {
@@ -33533,6 +35118,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalUncheckedCreateNestedManyWithoutUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
     notes?: UserNoteUncheckedCreateNestedManyWithoutUserInput
+    communicationLogs?: CommunicationLogUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutTransactionsInput = {
@@ -33829,6 +35415,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalUpdateManyWithoutUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
     notes?: UserNoteUpdateManyWithoutUserNestedInput
+    communicationLogs?: CommunicationLogUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutTransactionsInput = {
@@ -33872,6 +35459,7 @@ export namespace Prisma {
     withdrawals?: WithdrawalUncheckedUpdateManyWithoutUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
     notes?: UserNoteUncheckedUpdateManyWithoutUserNestedInput
+    communicationLogs?: CommunicationLogUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type WithdrawalUpsertWithoutTransactionInput = {
@@ -33970,6 +35558,7 @@ export namespace Prisma {
     transactions?: TransactionCreateNestedManyWithoutUserInput
     withdrawals?: WithdrawalCreateNestedManyWithoutUserInput
     notes?: UserNoteCreateNestedManyWithoutUserInput
+    communicationLogs?: CommunicationLogCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutNotificationsInput = {
@@ -34013,6 +35602,7 @@ export namespace Prisma {
     transactions?: TransactionUncheckedCreateNestedManyWithoutUserInput
     withdrawals?: WithdrawalUncheckedCreateNestedManyWithoutUserInput
     notes?: UserNoteUncheckedCreateNestedManyWithoutUserInput
+    communicationLogs?: CommunicationLogUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutNotificationsInput = {
@@ -34072,6 +35662,7 @@ export namespace Prisma {
     transactions?: TransactionUpdateManyWithoutUserNestedInput
     withdrawals?: WithdrawalUpdateManyWithoutUserNestedInput
     notes?: UserNoteUpdateManyWithoutUserNestedInput
+    communicationLogs?: CommunicationLogUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutNotificationsInput = {
@@ -34115,6 +35706,7 @@ export namespace Prisma {
     transactions?: TransactionUncheckedUpdateManyWithoutUserNestedInput
     withdrawals?: WithdrawalUncheckedUpdateManyWithoutUserNestedInput
     notes?: UserNoteUncheckedUpdateManyWithoutUserNestedInput
+    communicationLogs?: CommunicationLogUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type UserCreateWithoutNotesInput = {
@@ -34158,6 +35750,7 @@ export namespace Prisma {
     transactions?: TransactionCreateNestedManyWithoutUserInput
     withdrawals?: WithdrawalCreateNestedManyWithoutUserInput
     notifications?: NotificationCreateNestedManyWithoutUserInput
+    communicationLogs?: CommunicationLogCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutNotesInput = {
@@ -34201,6 +35794,7 @@ export namespace Prisma {
     transactions?: TransactionUncheckedCreateNestedManyWithoutUserInput
     withdrawals?: WithdrawalUncheckedCreateNestedManyWithoutUserInput
     notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
+    communicationLogs?: CommunicationLogUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutNotesInput = {
@@ -34260,6 +35854,7 @@ export namespace Prisma {
     transactions?: TransactionUpdateManyWithoutUserNestedInput
     withdrawals?: WithdrawalUpdateManyWithoutUserNestedInput
     notifications?: NotificationUpdateManyWithoutUserNestedInput
+    communicationLogs?: CommunicationLogUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutNotesInput = {
@@ -34303,6 +35898,199 @@ export namespace Prisma {
     transactions?: TransactionUncheckedUpdateManyWithoutUserNestedInput
     withdrawals?: WithdrawalUncheckedUpdateManyWithoutUserNestedInput
     notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
+    communicationLogs?: CommunicationLogUncheckedUpdateManyWithoutUserNestedInput
+  }
+
+  export type UserCreateWithoutCommunicationLogsInput = {
+    id: string
+    name: string
+    email: string
+    cpf?: string | null
+    phone?: string | null
+    password?: string | null
+    emailVerified?: boolean
+    phoneVerified?: boolean
+    approvalStatus?: $Enums.ApprovalStatus
+    image?: string | null
+    kycStatus?: $Enums.KYCStatus
+    kycData?: NullableJsonNullValueInput | InputJsonValue
+    documentType?: $Enums.DocumentType | null
+    documentNumber?: string | null
+    documentFront?: string | null
+    documentBack?: string | null
+    documentSelfie?: string | null
+    contratoSocial?: string | null
+    cartaoCNPJ?: string | null
+    cnhSocioControlado?: string | null
+    kycSubmittedAt?: Date | string | null
+    kycReviewedAt?: Date | string | null
+    kycRejectionReason?: string | null
+    adminNotificationLastSeenAt?: Date | string | null
+    twoFactorEnabled?: boolean
+    twoFactorSecret?: string | null
+    twoFactorBackupCodes?: UserCreatetwoFactorBackupCodesInput | string[]
+    createdAt: Date | string
+    updatedAt: Date | string
+    accounts?: AccountCreateNestedManyWithoutUserInput
+    balances?: BalanceCreateNestedManyWithoutUserInput
+    deposits?: DepositCreateNestedManyWithoutUserInput
+    orders?: OrderCreateNestedManyWithoutUserInput
+    p2pOffers?: P2POfferCreateNestedManyWithoutUserInput
+    buyerTrades?: P2PTradeCreateNestedManyWithoutBuyerInput
+    sellerTrades?: P2PTradeCreateNestedManyWithoutSellerInput
+    sessions?: SessionCreateNestedManyWithoutUserInput
+    transactions?: TransactionCreateNestedManyWithoutUserInput
+    withdrawals?: WithdrawalCreateNestedManyWithoutUserInput
+    notifications?: NotificationCreateNestedManyWithoutUserInput
+    notes?: UserNoteCreateNestedManyWithoutUserInput
+  }
+
+  export type UserUncheckedCreateWithoutCommunicationLogsInput = {
+    id: string
+    name: string
+    email: string
+    cpf?: string | null
+    phone?: string | null
+    password?: string | null
+    emailVerified?: boolean
+    phoneVerified?: boolean
+    approvalStatus?: $Enums.ApprovalStatus
+    image?: string | null
+    kycStatus?: $Enums.KYCStatus
+    kycData?: NullableJsonNullValueInput | InputJsonValue
+    documentType?: $Enums.DocumentType | null
+    documentNumber?: string | null
+    documentFront?: string | null
+    documentBack?: string | null
+    documentSelfie?: string | null
+    contratoSocial?: string | null
+    cartaoCNPJ?: string | null
+    cnhSocioControlado?: string | null
+    kycSubmittedAt?: Date | string | null
+    kycReviewedAt?: Date | string | null
+    kycRejectionReason?: string | null
+    adminNotificationLastSeenAt?: Date | string | null
+    twoFactorEnabled?: boolean
+    twoFactorSecret?: string | null
+    twoFactorBackupCodes?: UserCreatetwoFactorBackupCodesInput | string[]
+    createdAt: Date | string
+    updatedAt: Date | string
+    accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
+    balances?: BalanceUncheckedCreateNestedManyWithoutUserInput
+    deposits?: DepositUncheckedCreateNestedManyWithoutUserInput
+    orders?: OrderUncheckedCreateNestedManyWithoutUserInput
+    p2pOffers?: P2POfferUncheckedCreateNestedManyWithoutUserInput
+    buyerTrades?: P2PTradeUncheckedCreateNestedManyWithoutBuyerInput
+    sellerTrades?: P2PTradeUncheckedCreateNestedManyWithoutSellerInput
+    sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
+    transactions?: TransactionUncheckedCreateNestedManyWithoutUserInput
+    withdrawals?: WithdrawalUncheckedCreateNestedManyWithoutUserInput
+    notifications?: NotificationUncheckedCreateNestedManyWithoutUserInput
+    notes?: UserNoteUncheckedCreateNestedManyWithoutUserInput
+  }
+
+  export type UserCreateOrConnectWithoutCommunicationLogsInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutCommunicationLogsInput, UserUncheckedCreateWithoutCommunicationLogsInput>
+  }
+
+  export type UserUpsertWithoutCommunicationLogsInput = {
+    update: XOR<UserUpdateWithoutCommunicationLogsInput, UserUncheckedUpdateWithoutCommunicationLogsInput>
+    create: XOR<UserCreateWithoutCommunicationLogsInput, UserUncheckedCreateWithoutCommunicationLogsInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutCommunicationLogsInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutCommunicationLogsInput, UserUncheckedUpdateWithoutCommunicationLogsInput>
+  }
+
+  export type UserUpdateWithoutCommunicationLogsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    cpf?: NullableStringFieldUpdateOperationsInput | string | null
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    password?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerified?: BoolFieldUpdateOperationsInput | boolean
+    phoneVerified?: BoolFieldUpdateOperationsInput | boolean
+    approvalStatus?: EnumApprovalStatusFieldUpdateOperationsInput | $Enums.ApprovalStatus
+    image?: NullableStringFieldUpdateOperationsInput | string | null
+    kycStatus?: EnumKYCStatusFieldUpdateOperationsInput | $Enums.KYCStatus
+    kycData?: NullableJsonNullValueInput | InputJsonValue
+    documentType?: NullableEnumDocumentTypeFieldUpdateOperationsInput | $Enums.DocumentType | null
+    documentNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    documentFront?: NullableStringFieldUpdateOperationsInput | string | null
+    documentBack?: NullableStringFieldUpdateOperationsInput | string | null
+    documentSelfie?: NullableStringFieldUpdateOperationsInput | string | null
+    contratoSocial?: NullableStringFieldUpdateOperationsInput | string | null
+    cartaoCNPJ?: NullableStringFieldUpdateOperationsInput | string | null
+    cnhSocioControlado?: NullableStringFieldUpdateOperationsInput | string | null
+    kycSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    kycReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    kycRejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
+    adminNotificationLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    twoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
+    twoFactorSecret?: NullableStringFieldUpdateOperationsInput | string | null
+    twoFactorBackupCodes?: UserUpdatetwoFactorBackupCodesInput | string[]
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    accounts?: AccountUpdateManyWithoutUserNestedInput
+    balances?: BalanceUpdateManyWithoutUserNestedInput
+    deposits?: DepositUpdateManyWithoutUserNestedInput
+    orders?: OrderUpdateManyWithoutUserNestedInput
+    p2pOffers?: P2POfferUpdateManyWithoutUserNestedInput
+    buyerTrades?: P2PTradeUpdateManyWithoutBuyerNestedInput
+    sellerTrades?: P2PTradeUpdateManyWithoutSellerNestedInput
+    sessions?: SessionUpdateManyWithoutUserNestedInput
+    transactions?: TransactionUpdateManyWithoutUserNestedInput
+    withdrawals?: WithdrawalUpdateManyWithoutUserNestedInput
+    notifications?: NotificationUpdateManyWithoutUserNestedInput
+    notes?: UserNoteUpdateManyWithoutUserNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutCommunicationLogsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    cpf?: NullableStringFieldUpdateOperationsInput | string | null
+    phone?: NullableStringFieldUpdateOperationsInput | string | null
+    password?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerified?: BoolFieldUpdateOperationsInput | boolean
+    phoneVerified?: BoolFieldUpdateOperationsInput | boolean
+    approvalStatus?: EnumApprovalStatusFieldUpdateOperationsInput | $Enums.ApprovalStatus
+    image?: NullableStringFieldUpdateOperationsInput | string | null
+    kycStatus?: EnumKYCStatusFieldUpdateOperationsInput | $Enums.KYCStatus
+    kycData?: NullableJsonNullValueInput | InputJsonValue
+    documentType?: NullableEnumDocumentTypeFieldUpdateOperationsInput | $Enums.DocumentType | null
+    documentNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    documentFront?: NullableStringFieldUpdateOperationsInput | string | null
+    documentBack?: NullableStringFieldUpdateOperationsInput | string | null
+    documentSelfie?: NullableStringFieldUpdateOperationsInput | string | null
+    contratoSocial?: NullableStringFieldUpdateOperationsInput | string | null
+    cartaoCNPJ?: NullableStringFieldUpdateOperationsInput | string | null
+    cnhSocioControlado?: NullableStringFieldUpdateOperationsInput | string | null
+    kycSubmittedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    kycReviewedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    kycRejectionReason?: NullableStringFieldUpdateOperationsInput | string | null
+    adminNotificationLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    twoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
+    twoFactorSecret?: NullableStringFieldUpdateOperationsInput | string | null
+    twoFactorBackupCodes?: UserUpdatetwoFactorBackupCodesInput | string[]
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
+    balances?: BalanceUncheckedUpdateManyWithoutUserNestedInput
+    deposits?: DepositUncheckedUpdateManyWithoutUserNestedInput
+    orders?: OrderUncheckedUpdateManyWithoutUserNestedInput
+    p2pOffers?: P2POfferUncheckedUpdateManyWithoutUserNestedInput
+    buyerTrades?: P2PTradeUncheckedUpdateManyWithoutBuyerNestedInput
+    sellerTrades?: P2PTradeUncheckedUpdateManyWithoutSellerNestedInput
+    sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
+    transactions?: TransactionUncheckedUpdateManyWithoutUserNestedInput
+    withdrawals?: WithdrawalUncheckedUpdateManyWithoutUserNestedInput
+    notifications?: NotificationUncheckedUpdateManyWithoutUserNestedInput
+    notes?: UserNoteUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type AccountCreateManyUserInput = {
@@ -34477,6 +36265,14 @@ export namespace Prisma {
     adminId: string
     note: string
     createdAt?: Date | string
+  }
+
+  export type CommunicationLogCreateManyUserInput = {
+    id?: string
+    type: string
+    subject?: string | null
+    sentAt?: Date | string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
   }
 
   export type AccountUpdateWithoutUserInput = {
@@ -35011,6 +36807,30 @@ export namespace Prisma {
     adminId?: StringFieldUpdateOperationsInput | string
     note?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CommunicationLogUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    type?: StringFieldUpdateOperationsInput | string
+    subject?: NullableStringFieldUpdateOperationsInput | string | null
+    sentAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+  }
+
+  export type CommunicationLogUncheckedUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    type?: StringFieldUpdateOperationsInput | string
+    subject?: NullableStringFieldUpdateOperationsInput | string | null
+    sentAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+  }
+
+  export type CommunicationLogUncheckedUpdateManyWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    type?: StringFieldUpdateOperationsInput | string
+    subject?: NullableStringFieldUpdateOperationsInput | string | null
+    sentAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    metadata?: NullableJsonNullValueInput | InputJsonValue
   }
 
   export type P2PTradeCreateManyOfferInput = {

@@ -3,6 +3,10 @@ import prisma from "@/lib/prisma";
 import { nutzPayService } from "@/lib/nutzpay";
 import { sendWithdrawalReceipt } from "@/lib/receipt-email";
 import { getMoneyControls } from "@/lib/money-controls";
+import {
+  getAdminAlertSettings,
+  sendAdminAlertToAll,
+} from "@/lib/admin-alert-email";
 
 export async function POST(request: NextRequest) {
   try {
@@ -156,6 +160,21 @@ export async function POST(request: NextRequest) {
         },
         { status: 400 }
       );
+    }
+
+    // Notify admin email on withdrawal attempts over 500 USDT (non-blocking)
+    if (amount > 500) {
+      getAdminAlertSettings()
+        .then((settings) => {
+          if (settings.notifyWithdrawOver500 && settings.emails?.length) {
+            return sendAdminAlertToAll(
+              settings,
+              `Withdrawal attempt over 500 USDT: ${amount.toFixed(2)} USDT`,
+              `User ${user.email} (${user.name}) requested a withdrawal of ${amount.toFixed(2)} USDT to ${network} ${walletAddress}.`
+            );
+          }
+        })
+        .catch((err) => console.error("Admin withdrawal alert:", err));
     }
 
     // Generate external ID for NutzPay

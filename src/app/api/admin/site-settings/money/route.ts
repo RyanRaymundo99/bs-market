@@ -112,8 +112,8 @@ export async function PATCH(request: NextRequest) {
         maintenanceStartAt: moneyControls.maintenanceStartAt?.toISOString() ?? null,
         maintenanceEndAt: moneyControls.maintenanceEndAt?.toISOString() ?? null,
       },
-      ipAddress,
-      userAgent,
+      ipAddress: ipAddress ?? undefined,
+      userAgent: userAgent ?? undefined,
     });
 
     return NextResponse.json({

@@ -189,8 +189,8 @@ export async function POST(
       resourceType: "transaction",
       resourceId: transaction.id,
       newValue: { type: transaction.type },
-      ipAddress,
-      userAgent,
+      ipAddress: ipAddress ?? undefined,
+      userAgent: userAgent ?? undefined,
     });
 
     return NextResponse.json({

@@ -206,8 +206,8 @@ export async function POST(request: NextRequest) {
       resourceId: transaction.id,
       oldValue: { balance: currentBalance.amount.toNumber(), currency },
       newValue: { balance: updatedBalance.amount.toNumber(), currency, operation, reason: reason || null },
-      ipAddress,
-      userAgent,
+      ipAddress: ipAddress ?? undefined,
+      userAgent: userAgent ?? undefined,
     });
 
     return NextResponse.json({

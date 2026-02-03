@@ -54,6 +54,7 @@ model User {
   withdrawals    Withdrawal[]
   notifications  Notification[]
   notes          UserNote[]
+  communicationLogs CommunicationLog[]
 
   @@map("user")
 }
@@ -452,8 +453,23 @@ model CommunicationLog {
   subject   String?
   sentAt    DateTime @default(now())
   metadata  Json?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([sentAt])
   @@map("communication_log")
+}
+
+// Admin email alert preferences (singleton: one row)
+model AdminAlertSettings {
+  id                    String   @id @default(cuid())
+  email                 String?  @default("rian981265@gmail.com") // legacy single email; prefer emails
+  emails                Json?    // string[] – multiple addresses to notify
+  notifyDepositOver500  Boolean  @default(true)
+  notifyWithdrawOver500 Boolean  @default(true)
+  notifyNewAccount      Boolean  @default(true)
+  notifyKycReady        Boolean  @default(true)
+  updatedAt             DateTime @updatedAt
+
+  @@map("admin_alert_settings")
 }

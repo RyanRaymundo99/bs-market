@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import NavbarNew from "@/components/ui/navbar-new";
 import Breadcrumb from "@/components/ui/breadcrumb";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { getKycImageSrc } from "@/lib/kyc-image-src";
 import {
   User,
   Mail,
@@ -138,16 +139,9 @@ export default function ProfilePage() {
       const response = await fetch("/api/user/status");
       if (response.ok) {
         const data = await response.json();
-        console.log("Fetched user profile:", data.user);
         const user = data.user;
-
-        // Check if user is PENDING before setting state
         const isPendingUser =
           user.approvalStatus === "PENDING" || user.kycStatus === "PENDING";
-        console.log("Is PENDING user?", isPendingUser, {
-          approvalStatus: user.approvalStatus,
-          kycStatus: user.kycStatus,
-        });
 
         setUserProfile(user);
         setFormData({
@@ -156,14 +150,7 @@ export default function ProfilePage() {
           phone: user.phone || "",
           cpf: user.cpf || "",
         });
-
-        // Immediately set editing to true if user is PENDING
-        if (isPendingUser) {
-          console.log("User is PENDING, enabling editing mode immediately");
-          setEditing(true);
-        } else {
-          console.log("User is not PENDING, editing mode:", false);
-        }
+        if (isPendingUser) setEditing(true);
       }
     } catch (error) {
       console.error("Error fetching user profile:", error);
@@ -297,8 +284,8 @@ export default function ProfilePage() {
           error instanceof Error
             ? error.message
             : language === "pt"
-              ? "Falha ao enviar para revisão"
-              : "Failed to submit for review",
+            ? "Falha ao enviar para revisão"
+            : "Failed to submit for review",
       });
     }
   };
@@ -383,22 +370,14 @@ export default function ProfilePage() {
     userProfile?.approvalStatus === "PENDING" ||
     userProfile?.kycStatus === "PENDING";
 
-  // Force editing mode when PENDING - always show editable fields if PENDING
   const shouldShowEditableFields = isPending || (!isApproved && editing);
 
-  // Debug logging
-  useEffect(() => {
-    if (userProfile) {
-      console.log("Profile State:", {
-        approvalStatus: userProfile.approvalStatus,
-        kycStatus: userProfile.kycStatus,
-        isPending,
-        isApproved,
-        editing,
-        shouldShowEditableFields,
-      });
-    }
-  }, [userProfile, isPending, isApproved, editing, shouldShowEditableFields]);
+  const needsResendDocs =
+    isPending && !!userProfile?.kycRejectionReason?.trim();
+  const hasAllDocs =
+    !!kycDocuments?.documentFront &&
+    !!kycDocuments?.documentBack &&
+    !!kycDocuments?.documentSelfie;
 
   if (loading) {
     return (
@@ -432,13 +411,52 @@ export default function ProfilePage() {
           <p className="text-muted-foreground">
             Gerencie suas informações pessoais e documentos KYC
           </p>
-          {isPending && (
-            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-sm text-yellow-800">
-                <strong>Status Pendente:</strong> Você pode editar todas as
-                informações abaixo. Preencha todos os campos e envie para
+          {isPending && !needsResendDocs && (
+            <div className="mt-4 p-4 rounded-xl bg-muted/50 border border-border">
+              <p className="text-sm text-muted-foreground">
+                <strong className="text-foreground">Status pendente:</strong>{" "}
+                Preencha suas informações e envie os documentos abaixo para
                 revisão.
               </p>
+            </div>
+          )}
+          {needsResendDocs && (
+            <div
+              id="resend-banner"
+              className="mt-4 p-5 rounded-xl border border-primary/40 bg-primary/10"
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <h2 className="font-semibold text-foreground flex items-center gap-2">
+                    <Camera className="w-5 h-5 text-primary" />
+                    {t("resendDocsTitle")}
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {t("resendDocsMessage")}
+                  </p>
+                  {userProfile?.kycRejectionReason && (
+                    <div className="mt-3 p-3 rounded-lg bg-background/80 border border-border">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        {t("kycRejectionReason")}
+                      </p>
+                      <p className="text-sm text-foreground mt-1">
+                        {userProfile.kycRejectionReason}
+                      </p>
+                    </div>
+                  )}
+                </div>
+                <Button
+                  onClick={() =>
+                    document.getElementById("kyc-documents")?.scrollIntoView({
+                      behavior: "smooth",
+                      block: "start",
+                    })
+                  }
+                  className="shrink-0 bg-primary text-primary-foreground hover:opacity-90"
+                >
+                  {t("goToDocuments")}
+                </Button>
+              </div>
             </div>
           )}
         </div>
@@ -630,14 +648,14 @@ export default function ProfilePage() {
                     <p>
                       <strong>{t("submitted")}:</strong>{" "}
                       {new Date(userProfile.kycSubmittedAt).toLocaleDateString(
-                        language === "pt" ? "pt-BR" : "en-US",
+                        language === "pt" ? "pt-BR" : "en-US"
                       )}
                     </p>
                     {userProfile.kycReviewedAt && (
                       <p>
                         <strong>{t("reviewed")}:</strong>{" "}
                         {new Date(userProfile.kycReviewedAt).toLocaleDateString(
-                          language === "pt" ? "pt-BR" : "en-US",
+                          language === "pt" ? "pt-BR" : "en-US"
                         )}
                       </p>
                     )}
@@ -649,219 +667,294 @@ export default function ProfilePage() {
         </div>
 
         {/* KYC Documents */}
-        <Card className="mt-6">
+        <Card id="kyc-documents" className="mt-6 scroll-mt-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Camera className="w-5 h-5" />
               {t("kycDocuments")}
             </CardTitle>
+            {!isApproved && (
+              <p className="text-sm text-muted-foreground mt-1">
+                {needsResendDocs
+                  ? t("kycSectionSubtitleResend")
+                  : t("kycSectionSubtitleFirst")}
+              </p>
+            )}
+            {!isApproved && (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {t("formatsAccepted")}. {t("allThreeRequired")}
+              </p>
+            )}
           </CardHeader>
           <CardContent>
             <div className="grid gap-6 md:grid-cols-3">
-              {/* Document Front */}
-              <div className="space-y-3">
-                <Label>{t("documentFront")}</Label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+              {/* Step 1: Document Front */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/20 text-sm font-semibold text-primary">
+                    {t("step")} 1
+                  </span>
+                  <Label className="text-base">{t("documentFront")}</Label>
+                </div>
+                <p className="text-xs text-muted-foreground pl-10">
+                  {t("documentFrontTip")}
+                </p>
+                <div className="relative border-2 border-dashed border-border rounded-xl p-4 text-center min-h-[140px] flex flex-col justify-center">
                   {kycDocuments?.documentFront ? (
                     isApproved ? (
-                      <div className="space-y-3 py-8">
-                        <CheckCircle className="w-16 h-16 mx-auto text-green-500" />
-                        <div className="flex items-center justify-center gap-1">
-                          <p className="text-sm font-medium text-green-600">
-                            Aprovado
-                          </p>
-                        </div>
+                      <div className="space-y-2 py-4">
+                        <CheckCircle className="w-12 h-12 mx-auto text-primary" />
+                        <p className="text-sm font-medium text-primary">
+                          {t("approved")}
+                        </p>
                       </div>
                     ) : (
                       <div className="space-y-2">
                         <img
-                          src={kycDocuments.documentFront}
-                          alt="Frente do Documento"
-                          className="w-full h-32 object-cover rounded"
+                          src={getKycImageSrc(kycDocuments.documentFront)}
+                          alt={t("documentFront")}
+                          className="w-full h-28 object-cover rounded-lg"
                         />
-                        <div className="flex items-center justify-center gap-1">
-                          <p className="text-sm text-green-600">
-                            {t("uploaded")}
-                          </p>
-                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {t("uploaded")}
+                        </p>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleFileSelect("front", file);
+                          }}
+                          className="hidden"
+                          id="front-upload"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            document.getElementById("front-upload")?.click()
+                          }
+                          className="w-full text-xs"
+                        >
+                          <Upload className="w-3.5 h-3.5 mr-1.5" />
+                          {t("replacePhoto")}
+                        </Button>
                       </div>
                     )
                   ) : (
-                    <div className="space-y-2">
-                      <Upload className="w-8 h-8 mx-auto text-gray-400" />
-                      <p className="text-sm text-gray-500">
+                    <>
+                      <Upload className="w-10 h-10 mx-auto text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground mt-1">
                         {t("noDocumentUploaded")}
                       </p>
-                    </div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleFileSelect("front", file);
+                        }}
+                        className="hidden"
+                        id="front-upload"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          document.getElementById("front-upload")?.click()
+                        }
+                        className="w-full mt-2"
+                      >
+                        <Upload className="w-4 h-4 mr-2" />
+                        {t("uploadFront")}
+                      </Button>
+                    </>
                   )}
                 </div>
-                {!isApproved && (
-                  <>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleFileSelect("front", file);
-                      }}
-                      className="hidden"
-                      id="front-upload"
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        document.getElementById("front-upload")?.click()
-                      }
-                      className="w-full"
-                    >
-                      <Upload className="w-4 h-4 mr-2" />
-                      {t("uploadFront")}
-                    </Button>
-                  </>
-                )}
               </div>
 
-              {/* Document Back */}
-              <div className="space-y-3">
-                <Label>{t("documentBack")}</Label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+              {/* Step 2: Document Back */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/20 text-sm font-semibold text-primary">
+                    {t("step")} 2
+                  </span>
+                  <Label className="text-base">{t("documentBack")}</Label>
+                </div>
+                <p className="text-xs text-muted-foreground pl-10">
+                  {t("documentBackTip")}
+                </p>
+                <div className="relative border-2 border-dashed border-border rounded-xl p-4 text-center min-h-[140px] flex flex-col justify-center">
                   {kycDocuments?.documentBack ? (
                     isApproved ? (
-                      <div className="space-y-3 py-8">
-                        <CheckCircle className="w-16 h-16 mx-auto text-green-500" />
-                        <div className="flex items-center justify-center gap-1">
-                          <p className="text-sm font-medium text-green-600">
-                            Aprovado
-                          </p>
-                        </div>
+                      <div className="space-y-2 py-4">
+                        <CheckCircle className="w-12 h-12 mx-auto text-primary" />
+                        <p className="text-sm font-medium text-primary">
+                          {t("approved")}
+                        </p>
                       </div>
                     ) : (
                       <div className="space-y-2">
                         <img
-                          src={kycDocuments.documentBack}
-                          alt="Verso do Documento"
-                          className="w-full h-32 object-cover rounded"
+                          src={getKycImageSrc(kycDocuments.documentBack)}
+                          alt={t("documentBack")}
+                          className="w-full h-28 object-cover rounded-lg"
                         />
-                        <div className="flex items-center justify-center gap-1">
-                          <p className="text-sm text-green-600">
-                            {t("uploaded")}
-                          </p>
-                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {t("uploaded")}
+                        </p>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleFileSelect("back", file);
+                          }}
+                          className="hidden"
+                          id="back-upload"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            document.getElementById("back-upload")?.click()
+                          }
+                          className="w-full text-xs"
+                        >
+                          <Upload className="w-3.5 h-3.5 mr-1.5" />
+                          {t("replacePhoto")}
+                        </Button>
                       </div>
                     )
                   ) : (
-                    <div className="space-y-2">
-                      <Upload className="w-8 h-8 mx-auto text-gray-400" />
-                      <p className="text-sm text-gray-500">
+                    <>
+                      <Upload className="w-10 h-10 mx-auto text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground mt-1">
                         {t("noDocumentUploaded")}
                       </p>
-                    </div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleFileSelect("back", file);
+                        }}
+                        className="hidden"
+                        id="back-upload"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          document.getElementById("back-upload")?.click()
+                        }
+                        className="w-full mt-2"
+                      >
+                        <Upload className="w-4 h-4 mr-2" />
+                        {t("uploadBack")}
+                      </Button>
+                    </>
                   )}
                 </div>
-                {!isApproved && (
-                  <>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleFileSelect("back", file);
-                      }}
-                      className="hidden"
-                      id="back-upload"
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        document.getElementById("back-upload")?.click()
-                      }
-                      className="w-full"
-                    >
-                      <Upload className="w-4 h-4 mr-2" />
-                      {t("uploadBack")}
-                    </Button>
-                  </>
-                )}
               </div>
 
-              {/* Selfie */}
-              <div className="space-y-3">
-                <Label>{t("selfieWithDocument")}</Label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+              {/* Step 3: Selfie */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/20 text-sm font-semibold text-primary">
+                    {t("step")} 3
+                  </span>
+                  <Label className="text-base">{t("selfieWithDocument")}</Label>
+                </div>
+                <p className="text-xs text-muted-foreground pl-10">
+                  {t("selfieTip")}
+                </p>
+                <div className="relative border-2 border-dashed border-border rounded-xl p-4 text-center min-h-[140px] flex flex-col justify-center">
                   {kycDocuments?.documentSelfie ? (
                     isApproved ? (
-                      <div className="space-y-3 py-8">
-                        <CheckCircle className="w-16 h-16 mx-auto text-green-500" />
-                        <div className="flex items-center justify-center gap-1">
-                          <p className="text-sm font-medium text-green-600">
-                            Aprovado
-                          </p>
-                        </div>
+                      <div className="space-y-2 py-4">
+                        <CheckCircle className="w-12 h-12 mx-auto text-primary" />
+                        <p className="text-sm font-medium text-primary">
+                          {t("approved")}
+                        </p>
                       </div>
                     ) : (
                       <div className="space-y-2">
                         <img
-                          src={kycDocuments.documentSelfie}
-                          alt="Selfie com Documento"
-                          className="w-full h-32 object-cover rounded"
+                          src={getKycImageSrc(kycDocuments.documentSelfie)}
+                          alt={t("selfieWithDocument")}
+                          className="w-full h-28 object-cover rounded-lg"
                         />
-                        <div className="flex items-center justify-center gap-1">
-                          <p className="text-sm text-green-600">
-                            {t("uploaded")}
-                          </p>
-                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {t("uploaded")}
+                        </p>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleFileSelect("selfie", file);
+                          }}
+                          className="hidden"
+                          id="selfie-upload"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            document.getElementById("selfie-upload")?.click()
+                          }
+                          className="w-full text-xs"
+                        >
+                          <Upload className="w-3.5 h-3.5 mr-1.5" />
+                          {t("replacePhoto")}
+                        </Button>
                       </div>
                     )
                   ) : (
-                    <div className="space-y-2">
-                      <Upload className="w-8 h-8 mx-auto text-gray-400" />
-                      <p className="text-sm text-gray-500">
+                    <>
+                      <Upload className="w-10 h-10 mx-auto text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground mt-1">
                         {t("noSelfieUploaded")}
                       </p>
-                    </div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleFileSelect("selfie", file);
+                        }}
+                        className="hidden"
+                        id="selfie-upload"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          document.getElementById("selfie-upload")?.click()
+                        }
+                        className="w-full mt-2"
+                      >
+                        <Upload className="w-4 h-4 mr-2" />
+                        {t("uploadSelfie")}
+                      </Button>
+                    </>
                   )}
                 </div>
-                {!isApproved && (
-                  <>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleFileSelect("selfie", file);
-                      }}
-                      className="hidden"
-                      id="selfie-upload"
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        document.getElementById("selfie-upload")?.click()
-                      }
-                      className="w-full"
-                    >
-                      <Upload className="w-4 h-4 mr-2" />
-                      {t("uploadSelfie")}
-                    </Button>
-                  </>
-                )}
               </div>
             </div>
 
-            {/* File Preview and Upload */}
+            {/* Preview & confirm upload */}
             {selectedFile && !isApproved && (
-              <div className="mt-6 p-4 border rounded-lg bg-gray-50">
+              <div className="mt-6 p-5 rounded-xl border border-border bg-muted/30">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-medium">
-                    {t("preview")}:{" "}
+                  <h3 className="font-medium text-foreground">
+                    {t("preview")} —{" "}
                     {selectedFile.type === "front"
                       ? t("documentFront")
                       : selectedFile.type === "back"
-                        ? t("documentBack")
-                        : t("selfieWithDocument")}
+                      ? t("documentBack")
+                      : t("selfieWithDocument")}
                   </h3>
                   <Button
                     variant="ghost"
@@ -870,6 +963,7 @@ export default function ProfilePage() {
                       setSelectedFile(null);
                       setPreviewUrl(null);
                     }}
+                    className="text-muted-foreground hover:text-foreground"
                   >
                     <X className="w-4 h-4" />
                   </Button>
@@ -878,17 +972,17 @@ export default function ProfilePage() {
                   <img
                     src={previewUrl}
                     alt={t("preview")}
-                    className="w-full max-w-md h-48 object-cover rounded mb-4"
+                    className="w-full max-w-sm h-44 object-contain rounded-lg mb-4 bg-background/50"
                   />
                 )}
                 <Button
                   onClick={handleFileUpload}
                   disabled={uploading}
-                  className="w-full"
+                  className="w-full bg-primary text-primary-foreground hover:opacity-90"
                 >
                   {uploading ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary-foreground border-t-transparent mr-2" />
                       {t("uploading")}
                     </>
                   ) : (
@@ -897,6 +991,21 @@ export default function ProfilePage() {
                       {t("uploadDocument")}
                     </>
                   )}
+                </Button>
+              </div>
+            )}
+
+            {/* Submit for review – prominent when all 3 docs present */}
+            {!isApproved && hasAllDocs && (
+              <div className="mt-6 pt-4 border-t border-border">
+                <Button
+                  onClick={handleSubmitForReview}
+                  className="w-full bg-primary text-primary-foreground hover:opacity-90 py-6 text-base font-medium"
+                >
+                  <Upload className="w-5 h-5 mr-2" />
+                  {language === "pt"
+                    ? "Enviar para revisão"
+                    : "Submit for review"}
                 </Button>
               </div>
             )}
@@ -916,7 +1025,9 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent className="flex flex-wrap gap-4">
             <a
-              href={`https://wa.me/${process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "5511984284867"}`}
+              href={`https://wa.me/${
+                process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "5511984284867"
+              }`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-4 py-3 rounded-lg bg-[#25D366]/20 text-[#25D366] hover:bg-[#25D366]/30 border border-[#25D366]/40 transition-colors"
@@ -926,7 +1037,10 @@ export default function ProfilePage() {
               <span className="text-sm opacity-90">+55 11 98428-4867</span>
             </a>
             <a
-              href={`mailto:${process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "suporte@bsmarket.com.br"}`}
+              href={`mailto:${
+                process.env.NEXT_PUBLIC_SUPPORT_EMAIL ||
+                "suporte@bsmarket.com.br"
+              }`}
               className="inline-flex items-center gap-2 px-4 py-3 rounded-lg bg-white/10 text-white hover:bg-white/20 border border-white/20 transition-colors"
             >
               <Mail className="w-5 h-5" />
