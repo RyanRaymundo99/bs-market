@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
       pendingApprovals,
       approvedUsers,
       rejectedUsers,
+      approvedWithoutKYC,
       pendingKYC,
       approvedKYC,
       rejectedKYC,
@@ -25,6 +26,12 @@ export async function GET(request: NextRequest) {
       prisma.user.count({ where: { approvalStatus: "PENDING" } }),
       prisma.user.count({ where: { approvalStatus: "APPROVED" } }),
       prisma.user.count({ where: { approvalStatus: "REJECTED" } }),
+      prisma.user.count({
+        where: {
+          approvalStatus: "APPROVED",
+          kycStatus: { not: "APPROVED" },
+        },
+      }),
       prisma.user.count({
         where: {
           kycStatus: "PENDING",
@@ -67,6 +74,7 @@ export async function GET(request: NextRequest) {
         pendingApprovals,
         approvedUsers,
         rejectedUsers,
+        approvedWithoutKYC,
         pendingKYC,
         approvedKYC,
         rejectedKYC,

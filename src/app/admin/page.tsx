@@ -97,6 +97,7 @@ interface DashboardStats {
   pendingApprovals: number;
   approvedUsers: number;
   rejectedUsers: number;
+  approvedWithoutKYC: number;
   pendingKYC: number;
   approvedKYC: number;
   rejectedKYC: number;
@@ -246,6 +247,7 @@ function AdminDashboardContent() {
     pendingApprovals: 0,
     approvedUsers: 0,
     rejectedUsers: 0,
+    approvedWithoutKYC: 0,
     pendingKYC: 0,
     approvedKYC: 0,
     rejectedKYC: 0,
@@ -284,11 +286,11 @@ function AdminDashboardContent() {
   const [balanceConfirmStep, setBalanceConfirmStep] = useState(1);
   const [balanceUserId, setBalanceUserId] = useState("");
   const [balanceCurrency, setBalanceCurrency] = useState<"USDT" | "BRL">(
-    "USDT",
+    "USDT"
   );
   const [balanceAmount, setBalanceAmount] = useState("");
   const [balanceOperation, setBalanceOperation] = useState<"CREDIT" | "DEDUCT">(
-    "CREDIT",
+    "CREDIT"
   );
   const [balanceReason, setBalanceReason] = useState("");
   const [usersList, setUsersList] = useState<
@@ -322,24 +324,28 @@ function AdminDashboardContent() {
     Record<string, Array<{ date: string; value: number }>>
   >({});
   const [loadingHistory, setLoadingHistory] = useState<Record<string, boolean>>(
-    {},
+    {}
   );
 
   // New features states
   const [recentActivity, setRecentActivity] = useState<ActivityFeedItem[]>([]);
-  const [topUsers, setTopUsers] = useState<(ApiUserRecord & { totalBalance?: number })[]>([]);
+  const [topUsers, setTopUsers] = useState<
+    (ApiUserRecord & { totalBalance?: number })[]
+  >([]);
   const [systemHealth, setSystemHealth] = useState({
     database: "checking",
     api: "checking",
   });
   const [quickSearchQuery, setQuickSearchQuery] = useState("");
   const [showQuickSearch, setShowQuickSearch] = useState(false);
-  const [quickSearchResults, setQuickSearchResults] = useState<QuickSearchResultItem[]>([]);
+  const [quickSearchResults, setQuickSearchResults] = useState<
+    QuickSearchResultItem[]
+  >([]);
   const [loadingQuickSearch, setLoadingQuickSearch] = useState(false);
 
   // Transaction table enhancements
   const [selectedTransactions, setSelectedTransactions] = useState<Set<string>>(
-    new Set(),
+    new Set()
   );
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -408,31 +414,31 @@ function AdminDashboardContent() {
         if (data?.moneyControls) {
           setDepositsDisabled(Boolean(data.moneyControls.depositsDisabled));
           setWithdrawalsDisabled(
-            Boolean(data.moneyControls.withdrawalsDisabled),
+            Boolean(data.moneyControls.withdrawalsDisabled)
           );
           setDepositsDisabledMessage(
-            String(data.moneyControls.depositsDisabledMessage || ""),
+            String(data.moneyControls.depositsDisabledMessage || "")
           );
           setWithdrawalsDisabledMessage(
-            String(data.moneyControls.withdrawalsDisabledMessage || ""),
+            String(data.moneyControls.withdrawalsDisabledMessage || "")
           );
           setMaxDepositUsdt(Number(data.moneyControls.maxDepositUsdt) || 2000);
           setMaintenanceMessage(
-            String(data.moneyControls.maintenanceMessage || ""),
+            String(data.moneyControls.maintenanceMessage || "")
           );
           setMaintenanceStartAt(
             data.moneyControls.maintenanceStartAt
               ? new Date(data.moneyControls.maintenanceStartAt)
                   .toISOString()
                   .slice(0, 16)
-              : "",
+              : ""
           );
           setMaintenanceEndAt(
             data.moneyControls.maintenanceEndAt
               ? new Date(data.moneyControls.maintenanceEndAt)
                   .toISOString()
                   .slice(0, 16)
-              : "",
+              : ""
           );
           setMoneyControlsMeta({
             updatedAt: String(data.moneyControls.updatedAt),
@@ -475,28 +481,28 @@ function AdminDashboardContent() {
         setDepositsDisabled(Boolean(data.moneyControls.depositsDisabled));
         setWithdrawalsDisabled(Boolean(data.moneyControls.withdrawalsDisabled));
         setDepositsDisabledMessage(
-          String(data.moneyControls.depositsDisabledMessage || ""),
+          String(data.moneyControls.depositsDisabledMessage || "")
         );
         setWithdrawalsDisabledMessage(
-          String(data.moneyControls.withdrawalsDisabledMessage || ""),
+          String(data.moneyControls.withdrawalsDisabledMessage || "")
         );
         setMaxDepositUsdt(Number(data.moneyControls.maxDepositUsdt) || 2000);
         setMaintenanceMessage(
-          String(data.moneyControls.maintenanceMessage || ""),
+          String(data.moneyControls.maintenanceMessage || "")
         );
         setMaintenanceStartAt(
           data.moneyControls.maintenanceStartAt
             ? new Date(data.moneyControls.maintenanceStartAt)
                 .toISOString()
                 .slice(0, 16)
-            : "",
+            : ""
         );
         setMaintenanceEndAt(
           data.moneyControls.maintenanceEndAt
             ? new Date(data.moneyControls.maintenanceEndAt)
                 .toISOString()
                 .slice(0, 16)
-            : "",
+            : ""
         );
         setMoneyControlsMeta({
           updatedAt: String(data.moneyControls.updatedAt),
@@ -507,7 +513,7 @@ function AdminDashboardContent() {
       toast({
         title: "Atualizado",
         description: `Configuração salva. Usuários notificados: ${Number(
-          data?.notifiedUsers || 0,
+          data?.notifiedUsers || 0
         )}.`,
       });
     } catch (error) {
@@ -526,57 +532,58 @@ function AdminDashboardContent() {
   };
 
   // Real-time transaction updates (lightweight, fast)
-  const fetchRealtimeTransactions = useCallback(async (since?: Date) => {
-    try {
-      if (!since) {
-        setTransactionsLoading(true);
-      }
-
-      const url = new URL(
-        "/api/admin/transactions/realtime",
-        window.location.origin,
-      );
-      url.searchParams.set("limit", "50");
-      if (since) {
-        url.searchParams.set("since", since.toISOString());
-      }
-
-      const response = await fetch(url.toString(), {
-        cache: "no-store", // Always fetch fresh data
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch realtime transactions");
-      }
-
-      const data = await response.json();
-
-      if (data.success && data.transactions) {
-        if (since) {
-          // Incremental update - prepend new transactions
-          setTransactions((prev) => {
-            const existingIds = new Set(prev.map((t) => t.id));
-            const newTransactions = data.transactions.filter(
-              (t: Transaction) => !existingIds.has(t.id),
-            );
-            return [...newTransactions, ...prev].slice(0, 100); // Keep max 100
-          });
-        } else {
-          // Full refresh
-          setTransactions(data.transactions);
+  const fetchRealtimeTransactions = useCallback(
+    async (since?: Date) => {
+      try {
+        if (!since) {
+          setTransactionsLoading(true);
         }
-        setLastUpdateTime(new Date());
+
+        const url = new URL(
+          "/api/admin/transactions/realtime",
+          window.location.origin
+        );
+        url.searchParams.set("limit", "50");
+        if (since) {
+          url.searchParams.set("since", since.toISOString());
+        }
+
+        const response = await fetch(url.toString(), {
+          cache: "no-store", // Always fetch fresh data
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch realtime transactions");
+        }
+
+        const data = await response.json();
+
+        if (data.success && data.transactions) {
+          if (since) {
+            // Incremental update - prepend new transactions
+            setTransactions((prev) => {
+              const existingIds = new Set(prev.map((t) => t.id));
+              const newTransactions = data.transactions.filter(
+                (t: Transaction) => !existingIds.has(t.id)
+              );
+              return [...newTransactions, ...prev].slice(0, 100); // Keep max 100
+            });
+          } else {
+            // Full refresh
+            setTransactions(data.transactions);
+          }
+          setLastUpdateTime(new Date());
+        }
+      } catch (error) {
+        console.error("Error fetching realtime transactions:", error);
+        // Don't show toast for polling errors to avoid spam
+      } finally {
+        if (!since) {
+          setTransactionsLoading(false);
+        }
       }
-    } catch (error) {
-      console.error("Error fetching realtime transactions:", error);
-      // Don't show toast for polling errors to avoid spam
-    } finally {
-      if (!since) {
-        setTransactionsLoading(false);
-      }
-    }
-  },
-    [typeFilter, dateFrom, dateTo, amountMin, amountMax],
+    },
+    [typeFilter, dateFrom, dateTo, amountMin, amountMax]
   );
 
   const fetchFinanceData = useCallback(async () => {
@@ -665,7 +672,7 @@ function AdminDashboardContent() {
     const now = new Date();
     const date = new Date(timestamp);
     const diffInMinutes = Math.floor(
-      (now.getTime() - date.getTime()) / (1000 * 60),
+      (now.getTime() - date.getTime()) / (1000 * 60)
     );
 
     if (diffInMinutes < 1) return "Agora";
@@ -684,7 +691,7 @@ function AdminDashboardContent() {
       try {
         const response = await fetch(
           `/api/admin/finance/history?metric=${metric}&days=${days}`,
-          { cache: "no-store" },
+          { cache: "no-store" }
         );
 
         if (!response.ok) {
@@ -702,7 +709,7 @@ function AdminDashboardContent() {
         setLoadingHistory((prev) => ({ ...prev, [metric]: false }));
       }
     },
-    [historyData],
+    [historyData]
   );
 
   const HistoryTooltipContent = ({
@@ -762,7 +769,11 @@ function AdminDashboardContent() {
             .reverse()
             .map((item, index) => {
               const date = new Date(item.date);
-              const dateStr = `${date.getDate().toString().padStart(2, "0")}/${(date.getMonth() + 1).toString().padStart(2, "0")}`;
+              const dateStr = `${date.getDate().toString().padStart(2, "0")}/${(
+                date.getMonth() + 1
+              )
+                .toString()
+                .padStart(2, "0")}`;
               const percentage =
                 maxValue > 0 ? (item.value / maxValue) * 100 : 0;
 
@@ -807,12 +818,18 @@ function AdminDashboardContent() {
     const detailsUrl =
       transaction.id.startsWith("order_") &&
       transaction.id.length > "order_".length
-        ? `/api/admin/transactions/order/${transaction.id.slice("order_".length)}`
+        ? `/api/admin/transactions/order/${transaction.id.slice(
+            "order_".length
+          )}`
         : `/api/admin/transactions/${transaction.id}`;
 
     try {
       const response = await fetch(detailsUrl);
-      let data: { success?: boolean; transaction?: TransactionDetails; error?: string } = {};
+      let data: {
+        success?: boolean;
+        transaction?: TransactionDetails;
+        error?: string;
+      } = {};
       try {
         data = await response.json();
       } catch {
@@ -912,7 +929,7 @@ function AdminDashboardContent() {
         `/api/admin/transactions/${transactionDetails.id}/sync-status`,
         {
           method: "POST",
-        },
+        }
       );
 
       const data = await response.json();
@@ -924,7 +941,7 @@ function AdminDashboardContent() {
         });
         // Refresh transaction details by fetching from API
         const detailsResponse = await fetch(
-          `/api/admin/transactions/${transactionDetails.id}`,
+          `/api/admin/transactions/${transactionDetails.id}`
         );
         if (detailsResponse.ok) {
           const detailsData = await detailsResponse.json();
@@ -962,7 +979,7 @@ function AdminDashboardContent() {
         `/api/admin/transactions/${transactionDetails.id}/resend-receipt`,
         {
           method: "POST",
-        },
+        }
       );
 
       const data = await response.json();
@@ -976,7 +993,7 @@ function AdminDashboardContent() {
 
         // Refresh transaction details to update receipt status
         const detailsResponse = await fetch(
-          `/api/admin/transactions/${transactionDetails.id}`,
+          `/api/admin/transactions/${transactionDetails.id}`
         );
         if (detailsResponse.ok) {
           const detailsData = await detailsResponse.json();
@@ -1017,7 +1034,7 @@ function AdminDashboardContent() {
         `/api/admin/transactions/${transactionDetails.id}/mark-completed`,
         {
           method: "POST",
-        },
+        }
       );
 
       const data = await response.json();
@@ -1031,7 +1048,7 @@ function AdminDashboardContent() {
 
         // Refresh transaction details
         const detailsResponse = await fetch(
-          `/api/admin/transactions/${transactionDetails.id}`,
+          `/api/admin/transactions/${transactionDetails.id}`
         );
         if (detailsResponse.ok) {
           const detailsData = await detailsResponse.json();
@@ -1043,7 +1060,7 @@ function AdminDashboardContent() {
         }
       } else {
         throw new Error(
-          data.error || "Failed to mark transaction as completed",
+          data.error || "Failed to mark transaction as completed"
         );
       }
     } catch (error) {
@@ -1100,15 +1117,15 @@ function AdminDashboardContent() {
   const handleTransactionAction = async (
     transactionId: string,
     action: "approve" | "reject",
-    options?: { skipConfirm?: boolean },
+    options?: { skipConfirm?: boolean }
   ) => {
     if (action === "approve" && !options?.skipConfirm) {
       const first = window.confirm(
-        "Tem certeza que deseja aprovar esta transação?",
+        "Tem certeza que deseja aprovar esta transação?"
       );
       if (!first) return;
       const second = window.confirm(
-        "Confirmar novamente: deseja realmente marcar esta transação como concluída?",
+        "Confirmar novamente: deseja realmente marcar esta transação como concluída?"
       );
       if (!second) return;
     }
@@ -1120,7 +1137,7 @@ function AdminDashboardContent() {
         `/api/admin/transactions/${transactionId}/mark-completed`,
         {
           method: "POST",
-        },
+        }
       );
 
       if (response.ok) {
@@ -1129,13 +1146,17 @@ function AdminDashboardContent() {
           title: "Sucesso",
           description:
             data.message ||
-            `Transação ${action === "approve" ? "aprovada" : "processada"} com sucesso!`,
+            `Transação ${
+              action === "approve" ? "aprovada" : "processada"
+            } com sucesso!`,
         });
         await fetchRealtimeTransactions();
         setAdminActivityLog((prev) => [
           {
             type: `transaction_${action}`,
-            description: `Transação ${transactionId.substring(0, 8)}... ${action === "approve" ? "aprovada" : "processada"}`,
+            description: `Transação ${transactionId.substring(0, 8)}... ${
+              action === "approve" ? "aprovada" : "processada"
+            }`,
             timestamp: new Date().toISOString(),
           },
           ...prev.slice(0, 49),
@@ -1151,7 +1172,9 @@ function AdminDashboardContent() {
         description:
           error instanceof Error
             ? error.message
-            : `Falha ao ${action === "approve" ? "aprovar" : "processar"} transação`,
+            : `Falha ao ${
+                action === "approve" ? "aprovar" : "processar"
+              } transação`,
       });
     } finally {
       setProcessingTransaction(null);
@@ -1170,13 +1193,15 @@ function AdminDashboardContent() {
     }
 
     const firstConfirm = window.confirm(
-      `Tem certeza que deseja ${action === "approve" ? "aprovar" : "rejeitar"} ${selectedTransactions.size} transação(ões)?`,
+      `Tem certeza que deseja ${
+        action === "approve" ? "aprovar" : "rejeitar"
+      } ${selectedTransactions.size} transação(ões)?`
     );
     if (!firstConfirm) return;
 
     if (action === "approve") {
       const secondConfirm = window.confirm(
-        `Confirmar novamente: deseja realmente aprovar ${selectedTransactions.size} transação(ões)?`,
+        `Confirmar novamente: deseja realmente aprovar ${selectedTransactions.size} transação(ões)?`
       );
       if (!secondConfirm) return;
     }
@@ -1184,9 +1209,14 @@ function AdminDashboardContent() {
     // Only real transactions can be marked completed; exclude orphan orders (order_xxx)
     const idsToProcess =
       action === "approve"
-        ? Array.from(selectedTransactions).filter((id) => !id.startsWith("order_"))
+        ? Array.from(selectedTransactions).filter(
+            (id) => !id.startsWith("order_")
+          )
         : Array.from(selectedTransactions);
-    if (action === "approve" && idsToProcess.length < selectedTransactions.size) {
+    if (
+      action === "approve" &&
+      idsToProcess.length < selectedTransactions.size
+    ) {
       const skipped = selectedTransactions.size - idsToProcess.length;
       toast({
         title: "Aviso",
@@ -1196,7 +1226,7 @@ function AdminDashboardContent() {
     }
 
     const promises = idsToProcess.map((id) =>
-      handleTransactionAction(id, action, { skipConfirm: true }),
+      handleTransactionAction(id, action, { skipConfirm: true })
     );
 
     await Promise.all(promises);
@@ -1212,8 +1242,8 @@ function AdminDashboardContent() {
       typeof tx.user === "string"
         ? tx.user
         : tx.user
-          ? `${tx.user.name} (${tx.user.email})`
-          : "N/A",
+        ? `${tx.user.name} (${tx.user.email})`
+        : "N/A",
       formatCurrency(tx.value || 0),
       getStatusLabel(tx.status),
     ]);
@@ -1226,7 +1256,9 @@ function AdminDashboardContent() {
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `transactions-${new Date().toISOString().split("T")[0]}.csv`;
+    link.download = `transactions-${
+      new Date().toISOString().split("T")[0]
+    }.csv`;
     link.click();
     URL.revokeObjectURL(link.href);
 
@@ -1255,7 +1287,7 @@ function AdminDashboardContent() {
       setSelectedTransactions(new Set());
     } else {
       setSelectedTransactions(
-        new Set(filteredAndSortedTransactions.map((tx) => tx.id)),
+        new Set(filteredAndSortedTransactions.map((tx) => tx.id))
       );
     }
   };
@@ -1272,8 +1304,8 @@ function AdminDashboardContent() {
         typeof transaction.user === "string"
           ? transaction.user
           : transaction.user
-            ? `${transaction.user.name} ${transaction.user.email}`
-            : "";
+          ? `${transaction.user.name} ${transaction.user.email}`
+          : "";
 
       // Search filter
       const matchesSearch =
@@ -1469,7 +1501,7 @@ function AdminDashboardContent() {
           "• Todas as transações\n" +
           "• Todos os saldos dos usuários\n\n" +
           "Esta ação NÃO pode ser desfeita!\n\n" +
-          "Tem certeza que deseja continuar?",
+          "Tem certeza que deseja continuar?"
       );
 
       if (!confirmed) {
@@ -1522,7 +1554,9 @@ function AdminDashboardContent() {
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = downloadUrl;
-      link.download = `transactions-${selectedMonth}-${selectedYear}.${format === "pdf" ? "pdf" : "xlsx"}`;
+      link.download = `transactions-${selectedMonth}-${selectedYear}.${
+        format === "pdf" ? "pdf" : "xlsx"
+      }`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -1576,7 +1610,9 @@ function AdminDashboardContent() {
           activities.push({
             type: "transaction",
             title: `Transação ${tx.type}`,
-            description: `${formatCurrency(tx.value || 0)} - ${tx.user?.name || "N/A"}`,
+            description: `${formatCurrency(tx.value || 0)} - ${
+              tx.user?.name || "N/A"
+            }`,
             timestamp: tx.date ?? "",
             link: "#",
             icon: DollarSign,
@@ -1602,7 +1638,7 @@ function AdminDashboardContent() {
 
       activities.sort(
         (a, b) =>
-          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
       );
       setRecentActivity(activities.slice(0, 10));
     } catch (error) {
@@ -1620,14 +1656,14 @@ function AdminDashboardContent() {
           (data.users || []).slice(0, 20).map(async (user: ApiUserRecord) => {
             try {
               const balanceRes = await fetch(
-                `/api/admin/users/${user.id}?include=balance`,
+                `/api/admin/users/${user.id}?include=balance`
               );
               if (balanceRes.ok) {
                 const balanceData = await balanceRes.json();
                 const totalBalance =
                   (balanceData.balances || []).reduce(
                     (sum: number, b: ApiBalanceRecord) => sum + (b.amount || 0),
-                    0,
+                    0
                   ) || 0;
                 return { ...user, totalBalance };
               }
@@ -1635,7 +1671,7 @@ function AdminDashboardContent() {
             } catch {
               return { ...user, totalBalance: 0 };
             }
-          }),
+          })
         );
 
         usersWithBalances.sort((a, b) => b.totalBalance - a.totalBalance);
@@ -1709,13 +1745,15 @@ function AdminDashboardContent() {
           ?.filter(
             (tx: ApiTxRecord) =>
               tx.user?.name?.toLowerCase().includes(query.toLowerCase()) ||
-              tx.user?.email?.toLowerCase().includes(query.toLowerCase()),
+              tx.user?.email?.toLowerCase().includes(query.toLowerCase())
           )
           .slice(0, 3)
           .forEach((tx: ApiTxRecord) => {
             results.push({
               type: "transaction",
-              title: `${getTransactionTypeLabel(tx.type)} - ${formatCurrency(tx.value || 0)}`,
+              title: `${getTransactionTypeLabel(tx.type)} - ${formatCurrency(
+                tx.value || 0
+              )}`,
               subtitle: tx.user?.name || "N/A",
               link: "#",
               icon: DollarSign,
@@ -1941,7 +1979,7 @@ function AdminDashboardContent() {
                             >
                               {String(m).padStart(2, "0")}
                             </SelectItem>
-                          ),
+                          )
                         )}
                       </SelectContent>
                     </Select>
@@ -1955,7 +1993,7 @@ function AdminDashboardContent() {
                       <SelectContent className="border-gray-700 bg-gray-900">
                         {Array.from(
                           { length: 10 },
-                          (_, i) => new Date().getFullYear() - i,
+                          (_, i) => new Date().getFullYear() - i
                         ).map((y) => (
                           <SelectItem
                             key={y}
@@ -2005,139 +2043,158 @@ function AdminDashboardContent() {
           <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-gray-500">
             Métricas
           </h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7">
-          {/* Total Users */}
-          <Link href="/admin/users">
-            <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-blue-500 transition-all duration-200 cursor-pointer group h-full">
-              <CardContent className="p-3 lg:p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <Users className="h-4 w-4 text-blue-400 group-hover:text-blue-300" />
-                  {statsLoading ? (
-                    <div className="h-5 w-8 bg-gray-700 rounded animate-pulse"></div>
-                  ) : (
-                    <div className="text-xl lg:text-2xl font-bold text-white">
-                      {stats.totalUsers}
-                    </div>
-                  )}
-                </div>
-                <p className="text-xs text-gray-400">Total Users</p>
-              </CardContent>
-            </Card>
-          </Link>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8">
+            {/* Total Users */}
+            <Link href="/admin/users">
+              <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-blue-500 transition-all duration-200 cursor-pointer group h-full">
+                <CardContent className="p-3 lg:p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <Users className="h-4 w-4 text-blue-400 group-hover:text-blue-300" />
+                    {statsLoading ? (
+                      <div className="h-5 w-8 bg-gray-700 rounded animate-pulse"></div>
+                    ) : (
+                      <div className="text-xl lg:text-2xl font-bold text-white">
+                        {stats.totalUsers}
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400">Total Users</p>
+                </CardContent>
+              </Card>
+            </Link>
 
-          {/* Pending Approvals */}
-          <Link href="/admin/users">
-            <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-yellow-500 transition-all duration-200 cursor-pointer group h-full">
-              <CardContent className="p-3 lg:p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <Clock className="h-4 w-4 text-yellow-400 group-hover:text-yellow-300" />
-                  {statsLoading ? (
-                    <div className="h-5 w-8 bg-gray-700 rounded animate-pulse"></div>
-                  ) : (
-                    <div className="text-xl lg:text-2xl font-bold text-yellow-400">
-                      {stats.pendingApprovals}
-                    </div>
-                  )}
-                </div>
-                <p className="text-xs text-gray-400">Pendentes</p>
-              </CardContent>
-            </Card>
-          </Link>
+            {/* Pending Approvals */}
+            <Link href="/admin/users">
+              <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-yellow-500 transition-all duration-200 cursor-pointer group h-full">
+                <CardContent className="p-3 lg:p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <Clock className="h-4 w-4 text-yellow-400 group-hover:text-yellow-300" />
+                    {statsLoading ? (
+                      <div className="h-5 w-8 bg-gray-700 rounded animate-pulse"></div>
+                    ) : (
+                      <div className="text-xl lg:text-2xl font-bold text-yellow-400">
+                        {stats.pendingApprovals}
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400">Pendentes</p>
+                </CardContent>
+              </Card>
+            </Link>
 
-          {/* Approved Users */}
-          <Link href="/admin/users">
-            <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-green-500 transition-all duration-200 cursor-pointer group h-full">
-              <CardContent className="p-3 lg:p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <CheckCircle className="h-4 w-4 text-green-400 group-hover:text-green-300" />
-                  {statsLoading ? (
-                    <div className="h-5 w-8 bg-gray-700 rounded animate-pulse"></div>
-                  ) : (
-                    <div className="text-xl lg:text-2xl font-bold text-green-400">
-                      {stats.approvedUsers}
-                    </div>
-                  )}
-                </div>
-                <p className="text-xs text-gray-400">Aprovados</p>
-              </CardContent>
-            </Card>
-          </Link>
+            {/* Approved Users */}
+            <Link href="/admin/users">
+              <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-green-500 transition-all duration-200 cursor-pointer group h-full">
+                <CardContent className="p-3 lg:p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <CheckCircle className="h-4 w-4 text-green-400 group-hover:text-green-300" />
+                    {statsLoading ? (
+                      <div className="h-5 w-8 bg-gray-700 rounded animate-pulse"></div>
+                    ) : (
+                      <div className="text-xl lg:text-2xl font-bold text-green-400">
+                        {stats.approvedUsers}
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400">Aprovados</p>
+                </CardContent>
+              </Card>
+            </Link>
 
-          {/* Rejected Users */}
-          <Link href="/admin/users">
-            <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-red-500 transition-all duration-200 cursor-pointer group h-full">
-              <CardContent className="p-3 lg:p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <X className="h-4 w-4 text-red-400 group-hover:text-red-300" />
-                  {statsLoading ? (
-                    <div className="h-5 w-8 bg-gray-700 rounded animate-pulse"></div>
-                  ) : (
-                    <div className="text-xl lg:text-2xl font-bold text-red-400">
-                      {stats.rejectedUsers}
-                    </div>
-                  )}
-                </div>
-                <p className="text-xs text-gray-400">Rejeitados</p>
-              </CardContent>
-            </Card>
-          </Link>
+            {/* Rejected Users */}
+            <Link href="/admin/users">
+              <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-red-500 transition-all duration-200 cursor-pointer group h-full">
+                <CardContent className="p-3 lg:p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <X className="h-4 w-4 text-red-400 group-hover:text-red-300" />
+                    {statsLoading ? (
+                      <div className="h-5 w-8 bg-gray-700 rounded animate-pulse"></div>
+                    ) : (
+                      <div className="text-xl lg:text-2xl font-bold text-red-400">
+                        {stats.rejectedUsers}
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400">Rejeitados</p>
+                </CardContent>
+              </Card>
+            </Link>
 
-          {/* Pending KYC */}
-          <Link href="/admin/kyc">
-            <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-orange-500 transition-all duration-200 cursor-pointer group h-full">
-              <CardContent className="p-3 lg:p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <FileText className="h-4 w-4 text-orange-400 group-hover:text-orange-300" />
-                  {statsLoading ? (
-                    <div className="h-5 w-8 bg-gray-700 rounded animate-pulse"></div>
-                  ) : (
-                    <div className="text-xl lg:text-2xl font-bold text-orange-400">
-                      {stats.pendingKYC}
-                    </div>
-                  )}
-                </div>
-                <p className="text-xs text-gray-400">KYC Pendente</p>
-              </CardContent>
-            </Card>
-          </Link>
+            {/* Approved without KYC */}
+            <Link href="/admin/users">
+              <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-amber-500 transition-all duration-200 cursor-pointer group h-full">
+                <CardContent className="p-3 lg:p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <AlertCircle className="h-4 w-4 text-amber-400 group-hover:text-amber-300" />
+                    {statsLoading ? (
+                      <div className="h-5 w-8 bg-gray-700 rounded animate-pulse"></div>
+                    ) : (
+                      <div className="text-xl lg:text-2xl font-bold text-amber-400">
+                        {stats.approvedWithoutKYC}
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400">Aprovados sem KYC</p>
+                </CardContent>
+              </Card>
+            </Link>
 
-          {/* Approved KYC */}
-          <Link href="/admin/kyc">
-            <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-green-500 transition-all duration-200 cursor-pointer group h-full">
-              <CardContent className="p-3 lg:p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <Shield className="h-4 w-4 text-green-400 group-hover:text-green-300" />
-                  {statsLoading ? (
-                    <div className="h-5 w-8 bg-gray-700 rounded animate-pulse"></div>
-                  ) : (
-                    <div className="text-xl lg:text-2xl font-bold text-green-400">
-                      {stats.approvedKYC}
-                    </div>
-                  )}
-                </div>
-                <p className="text-xs text-gray-400">KYC Aprovado</p>
-              </CardContent>
-            </Card>
-          </Link>
+            {/* Pending KYC */}
+            <Link href="/admin/kyc">
+              <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-orange-500 transition-all duration-200 cursor-pointer group h-full">
+                <CardContent className="p-3 lg:p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <FileText className="h-4 w-4 text-orange-400 group-hover:text-orange-300" />
+                    {statsLoading ? (
+                      <div className="h-5 w-8 bg-gray-700 rounded animate-pulse"></div>
+                    ) : (
+                      <div className="text-xl lg:text-2xl font-bold text-orange-400">
+                        {stats.pendingKYC}
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400">KYC Pendente</p>
+                </CardContent>
+              </Card>
+            </Link>
 
-          {/* Rejected KYC */}
-          <Link href="/admin/kyc">
-            <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-red-500 transition-all duration-200 cursor-pointer group h-full">
-              <CardContent className="p-3 lg:p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <Shield className="h-4 w-4 text-red-400 group-hover:text-red-300" />
-                  {statsLoading ? (
-                    <div className="h-5 w-8 bg-gray-700 rounded animate-pulse"></div>
-                  ) : (
-                    <div className="text-xl lg:text-2xl font-bold text-red-400">
-                      {stats.rejectedKYC}
-                    </div>
-                  )}
-                </div>
-                <p className="text-xs text-gray-400">KYC Rejeitado</p>
-              </CardContent>
-            </Card>
-          </Link>
+            {/* Approved KYC */}
+            <Link href="/admin/kyc">
+              <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-green-500 transition-all duration-200 cursor-pointer group h-full">
+                <CardContent className="p-3 lg:p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <Shield className="h-4 w-4 text-green-400 group-hover:text-green-300" />
+                    {statsLoading ? (
+                      <div className="h-5 w-8 bg-gray-700 rounded animate-pulse"></div>
+                    ) : (
+                      <div className="text-xl lg:text-2xl font-bold text-green-400">
+                        {stats.approvedKYC}
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400">KYC Aprovado</p>
+                </CardContent>
+              </Card>
+            </Link>
+
+            {/* Rejected KYC */}
+            <Link href="/admin/kyc">
+              <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-red-500 transition-all duration-200 cursor-pointer group h-full">
+                <CardContent className="p-3 lg:p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <Shield className="h-4 w-4 text-red-400 group-hover:text-red-300" />
+                    {statsLoading ? (
+                      <div className="h-5 w-8 bg-gray-700 rounded animate-pulse"></div>
+                    ) : (
+                      <div className="text-xl lg:text-2xl font-bold text-red-400">
+                        {stats.rejectedKYC}
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400">KYC Rejeitado</p>
+                </CardContent>
+              </Card>
+            </Link>
           </div>
         </section>
 
@@ -2147,63 +2204,63 @@ function AdminDashboardContent() {
             Atalhos
           </h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6">
-          <Link href="/admin/users">
-            <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-blue-500 transition-all cursor-pointer h-full">
-              <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
-                <Users className="w-6 h-6 text-blue-400 mb-2" />
-                <CardTitle className="text-sm text-white mb-1">
-                  Usuários
-                </CardTitle>
-                <p className="text-xs text-gray-400">Gerenciar usuários</p>
-              </CardContent>
-            </Card>
-          </Link>
+            <Link href="/admin/users">
+              <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-blue-500 transition-all cursor-pointer h-full">
+                <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
+                  <Users className="w-6 h-6 text-blue-400 mb-2" />
+                  <CardTitle className="text-sm text-white mb-1">
+                    Usuários
+                  </CardTitle>
+                  <p className="text-xs text-gray-400">Gerenciar usuários</p>
+                </CardContent>
+              </Card>
+            </Link>
 
-          <Link href="/admin/kyc">
-            <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-green-500 transition-all cursor-pointer h-full">
-              <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
-                <FileText className="w-6 h-6 text-green-400 mb-2" />
-                <CardTitle className="text-sm text-white mb-1">KYC</CardTitle>
-                <p className="text-xs text-gray-400">Verificar documentos</p>
-              </CardContent>
-            </Card>
-          </Link>
+            <Link href="/admin/kyc">
+              <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-green-500 transition-all cursor-pointer h-full">
+                <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
+                  <FileText className="w-6 h-6 text-green-400 mb-2" />
+                  <CardTitle className="text-sm text-white mb-1">KYC</CardTitle>
+                  <p className="text-xs text-gray-400">Verificar documentos</p>
+                </CardContent>
+              </Card>
+            </Link>
 
-          <Link href="/admin/notification-center">
-            <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-purple-500 transition-all cursor-pointer h-full">
-              <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
-                <Mail className="w-6 h-6 text-purple-400 mb-2" />
-                <CardTitle className="text-sm text-white mb-1">
-                  Notificações
-                </CardTitle>
-                <p className="text-xs text-gray-400">Enviar mensagens</p>
-              </CardContent>
-            </Card>
-          </Link>
+            <Link href="/admin/notification-center">
+              <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-purple-500 transition-all cursor-pointer h-full">
+                <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
+                  <Mail className="w-6 h-6 text-purple-400 mb-2" />
+                  <CardTitle className="text-sm text-white mb-1">
+                    Notificações
+                  </CardTitle>
+                  <p className="text-xs text-gray-400">Enviar mensagens</p>
+                </CardContent>
+              </Card>
+            </Link>
 
-          <Link href="/admin/webhook-logs">
-            <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-blue-500 transition-all cursor-pointer h-full">
-              <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
-                <Webhook className="w-6 h-6 text-blue-400 mb-2" />
-                <CardTitle className="text-sm text-white mb-1">
-                  Webhooks
-                </CardTitle>
-                <p className="text-xs text-gray-400">Ver logs</p>
-              </CardContent>
-            </Card>
-          </Link>
+            <Link href="/admin/webhook-logs">
+              <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-blue-500 transition-all cursor-pointer h-full">
+                <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
+                  <Webhook className="w-6 h-6 text-blue-400 mb-2" />
+                  <CardTitle className="text-sm text-white mb-1">
+                    Webhooks
+                  </CardTitle>
+                  <p className="text-xs text-gray-400">Ver logs</p>
+                </CardContent>
+              </Card>
+            </Link>
 
-          <Link href="/admin/audit-log">
-            <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-amber-500 transition-all cursor-pointer h-full">
-              <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
-                <ScrollText className="w-6 h-6 text-amber-400 mb-2" />
-                <CardTitle className="text-sm text-white mb-1">
-                  Audit log
-                </CardTitle>
-                <p className="text-xs text-gray-400">Histórico de ações</p>
-              </CardContent>
-            </Card>
-          </Link>
+            <Link href="/admin/audit-log">
+              <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-amber-500 transition-all cursor-pointer h-full">
+                <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
+                  <ScrollText className="w-6 h-6 text-amber-400 mb-2" />
+                  <CardTitle className="text-sm text-white mb-1">
+                    Audit log
+                  </CardTitle>
+                  <p className="text-xs text-gray-400">Histórico de ações</p>
+                </CardContent>
+              </Card>
+            </Link>
           </div>
         </section>
 
@@ -2319,13 +2376,16 @@ function AdminDashboardContent() {
                   max={100000}
                   value={maxDepositUsdt}
                   onChange={(e) =>
-                    setMaxDepositUsdt(Math.max(0, parseInt(e.target.value, 10) || 0))
+                    setMaxDepositUsdt(
+                      Math.max(0, parseInt(e.target.value, 10) || 0)
+                    )
                   }
                   disabled={moneyControlsLoading || savingMoneyControls}
                   className="bg-gray-800/50 border-gray-700 text-white max-w-[160px]"
                 />
                 <p className="text-xs text-gray-500">
-                  Above this limit users are directed to contact support via WhatsApp.
+                  Above this limit users are directed to contact support via
+                  WhatsApp.
                 </p>
               </div>
 
@@ -2344,7 +2404,9 @@ function AdminDashboardContent() {
                 />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-xs text-gray-400">Início (local)</Label>
+                    <Label className="text-xs text-gray-400">
+                      Início (local)
+                    </Label>
                     <Input
                       type="datetime-local"
                       value={maintenanceStartAt}
@@ -2379,7 +2441,9 @@ function AdminDashboardContent() {
                 } text-white`}
               >
                 <Send className="mr-2 h-4 w-4" />
-                {savingMoneyControls ? "Salvando…" : "Salvar e notificar usuários"}
+                {savingMoneyControls
+                  ? "Salvando…"
+                  : "Salvar e notificar usuários"}
               </Button>
 
               {moneyControlsMeta?.updatedAt ? (
@@ -2400,204 +2464,212 @@ function AdminDashboardContent() {
           <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-gray-500">
             Atividade e transações
           </h2>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <Card className="bg-gray-900 border-gray-800 lg:col-span-2">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-white flex items-center gap-2">
-                  <Activity className="h-5 w-5 text-blue-400" />
-                  Atividade Recente
-                </CardTitle>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={fetchRecentActivity}
-                  className="text-gray-400 hover:text-white"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3 max-h-[400px] overflow-y-auto">
-                {recentActivity.length === 0 ? (
-                  <div className="text-center py-8 text-gray-400">
-                    <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">Nenhuma atividade recente</p>
-                  </div>
-                ) : (
-                  recentActivity.map((activity, idx) => {
-                    const Icon = activity.icon;
-                    const timeAgo = formatTimeAgo(activity.timestamp);
-                    return (
-                      <div
-                        key={idx}
-                        className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-800/50 transition-colors cursor-pointer"
-                        onClick={() => router.push(activity.link)}
-                      >
-                        <div
-                          className={`p-2 rounded-lg ${
-                            activity.color === "blue"
-                              ? "bg-blue-900/30"
-                              : activity.color === "green"
-                                ? "bg-green-900/30"
-                                : activity.color === "orange"
-                                  ? "bg-orange-900/30"
-                                  : "bg-gray-800"
-                          }`}
-                        >
-                          <Icon
-                            className={`h-4 w-4 ${
-                              activity.color === "blue"
-                                ? "text-blue-400"
-                                : activity.color === "green"
-                                  ? "text-green-400"
-                                  : activity.color === "orange"
-                                    ? "text-orange-400"
-                                    : "text-gray-400"
-                            }`}
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-white">
-                            {activity.title}
-                          </p>
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            {activity.description}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {timeAgo}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Top Users & System Health */}
-          <div className="space-y-4">
-            {/* Top Priority Users */}
-            <Card className="bg-gray-900 border-gray-800">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <Card className="bg-gray-900 border-gray-800 lg:col-span-2">
               <CardHeader className="pb-3">
-                <CardTitle className="text-white flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-green-400" />
-                  Top Priority Users
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <Activity className="h-5 w-5 text-blue-400" />
+                    Atividade Recente
+                  </CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={fetchRecentActivity}
+                    className="text-gray-400 hover:text-white"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {topUsers.length === 0 ? (
-                    <div className="text-center py-4 text-gray-400 text-sm">
-                      Carregando...
+                <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                  {recentActivity.length === 0 ? (
+                    <div className="text-center py-8 text-gray-400">
+                      <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">Nenhuma atividade recente</p>
                     </div>
                   ) : (
-                    topUsers.map((user, idx) => (
-                      <div
-                        key={user.id}
-                        className="flex items-center p-2 rounded-lg hover:bg-gray-800/50 transition-colors cursor-pointer"
-                        onClick={() => router.push(`/admin/users/${user.id}`)}
-                      >
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold text-white">
-                            {idx + 1}
+                    recentActivity.map((activity, idx) => {
+                      const Icon = activity.icon;
+                      const timeAgo = formatTimeAgo(activity.timestamp);
+                      return (
+                        <div
+                          key={idx}
+                          className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-800/50 transition-colors cursor-pointer"
+                          onClick={() => router.push(activity.link)}
+                        >
+                          <div
+                            className={`p-2 rounded-lg ${
+                              activity.color === "blue"
+                                ? "bg-blue-900/30"
+                                : activity.color === "green"
+                                ? "bg-green-900/30"
+                                : activity.color === "orange"
+                                ? "bg-orange-900/30"
+                                : "bg-gray-800"
+                            }`}
+                          >
+                            <Icon
+                              className={`h-4 w-4 ${
+                                activity.color === "blue"
+                                  ? "text-blue-400"
+                                  : activity.color === "green"
+                                  ? "text-green-400"
+                                  : activity.color === "orange"
+                                  ? "text-orange-400"
+                                  : "text-gray-400"
+                              }`}
+                            />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-white truncate">
-                              {user.name}
+                            <p className="text-sm font-medium text-white">
+                              {activity.title}
                             </p>
-                            <p className="text-xs text-gray-400 truncate">
-                              {user.email}
+                            <p className="text-xs text-gray-400 mt-0.5">
+                              {activity.description}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {timeAgo}
                             </p>
                           </div>
                         </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </CardContent>
             </Card>
 
-            {/* System Health */}
-            <Card className="bg-gray-900 border-gray-800">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-white flex items-center gap-2">
-                  <Server className="h-5 w-5 text-blue-400" />
-                  Status do Sistema
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-2 rounded-lg bg-gray-800/30">
-                    <div className="flex items-center gap-2">
-                      <Database className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm text-gray-300">
-                        Banco de Dados
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {systemHealth.database === "healthy" ? (
-                        <>
-                          <CheckCircle2 className="h-4 w-4 text-green-400" />
-                          <span className="text-xs text-green-400">Online</span>
-                        </>
-                      ) : systemHealth.database === "checking" ? (
-                        <>
-                          <Clock className="h-4 w-4 text-yellow-400 animate-pulse" />
-                          <span className="text-xs text-yellow-400">
-                            Verificando
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <AlertCircle className="h-4 w-4 text-red-400" />
-                          <span className="text-xs text-red-400">Offline</span>
-                        </>
-                      )}
-                    </div>
+            {/* Top Users & System Health */}
+            <div className="space-y-4">
+              {/* Top Priority Users */}
+              <Card className="bg-gray-900 border-gray-800">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-green-400" />
+                    Top Priority Users
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {topUsers.length === 0 ? (
+                      <div className="text-center py-4 text-gray-400 text-sm">
+                        Carregando...
+                      </div>
+                    ) : (
+                      topUsers.map((user, idx) => (
+                        <div
+                          key={user.id}
+                          className="flex items-center p-2 rounded-lg hover:bg-gray-800/50 transition-colors cursor-pointer"
+                          onClick={() => router.push(`/admin/users/${user.id}`)}
+                        >
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold text-white">
+                              {idx + 1}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-white truncate">
+                                {user.name}
+                              </p>
+                              <p className="text-xs text-gray-400 truncate">
+                                {user.email}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
-                  <div className="flex items-center justify-between p-2 rounded-lg bg-gray-800/30">
-                    <div className="flex items-center gap-2">
-                      <Zap className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm text-gray-300">API</span>
+                </CardContent>
+              </Card>
+
+              {/* System Health */}
+              <Card className="bg-gray-900 border-gray-800">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <Server className="h-5 w-5 text-blue-400" />
+                    Status do Sistema
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-gray-800/30">
+                      <div className="flex items-center gap-2">
+                        <Database className="h-4 w-4 text-gray-400" />
+                        <span className="text-sm text-gray-300">
+                          Banco de Dados
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {systemHealth.database === "healthy" ? (
+                          <>
+                            <CheckCircle2 className="h-4 w-4 text-green-400" />
+                            <span className="text-xs text-green-400">
+                              Online
+                            </span>
+                          </>
+                        ) : systemHealth.database === "checking" ? (
+                          <>
+                            <Clock className="h-4 w-4 text-yellow-400 animate-pulse" />
+                            <span className="text-xs text-yellow-400">
+                              Verificando
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <AlertCircle className="h-4 w-4 text-red-400" />
+                            <span className="text-xs text-red-400">
+                              Offline
+                            </span>
+                          </>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {systemHealth.api === "healthy" ? (
-                        <>
-                          <CheckCircle2 className="h-4 w-4 text-green-400" />
-                          <span className="text-xs text-green-400">Online</span>
-                        </>
-                      ) : systemHealth.api === "checking" ? (
-                        <>
-                          <Clock className="h-4 w-4 text-yellow-400 animate-pulse" />
-                          <span className="text-xs text-yellow-400">
-                            Verificando
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <AlertCircle className="h-4 w-4 text-red-400" />
-                          <span className="text-xs text-red-400">Offline</span>
-                        </>
-                      )}
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-gray-800/30">
+                      <div className="flex items-center gap-2">
+                        <Zap className="h-4 w-4 text-gray-400" />
+                        <span className="text-sm text-gray-300">API</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {systemHealth.api === "healthy" ? (
+                          <>
+                            <CheckCircle2 className="h-4 w-4 text-green-400" />
+                            <span className="text-xs text-green-400">
+                              Online
+                            </span>
+                          </>
+                        ) : systemHealth.api === "checking" ? (
+                          <>
+                            <Clock className="h-4 w-4 text-yellow-400 animate-pulse" />
+                            <span className="text-xs text-yellow-400">
+                              Verificando
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <AlertCircle className="h-4 w-4 text-red-400" />
+                            <span className="text-xs text-red-400">
+                              Offline
+                            </span>
+                          </>
+                        )}
+                      </div>
                     </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={checkSystemHealth}
+                      className="w-full border-gray-700 text-gray-300 hover:bg-gray-800"
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Verificar Status
+                    </Button>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={checkSystemHealth}
-                    className="w-full border-gray-700 text-gray-300 hover:bg-gray-800"
-                  >
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Verificar Status
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </div>
-        </div>
         </section>
 
         {/* Admin Activity Log */}
@@ -2646,674 +2718,680 @@ function AdminDashboardContent() {
           <p className="mb-4 text-sm text-gray-400">
             Movimentação financeira em tempo real
           </p>
-        <div className="space-y-4">
-
-          {/* Finance Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 lg:gap-4">
-            {/* Total Deposits */}
-            <CustomTooltip
-              content={
-                <HistoryTooltipContent
-                  metric="deposits"
-                  title="Histórico de Depósitos"
-                />
-              }
-              side="top"
-              hoverable
-            >
-              <Card
-                className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-green-500 transition-all duration-200 cursor-pointer h-full"
-                onMouseEnter={() => fetchHistory("deposits", 7)}
-                onClick={() => handleMetricCardClick("DEPOSIT")}
+          <div className="space-y-4">
+            {/* Finance Stats Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 lg:gap-4">
+              {/* Total Deposits */}
+              <CustomTooltip
+                content={
+                  <HistoryTooltipContent
+                    metric="deposits"
+                    title="Histórico de Depósitos"
+                  />
+                }
+                side="top"
+                hoverable
               >
-                <CardContent className="p-3 lg:p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <DollarSign className="h-4 w-4 text-green-400" />
-                    {financeLoading ? (
-                      <div className="h-5 w-16 bg-gray-700 rounded animate-pulse"></div>
-                    ) : (
-                      <div className="text-lg lg:text-xl font-bold text-white">
-                        {formatCurrency(financeStats.totalDeposits).replace(
-                          "R$",
-                          "R$",
-                        ).length > 15
-                          ? formatCurrency(
-                              financeStats.totalDeposits,
-                            ).substring(0, 12) + "..."
-                          : formatCurrency(financeStats.totalDeposits)}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-gray-400">Depósitos</p>
-                    {!financeLoading && (
-                      <div className="flex items-center">
-                        {financeStats.depositsChange >= 0 ? (
-                          <ArrowUpRight className="h-3 w-3 text-green-400" />
-                        ) : (
-                          <ArrowDownRight className="h-3 w-3 text-red-400" />
-                        )}
-                        <span
-                          className={`text-xs ml-0.5 ${
-                            financeStats.depositsChange >= 0
-                              ? "text-green-400"
-                              : "text-red-400"
-                          }`}
-                        >
-                          {formatPercentage(financeStats.depositsChange)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </CustomTooltip>
-
-            {/* Total Withdrawals */}
-            <CustomTooltip
-              content={
-                <HistoryTooltipContent
-                  metric="withdrawals"
-                  title="Histórico de Saques"
-                />
-              }
-              side="top"
-              hoverable
-            >
-              <Card
-                className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-red-500 transition-all duration-200 cursor-pointer h-full"
-                onMouseEnter={() => fetchHistory("withdrawals", 7)}
-                onClick={() => handleMetricCardClick("WITHDRAWAL")}
-              >
-                <CardContent className="p-3 lg:p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <ArrowDownRight className="h-4 w-4 text-red-400" />
-                    {financeLoading ? (
-                      <div className="h-5 w-16 bg-gray-700 rounded animate-pulse"></div>
-                    ) : (
-                      <div className="text-lg lg:text-xl font-bold text-white">
-                        {formatCurrency(financeStats.totalWithdrawals).replace(
-                          "R$",
-                          "R$",
-                        ).length > 15
-                          ? formatCurrency(
-                              financeStats.totalWithdrawals,
-                            ).substring(0, 12) + "..."
-                          : formatCurrency(financeStats.totalWithdrawals)}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-gray-400">Saques</p>
-                    {!financeLoading && (
-                      <div className="flex items-center">
-                        {financeStats.withdrawalsChange >= 0 ? (
-                          <ArrowUpRight className="h-3 w-3 text-green-400" />
-                        ) : (
-                          <ArrowDownRight className="h-3 w-3 text-red-400" />
-                        )}
-                        <span
-                          className={`text-xs ml-0.5 ${
-                            financeStats.withdrawalsChange >= 0
-                              ? "text-green-400"
-                              : "text-red-400"
-                          }`}
-                        >
-                          {formatPercentage(financeStats.withdrawalsChange)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </CustomTooltip>
-
-            {/* Total Trades */}
-            <CustomTooltip
-              content={
-                <HistoryTooltipContent
-                  metric="trades"
-                  title="Histórico de Trades"
-                />
-              }
-              side="top"
-              hoverable
-            >
-              <Card
-                className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-blue-500 transition-all duration-200 cursor-pointer h-full"
-                onMouseEnter={() => fetchHistory("trades", 7)}
-              >
-                <CardContent className="p-3 lg:p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <BarChart3 className="h-4 w-4 text-blue-400" />
-                    {financeLoading ? (
-                      <div className="h-5 w-16 bg-gray-700 rounded animate-pulse"></div>
-                    ) : (
-                      <div className="text-lg lg:text-xl font-bold text-white">
-                        {formatCurrency(financeStats.totalTrades).replace(
-                          "R$",
-                          "R$",
-                        ).length > 15
-                          ? formatCurrency(financeStats.totalTrades).substring(
-                              0,
-                              12,
-                            ) + "..."
-                          : formatCurrency(financeStats.totalTrades)}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-gray-400">Trades</p>
-                    {!financeLoading && (
-                      <div className="flex items-center">
-                        {financeStats.tradesChange >= 0 ? (
-                          <ArrowUpRight className="h-3 w-3 text-green-400" />
-                        ) : (
-                          <ArrowDownRight className="h-3 w-3 text-red-400" />
-                        )}
-                        <span
-                          className={`text-xs ml-0.5 ${
-                            financeStats.tradesChange >= 0
-                              ? "text-green-400"
-                              : "text-red-400"
-                          }`}
-                        >
-                          {formatPercentage(financeStats.tradesChange)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </CustomTooltip>
-
-            {/* Total Commissions */}
-            <CustomTooltip
-              content={
-                <HistoryTooltipContent
-                  metric="commissions"
-                  title="Histórico de Comissões"
-                />
-              }
-              side="top"
-              hoverable
-            >
-              <Card
-                className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-purple-500 transition-all duration-200 cursor-pointer h-full"
-                onMouseEnter={() => fetchHistory("commissions", 7)}
-              >
-                <CardContent className="p-3 lg:p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <PieChart className="h-4 w-4 text-purple-400" />
-                    {financeLoading ? (
-                      <div className="h-5 w-16 bg-gray-700 rounded animate-pulse"></div>
-                    ) : (
-                      <div className="text-lg lg:text-xl font-bold text-white">
-                        {formatCurrency(financeStats.totalCommissions).replace(
-                          "R$",
-                          "R$",
-                        ).length > 15
-                          ? formatCurrency(
-                              financeStats.totalCommissions,
-                            ).substring(0, 12) + "..."
-                          : formatCurrency(financeStats.totalCommissions)}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-gray-400">Comissões</p>
-                    {!financeLoading && (
-                      <div className="flex items-center">
-                        {financeStats.commissionsChange >= 0 ? (
-                          <ArrowUpRight className="h-3 w-3 text-green-400" />
-                        ) : (
-                          <ArrowDownRight className="h-3 w-3 text-red-400" />
-                        )}
-                        <span
-                          className={`text-xs ml-0.5 ${
-                            financeStats.commissionsChange >= 0
-                              ? "text-green-400"
-                              : "text-red-400"
-                          }`}
-                        >
-                          {formatPercentage(financeStats.commissionsChange)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </CustomTooltip>
-
-            {/* Average User Balance */}
-            <CustomTooltip
-              content={
-                <HistoryTooltipContent
-                  metric="balance"
-                  title="Histórico de Saldo Médio"
-                />
-              }
-              side="top"
-              hoverable
-            >
-              <Card
-                className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-yellow-500 transition-all duration-200 cursor-pointer h-full"
-                onMouseEnter={() => fetchHistory("balance", 7)}
-              >
-                <CardContent className="p-3 lg:p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <TrendingUp className="h-4 w-4 text-yellow-400" />
-                    {financeLoading ? (
-                      <div className="h-5 w-16 bg-gray-700 rounded animate-pulse"></div>
-                    ) : (
-                      <div className="text-lg lg:text-xl font-bold text-white">
-                        {formatCurrency(
-                          financeStats.averageUserBalance,
-                        ).replace("R$", "R$").length > 15
-                          ? formatCurrency(
-                              financeStats.averageUserBalance,
-                            ).substring(0, 12) + "..."
-                          : formatCurrency(financeStats.averageUserBalance)}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-gray-400">Saldo Médio</p>
-                    {!financeLoading && (
-                      <div className="flex items-center">
-                        {financeStats.balanceChange >= 0 ? (
-                          <ArrowUpRight className="h-3 w-3 text-green-400" />
-                        ) : (
-                          <ArrowDownRight className="h-3 w-3 text-red-400" />
-                        )}
-                        <span
-                          className={`text-xs ml-0.5 ${
-                            financeStats.balanceChange >= 0
-                              ? "text-green-400"
-                              : "text-red-400"
-                          }`}
-                        >
-                          {formatPercentage(financeStats.balanceChange)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </CustomTooltip>
-          </div>
-
-          {/* Charts Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-            {/* Area Chart - Deposits and Withdrawals */}
-            <Card className="bg-gray-900 border-gray-800">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-white flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5 text-green-400" />
-                    Evolução dos Depósitos e Saques
-                  </CardTitle>
-                  <Select
-                    value={String(chartDateRange)}
-                    onValueChange={(value) => setChartDateRange(Number(value))}
-                  >
-                    <SelectTrigger className="w-32 h-8 bg-gray-800 border-gray-700 text-white text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-900 border-gray-700">
-                      <SelectItem
-                        value="7"
-                        className="text-white hover:bg-gray-800"
-                      >
-                        7 dias
-                      </SelectItem>
-                      <SelectItem
-                        value="30"
-                        className="text-white hover:bg-gray-800"
-                      >
-                        30 dias
-                      </SelectItem>
-                      <SelectItem
-                        value="90"
-                        className="text-white hover:bg-gray-800"
-                      >
-                        90 dias
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {chartData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={350}>
-                    <AreaChart
-                      data={chartData}
-                      margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-                    >
-                      <defs>
-                        <linearGradient
-                          id="colorDeposits"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop
-                            offset="5%"
-                            stopColor="#10B981"
-                            stopOpacity={0.3}
-                          />
-                          <stop
-                            offset="95%"
-                            stopColor="#10B981"
-                            stopOpacity={0}
-                          />
-                        </linearGradient>
-                        <linearGradient
-                          id="colorWithdrawals"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop
-                            offset="5%"
-                            stopColor="#EF4444"
-                            stopOpacity={0.3}
-                          />
-                          <stop
-                            offset="95%"
-                            stopColor="#EF4444"
-                            stopOpacity={0}
-                          />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        stroke="#374151"
-                        opacity={0.3}
-                      />
-                      <XAxis
-                        dataKey="date"
-                        stroke="#9CA3AF"
-                        fontSize={11}
-                        tick={{ fill: "#9CA3AF" }}
-                        tickLine={{ stroke: "#4B5563" }}
-                        tickFormatter={(value) => {
-                          const date = new Date(value);
-                          return `${date.getDate()}/${date.getMonth() + 1}`;
-                        }}
-                        interval="preserveStartEnd"
-                      />
-                      <YAxis
-                        stroke="#9CA3AF"
-                        fontSize={11}
-                        tick={{ fill: "#9CA3AF" }}
-                        tickLine={{ stroke: "#4B5563" }}
-                        width={70}
-                        tickFormatter={(value) => {
-                          if (value >= 1000000) {
-                            return `R$${(value / 1000000).toFixed(1)}M`;
-                          }
-                          if (value >= 1000) {
-                            return `R$${(value / 1000).toFixed(1)}k`;
-                          }
-                          return `R$${value}`;
-                        }}
-                        domain={["auto", "auto"]}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "#1F2937",
-                          border: "1px solid #4B5563",
-                          borderRadius: "8px",
-                          color: "#F3F4F6",
-                          padding: "12px",
-                          boxShadow: "0 4px 6px rgba(0, 0, 0, 0.3)",
-                        }}
-                        labelStyle={{
-                          color: "#F3F4F6",
-                          fontWeight: "600",
-                          marginBottom: "8px",
-                        }}
-                        itemStyle={{
-                          color: "#D1D5DB",
-                          padding: "4px 0",
-                        }}
-                        labelFormatter={(value) => {
-                          const date = new Date(value);
-                          return date.toLocaleDateString("pt-BR", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          });
-                        }}
-                        formatter={(value: number, name: string) => {
-                          const formatted =
-                            value >= 1000
-                              ? `R$ ${(value / 1000).toFixed(2)}k`
-                              : `R$ ${value.toFixed(2)}`;
-                          return [
-                            formatted,
-                            name === "deposits" ? "Depósitos" : "Saques",
-                          ];
-                        }}
-                        cursor={{ stroke: "#6B7280", strokeWidth: 1 }}
-                      />
-                      <Legend
-                        wrapperStyle={{ color: "#9CA3AF", paddingTop: "20px" }}
-                        iconType="circle"
-                        iconSize={8}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="deposits"
-                        stroke="#10B981"
-                        strokeWidth={2.5}
-                        fill="url(#colorDeposits)"
-                        name="Depósitos"
-                        dot={false}
-                        activeDot={{
-                          r: 5,
-                          fill: "#10B981",
-                          stroke: "#10B981",
-                          strokeWidth: 2,
-                        }}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="withdrawals"
-                        stroke="#EF4444"
-                        strokeWidth={2.5}
-                        fill="url(#colorWithdrawals)"
-                        name="Saques"
-                        dot={false}
-                        activeDot={{
-                          r: 5,
-                          fill: "#EF4444",
-                          stroke: "#EF4444",
-                          strokeWidth: 2,
-                        }}
-                      />
-                      <ReferenceLine
-                        y={0}
-                        stroke="#6B7280"
-                        strokeDasharray="2 2"
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="h-64 flex items-center justify-center">
-                    <div className="text-center text-gray-400">
-                      <BarChart3 className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                      <p>Carregando dados...</p>
+                <Card
+                  className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-green-500 transition-all duration-200 cursor-pointer h-full"
+                  onMouseEnter={() => fetchHistory("deposits", 7)}
+                  onClick={() => handleMetricCardClick("DEPOSIT")}
+                >
+                  <CardContent className="p-3 lg:p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <DollarSign className="h-4 w-4 text-green-400" />
+                      {financeLoading ? (
+                        <div className="h-5 w-16 bg-gray-700 rounded animate-pulse"></div>
+                      ) : (
+                        <div className="text-lg lg:text-xl font-bold text-white">
+                          {formatCurrency(financeStats.totalDeposits).replace(
+                            "R$",
+                            "R$"
+                          ).length > 15
+                            ? formatCurrency(
+                                financeStats.totalDeposits
+                              ).substring(0, 12) + "..."
+                            : formatCurrency(financeStats.totalDeposits)}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Bar Chart - Daily Trade Volume */}
-            <Card className="bg-gray-900 border-gray-800">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-white flex items-center gap-2">
-                    <BarChart3 className="w-5 h-5 text-blue-400" />
-                    Volume Diário de Trades
-                  </CardTitle>
-                  <Select
-                    value={String(chartDateRange)}
-                    onValueChange={(value) => setChartDateRange(Number(value))}
-                  >
-                    <SelectTrigger className="w-32 h-8 bg-gray-800 border-gray-700 text-white text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-900 border-gray-700">
-                      <SelectItem
-                        value="7"
-                        className="text-white hover:bg-gray-800"
-                      >
-                        7 dias
-                      </SelectItem>
-                      <SelectItem
-                        value="30"
-                        className="text-white hover:bg-gray-800"
-                      >
-                        30 dias
-                      </SelectItem>
-                      <SelectItem
-                        value="90"
-                        className="text-white hover:bg-gray-800"
-                      >
-                        90 dias
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {chartData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={350}>
-                    <BarChart
-                      data={chartData}
-                      margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-                    >
-                      <defs>
-                        <linearGradient
-                          id="colorTrades"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop
-                            offset="5%"
-                            stopColor="#3B82F6"
-                            stopOpacity={0.8}
-                          />
-                          <stop
-                            offset="95%"
-                            stopColor="#3B82F6"
-                            stopOpacity={0.4}
-                          />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        stroke="#374151"
-                        opacity={0.3}
-                      />
-                      <XAxis
-                        dataKey="date"
-                        stroke="#9CA3AF"
-                        fontSize={11}
-                        tick={{ fill: "#9CA3AF" }}
-                        tickLine={{ stroke: "#4B5563" }}
-                        tickFormatter={(value) => {
-                          const date = new Date(value);
-                          return `${date.getDate()}/${date.getMonth() + 1}`;
-                        }}
-                        interval="preserveStartEnd"
-                      />
-                      <YAxis
-                        stroke="#9CA3AF"
-                        fontSize={11}
-                        tick={{ fill: "#9CA3AF" }}
-                        tickLine={{ stroke: "#4B5563" }}
-                        width={70}
-                        tickFormatter={(value) => {
-                          if (value >= 1000000) {
-                            return `R$${(value / 1000000).toFixed(1)}M`;
-                          }
-                          if (value >= 1000) {
-                            return `R$${(value / 1000).toFixed(1)}k`;
-                          }
-                          return `R$${value}`;
-                        }}
-                        domain={[0, "auto"]}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "#1F2937",
-                          border: "1px solid #4B5563",
-                          borderRadius: "8px",
-                          color: "#F3F4F6",
-                          padding: "12px",
-                          boxShadow: "0 4px 6px rgba(0, 0, 0, 0.3)",
-                        }}
-                        labelStyle={{
-                          color: "#F3F4F6",
-                          fontWeight: "600",
-                          marginBottom: "8px",
-                        }}
-                        itemStyle={{
-                          color: "#D1D5DB",
-                          padding: "4px 0",
-                        }}
-                        labelFormatter={(value) => {
-                          const date = new Date(value);
-                          return date.toLocaleDateString("pt-BR", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          });
-                        }}
-                        formatter={(value: number) => {
-                          const formatted =
-                            value >= 1000
-                              ? `R$ ${(value / 1000).toFixed(2)}k`
-                              : `R$ ${value.toFixed(2)}`;
-                          return [formatted, "Volume de Trades"];
-                        }}
-                        cursor={{ fill: "#3B82F6", fillOpacity: 0.1 }}
-                      />
-                      <Legend
-                        wrapperStyle={{ color: "#9CA3AF", paddingTop: "20px" }}
-                        iconType="square"
-                        iconSize={8}
-                      />
-                      <Bar
-                        dataKey="trades"
-                        fill="url(#colorTrades)"
-                        name="Volume de Trades"
-                        radius={[6, 6, 0, 0]}
-                        stroke="#3B82F6"
-                        strokeWidth={1}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="h-64 flex items-center justify-center">
-                    <div className="text-center text-gray-400">
-                      <BarChart3 className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                      <p>Carregando dados...</p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-gray-400">Depósitos</p>
+                      {!financeLoading && (
+                        <div className="flex items-center">
+                          {financeStats.depositsChange >= 0 ? (
+                            <ArrowUpRight className="h-3 w-3 text-green-400" />
+                          ) : (
+                            <ArrowDownRight className="h-3 w-3 text-red-400" />
+                          )}
+                          <span
+                            className={`text-xs ml-0.5 ${
+                              financeStats.depositsChange >= 0
+                                ? "text-green-400"
+                                : "text-red-400"
+                            }`}
+                          >
+                            {formatPercentage(financeStats.depositsChange)}
+                          </span>
+                        </div>
+                      )}
                     </div>
+                  </CardContent>
+                </Card>
+              </CustomTooltip>
+
+              {/* Total Withdrawals */}
+              <CustomTooltip
+                content={
+                  <HistoryTooltipContent
+                    metric="withdrawals"
+                    title="Histórico de Saques"
+                  />
+                }
+                side="top"
+                hoverable
+              >
+                <Card
+                  className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-red-500 transition-all duration-200 cursor-pointer h-full"
+                  onMouseEnter={() => fetchHistory("withdrawals", 7)}
+                  onClick={() => handleMetricCardClick("WITHDRAWAL")}
+                >
+                  <CardContent className="p-3 lg:p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <ArrowDownRight className="h-4 w-4 text-red-400" />
+                      {financeLoading ? (
+                        <div className="h-5 w-16 bg-gray-700 rounded animate-pulse"></div>
+                      ) : (
+                        <div className="text-lg lg:text-xl font-bold text-white">
+                          {formatCurrency(
+                            financeStats.totalWithdrawals
+                          ).replace("R$", "R$").length > 15
+                            ? formatCurrency(
+                                financeStats.totalWithdrawals
+                              ).substring(0, 12) + "..."
+                            : formatCurrency(financeStats.totalWithdrawals)}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-gray-400">Saques</p>
+                      {!financeLoading && (
+                        <div className="flex items-center">
+                          {financeStats.withdrawalsChange >= 0 ? (
+                            <ArrowUpRight className="h-3 w-3 text-green-400" />
+                          ) : (
+                            <ArrowDownRight className="h-3 w-3 text-red-400" />
+                          )}
+                          <span
+                            className={`text-xs ml-0.5 ${
+                              financeStats.withdrawalsChange >= 0
+                                ? "text-green-400"
+                                : "text-red-400"
+                            }`}
+                          >
+                            {formatPercentage(financeStats.withdrawalsChange)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </CustomTooltip>
+
+              {/* Total Trades */}
+              <CustomTooltip
+                content={
+                  <HistoryTooltipContent
+                    metric="trades"
+                    title="Histórico de Trades"
+                  />
+                }
+                side="top"
+                hoverable
+              >
+                <Card
+                  className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-blue-500 transition-all duration-200 cursor-pointer h-full"
+                  onMouseEnter={() => fetchHistory("trades", 7)}
+                >
+                  <CardContent className="p-3 lg:p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <BarChart3 className="h-4 w-4 text-blue-400" />
+                      {financeLoading ? (
+                        <div className="h-5 w-16 bg-gray-700 rounded animate-pulse"></div>
+                      ) : (
+                        <div className="text-lg lg:text-xl font-bold text-white">
+                          {formatCurrency(financeStats.totalTrades).replace(
+                            "R$",
+                            "R$"
+                          ).length > 15
+                            ? formatCurrency(
+                                financeStats.totalTrades
+                              ).substring(0, 12) + "..."
+                            : formatCurrency(financeStats.totalTrades)}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-gray-400">Trades</p>
+                      {!financeLoading && (
+                        <div className="flex items-center">
+                          {financeStats.tradesChange >= 0 ? (
+                            <ArrowUpRight className="h-3 w-3 text-green-400" />
+                          ) : (
+                            <ArrowDownRight className="h-3 w-3 text-red-400" />
+                          )}
+                          <span
+                            className={`text-xs ml-0.5 ${
+                              financeStats.tradesChange >= 0
+                                ? "text-green-400"
+                                : "text-red-400"
+                            }`}
+                          >
+                            {formatPercentage(financeStats.tradesChange)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </CustomTooltip>
+
+              {/* Total Commissions */}
+              <CustomTooltip
+                content={
+                  <HistoryTooltipContent
+                    metric="commissions"
+                    title="Histórico de Comissões"
+                  />
+                }
+                side="top"
+                hoverable
+              >
+                <Card
+                  className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-purple-500 transition-all duration-200 cursor-pointer h-full"
+                  onMouseEnter={() => fetchHistory("commissions", 7)}
+                >
+                  <CardContent className="p-3 lg:p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <PieChart className="h-4 w-4 text-purple-400" />
+                      {financeLoading ? (
+                        <div className="h-5 w-16 bg-gray-700 rounded animate-pulse"></div>
+                      ) : (
+                        <div className="text-lg lg:text-xl font-bold text-white">
+                          {formatCurrency(
+                            financeStats.totalCommissions
+                          ).replace("R$", "R$").length > 15
+                            ? formatCurrency(
+                                financeStats.totalCommissions
+                              ).substring(0, 12) + "..."
+                            : formatCurrency(financeStats.totalCommissions)}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-gray-400">Comissões</p>
+                      {!financeLoading && (
+                        <div className="flex items-center">
+                          {financeStats.commissionsChange >= 0 ? (
+                            <ArrowUpRight className="h-3 w-3 text-green-400" />
+                          ) : (
+                            <ArrowDownRight className="h-3 w-3 text-red-400" />
+                          )}
+                          <span
+                            className={`text-xs ml-0.5 ${
+                              financeStats.commissionsChange >= 0
+                                ? "text-green-400"
+                                : "text-red-400"
+                            }`}
+                          >
+                            {formatPercentage(financeStats.commissionsChange)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </CustomTooltip>
+
+              {/* Average User Balance */}
+              <CustomTooltip
+                content={
+                  <HistoryTooltipContent
+                    metric="balance"
+                    title="Histórico de Saldo Médio"
+                  />
+                }
+                side="top"
+                hoverable
+              >
+                <Card
+                  className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-yellow-500 transition-all duration-200 cursor-pointer h-full"
+                  onMouseEnter={() => fetchHistory("balance", 7)}
+                >
+                  <CardContent className="p-3 lg:p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <TrendingUp className="h-4 w-4 text-yellow-400" />
+                      {financeLoading ? (
+                        <div className="h-5 w-16 bg-gray-700 rounded animate-pulse"></div>
+                      ) : (
+                        <div className="text-lg lg:text-xl font-bold text-white">
+                          {formatCurrency(
+                            financeStats.averageUserBalance
+                          ).replace("R$", "R$").length > 15
+                            ? formatCurrency(
+                                financeStats.averageUserBalance
+                              ).substring(0, 12) + "..."
+                            : formatCurrency(financeStats.averageUserBalance)}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-gray-400">Saldo Médio</p>
+                      {!financeLoading && (
+                        <div className="flex items-center">
+                          {financeStats.balanceChange >= 0 ? (
+                            <ArrowUpRight className="h-3 w-3 text-green-400" />
+                          ) : (
+                            <ArrowDownRight className="h-3 w-3 text-red-400" />
+                          )}
+                          <span
+                            className={`text-xs ml-0.5 ${
+                              financeStats.balanceChange >= 0
+                                ? "text-green-400"
+                                : "text-red-400"
+                            }`}
+                          >
+                            {formatPercentage(financeStats.balanceChange)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </CustomTooltip>
+            </div>
+
+            {/* Charts Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+              {/* Area Chart - Deposits and Withdrawals */}
+              <Card className="bg-gray-900 border-gray-800">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-white flex items-center gap-2">
+                      <TrendingUp className="w-5 h-5 text-green-400" />
+                      Evolução dos Depósitos e Saques
+                    </CardTitle>
+                    <Select
+                      value={String(chartDateRange)}
+                      onValueChange={(value) =>
+                        setChartDateRange(Number(value))
+                      }
+                    >
+                      <SelectTrigger className="w-32 h-8 bg-gray-800 border-gray-700 text-white text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-gray-900 border-gray-700">
+                        <SelectItem
+                          value="7"
+                          className="text-white hover:bg-gray-800"
+                        >
+                          7 dias
+                        </SelectItem>
+                        <SelectItem
+                          value="30"
+                          className="text-white hover:bg-gray-800"
+                        >
+                          30 dias
+                        </SelectItem>
+                        <SelectItem
+                          value="90"
+                          className="text-white hover:bg-gray-800"
+                        >
+                          90 dias
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                </CardHeader>
+                <CardContent>
+                  {chartData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={350}>
+                      <AreaChart
+                        data={chartData}
+                        margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                      >
+                        <defs>
+                          <linearGradient
+                            id="colorDeposits"
+                            x1="0"
+                            y1="0"
+                            x2="0"
+                            y2="1"
+                          >
+                            <stop
+                              offset="5%"
+                              stopColor="#10B981"
+                              stopOpacity={0.3}
+                            />
+                            <stop
+                              offset="95%"
+                              stopColor="#10B981"
+                              stopOpacity={0}
+                            />
+                          </linearGradient>
+                          <linearGradient
+                            id="colorWithdrawals"
+                            x1="0"
+                            y1="0"
+                            x2="0"
+                            y2="1"
+                          >
+                            <stop
+                              offset="5%"
+                              stopColor="#EF4444"
+                              stopOpacity={0.3}
+                            />
+                            <stop
+                              offset="95%"
+                              stopColor="#EF4444"
+                              stopOpacity={0}
+                            />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke="#374151"
+                          opacity={0.3}
+                        />
+                        <XAxis
+                          dataKey="date"
+                          stroke="#9CA3AF"
+                          fontSize={11}
+                          tick={{ fill: "#9CA3AF" }}
+                          tickLine={{ stroke: "#4B5563" }}
+                          tickFormatter={(value) => {
+                            const date = new Date(value);
+                            return `${date.getDate()}/${date.getMonth() + 1}`;
+                          }}
+                          interval="preserveStartEnd"
+                        />
+                        <YAxis
+                          stroke="#9CA3AF"
+                          fontSize={11}
+                          tick={{ fill: "#9CA3AF" }}
+                          tickLine={{ stroke: "#4B5563" }}
+                          width={70}
+                          tickFormatter={(value) => {
+                            if (value >= 1000000) {
+                              return `R$${(value / 1000000).toFixed(1)}M`;
+                            }
+                            if (value >= 1000) {
+                              return `R$${(value / 1000).toFixed(1)}k`;
+                            }
+                            return `R$${value}`;
+                          }}
+                          domain={["auto", "auto"]}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "#1F2937",
+                            border: "1px solid #4B5563",
+                            borderRadius: "8px",
+                            color: "#F3F4F6",
+                            padding: "12px",
+                            boxShadow: "0 4px 6px rgba(0, 0, 0, 0.3)",
+                          }}
+                          labelStyle={{
+                            color: "#F3F4F6",
+                            fontWeight: "600",
+                            marginBottom: "8px",
+                          }}
+                          itemStyle={{
+                            color: "#D1D5DB",
+                            padding: "4px 0",
+                          }}
+                          labelFormatter={(value) => {
+                            const date = new Date(value);
+                            return date.toLocaleDateString("pt-BR", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            });
+                          }}
+                          formatter={(value: number, name: string) => {
+                            const formatted =
+                              value >= 1000
+                                ? `R$ ${(value / 1000).toFixed(2)}k`
+                                : `R$ ${value.toFixed(2)}`;
+                            return [
+                              formatted,
+                              name === "deposits" ? "Depósitos" : "Saques",
+                            ];
+                          }}
+                          cursor={{ stroke: "#6B7280", strokeWidth: 1 }}
+                        />
+                        <Legend
+                          wrapperStyle={{
+                            color: "#9CA3AF",
+                            paddingTop: "20px",
+                          }}
+                          iconType="circle"
+                          iconSize={8}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="deposits"
+                          stroke="#10B981"
+                          strokeWidth={2.5}
+                          fill="url(#colorDeposits)"
+                          name="Depósitos"
+                          dot={false}
+                          activeDot={{
+                            r: 5,
+                            fill: "#10B981",
+                            stroke: "#10B981",
+                            strokeWidth: 2,
+                          }}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="withdrawals"
+                          stroke="#EF4444"
+                          strokeWidth={2.5}
+                          fill="url(#colorWithdrawals)"
+                          name="Saques"
+                          dot={false}
+                          activeDot={{
+                            r: 5,
+                            fill: "#EF4444",
+                            stroke: "#EF4444",
+                            strokeWidth: 2,
+                          }}
+                        />
+                        <ReferenceLine
+                          y={0}
+                          stroke="#6B7280"
+                          strokeDasharray="2 2"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-64 flex items-center justify-center">
+                      <div className="text-center text-gray-400">
+                        <BarChart3 className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                        <p>Carregando dados...</p>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Bar Chart - Daily Trade Volume */}
+              <Card className="bg-gray-900 border-gray-800">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-white flex items-center gap-2">
+                      <BarChart3 className="w-5 h-5 text-blue-400" />
+                      Volume Diário de Trades
+                    </CardTitle>
+                    <Select
+                      value={String(chartDateRange)}
+                      onValueChange={(value) =>
+                        setChartDateRange(Number(value))
+                      }
+                    >
+                      <SelectTrigger className="w-32 h-8 bg-gray-800 border-gray-700 text-white text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-gray-900 border-gray-700">
+                        <SelectItem
+                          value="7"
+                          className="text-white hover:bg-gray-800"
+                        >
+                          7 dias
+                        </SelectItem>
+                        <SelectItem
+                          value="30"
+                          className="text-white hover:bg-gray-800"
+                        >
+                          30 dias
+                        </SelectItem>
+                        <SelectItem
+                          value="90"
+                          className="text-white hover:bg-gray-800"
+                        >
+                          90 dias
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {chartData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={350}>
+                      <BarChart
+                        data={chartData}
+                        margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                      >
+                        <defs>
+                          <linearGradient
+                            id="colorTrades"
+                            x1="0"
+                            y1="0"
+                            x2="0"
+                            y2="1"
+                          >
+                            <stop
+                              offset="5%"
+                              stopColor="#3B82F6"
+                              stopOpacity={0.8}
+                            />
+                            <stop
+                              offset="95%"
+                              stopColor="#3B82F6"
+                              stopOpacity={0.4}
+                            />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke="#374151"
+                          opacity={0.3}
+                        />
+                        <XAxis
+                          dataKey="date"
+                          stroke="#9CA3AF"
+                          fontSize={11}
+                          tick={{ fill: "#9CA3AF" }}
+                          tickLine={{ stroke: "#4B5563" }}
+                          tickFormatter={(value) => {
+                            const date = new Date(value);
+                            return `${date.getDate()}/${date.getMonth() + 1}`;
+                          }}
+                          interval="preserveStartEnd"
+                        />
+                        <YAxis
+                          stroke="#9CA3AF"
+                          fontSize={11}
+                          tick={{ fill: "#9CA3AF" }}
+                          tickLine={{ stroke: "#4B5563" }}
+                          width={70}
+                          tickFormatter={(value) => {
+                            if (value >= 1000000) {
+                              return `R$${(value / 1000000).toFixed(1)}M`;
+                            }
+                            if (value >= 1000) {
+                              return `R$${(value / 1000).toFixed(1)}k`;
+                            }
+                            return `R$${value}`;
+                          }}
+                          domain={[0, "auto"]}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "#1F2937",
+                            border: "1px solid #4B5563",
+                            borderRadius: "8px",
+                            color: "#F3F4F6",
+                            padding: "12px",
+                            boxShadow: "0 4px 6px rgba(0, 0, 0, 0.3)",
+                          }}
+                          labelStyle={{
+                            color: "#F3F4F6",
+                            fontWeight: "600",
+                            marginBottom: "8px",
+                          }}
+                          itemStyle={{
+                            color: "#D1D5DB",
+                            padding: "4px 0",
+                          }}
+                          labelFormatter={(value) => {
+                            const date = new Date(value);
+                            return date.toLocaleDateString("pt-BR", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            });
+                          }}
+                          formatter={(value: number) => {
+                            const formatted =
+                              value >= 1000
+                                ? `R$ ${(value / 1000).toFixed(2)}k`
+                                : `R$ ${value.toFixed(2)}`;
+                            return [formatted, "Volume de Trades"];
+                          }}
+                          cursor={{ fill: "#3B82F6", fillOpacity: 0.1 }}
+                        />
+                        <Legend
+                          wrapperStyle={{
+                            color: "#9CA3AF",
+                            paddingTop: "20px",
+                          }}
+                          iconType="square"
+                          iconSize={8}
+                        />
+                        <Bar
+                          dataKey="trades"
+                          fill="url(#colorTrades)"
+                          name="Volume de Trades"
+                          radius={[6, 6, 0, 0]}
+                          stroke="#3B82F6"
+                          strokeWidth={1}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-64 flex items-center justify-center">
+                      <div className="text-center text-gray-400">
+                        <BarChart3 className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                        <p>Carregando dados...</p>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </div>
-        </div>
         </section>
 
         {/* Transações */}
@@ -3324,9 +3402,7 @@ function AdminDashboardContent() {
           <Card className="bg-gray-900 border-gray-800">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="text-white">
-                  Tabela detalhada
-                </CardTitle>
+                <CardTitle className="text-white">Tabela detalhada</CardTitle>
                 <Button
                   onClick={handleOpenBalanceDialog}
                   className="bg-blue-600 hover:bg-blue-700 text-white"
@@ -3616,7 +3692,7 @@ function AdminDashboardContent() {
                                 hour: "2-digit",
                                 minute: "2-digit",
                                 second: "2-digit",
-                              },
+                              }
                             )}
                           </td>
                           <td className="py-3 px-4">
@@ -3625,16 +3701,16 @@ function AdminDashboardContent() {
                                 transaction.type === "DEPOSIT"
                                   ? "bg-green-900 text-green-300"
                                   : transaction.type === "WITHDRAWAL"
-                                    ? "bg-red-900 text-red-300"
-                                    : transaction.type === "FEE"
-                                      ? "bg-purple-900 text-purple-300"
-                                      : transaction.type === "BUY_CRYPTO"
-                                        ? "bg-emerald-900 text-emerald-300"
-                                        : transaction.type === "SELL_CRYPTO"
-                                          ? "bg-orange-900 text-orange-300"
-                                          : transaction.type === "REFUND"
-                                            ? "bg-gray-900 text-gray-300"
-                                            : "bg-gray-900 text-gray-300"
+                                  ? "bg-red-900 text-red-300"
+                                  : transaction.type === "FEE"
+                                  ? "bg-purple-900 text-purple-300"
+                                  : transaction.type === "BUY_CRYPTO"
+                                  ? "bg-emerald-900 text-emerald-300"
+                                  : transaction.type === "SELL_CRYPTO"
+                                  ? "bg-orange-900 text-orange-300"
+                                  : transaction.type === "REFUND"
+                                  ? "bg-gray-900 text-gray-300"
+                                  : "bg-gray-900 text-gray-300"
                               }`}
                             >
                               {getTransactionTypeLabel(transaction.type)}
@@ -3651,7 +3727,7 @@ function AdminDashboardContent() {
                                 onClick={() => {
                                   if (transaction.userId) {
                                     router.push(
-                                      `/admin/users/${transaction.userId}`,
+                                      `/admin/users/${transaction.userId}`
                                     );
                                   }
                                 }}
@@ -3668,8 +3744,8 @@ function AdminDashboardContent() {
                             {transaction.value && !isNaN(transaction.value)
                               ? formatCurrency(transaction.value)
                               : transaction.currency === "USDT"
-                                ? formatUSDT(Math.abs(transaction.amount || 0))
-                                : formatCurrency(0)}
+                              ? formatUSDT(Math.abs(transaction.amount || 0))
+                              : formatCurrency(0)}
                           </td>
                           <td className="py-3 px-4">
                             <div className="flex items-center gap-2">
@@ -3680,14 +3756,14 @@ function AdminDashboardContent() {
                                   transaction.status === "CONFIRMED"
                                     ? "bg-green-900 text-green-300"
                                     : transaction.status === "PENDING" ||
-                                        transaction.status === "PROCESSING" ||
-                                        transaction.status === "EXECUTING"
-                                      ? "bg-yellow-900 text-yellow-300"
-                                      : transaction.status === "REJECTED" ||
-                                          transaction.status === "FAILED" ||
-                                          transaction.status === "CANCELLED"
-                                        ? "bg-red-900 text-red-300"
-                                        : "bg-gray-900 text-gray-300"
+                                      transaction.status === "PROCESSING" ||
+                                      transaction.status === "EXECUTING"
+                                    ? "bg-yellow-900 text-yellow-300"
+                                    : transaction.status === "REJECTED" ||
+                                      transaction.status === "FAILED" ||
+                                      transaction.status === "CANCELLED"
+                                    ? "bg-red-900 text-red-300"
+                                    : "bg-gray-900 text-gray-300"
                                 }`}
                               >
                                 {getStatusLabel(transaction.status)}
@@ -3695,24 +3771,24 @@ function AdminDashboardContent() {
                               {(transaction.status === "PENDING" ||
                                 transaction.status === "PROCESSING") &&
                                 !transaction.id.startsWith("order_") && (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleTransactionAction(
-                                      transaction.id,
-                                      "approve",
-                                    );
-                                  }}
-                                  disabled={
-                                    processingTransaction === transaction.id
-                                  }
-                                  className="h-6 w-6 p-0 text-green-400 hover:text-green-300 hover:bg-green-900/30"
-                                >
-                                  <CheckCircle className="h-3 w-3" />
-                                </Button>
-                              )}
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleTransactionAction(
+                                        transaction.id,
+                                        "approve"
+                                      );
+                                    }}
+                                    disabled={
+                                      processingTransaction === transaction.id
+                                    }
+                                    className="h-6 w-6 p-0 text-green-400 hover:text-green-300 hover:bg-green-900/30"
+                                  >
+                                    <CheckCircle className="h-3 w-3" />
+                                  </Button>
+                                )}
                             </div>
                           </td>
                         </tr>
@@ -3767,10 +3843,10 @@ function AdminDashboardContent() {
                             transactionDetails.status === "CONFIRMED"
                               ? "bg-green-900 text-green-300"
                               : transactionDetails.status === "PENDING" ||
-                                  transactionDetails.status === "PROCESSING" ||
-                                  transactionDetails.status === "EXECUTING"
-                                ? "bg-yellow-900 text-yellow-300"
-                                : "bg-red-900 text-red-300"
+                                transactionDetails.status === "PROCESSING" ||
+                                transactionDetails.status === "EXECUTING"
+                              ? "bg-yellow-900 text-yellow-300"
+                              : "bg-red-900 text-red-300"
                           }`}
                         >
                           {getStatusLabel(transactionDetails.status)}
@@ -3780,33 +3856,33 @@ function AdminDashboardContent() {
                         transactionDetails.status === "PROCESSING" ||
                         transactionDetails.status === "EXECUTING") &&
                         !transactionDetails.id.startsWith("order_") && (
-                        <Button
-                          onClick={handleMarkAsCompleted}
-                          disabled={markingCompleted}
-                          variant="outline"
-                          size="sm"
-                          className="border-green-600 text-green-400 hover:bg-green-900 hover:text-green-300 mt-5"
-                        >
-                          {markingCompleted ? (
-                            <>
-                              <Clock className="w-4 h-4 mr-2 animate-spin" />
-                              Marcando...
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle className="w-4 h-4 mr-2" />
-                              Marcar como Concluída
-                            </>
-                          )}
-                        </Button>
-                      )}
+                          <Button
+                            onClick={handleMarkAsCompleted}
+                            disabled={markingCompleted}
+                            variant="outline"
+                            size="sm"
+                            className="border-green-600 text-green-400 hover:bg-green-900 hover:text-green-300 mt-5"
+                          >
+                            {markingCompleted ? (
+                              <>
+                                <Clock className="w-4 h-4 mr-2 animate-spin" />
+                                Marcando...
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle className="w-4 h-4 mr-2" />
+                                Marcar como Concluída
+                              </>
+                            )}
+                          </Button>
+                        )}
                     </div>
                   </div>
                   <div>
                     <p className="text-sm text-gray-400">Data</p>
                     <p className="text-white">
                       {new Date(transactionDetails.createdAt).toLocaleString(
-                        "pt-BR",
+                        "pt-BR"
                       )}
                     </p>
                   </div>
@@ -3840,77 +3916,77 @@ function AdminDashboardContent() {
                     {(transactionDetails.type === "BUY_CRYPTO" ||
                       transactionDetails.type === "WITHDRAWAL") &&
                       !transactionDetails.id.startsWith("order_") && (
-                      <div className="col-span-2 border-t border-gray-800 pt-4 mt-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <Mail className="h-4 w-4 text-gray-400" />
-                            <div>
-                              <p className="text-sm text-gray-400">
-                                Status do Recibo por Email
-                              </p>
-                              {(() => {
-                                const receiptStatus = getReceiptStatus();
-                                if (!receiptStatus) {
+                        <div className="col-span-2 border-t border-gray-800 pt-4 mt-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <Mail className="h-4 w-4 text-gray-400" />
+                              <div>
+                                <p className="text-sm text-gray-400">
+                                  Status do Recibo por Email
+                                </p>
+                                {(() => {
+                                  const receiptStatus = getReceiptStatus();
+                                  if (!receiptStatus) {
+                                    return (
+                                      <p className="text-yellow-400 text-sm">
+                                        Não enviado
+                                      </p>
+                                    );
+                                  }
                                   return (
-                                    <p className="text-yellow-400 text-sm">
-                                      Não enviado
-                                    </p>
+                                    <div className="flex items-center gap-2">
+                                      {receiptStatus.sent ? (
+                                        <>
+                                          <CheckCircle className="h-4 w-4 text-green-400" />
+                                          <p className="text-green-400 text-sm">
+                                            Enviado em{" "}
+                                            {new Date(
+                                              receiptStatus.sentAt
+                                            ).toLocaleString("pt-BR")}
+                                          </p>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <X className="h-4 w-4 text-red-400" />
+                                          <p className="text-red-400 text-sm">
+                                            Falha ao enviar
+                                            {receiptStatus.error &&
+                                              `: ${receiptStatus.error}`}
+                                          </p>
+                                        </>
+                                      )}
+                                      {receiptStatus.count > 1 && (
+                                        <span className="text-xs text-gray-500">
+                                          ({receiptStatus.count} tentativas)
+                                        </span>
+                                      )}
+                                    </div>
                                   );
-                                }
-                                return (
-                                  <div className="flex items-center gap-2">
-                                    {receiptStatus.sent ? (
-                                      <>
-                                        <CheckCircle className="h-4 w-4 text-green-400" />
-                                        <p className="text-green-400 text-sm">
-                                          Enviado em{" "}
-                                          {new Date(
-                                            receiptStatus.sentAt,
-                                          ).toLocaleString("pt-BR")}
-                                        </p>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <X className="h-4 w-4 text-red-400" />
-                                        <p className="text-red-400 text-sm">
-                                          Falha ao enviar
-                                          {receiptStatus.error &&
-                                            `: ${receiptStatus.error}`}
-                                        </p>
-                                      </>
-                                    )}
-                                    {receiptStatus.count > 1 && (
-                                      <span className="text-xs text-gray-500">
-                                        ({receiptStatus.count} tentativas)
-                                      </span>
-                                    )}
-                                  </div>
-                                );
-                              })()}
+                                })()}
+                              </div>
                             </div>
+                            <Button
+                              onClick={handleResendReceipt}
+                              disabled={resendingReceipt}
+                              variant="outline"
+                              size="sm"
+                              className="border-gray-700 text-white hover:bg-gray-800"
+                            >
+                              {resendingReceipt ? (
+                                <>
+                                  <Clock className="h-4 w-4 mr-2 animate-spin" />
+                                  Enviando...
+                                </>
+                              ) : (
+                                <>
+                                  <Send className="h-4 w-4 mr-2" />
+                                  Reenviar Recibo
+                                </>
+                              )}
+                            </Button>
                           </div>
-                          <Button
-                            onClick={handleResendReceipt}
-                            disabled={resendingReceipt}
-                            variant="outline"
-                            size="sm"
-                            className="border-gray-700 text-white hover:bg-gray-800"
-                          >
-                            {resendingReceipt ? (
-                              <>
-                                <Clock className="h-4 w-4 mr-2 animate-spin" />
-                                Enviando...
-                              </>
-                            ) : (
-                              <>
-                                <Send className="h-4 w-4 mr-2" />
-                                Reenviar Recibo
-                              </>
-                            )}
-                          </Button>
                         </div>
-                      </div>
-                    )}
+                      )}
                     {transactionDetails.user.cpf && (
                       <div>
                         <p className="text-sm text-gray-400">CPF</p>
@@ -3987,7 +4063,7 @@ function AdminDashboardContent() {
                           <p className="text-sm text-gray-400">Criado em</p>
                           <p className="text-white">
                             {new Date(
-                              transactionDetails.order.createdAt,
+                              transactionDetails.order.createdAt
                             ).toLocaleString("pt-BR")}
                           </p>
                         </div>
@@ -3997,7 +4073,7 @@ function AdminDashboardContent() {
                           <p className="text-sm text-gray-400">Executado em</p>
                           <p className="text-white">
                             {new Date(
-                              transactionDetails.order.executedAt,
+                              transactionDetails.order.executedAt
                             ).toLocaleString("pt-BR")}
                           </p>
                         </div>
@@ -4012,7 +4088,7 @@ function AdminDashboardContent() {
                         <p className="text-sm text-gray-400">Valor Total BRL</p>
                         <p className="text-white">
                           {formatCurrency(
-                            Number(transactionDetails.order.total),
+                            Number(transactionDetails.order.total)
                           )}
                         </p>
                       </div>
@@ -4021,7 +4097,7 @@ function AdminDashboardContent() {
                         <p className="text-white">
                           {formatCurrency(
                             Number(transactionDetails.order.total) /
-                              Number(transactionDetails.order.amount),
+                              Number(transactionDetails.order.amount)
                           )}{" "}
                           BRL/USDT
                         </p>
@@ -4048,7 +4124,7 @@ function AdminDashboardContent() {
                               </span>
                               <span className="text-white font-semibold">
                                 {Number(
-                                  transactionDetails.order.amount,
+                                  transactionDetails.order.amount
                                 ).toLocaleString("pt-BR", {
                                   minimumFractionDigits: 0,
                                   maximumFractionDigits: 8,
@@ -4063,7 +4139,7 @@ function AdminDashboardContent() {
                               <span className="text-white font-semibold">
                                 {formatCurrency(
                                   Number(transactionDetails.order.total) /
-                                    Number(transactionDetails.order.amount),
+                                    Number(transactionDetails.order.amount)
                                 )}{" "}
                                 BRL/USDT
                               </span>
@@ -4079,7 +4155,7 @@ function AdminDashboardContent() {
                                   <span className="text-gray-400">=</span>
                                   <span>
                                     {Number(
-                                      transactionDetails.order.amount,
+                                      transactionDetails.order.amount
                                     ).toLocaleString("pt-BR", {
                                       minimumFractionDigits: 0,
                                       maximumFractionDigits: 8,
@@ -4090,7 +4166,7 @@ function AdminDashboardContent() {
                                   <span>
                                     {formatCurrency(
                                       Number(transactionDetails.order.total) /
-                                        Number(transactionDetails.order.amount),
+                                        Number(transactionDetails.order.amount)
                                     )}
                                   </span>
                                 </div>
@@ -4098,7 +4174,7 @@ function AdminDashboardContent() {
                                   <span className="text-gray-400">=</span>
                                   <span className="text-green-400 font-bold">
                                     {formatCurrency(
-                                      Number(transactionDetails.order.total),
+                                      Number(transactionDetails.order.total)
                                     )}
                                   </span>
                                 </div>
@@ -4154,7 +4230,7 @@ function AdminDashboardContent() {
                         <p className="text-sm text-gray-400">Valor</p>
                         <p className="text-white">
                           {formatCurrency(
-                            Number(transactionDetails.deposit.amount),
+                            Number(transactionDetails.deposit.amount)
                           )}
                         </p>
                       </div>
@@ -4171,7 +4247,7 @@ function AdminDashboardContent() {
                           <p className="text-sm text-gray-400">Confirmado em</p>
                           <p className="text-white">
                             {new Date(
-                              transactionDetails.deposit.confirmedAt,
+                              transactionDetails.deposit.confirmedAt
                             ).toLocaleString("pt-BR")}
                           </p>
                         </div>
@@ -4246,7 +4322,7 @@ function AdminDashboardContent() {
                         <p className="text-sm text-gray-400">Valor</p>
                         <p className="text-white">
                           {formatCurrency(
-                            Number(transactionDetails.withdrawal.amount),
+                            Number(transactionDetails.withdrawal.amount)
                           )}
                         </p>
                       </div>
@@ -4309,7 +4385,7 @@ function AdminDashboardContent() {
                   {Boolean(
                     transactionDetails.order?.externalOrderId ||
                       (transactionDetails.metadata as Record<string, unknown>)
-                        ?.orderId,
+                        ?.orderId
                   ) && (
                     <span className="text-gray-500 text-xs">
                       (ID externo / pedido para buscar nos logs)
@@ -4549,8 +4625,8 @@ function AdminDashboardContent() {
                 {processingBalance
                   ? "Processando..."
                   : balanceOperation === "CREDIT"
-                    ? "Creditar"
-                    : "Deduzir"}
+                  ? "Creditar"
+                  : "Deduzir"}
               </Button>
             </div>
           </div>
