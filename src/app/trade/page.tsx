@@ -38,6 +38,26 @@ const WHATSAPP_SUPPORT_URL = `https://wa.me/${
 // Hard limit for online purchases - above this, redirect to WhatsApp
 const ONLINE_MAX_USDT = 2000;
 
+// Generate WhatsApp URL with pre-filled message for deposits > 2k
+const getWhatsAppUrlForLargeDeposit = (
+  usdtAmount: number,
+  language: string
+) => {
+  const whatsappNumber =
+    process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "5511984284867";
+  const message =
+    language === "pt"
+      ? `Olá! Tenho interesse em fazer um depósito de ${usdtAmount.toLocaleString(
+          "pt-BR",
+          { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+        )} USDT. Gostaria de mais informações.`
+      : `Hello! I'm interested in making a deposit of ${usdtAmount.toLocaleString(
+          "en-US",
+          { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+        )} USDT. I'd like more information.`;
+  return `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+};
+
 const TradePage = () => {
   const router = useRouter();
   const pathname = usePathname();
@@ -295,30 +315,21 @@ const TradePage = () => {
     const formatted = formatUSDTInput(inputValue);
     const parsed = parseUSDTInput(formatted);
 
-    // Prevent typing more than 2000 USDT - redirect to WhatsApp instead
+    // Prevent typing more than 2000 USDT - show warning and WhatsApp button
     if (parsed > ONLINE_MAX_USDT) {
-      // Show toast and redirect to WhatsApp
+      // Show toast warning
       toast({
         title: language === "pt" ? "Limite online" : "Online limit",
         description:
           language === "pt"
             ? `O limite máximo para compras online é ${ONLINE_MAX_USDT.toLocaleString(
                 "pt-BR"
-              )} USDT. Redirecionando para WhatsApp...`
-            : `Maximum online purchase limit is ${ONLINE_MAX_USDT.toLocaleString()} USDT. Redirecting to WhatsApp...`,
+              )} USDT. Para valores maiores, use o botão WhatsApp abaixo.`
+            : `Maximum online purchase limit is ${ONLINE_MAX_USDT.toLocaleString()} USDT. For larger amounts, use the WhatsApp button below.`,
         variant: "default",
       });
-      // Redirect to WhatsApp after a short delay
-      setTimeout(() => {
-        window.open(WHATSAPP_SUPPORT_URL, "_blank");
-      }, 1500);
-      // Set to max allowed value
-      setBuyUSDT(
-        ONLINE_MAX_USDT.toLocaleString("pt-BR", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        }).replace(".", ",")
-      );
+      // Allow user to see the value they typed, but they'll see the WhatsApp button instead of purchase button
+      setBuyUSDT(formatted);
       return;
     }
 
@@ -575,10 +586,6 @@ const TradePage = () => {
         description: msg,
         variant: "destructive",
       });
-      // Redirect to WhatsApp
-      setTimeout(() => {
-        window.open(WHATSAPP_SUPPORT_URL, "_blank");
-      }, 2000);
       return;
     }
 
@@ -623,10 +630,6 @@ const TradePage = () => {
             description: msg,
             variant: "destructive",
           });
-          // Redirect to WhatsApp
-          setTimeout(() => {
-            window.open(WHATSAPP_SUPPORT_URL, "_blank");
-          }, 2000);
           return;
         }
         if (data.code === "DEPOSIT_LIMIT_EXCEEDED") {
@@ -1126,7 +1129,10 @@ const TradePage = () => {
                       className="w-full h-12 sm:h-14 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-colors text-base sm:text-lg flex items-center justify-center gap-2"
                     >
                       <a
-                        href={WHATSAPP_SUPPORT_URL}
+                        href={getWhatsAppUrlForLargeDeposit(
+                          buyUSDTAmount,
+                          language
+                        )}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
