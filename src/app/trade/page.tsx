@@ -31,7 +31,9 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-const WHATSAPP_SUPPORT_URL = `https://wa.me/${process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "5511984284867"}`;
+const WHATSAPP_SUPPORT_URL = `https://wa.me/${
+  process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "5511984284867"
+}`;
 
 const TradePage = () => {
   const router = useRouter();
@@ -43,7 +45,7 @@ const TradePage = () => {
   // Admin-controlled switch and limits from site-status
   const [moneyDisabled, setMoneyDisabled] = useState(false);
   const [moneyDisabledMessage, setMoneyDisabledMessage] = useState<string>("");
-  const [maxDepositUsdt, setMaxDepositUsdt] = useState(2000);
+  const [maxDepositUsdt, setMaxDepositUsdt] = useState(1000000);
   const [inMaintenance, setInMaintenance] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState<string>("");
 
@@ -76,7 +78,7 @@ const TradePage = () => {
         if (data?.success) {
           setMoneyDisabled(Boolean(data.depositsDisabled));
           setMoneyDisabledMessage(String(data.depositsDisabledMessage || ""));
-          setMaxDepositUsdt(Number(data.maxDepositUsdt) || 2000);
+          setMaxDepositUsdt(Number(data.maxDepositUsdt) || 1000000);
           setInMaintenance(Boolean(data.inMaintenance));
           setMaintenanceMessage(String(data.maintenanceMessage || ""));
         }
@@ -255,11 +257,16 @@ const TradePage = () => {
 
     // Split by comma so we don't confuse thousand dots with decimal point
     const [intPartStr, ...decParts] = cleaned.split(",");
-    const decimalPart = (decParts.join("") || "").replace(/\D/g, "").slice(0, 4); // max 4 decimals
+    const decimalPart = (decParts.join("") || "")
+      .replace(/\D/g, "")
+      .slice(0, 4); // max 4 decimals
 
     // Integer part: strip all non-digits (removes thousand dots), then add thousand separators
     const integerDigits = (intPartStr || "").replace(/\D/g, "");
-    const formattedInteger = integerDigits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    const formattedInteger = integerDigits.replace(
+      /\B(?=(\d{3})+(?!\d))/g,
+      "."
+    );
 
     if (decimalPart) {
       return `${formattedInteger},${decimalPart}`;
@@ -887,9 +894,13 @@ const TradePage = () => {
         {inMaintenance && maintenanceMessage ? (
           <div className="max-w-4xl mx-auto mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
             <p className="text-sm font-medium text-amber-200">
-              {language === "pt" ? "Manutenção programada" : "Scheduled maintenance"}
+              {language === "pt"
+                ? "Manutenção programada"
+                : "Scheduled maintenance"}
             </p>
-            <p className="text-xs text-amber-100/80 mt-1">{maintenanceMessage}</p>
+            <p className="text-xs text-amber-100/80 mt-1">
+              {maintenanceMessage}
+            </p>
           </div>
         ) : null}
 

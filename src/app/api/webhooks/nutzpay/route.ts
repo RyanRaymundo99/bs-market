@@ -8,6 +8,38 @@ import {
   sendWithdrawalReceipt,
 } from "@/lib/receipt-email";
 
+/** Map NutzPay webhook event names to canonical types we handle (incl. Portuguese / alternate names). */
+function normalizeWebhookEventType(raw: string): string {
+  const lower = raw.toLowerCase().replace(/\s+/g, "_");
+  const map: Record<string, string> = {
+    "transaction.created": "transaction.created",
+    "transaction.completed": "transaction.completed",
+    "transaction.failed": "transaction.failed",
+    "transaction.refunded": "transaction.refunded",
+    "transaction_created": "transaction.created",
+    "transaction_completed": "transaction.completed",
+    "transaction_failed": "transaction.failed",
+    "transaction_refunded": "transaction.refunded",
+    "transacao_criada": "transaction.created",
+    "transacao_completada": "transaction.completed",
+    "transacao_falhou": "transaction.failed",
+    "transacao_reembolsada": "transaction.refunded",
+    "payment.created": "payment.created",
+    "payment.completed": "payment.completed",
+    "payment.failed": "payment.failed",
+    "payment.refunded": "payment.refunded",
+    "payment_created": "payment.created",
+    "payment_completed": "payment.completed",
+    "payment_failed": "payment.failed",
+    "payment_refunded": "payment.refunded",
+    "pagamento_criado": "payment.created",
+    "pagamento_completado": "payment.completed",
+    "pagamento_falhou": "payment.failed",
+    "pagamento_reembolsado": "payment.refunded",
+  };
+  return map[lower] ?? raw;
+}
+
 // Allow GET requests for webhook URL verification/testing
 export async function GET(request: NextRequest) {
   return NextResponse.json({
@@ -30,7 +62,9 @@ export async function POST(request: NextRequest) {
     // NutzPay can send webhooks in two formats:
     // 1. Nested: { event: "...", data: { transaction_id: "...", status: "..." } }
     // 2. Flat: { event: "...", transaction_id: "...", status: "..." }
-    const eventType = body.event || "transaction.unknown";
+    // Supported events (Editar Webhook): Transação Criada/Completada/Falhou/Reembolsada, Pagamento Criado/Completado/Falhou/Reembolsado
+    const rawEvent = (body.event || body.type || "transaction.unknown") as string;
+    const eventType = normalizeWebhookEventType(rawEvent);
     const webhookData = body.data || body; // Use nested data if present, otherwise use body itself
 
     // Extract transaction_id from either nested data or top-level

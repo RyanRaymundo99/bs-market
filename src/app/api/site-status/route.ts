@@ -26,7 +26,7 @@ export async function GET() {
         withdrawalsDisabled: moneyControls.withdrawalsDisabled,
         depositsDisabledMessage: moneyControls.depositsDisabledMessage,
         withdrawalsDisabledMessage: moneyControls.withdrawalsDisabledMessage,
-        maxDepositUsdt: moneyControls.maxDepositUsdt ?? 2000,
+        maxDepositUsdt: moneyControls.maxDepositUsdt ?? 1000000,
         maintenanceMessage: moneyControls.maintenanceMessage ?? null,
         maintenanceStartAt: moneyControls.maintenanceStartAt ?? null,
         maintenanceEndAt: moneyControls.maintenanceEndAt ?? null,
@@ -47,4 +47,3 @@ export async function GET() {
     );
   }
 }
-

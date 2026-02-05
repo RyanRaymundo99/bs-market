@@ -44,7 +44,7 @@ async function ensureMoneyControlsTable(): Promise<void> {
         "withdrawalsDisabled" boolean NOT NULL DEFAULT false,
         "depositsDisabledMessage" text NOT NULL DEFAULT '${depositsMsg}',
         "withdrawalsDisabledMessage" text NOT NULL DEFAULT '${withdrawalsMsg}',
-        "maxDepositUsdt" integer NOT NULL DEFAULT 2000,
+        "maxDepositUsdt" integer NOT NULL DEFAULT 1000000,
         "maintenanceMessage" text,
         "maintenanceStartAt" timestamptz,
         "maintenanceEndAt" timestamptz,
@@ -76,8 +76,14 @@ async function ensureMoneyControlsTable(): Promise<void> {
         ALTER TABLE "site_settings"
         ADD COLUMN IF NOT EXISTS "depositsDisabled" boolean NOT NULL DEFAULT false,
         ADD COLUMN IF NOT EXISTS "withdrawalsDisabled" boolean NOT NULL DEFAULT false,
-        ADD COLUMN IF NOT EXISTS "depositsDisabledMessage" text NOT NULL DEFAULT '${DEFAULT_DEPOSITS_MESSAGE.replace(/'/g, "''")}',
-        ADD COLUMN IF NOT EXISTS "withdrawalsDisabledMessage" text NOT NULL DEFAULT '${DEFAULT_WITHDRAWALS_MESSAGE.replace(/'/g, "''")}';
+        ADD COLUMN IF NOT EXISTS "depositsDisabledMessage" text NOT NULL DEFAULT '${DEFAULT_DEPOSITS_MESSAGE.replace(
+          /'/g,
+          "''"
+        )}',
+        ADD COLUMN IF NOT EXISTS "withdrawalsDisabledMessage" text NOT NULL DEFAULT '${DEFAULT_WITHDRAWALS_MESSAGE.replace(
+          /'/g,
+          "''"
+        )}';
       `);
 
       // Migrate data: if moneyDisabled was true, set both to true (Unsafe to avoid 42P02)
@@ -94,7 +100,7 @@ async function ensureMoneyControlsTable(): Promise<void> {
       `);
       await prisma.$executeRawUnsafe(`
         ALTER TABLE "site_settings"
-        ADD COLUMN IF NOT EXISTS "maxDepositUsdt" integer NOT NULL DEFAULT 2000,
+        ADD COLUMN IF NOT EXISTS "maxDepositUsdt" integer NOT NULL DEFAULT 1000000,
         ADD COLUMN IF NOT EXISTS "maintenanceMessage" text,
         ADD COLUMN IF NOT EXISTS "maintenanceStartAt" timestamptz,
         ADD COLUMN IF NOT EXISTS "maintenanceEndAt" timestamptz;
@@ -105,12 +111,18 @@ async function ensureMoneyControlsTable(): Promise<void> {
         ALTER TABLE "site_settings"
         ADD COLUMN IF NOT EXISTS "depositsDisabled" boolean NOT NULL DEFAULT false,
         ADD COLUMN IF NOT EXISTS "withdrawalsDisabled" boolean NOT NULL DEFAULT false,
-        ADD COLUMN IF NOT EXISTS "depositsDisabledMessage" text NOT NULL DEFAULT '${DEFAULT_DEPOSITS_MESSAGE.replace(/'/g, "''")}',
-        ADD COLUMN IF NOT EXISTS "withdrawalsDisabledMessage" text NOT NULL DEFAULT '${DEFAULT_WITHDRAWALS_MESSAGE.replace(/'/g, "''")}';
+        ADD COLUMN IF NOT EXISTS "depositsDisabledMessage" text NOT NULL DEFAULT '${DEFAULT_DEPOSITS_MESSAGE.replace(
+          /'/g,
+          "''"
+        )}',
+        ADD COLUMN IF NOT EXISTS "withdrawalsDisabledMessage" text NOT NULL DEFAULT '${DEFAULT_WITHDRAWALS_MESSAGE.replace(
+          /'/g,
+          "''"
+        )}';
       `);
       await prisma.$executeRawUnsafe(`
         ALTER TABLE "site_settings"
-        ADD COLUMN IF NOT EXISTS "maxDepositUsdt" integer NOT NULL DEFAULT 2000,
+        ADD COLUMN IF NOT EXISTS "maxDepositUsdt" integer NOT NULL DEFAULT 1000000,
         ADD COLUMN IF NOT EXISTS "maintenanceMessage" text,
         ADD COLUMN IF NOT EXISTS "maintenanceStartAt" timestamptz,
         ADD COLUMN IF NOT EXISTS "maintenanceEndAt" timestamptz;
@@ -143,7 +155,7 @@ export async function getMoneyControls(): Promise<MoneyControls> {
     }>
   >(
     `SELECT "depositsDisabled", "withdrawalsDisabled", "depositsDisabledMessage", "withdrawalsDisabledMessage",
-            COALESCE("maxDepositUsdt", 2000)::int as "maxDepositUsdt",
+            COALESCE("maxDepositUsdt", 1000000)::int as "maxDepositUsdt",
             "maintenanceMessage", "maintenanceStartAt", "maintenanceEndAt",
             "updatedAt", "updatedBy"
      FROM "site_settings"
@@ -158,7 +170,7 @@ export async function getMoneyControls(): Promise<MoneyControls> {
       withdrawalsDisabled: false,
       depositsDisabledMessage: DEFAULT_DEPOSITS_MESSAGE,
       withdrawalsDisabledMessage: DEFAULT_WITHDRAWALS_MESSAGE,
-      maxDepositUsdt: 2000,
+      maxDepositUsdt: 1000000,
       maintenanceMessage: null,
       maintenanceStartAt: null,
       maintenanceEndAt: null,
@@ -168,9 +180,30 @@ export async function getMoneyControls(): Promise<MoneyControls> {
   }
 
   const r = rows[0];
+
+  // Auto-update old limit values (2000) to new default (1000000)
+  // This ensures existing installations get the new limit automatically
+  if (r.maxDepositUsdt === 2000) {
+    try {
+      await prisma.$executeRawUnsafe(`
+        UPDATE "site_settings"
+        SET "maxDepositUsdt" = 1000000, "updatedAt" = now()
+        WHERE "id" = 1 AND "maxDepositUsdt" = 2000;
+      `);
+      // Return updated value
+      return {
+        ...r,
+        maxDepositUsdt: 1000000,
+      };
+    } catch (error) {
+      console.error("Failed to auto-update maxDepositUsdt:", error);
+      // Continue with existing value if update fails
+    }
+  }
+
   return {
     ...r,
-    maxDepositUsdt: r.maxDepositUsdt ?? 2000,
+    maxDepositUsdt: r.maxDepositUsdt ?? 1000000,
   };
 }
 
@@ -214,8 +247,12 @@ export async function setMoneyControls(params: {
     SET
       "depositsDisabled" = ${params.depositsDisabled},
       "withdrawalsDisabled" = ${params.withdrawalsDisabled},
-      "depositsDisabledMessage" = ${params.depositsDisabledMessage ?? current.depositsDisabledMessage},
-      "withdrawalsDisabledMessage" = ${params.withdrawalsDisabledMessage ?? current.withdrawalsDisabledMessage},
+      "depositsDisabledMessage" = ${
+        params.depositsDisabledMessage ?? current.depositsDisabledMessage
+      },
+      "withdrawalsDisabledMessage" = ${
+        params.withdrawalsDisabledMessage ?? current.withdrawalsDisabledMessage
+      },
       "maxDepositUsdt" = ${maxDeposit},
       "maintenanceMessage" = ${maintenanceMsg},
       "maintenanceStartAt" = ${maintenanceStart},

@@ -314,7 +314,7 @@ function AdminDashboardContent() {
     updatedAt: string;
     updatedBy: string | null;
   } | null>(null);
-  const [maxDepositUsdt, setMaxDepositUsdt] = useState(2000);
+  const [maxDepositUsdt, setMaxDepositUsdt] = useState(1000000);
   const [maintenanceMessage, setMaintenanceMessage] = useState("");
   const [maintenanceStartAt, setMaintenanceStartAt] = useState("");
   const [maintenanceEndAt, setMaintenanceEndAt] = useState("");
@@ -422,7 +422,9 @@ function AdminDashboardContent() {
           setWithdrawalsDisabledMessage(
             String(data.moneyControls.withdrawalsDisabledMessage || "")
           );
-          setMaxDepositUsdt(Number(data.moneyControls.maxDepositUsdt) || 2000);
+          setMaxDepositUsdt(
+            Number(data.moneyControls.maxDepositUsdt) || 1000000
+          );
           setMaintenanceMessage(
             String(data.moneyControls.maintenanceMessage || "")
           );
@@ -2373,7 +2375,7 @@ function AdminDashboardContent() {
                 <Input
                   type="number"
                   min={1}
-                  max={100000}
+                  max={10000000}
                   value={maxDepositUsdt}
                   onChange={(e) =>
                     setMaxDepositUsdt(
