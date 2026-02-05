@@ -196,9 +196,9 @@ export class NutzPayService {
         usdtAmountString: usdtAmount.toFixed(4),
       });
 
-      // Prepare the purchase payload per NutzPay migration guide (no "acquirer" field)
-      // Guide: amount, usdt_amount, customer, external_id, callback_url only – API uses account default provider
-      const purchasePayload = {
+      // Prepare the purchase payload. Send acquirer explicitly to override account default
+      // (e.g. when account default is "cali" which is unsupported – force mercadopago).
+      const purchasePayload: Record<string, unknown> = {
         amount: formattedAmount,
         usdt_amount: formattedUsdtAmount,
         customer: {
@@ -214,6 +214,11 @@ export class NutzPayService {
             process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"
           }/api/webhooks/nutzpay`,
       };
+      // Override provider when env is set (avoids "Unsupported acquirer: cali" when account default is cali)
+      const acquirer = process.env.NUTZPAY_ACQUIRER?.toLowerCase().trim();
+      if (acquirer) {
+        purchasePayload.acquirer = acquirer;
+      }
 
       const headers = this.getAuthHeaders();
 

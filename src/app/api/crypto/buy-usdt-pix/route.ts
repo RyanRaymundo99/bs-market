@@ -425,7 +425,8 @@ export async function POST(request: NextRequest) {
             exchangeRate: amountNum / usdtAmountNum,
             fee: fee,
             totalPaid: amountNum,
-            transactionId: transactionId || externalId,
+            transactionId:
+              typeof transactionId === "string" ? transactionId : externalId,
             date: new Date(),
             paymentMethod: "PIX",
           })
