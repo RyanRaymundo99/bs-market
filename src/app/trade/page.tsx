@@ -35,6 +35,9 @@ const WHATSAPP_SUPPORT_URL = `https://wa.me/${
   process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "5511984284867"
 }`;
 
+// Hard limit for online purchases - above this, redirect to WhatsApp
+const ONLINE_MAX_USDT = 2000;
+
 const TradePage = () => {
   const router = useRouter();
   const pathname = usePathname();
@@ -290,6 +293,35 @@ const TradePage = () => {
   const handleUSDTInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
     const formatted = formatUSDTInput(inputValue);
+    const parsed = parseUSDTInput(formatted);
+
+    // Prevent typing more than 2000 USDT - redirect to WhatsApp instead
+    if (parsed > ONLINE_MAX_USDT) {
+      // Show toast and redirect to WhatsApp
+      toast({
+        title: language === "pt" ? "Limite online" : "Online limit",
+        description:
+          language === "pt"
+            ? `O limite máximo para compras online é ${ONLINE_MAX_USDT.toLocaleString(
+                "pt-BR"
+              )} USDT. Redirecionando para WhatsApp...`
+            : `Maximum online purchase limit is ${ONLINE_MAX_USDT.toLocaleString()} USDT. Redirecting to WhatsApp...`,
+        variant: "default",
+      });
+      // Redirect to WhatsApp after a short delay
+      setTimeout(() => {
+        window.open(WHATSAPP_SUPPORT_URL, "_blank");
+      }, 1500);
+      // Set to max allowed value
+      setBuyUSDT(
+        ONLINE_MAX_USDT.toLocaleString("pt-BR", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }).replace(".", ",")
+      );
+      return;
+    }
+
     setBuyUSDT(formatted);
   };
 
@@ -530,6 +562,27 @@ const TradePage = () => {
       });
       return;
     }
+    // Hard limit: 2000 USDT for online purchases
+    if (buyUSDTAmount > ONLINE_MAX_USDT) {
+      const msg =
+        language === "pt"
+          ? `O limite máximo para compras online é ${ONLINE_MAX_USDT.toLocaleString(
+              "pt-BR"
+            )} USDT. Para valores maiores, entre em contato conosco via WhatsApp.`
+          : `Maximum online purchase limit is ${ONLINE_MAX_USDT.toLocaleString()} USDT. For larger amounts, please contact us via WhatsApp.`;
+      toast({
+        title: language === "pt" ? "Limite online" : "Online limit",
+        description: msg,
+        variant: "destructive",
+      });
+      // Redirect to WhatsApp
+      setTimeout(() => {
+        window.open(WHATSAPP_SUPPORT_URL, "_blank");
+      }, 2000);
+      return;
+    }
+
+    // Also check against admin-configured maxDepositUsdt (for lower limits)
     if (buyUSDTAmount > maxDepositUsdt) {
       const msg =
         language === "pt"
@@ -560,6 +613,22 @@ const TradePage = () => {
       const data = await response.json();
 
       if (!response.ok) {
+        if (data.code === "ONLINE_LIMIT_EXCEEDED") {
+          const msg =
+            language === "pt"
+              ? `O limite máximo para compras online é 2.000 USDT. Para valores maiores, entre em contato conosco via WhatsApp.`
+              : `Maximum online purchase limit is 2,000 USDT. For larger amounts, please contact us via WhatsApp.`;
+          toast({
+            title: language === "pt" ? "Limite online" : "Online limit",
+            description: msg,
+            variant: "destructive",
+          });
+          // Redirect to WhatsApp
+          setTimeout(() => {
+            window.open(WHATSAPP_SUPPORT_URL, "_blank");
+          }, 2000);
+          return;
+        }
         if (data.code === "DEPOSIT_LIMIT_EXCEEDED") {
           const msg =
             language === "pt"
@@ -989,8 +1058,10 @@ const TradePage = () => {
                   />
                   <p className="mt-1.5 text-xs text-gray-400">
                     {language === "pt"
-                      ? `Máximo ${maxDepositUsdt} USDT por depósito. Valores maiores: entre em contato via WhatsApp.`
-                      : `Maximum ${maxDepositUsdt} USDT per deposit. For larger amounts: contact us via WhatsApp.`}
+                      ? `Máximo ${ONLINE_MAX_USDT.toLocaleString(
+                          "pt-BR"
+                        )} USDT para compras online. Valores maiores: entre em contato via WhatsApp.`
+                      : `Maximum ${ONLINE_MAX_USDT.toLocaleString()} USDT for online purchases. For larger amounts: contact us via WhatsApp.`}
                   </p>
                 </div>
 
@@ -1041,7 +1112,32 @@ const TradePage = () => {
                   </div>
                 </div>
 
-                {buyUSDTAmount > maxDepositUsdt ? (
+                {buyUSDTAmount > ONLINE_MAX_USDT ? (
+                  <div className="space-y-3">
+                    <p className="text-sm text-amber-400 text-center">
+                      {language === "pt"
+                        ? `O limite máximo para compras online é ${ONLINE_MAX_USDT.toLocaleString(
+                            "pt-BR"
+                          )} USDT. Para valores maiores, entre em contato conosco via WhatsApp.`
+                        : `Maximum online purchase limit is ${ONLINE_MAX_USDT.toLocaleString()} USDT. For larger amounts, please contact us via WhatsApp.`}
+                    </p>
+                    <Button
+                      asChild
+                      className="w-full h-12 sm:h-14 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-colors text-base sm:text-lg flex items-center justify-center gap-2"
+                    >
+                      <a
+                        href={WHATSAPP_SUPPORT_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <MessageCircle className="w-5 h-5" />
+                        {language === "pt"
+                          ? "Falar no WhatsApp"
+                          : "Contact via WhatsApp"}
+                      </a>
+                    </Button>
+                  </div>
+                ) : buyUSDTAmount > maxDepositUsdt ? (
                   <div className="space-y-3">
                     <p className="text-sm text-amber-400 text-center">
                       {language === "pt"

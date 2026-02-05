@@ -132,7 +132,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Enforce maximum deposit; above limit user must contact via WhatsApp
+    // Hard limit: 2000 USDT for online purchases
+    const ONLINE_MAX_USDT = 2000;
+    if (usdtAmountNum > ONLINE_MAX_USDT) {
+      const whatsappNumber =
+        process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "5511984284867";
+      return NextResponse.json(
+        {
+          error: `O limite máximo para compras online é ${ONLINE_MAX_USDT.toLocaleString(
+            "pt-BR"
+          )} USDT. Para valores maiores, entre em contato conosco via WhatsApp.`,
+          code: "ONLINE_LIMIT_EXCEEDED",
+          whatsappUrl: `https://wa.me/${whatsappNumber}`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Also check against admin-configured maxDepositUsdt (for lower limits)
     if (usdtAmountNum > maxDepositUsdt) {
       const whatsappNumber =
         process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "5511984284867";
