@@ -55,6 +55,20 @@ export class NutzPayService {
     return headers;
   }
 
+  /** Redact secret headers so they are never logged. */
+  private redactHeaders(headers: unknown): Record<string, string> {
+    if (!headers || typeof headers !== "object") return {};
+    const out: Record<string, string> = {};
+    const secretKeys = ["x-secret-key", "authorization", "cookie"];
+    for (const [k, v] of Object.entries(headers)) {
+      const lower = k.toLowerCase();
+      out[k] = secretKeys.some((s) => lower.includes(s))
+        ? "[REDACTED]"
+        : String(v);
+    }
+    return out;
+  }
+
   /**
    * v2.0: Build error message for 429 Rate Limit responses using X-RateLimit-* headers.
    */
@@ -266,7 +280,7 @@ export class NutzPayService {
           console.error("Response Data:", JSON.stringify(errorData, null, 2));
           console.error(
             "Request Headers Sent:",
-            JSON.stringify(error.config?.headers, null, 2)
+            JSON.stringify(this.redactHeaders(error.config?.headers), null, 2)
           );
           console.error(
             "Auth Method Used:",
@@ -301,7 +315,20 @@ export class NutzPayService {
           throw new Error(errorMessage);
         }
 
-        // Log other API errors with request details
+        // 502/503/504: NutzPay gateway or backend temporarily unavailable
+        const status = error.response?.status;
+        if (status === 502 || status === 503 || status === 504) {
+          const msg =
+            status === 502
+              ? "NutzPay is temporarily unavailable (Bad Gateway). Please try again in a few minutes."
+              : status === 503
+              ? "NutzPay service is temporarily unavailable. Please try again in a few minutes."
+              : "NutzPay request timed out. Please try again.";
+          console.error(`NutzPay ${status}:`, msg);
+          throw new Error(msg);
+        }
+
+        // Log other API errors with request details (headers redacted)
         if (error.response?.data) {
           console.error("=== NUTZPAY API ERROR ===");
           console.error("Status:", error.response.status);
@@ -313,7 +340,7 @@ export class NutzPayService {
           console.error("Request Method:", error.config?.method);
           console.error(
             "Request Headers:",
-            JSON.stringify(error.config?.headers, null, 2)
+            JSON.stringify(this.redactHeaders(error.config?.headers), null, 2)
           );
           console.error("Request payload that caused error:", {
             amount: formattedAmount ?? data.amount,
