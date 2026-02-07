@@ -33,6 +33,10 @@ export async function PATCH(request: NextRequest) {
       maintenanceMessage?: string | null;
       maintenanceStartAt?: string | null;
       maintenanceEndAt?: string | null;
+      blockLoginDuringMaintenance?: boolean;
+      blockTradeDuringMaintenance?: boolean;
+      newSignupsDisabled?: boolean;
+      tradeDisabled?: boolean;
       notifyUsers?: boolean;
     };
 
@@ -82,6 +86,10 @@ export async function PATCH(request: NextRequest) {
       maintenanceMessage,
       maintenanceStartAt,
       maintenanceEndAt,
+      blockLoginDuringMaintenance: body.blockLoginDuringMaintenance,
+      blockTradeDuringMaintenance: body.blockTradeDuringMaintenance,
+      newSignupsDisabled: body.newSignupsDisabled,
+      tradeDisabled: body.tradeDisabled,
       updatedBy: adminSession.user.email || adminSession.userId,
       notifyUsers: Boolean(body.notifyUsers),
     });
@@ -101,6 +109,10 @@ export async function PATCH(request: NextRequest) {
         maintenanceMessage: oldMoneyControls.maintenanceMessage ?? null,
         maintenanceStartAt: oldMoneyControls.maintenanceStartAt?.toISOString() ?? null,
         maintenanceEndAt: oldMoneyControls.maintenanceEndAt?.toISOString() ?? null,
+        blockLoginDuringMaintenance: oldMoneyControls.blockLoginDuringMaintenance,
+        blockTradeDuringMaintenance: oldMoneyControls.blockTradeDuringMaintenance,
+        newSignupsDisabled: oldMoneyControls.newSignupsDisabled,
+        tradeDisabled: oldMoneyControls.tradeDisabled,
       },
       newValue: {
         depositsDisabled: moneyControls.depositsDisabled,
@@ -111,6 +123,10 @@ export async function PATCH(request: NextRequest) {
         maintenanceMessage: moneyControls.maintenanceMessage ?? null,
         maintenanceStartAt: moneyControls.maintenanceStartAt?.toISOString() ?? null,
         maintenanceEndAt: moneyControls.maintenanceEndAt?.toISOString() ?? null,
+        blockLoginDuringMaintenance: moneyControls.blockLoginDuringMaintenance,
+        blockTradeDuringMaintenance: moneyControls.blockTradeDuringMaintenance,
+        newSignupsDisabled: moneyControls.newSignupsDisabled,
+        tradeDisabled: moneyControls.tradeDisabled,
       },
       ipAddress: ipAddress ?? undefined,
       userAgent: userAgent ?? undefined,

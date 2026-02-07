@@ -9,7 +9,6 @@ import {
   TrendingDown,
   BarChart3,
   User,
-  LayoutList,
 } from "lucide-react";
 import { BalanceDisplay } from "./balance-display";
 import { UserNotificationBell } from "./user-notification-bell";
@@ -21,7 +20,6 @@ const NAV_LINKS_KEYS = [
   { key: "dashboard", href: "/dashboard", icon: Home },
   { key: "trade", href: "/trade", icon: BarChart3 },
   { key: "withdraw", href: "/withdraw", icon: TrendingDown },
-  { key: "activityPage", href: "/activity", icon: LayoutList },
   { key: "profile", href: "/profile", icon: User },
 ];
 
@@ -136,8 +134,6 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
                     ? "Dashboard"
                     : link.key === "withdraw"
                     ? "Sacar"
-                    : link.key === "activityPage"
-                    ? "Ver tudo"
                     : link.key === "profile"
                     ? "Perfil"
                     : link.key}
@@ -308,8 +304,6 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
                         ? "Dashboard"
                         : link.key === "withdraw"
                         ? "Sacar"
-                        : link.key === "activityPage"
-                        ? "Ver tudo"
                         : link.key === "profile"
                         ? "Perfil"
                         : link.key}

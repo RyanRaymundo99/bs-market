@@ -54,6 +54,7 @@ model User {
   withdrawals    Withdrawal[]
   notifications  Notification[]
   notes          UserNote[]
+  userTags      UserTag[]
   communicationLogs CommunicationLog[]
 
   @@map("user")
@@ -415,7 +416,7 @@ model AdminAuditLog {
   @@map("admin_audit_log")
 }
 
-// Internal notes/tags on user accounts (support)
+// Internal notes on user accounts (support)
 model UserNote {
   id        String   @id @default(cuid())
   userId    String
@@ -426,6 +427,30 @@ model UserNote {
 
   @@index([userId])
   @@map("user_note")
+}
+
+// Admin-applied labels/tags on users (e.g. VIP, High risk)
+model UserTag {
+  id     String @id @default(cuid())
+  userId String
+  tag    String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tag])
+  @@index([tag])
+  @@map("user_tag")
+}
+
+// Saved notification templates with placeholders (e.g. {{userName}}, {{amount}})
+model NotificationTemplate {
+  id             String   @id @default(cuid())
+  name           String   // e.g. "KYC Rejected", "Deposit received"
+  titleTemplate  String   @db.Text
+  messageTemplate String  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("notification_template")
 }
 
 // Support issues queue (lightweight)

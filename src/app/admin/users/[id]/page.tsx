@@ -33,6 +33,10 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   LogIn,
+  Tag,
+  StickyNote,
+  Plus,
+  Loader2,
 } from "lucide-react";
 import {
   Dialog,
@@ -112,6 +116,12 @@ export default function AdminUserDetailsPage({
   const [editConfirmStep, setEditConfirmStep] = useState(1);
   const [userId, setUserId] = useState<string | null>(null);
   const [loggingInAsUser, setLoggingInAsUser] = useState(false);
+  const [tags, setTags] = useState<string[]>([]);
+  const [notes, setNotes] = useState<{ id: string; note: string; createdAt: string }[]>([]);
+  const [newTag, setNewTag] = useState("");
+  const [newNote, setNewNote] = useState("");
+  const [addingTag, setAddingTag] = useState(false);
+  const [addingNote, setAddingNote] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -127,11 +137,15 @@ export default function AdminUserDetailsPage({
           balanceResponse,
           transactionsResponse,
           rateResponse,
+          tagsResponse,
+          notesResponse,
         ] = await Promise.all([
           fetch(`/api/admin/users/${id}`),
           fetch(`/api/admin/users/${id}?include=balance`),
           fetch(`/api/admin/users/${id}?include=transactions`),
           fetch("/api/crypto/usdt-rate"),
+          fetch(`/api/admin/users/${id}/tags`),
+          fetch(`/api/admin/users/${id}/notes`),
         ]);
 
         // Set exchange rate
@@ -164,6 +178,15 @@ export default function AdminUserDetailsPage({
         if (transactionsResponse.ok) {
           const txData = await transactionsResponse.json();
           setTransactions(txData.transactions || []);
+        }
+
+        if (tagsResponse.ok) {
+          const tagsData = await tagsResponse.json();
+          setTags(tagsData.tags || []);
+        }
+        if (notesResponse.ok) {
+          const notesData = await notesResponse.json();
+          setNotes((notesData.notes || []).map((n: { id: string; note: string; createdAt: string }) => ({ id: n.id, note: n.note, createdAt: n.createdAt })));
         }
       } catch (error) {
         console.error("Error fetching user details:", error);
@@ -436,6 +459,66 @@ export default function AdminUserDetailsPage({
 
   const handleImageClick = (src: string, title: string, alt: string) => {
     setSelectedImage({ src, alt, title });
+  };
+
+  const handleAddTag = async () => {
+    if (!userId || !newTag.trim()) return;
+    setAddingTag(true);
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/tags`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tag: newTag.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setTags((prev) => (prev.includes(data.tag) ? prev : [...prev, data.tag]));
+        setNewTag("");
+        toast({ title: "Tag added", description: data.tag });
+      } else {
+        toast({ variant: "destructive", title: "Error", description: data.error || "Failed to add tag" });
+      }
+    } finally {
+      setAddingTag(false);
+    }
+  };
+
+  const handleRemoveTag = async (tag: string) => {
+    if (!userId) return;
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/tags?tag=${encodeURIComponent(tag)}`, { method: "DELETE" });
+      if (res.ok) {
+        setTags((prev) => prev.filter((t) => t !== tag));
+        toast({ title: "Tag removed", description: tag });
+      } else {
+        const data = await res.json();
+        toast({ variant: "destructive", title: "Error", description: data.error || "Failed to remove tag" });
+      }
+    } catch {
+      toast({ variant: "destructive", title: "Error", description: "Failed to remove tag" });
+    }
+  };
+
+  const handleAddNote = async () => {
+    if (!userId || !newNote.trim()) return;
+    setAddingNote(true);
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ note: newNote.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok && data.note) {
+        setNotes((prev) => [{ id: data.note.id, note: data.note.note, createdAt: data.note.createdAt }, ...prev]);
+        setNewNote("");
+        toast({ title: "Note added" });
+      } else {
+        toast({ variant: "destructive", title: "Error", description: data.error || "Failed to add note" });
+      }
+    } finally {
+      setAddingNote(false);
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -733,6 +816,99 @@ export default function AdminUserDetailsPage({
                     </div>
                   )}
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Tags & Notes */}
+        <div className="grid gap-6 lg:grid-cols-2 mt-6">
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-foreground">
+                <Tag className="w-5 h-5" />
+                User tags
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex flex-wrap gap-2">
+                {tags.map((t) => (
+                  <Badge key={t} variant="secondary" className="gap-1 pr-1">
+                    {t}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTag(t)}
+                      className="ml-1 rounded hover:bg-muted p-0.5"
+                      aria-label={`Remove ${t}`}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                ))}
+                {tags.length === 0 && (
+                  <span className="text-sm text-muted-foreground">No tags</span>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="e.g. VIP, High risk"
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleAddTag()}
+                  className="bg-muted border-border text-foreground max-w-[200px]"
+                />
+                <Button
+                  size="sm"
+                  onClick={handleAddTag}
+                  disabled={addingTag || !newTag.trim()}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                >
+                  {addingTag ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-card border-border">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-foreground">
+                <StickyNote className="w-5 h-5" />
+                Internal notes
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {notes.map((n) => (
+                  <div
+                    key={n.id}
+                    className="rounded-lg border border-border bg-muted/50 p-3 text-sm"
+                  >
+                    <p className="text-foreground whitespace-pre-wrap">{n.note}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {new Date(n.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                ))}
+                {notes.length === 0 && (
+                  <p className="text-sm text-muted-foreground">No notes yet</p>
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
+                <textarea
+                  placeholder="e.g. Asked for limit increase, KYC docs re-sent..."
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  rows={2}
+                  className="rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground resize-none"
+                />
+                <Button
+                  size="sm"
+                  onClick={handleAddNote}
+                  disabled={addingNote || !newNote.trim()}
+                  className="w-fit bg-primary hover:bg-primary/90 text-primary-foreground"
+                >
+                  {addingNote ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+                  Add note
+                </Button>
               </div>
             </CardContent>
           </Card>

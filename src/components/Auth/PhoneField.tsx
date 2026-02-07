@@ -57,13 +57,13 @@ export function PhoneField({
 
   return (
     <div className="space-y-2">
-      <Label htmlFor="phone" className="text-white">
+      <Label htmlFor="phone" className="text-foreground">
         {label}
-        {required && <span className="text-red-400 ml-1">*</span>}
+        {required && <span className="text-destructive ml-1">*</span>}
       </Label>
       <div className="relative">
         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <Phone className="h-5 w-5 text-gray-300" />
+          <Phone className="h-5 w-5 text-muted-foreground" />
         </div>
         <Input
           id="phone"
@@ -73,18 +73,13 @@ export function PhoneField({
           onChange={handleChange}
           onBlur={onBlur}
           placeholder={placeholder}
-          className={`pl-10 bg-white/10 border-white/20 text-white placeholder-gray-300 backdrop-blur-[10px] focus:border-white/40 focus:ring-white/20 ${
-            error
-              ? "border-red-400 focus:border-red-400 focus:ring-red-400/20"
-              : ""
+          className={`pl-10 bg-input border-border text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring ${
+            error ? "border-destructive focus-visible:ring-destructive" : ""
           }`}
-          style={{
-            boxShadow: "inset 0 1px 0 0 rgba(255, 255, 255, 0.1)",
-          }}
         />
       </div>
-      {error && <p className="text-red-400 text-sm mt-1">{error}</p>}
-      <p className="text-gray-400 text-xs">
+      {error && <p className="text-destructive text-sm mt-1">{error}</p>}
+      <p className="text-muted-foreground text-xs">
         Enter your phone number with area code (e.g., (11) 99999-9999)
       </p>
     </div>

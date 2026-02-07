@@ -9,6 +9,10 @@ export type MoneyControls = {
   maintenanceMessage: string | null;
   maintenanceStartAt: Date | null;
   maintenanceEndAt: Date | null;
+  blockLoginDuringMaintenance: boolean;
+  blockTradeDuringMaintenance: boolean;
+  newSignupsDisabled: boolean;
+  tradeDisabled: boolean;
   updatedAt: Date;
   updatedBy: string | null;
 };
@@ -48,6 +52,10 @@ async function ensureMoneyControlsTable(): Promise<void> {
         "maintenanceMessage" text,
         "maintenanceStartAt" timestamptz,
         "maintenanceEndAt" timestamptz,
+        "blockLoginDuringMaintenance" boolean NOT NULL DEFAULT false,
+        "blockTradeDuringMaintenance" boolean NOT NULL DEFAULT false,
+        "newSignupsDisabled" boolean NOT NULL DEFAULT false,
+        "tradeDisabled" boolean NOT NULL DEFAULT false,
         "updatedAt" timestamptz NOT NULL DEFAULT now(),
         "updatedBy" text
       );
@@ -103,7 +111,11 @@ async function ensureMoneyControlsTable(): Promise<void> {
         ADD COLUMN IF NOT EXISTS "maxDepositUsdt" integer NOT NULL DEFAULT 1000000,
         ADD COLUMN IF NOT EXISTS "maintenanceMessage" text,
         ADD COLUMN IF NOT EXISTS "maintenanceStartAt" timestamptz,
-        ADD COLUMN IF NOT EXISTS "maintenanceEndAt" timestamptz;
+        ADD COLUMN IF NOT EXISTS "maintenanceEndAt" timestamptz,
+        ADD COLUMN IF NOT EXISTS "blockLoginDuringMaintenance" boolean NOT NULL DEFAULT false,
+        ADD COLUMN IF NOT EXISTS "blockTradeDuringMaintenance" boolean NOT NULL DEFAULT false,
+        ADD COLUMN IF NOT EXISTS "newSignupsDisabled" boolean NOT NULL DEFAULT false,
+        ADD COLUMN IF NOT EXISTS "tradeDisabled" boolean NOT NULL DEFAULT false;
       `);
     } else {
       // Ensure new columns exist (in case migration was partial)
@@ -125,7 +137,11 @@ async function ensureMoneyControlsTable(): Promise<void> {
         ADD COLUMN IF NOT EXISTS "maxDepositUsdt" integer NOT NULL DEFAULT 1000000,
         ADD COLUMN IF NOT EXISTS "maintenanceMessage" text,
         ADD COLUMN IF NOT EXISTS "maintenanceStartAt" timestamptz,
-        ADD COLUMN IF NOT EXISTS "maintenanceEndAt" timestamptz;
+        ADD COLUMN IF NOT EXISTS "maintenanceEndAt" timestamptz,
+        ADD COLUMN IF NOT EXISTS "blockLoginDuringMaintenance" boolean NOT NULL DEFAULT false,
+        ADD COLUMN IF NOT EXISTS "blockTradeDuringMaintenance" boolean NOT NULL DEFAULT false,
+        ADD COLUMN IF NOT EXISTS "newSignupsDisabled" boolean NOT NULL DEFAULT false,
+        ADD COLUMN IF NOT EXISTS "tradeDisabled" boolean NOT NULL DEFAULT false;
       `);
 
       await prisma.$executeRawUnsafe(`
@@ -150,6 +166,10 @@ export async function getMoneyControls(): Promise<MoneyControls> {
       maintenanceMessage: string | null;
       maintenanceStartAt: Date | null;
       maintenanceEndAt: Date | null;
+      blockLoginDuringMaintenance: boolean | null;
+      blockTradeDuringMaintenance: boolean | null;
+      newSignupsDisabled: boolean | null;
+      tradeDisabled: boolean | null;
       updatedAt: Date;
       updatedBy: string | null;
     }>
@@ -157,6 +177,10 @@ export async function getMoneyControls(): Promise<MoneyControls> {
     `SELECT "depositsDisabled", "withdrawalsDisabled", "depositsDisabledMessage", "withdrawalsDisabledMessage",
             COALESCE("maxDepositUsdt", 1000000)::int as "maxDepositUsdt",
             "maintenanceMessage", "maintenanceStartAt", "maintenanceEndAt",
+            COALESCE("blockLoginDuringMaintenance", false) as "blockLoginDuringMaintenance",
+            COALESCE("blockTradeDuringMaintenance", false) as "blockTradeDuringMaintenance",
+            COALESCE("newSignupsDisabled", false) as "newSignupsDisabled",
+            COALESCE("tradeDisabled", false) as "tradeDisabled",
             "updatedAt", "updatedBy"
      FROM "site_settings"
      WHERE "id" = 1
@@ -174,6 +198,10 @@ export async function getMoneyControls(): Promise<MoneyControls> {
       maintenanceMessage: null,
       maintenanceStartAt: null,
       maintenanceEndAt: null,
+      blockLoginDuringMaintenance: false,
+      blockTradeDuringMaintenance: false,
+      newSignupsDisabled: false,
+      tradeDisabled: false,
       updatedAt: new Date(),
       updatedBy: null,
     };
@@ -204,6 +232,10 @@ export async function getMoneyControls(): Promise<MoneyControls> {
   return {
     ...r,
     maxDepositUsdt: r.maxDepositUsdt ?? 1000000,
+    blockLoginDuringMaintenance: r.blockLoginDuringMaintenance ?? false,
+    blockTradeDuringMaintenance: r.blockTradeDuringMaintenance ?? false,
+    newSignupsDisabled: r.newSignupsDisabled ?? false,
+    tradeDisabled: r.tradeDisabled ?? false,
   };
 }
 
@@ -216,6 +248,10 @@ export async function setMoneyControls(params: {
   maintenanceMessage?: string | null;
   maintenanceStartAt?: Date | string | null;
   maintenanceEndAt?: Date | string | null;
+  blockLoginDuringMaintenance?: boolean;
+  blockTradeDuringMaintenance?: boolean;
+  newSignupsDisabled?: boolean;
+  tradeDisabled?: boolean;
   updatedBy?: string | null;
   notifyUsers?: boolean;
 }): Promise<{ moneyControls: MoneyControls; notifiedUsers: number }> {
@@ -241,6 +277,18 @@ export async function setMoneyControls(params: {
         ? new Date(params.maintenanceEndAt)
         : null
       : current.maintenanceEndAt;
+  const blockLogin =
+    params.blockLoginDuringMaintenance !== undefined
+      ? params.blockLoginDuringMaintenance
+      : current.blockLoginDuringMaintenance;
+  const blockTrade =
+    params.blockTradeDuringMaintenance !== undefined
+      ? params.blockTradeDuringMaintenance
+      : current.blockTradeDuringMaintenance;
+  const newSignupsDisabled =
+    params.newSignupsDisabled !== undefined ? params.newSignupsDisabled : current.newSignupsDisabled;
+  const tradeDisabled =
+    params.tradeDisabled !== undefined ? params.tradeDisabled : current.tradeDisabled;
 
   await prisma.$executeRaw`
     UPDATE "site_settings"
@@ -257,6 +305,10 @@ export async function setMoneyControls(params: {
       "maintenanceMessage" = ${maintenanceMsg},
       "maintenanceStartAt" = ${maintenanceStart},
       "maintenanceEndAt" = ${maintenanceEnd},
+      "blockLoginDuringMaintenance" = ${blockLogin},
+      "blockTradeDuringMaintenance" = ${blockTrade},
+      "newSignupsDisabled" = ${newSignupsDisabled},
+      "tradeDisabled" = ${tradeDisabled},
       "updatedAt" = now(),
       "updatedBy" = ${params.updatedBy ?? null}
     WHERE "id" = 1;

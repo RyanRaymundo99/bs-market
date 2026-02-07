@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { compare } from "bcryptjs";
+import { getMoneyControls } from "@/lib/money-controls";
 
 // Rate limiting constants
 const MAX_LOGIN_ATTEMPTS = 10; // Allow up to 10 wrong password attempts
@@ -122,6 +123,18 @@ export async function POST(request: NextRequest) {
           { status: 429 }
         );
       }
+    }
+
+    const controls = await getMoneyControls();
+    const now = Date.now();
+    const start = controls.maintenanceStartAt ? new Date(controls.maintenanceStartAt).getTime() : null;
+    const end = controls.maintenanceEndAt ? new Date(controls.maintenanceEndAt).getTime() : null;
+    const inMaintenance = start != null && end != null && now >= start && now <= end;
+    if (inMaintenance && controls.blockLoginDuringMaintenance) {
+      return NextResponse.json(
+        { error: controls.maintenanceMessage || "Login is temporarily unavailable during maintenance." },
+        { status: 503 }
+      );
     }
 
     const { email, password } = await request.json();

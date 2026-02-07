@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 /** Convert HSL string "H S% L%" (e.g. from CSS var) to hex. */
 function hslStringToHex(hsl: string): string {
   const match = hsl.trim().match(/^(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)%\s+(\d+(?:\.\d+)?)%$/);
-  if (!match) return "#12E0A1";
+  if (!match) return "#12e19f";
   const h = Number(match[1]) / 360;
   const s = Number(match[2]) / 100;
   const l = Number(match[3]) / 100;
@@ -37,7 +37,7 @@ function hue2rgb(p: number, q: number, t: number): number {
 
 /** Returns the theme primary color as hex (for Recharts, etc.). */
 export function usePrimaryColor(): string {
-  const [hex, setHex] = useState("#12E0A1");
+  const [hex, setHex] = useState("#12e19f");
 
   useEffect(() => {
     const read = () => {
@@ -47,7 +47,7 @@ export function usePrimaryColor(): string {
           .trim();
         if (value) setHex(hslStringToHex(value));
       } catch {
-        setHex("#12E0A1");
+        setHex("#12e19f");
       }
     };
     read();

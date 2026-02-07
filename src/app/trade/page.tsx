@@ -103,8 +103,17 @@ const TradePage = () => {
           setMoneyDisabled(Boolean(data.depositsDisabled));
           setMoneyDisabledMessage(String(data.depositsDisabledMessage || ""));
           setMaxDepositUsdt(Number(data.maxDepositUsdt) || 1000000);
-          setInMaintenance(Boolean(data.inMaintenance));
-          setMaintenanceMessage(String(data.maintenanceMessage || ""));
+          const inMaint = Boolean(data.inMaintenance);
+          const blockTrade = Boolean(data.blockTrade);
+          const tradeDisabled = Boolean(data.tradeDisabled);
+          setInMaintenance(inMaint || blockTrade || tradeDisabled);
+          setMaintenanceMessage(
+            data.maintenanceMessage
+              ? String(data.maintenanceMessage)
+              : tradeDisabled && !inMaint
+              ? "Trading is temporarily disabled."
+              : ""
+          );
         }
       } catch (error) {
         console.error("Failed to load site status:", error);

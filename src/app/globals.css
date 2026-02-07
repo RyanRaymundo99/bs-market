@@ -10,13 +10,13 @@
     --card-foreground: 0 0% 100%;
     --popover: 0 0% 0%;
     --popover-foreground: 0 0% 100%;
-    --primary: 162 85% 47%; /* RGB(18, 224, 161) / #12E0A1 */
+    --primary: 161 85% 48%; /* logo green #12e19f */
     --primary-foreground: 0 0% 100%; /* white text */
-    --secondary: 162 85% 47%; /* RGB(18, 224, 161) / #12E0A1 */
+    --secondary: 161 85% 48%; /* logo green #12e19f */
     --secondary-foreground: 0 0% 100%;
     --muted: 0 0% 15%; /* dark gray */
     --muted-foreground: 0 0% 70%; /* light gray */
-    --accent: 162 85% 47%; /* RGB(18, 224, 161) / #12E0A1 */
+    --accent: 161 85% 48%; /* logo green #12e19f */
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
@@ -24,7 +24,7 @@
     --warning-foreground: 0 0% 0%;
     --border: 0 0% 20%; /* gray border */
     --input: 0 0% 10%; /* dark input */
-    --ring: 162 85% 47%; /* RGB(18, 224, 161) / #12E0A1 */
+    --ring: 161 85% 48%; /* logo green #12e19f */
     --radius: 1rem;
   }
 
@@ -263,6 +263,11 @@
 [data-site-button-style="soft"] button[class*="bg-primary"]:hover:not(:disabled),
 [data-site-button-style="soft"] a[class*="bg-primary"]:hover {
   background-color: hsl(var(--primary) / 0.3) !important;
+}
+
+/* Auth (login/signup) on bright theme: softer orbs so card stays clean */
+[data-site-theme="bright"] .auth-layout-orb {
+  opacity: 0.4;
 }
 
 @layer base {
@@ -681,9 +686,9 @@
   }
 }
 
-/* Landing page background */
+/* Landing page background – use theme so bright theme gets light bg */
 .home-bg {
-  background-color: #000;
+  background-color: hsl(var(--background));
 }
 
 .home-bg-image {
@@ -877,6 +882,26 @@
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   pointer-events: none;
+}
+
+/* Bright theme: light overlay so page stays light */
+[data-site-theme="bright"] .home-bg-glass {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.05) 30%,
+    rgba(255, 255, 255, 0.08) 70%,
+    rgba(255, 255, 255, 0.1) 100%
+  );
+}
+
+[data-site-theme="bright"] .home-bg-glass-frost {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Bright theme: softer orbs so they don’t dominate */
+[data-site-theme="bright"] .home-bg-orb {
+  opacity: 0.35;
 }
 
 .landing-section-label {

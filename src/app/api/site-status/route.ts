@@ -18,6 +18,8 @@ export async function GET() {
       end != null &&
       now.getTime() >= start &&
       now.getTime() <= end;
+    const blockLogin = inMaintenance && moneyControls.blockLoginDuringMaintenance;
+    const blockTrade = inMaintenance && moneyControls.blockTradeDuringMaintenance;
 
     return NextResponse.json(
       {
@@ -31,6 +33,10 @@ export async function GET() {
         maintenanceStartAt: moneyControls.maintenanceStartAt ?? null,
         maintenanceEndAt: moneyControls.maintenanceEndAt ?? null,
         inMaintenance,
+        blockLogin: !!blockLogin,
+        blockTrade: !!blockTrade || !!moneyControls.tradeDisabled,
+        newSignupsDisabled: !!moneyControls.newSignupsDisabled,
+        tradeDisabled: !!moneyControls.tradeDisabled,
         updatedAt: moneyControls.updatedAt,
       },
       {

@@ -5,16 +5,18 @@ import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { Providers } from "@/components/providers";
-import { FloatingSupportWidget } from "@/components/FloatingSupportWidget";
+import { FloatingSupportWidgetLazy } from "@/components/FloatingSupportWidgetLazy";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -102,7 +104,7 @@ export default function RootLayout({
       <body className={`${geistSans.className} antialiased`}>
         <Providers>
           {children}
-          <FloatingSupportWidget />
+          <FloatingSupportWidgetLazy />
         </Providers>
         <Toaster />
         <Analytics />

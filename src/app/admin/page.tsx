@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, Suspense } from "react";
+import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -281,6 +281,8 @@ function AdminDashboardContent() {
   const [syncingStatus, setSyncingStatus] = useState(false);
   const [markingCompleted, setMarkingCompleted] = useState(false);
   const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
+  const lastUpdateTimeRef = useRef<Date>(lastUpdateTime);
+  const hasRealtimeTransactionsRef = useRef(false);
   const [isPolling, setIsPolling] = useState(false);
   const [showBalanceDialog, setShowBalanceDialog] = useState(false);
   const [showBalanceConfirmDialog, setShowBalanceConfirmDialog] =
@@ -320,6 +322,10 @@ function AdminDashboardContent() {
   const [maintenanceMessage, setMaintenanceMessage] = useState("");
   const [maintenanceStartAt, setMaintenanceStartAt] = useState("");
   const [maintenanceEndAt, setMaintenanceEndAt] = useState("");
+  const [blockLoginDuringMaintenance, setBlockLoginDuringMaintenance] = useState(false);
+  const [blockTradeDuringMaintenance, setBlockTradeDuringMaintenance] = useState(false);
+  const [newSignupsDisabled, setNewSignupsDisabled] = useState(false);
+  const [tradeDisabled, setTradeDisabled] = useState(false);
 
   // Historical data states for hover tooltips
   const [historyData, setHistoryData] = useState<
@@ -446,6 +452,10 @@ function AdminDashboardContent() {
                   .slice(0, 16)
               : ""
           );
+          setBlockLoginDuringMaintenance(Boolean((data.moneyControls as { blockLoginDuringMaintenance?: boolean }).blockLoginDuringMaintenance));
+          setBlockTradeDuringMaintenance(Boolean((data.moneyControls as { blockTradeDuringMaintenance?: boolean }).blockTradeDuringMaintenance));
+          setNewSignupsDisabled(Boolean((data.moneyControls as { newSignupsDisabled?: boolean }).newSignupsDisabled));
+          setTradeDisabled(Boolean((data.moneyControls as { tradeDisabled?: boolean }).tradeDisabled));
           setMoneyControlsMeta({
             updatedAt: String(data.moneyControls.updatedAt),
             updatedBy: data.moneyControls.updatedBy ?? null,
@@ -473,6 +483,14 @@ function AdminDashboardContent() {
           withdrawalsDisabled,
           depositsDisabledMessage,
           withdrawalsDisabledMessage,
+          maxDepositUsdt,
+          maintenanceMessage: maintenanceMessage || null,
+          maintenanceStartAt: maintenanceStartAt || null,
+          maintenanceEndAt: maintenanceEndAt || null,
+          blockLoginDuringMaintenance,
+          blockTradeDuringMaintenance,
+          newSignupsDisabled,
+          tradeDisabled,
           notifyUsers: true,
         }),
       });
@@ -510,6 +528,10 @@ function AdminDashboardContent() {
                 .slice(0, 16)
             : ""
         );
+        setBlockLoginDuringMaintenance(Boolean((data.moneyControls as { blockLoginDuringMaintenance?: boolean }).blockLoginDuringMaintenance));
+        setBlockTradeDuringMaintenance(Boolean((data.moneyControls as { blockTradeDuringMaintenance?: boolean }).blockTradeDuringMaintenance));
+        setNewSignupsDisabled(Boolean((data.moneyControls as { newSignupsDisabled?: boolean }).newSignupsDisabled));
+        setTradeDisabled(Boolean((data.moneyControls as { tradeDisabled?: boolean }).tradeDisabled));
         setMoneyControlsMeta({
           updatedAt: String(data.moneyControls.updatedAt),
           updatedBy: data.moneyControls.updatedBy ?? null,
@@ -576,9 +598,12 @@ function AdminDashboardContent() {
             });
           } else {
             // Full refresh
+            hasRealtimeTransactionsRef.current = true;
             setTransactions(data.transactions);
           }
-          setLastUpdateTime(new Date());
+          const next = new Date();
+          lastUpdateTimeRef.current = next;
+          setLastUpdateTime(next);
         }
       } catch (error) {
         console.error("Error fetching realtime transactions:", error);
@@ -608,7 +633,7 @@ function AdminDashboardContent() {
       if (data.success) {
         setFinanceStats(data.financeStats);
         // Only set transactions if we don't have realtime updates yet
-        if (transactions.length === 0) {
+        if (!hasRealtimeTransactionsRef.current) {
           setTransactions(data.transactions);
           setTransactionsLoading(false);
         }
@@ -626,7 +651,7 @@ function AdminDashboardContent() {
     } finally {
       setFinanceLoading(false);
     }
-  }, [toast, transactions.length]);
+  }, [toast]);
 
   const [statsLoading, setStatsLoading] = useState(true);
   const [financeLoading, setFinanceLoading] = useState(true);
@@ -1824,19 +1849,18 @@ function AdminDashboardContent() {
     checkSystemHealth,
   ]);
 
-  // Real-time polling for transactions (every 5 seconds)
+  // Real-time polling for transactions (every 5 seconds) – use ref so interval isn’t recreated every update
   useEffect(() => {
     setIsPolling(true);
     const interval = setInterval(() => {
-      // Only fetch new transactions since last update
-      fetchRealtimeTransactions(lastUpdateTime);
-    }, 5000); // Poll every 5 seconds
+      fetchRealtimeTransactions(lastUpdateTimeRef.current);
+    }, 5000);
 
     return () => {
       clearInterval(interval);
       setIsPolling(false);
     };
-  }, [fetchRealtimeTransactions, lastUpdateTime]);
+  }, [fetchRealtimeTransactions]);
 
   // Don't block the entire page - show skeleton loaders instead
 
@@ -2445,6 +2469,48 @@ function AdminDashboardContent() {
                 <p className="text-xs text-muted-foreground">
                   Mensagem exibida na página de trade quando estiver no período.
                 </p>
+                <div className="flex flex-wrap gap-4 pt-2">
+                  <label className="flex items-center gap-2 cursor-pointer text-sm text-foreground">
+                    <input
+                      type="checkbox"
+                      checked={blockLoginDuringMaintenance}
+                      onChange={(e) => setBlockLoginDuringMaintenance(e.target.checked)}
+                      disabled={moneyControlsLoading || savingMoneyControls}
+                      className="rounded border-border"
+                    />
+                    Block login during maintenance
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-sm text-foreground">
+                    <input
+                      type="checkbox"
+                      checked={blockTradeDuringMaintenance}
+                      onChange={(e) => setBlockTradeDuringMaintenance(e.target.checked)}
+                      disabled={moneyControlsLoading || savingMoneyControls}
+                      className="rounded border-border"
+                    />
+                    Block trade during maintenance
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-sm text-foreground">
+                    <input
+                      type="checkbox"
+                      checked={newSignupsDisabled}
+                      onChange={(e) => setNewSignupsDisabled(e.target.checked)}
+                      disabled={moneyControlsLoading || savingMoneyControls}
+                      className="rounded border-border"
+                    />
+                    Disable new signups
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-sm text-foreground">
+                    <input
+                      type="checkbox"
+                      checked={tradeDisabled}
+                      onChange={(e) => setTradeDisabled(e.target.checked)}
+                      disabled={moneyControlsLoading || savingMoneyControls}
+                      className="rounded border-border"
+                    />
+                    Disable trade
+                  </label>
+                </div>
               </div>
 
               <Button

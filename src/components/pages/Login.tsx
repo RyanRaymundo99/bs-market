@@ -41,9 +41,23 @@ const Login = () => {
     null
   );
   const [isSuccess, setIsSuccess] = useState(false);
+  const [loginBlocked, setLoginBlocked] = useState(false);
+  const [loginBlockMessage, setLoginBlockMessage] = useState("");
   const { toast } = useToast();
   const router = useRouter();
   const emailInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetch("/api/site-status")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.success && data.blockLogin) {
+          setLoginBlocked(true);
+          setLoginBlockMessage(data.maintenanceMessage || "Login is temporarily unavailable during maintenance.");
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const form = useForm<LoginFormValues>({
     defaultValues: {
@@ -203,7 +217,7 @@ const Login = () => {
       {/* Home Icon Button */}
       <Link
         href="/"
-        className="fixed top-4 left-4 z-50 flex items-center justify-center w-10 h-10 bg-black/60 backdrop-blur-[20px] border border-white/10 text-white hover:text-brand-300 hover:bg-black/80 rounded-lg transition-all duration-200"
+        className="fixed top-4 left-4 z-50 flex items-center justify-center w-10 h-10 bg-card/90 backdrop-blur-md border border-border text-foreground hover:text-primary hover:bg-muted rounded-lg transition-all"
         title="Voltar para a página inicial"
       >
         <Home className="w-5 h-5" />
@@ -216,7 +230,7 @@ const Login = () => {
             Não tem uma conta?{" "}
             <Link
               href="/signup"
-              className="text-brand-300 hover:text-brand-400 hover:underline transition-colors"
+              className="text-primary hover:underline transition-colors"
             >
               Criar conta
             </Link>
@@ -225,6 +239,11 @@ const Login = () => {
         }
         showLogo={true}
       >
+        {loginBlocked && (
+          <div className="mb-4 p-4 rounded-lg bg-amber-500/20 border border-amber-500/50 text-amber-200 text-sm" role="alert">
+            {loginBlockMessage}
+          </div>
+        )}
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
@@ -253,7 +272,7 @@ const Login = () => {
                 {remainingAttempts !== null && remainingAttempts > 0 && (
                   <div
                     id="attempts-warning"
-                    className="text-xs text-yellow-400 font-medium"
+                    className="text-xs text-warning font-medium"
                     role="alert"
                     aria-live="polite"
                   >
@@ -262,7 +281,7 @@ const Login = () => {
                 )}
                 <Link
                   href="/forgot-password"
-                  className="text-sm font-medium text-brand-300 hover:text-brand-400 hover:underline transition-colors ml-auto"
+                  className="text-sm font-medium text-primary hover:underline transition-colors ml-auto"
                   aria-label="Recuperar senha esquecida"
                 >
                   Esqueceu a senha?
@@ -274,7 +293,7 @@ const Login = () => {
                 label="Senha"
                 placeholder="••••••••"
                 type="password"
-                icon={<Lock className="h-5 w-5 text-gray-300" />}
+                icon={<Lock className="h-5 w-5 text-muted-foreground" />}
                 showPasswordToggle={true}
                 labelPosition="top"
                 aria-describedby={
@@ -293,45 +312,32 @@ const Login = () => {
 
             <Button
               type="submit"
-              className="w-full bg-white/10 hover:bg-white/20 text-white border border-white/20 hover:border-white/30 transition-all duration-200 h-12 text-base font-medium backdrop-blur-[10px] relative overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={pending || isSuccess}
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-12 text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={pending || isSuccess || loginBlocked}
               aria-busy={pending}
               aria-label={pending ? "Processando login" : "Fazer login"}
-              style={{
-                boxShadow: "inset 0 1px 0 0 rgba(255, 255, 255, 0.1)",
-              }}
             >
-              {/* Mirror effect for button */}
-              <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-30 pointer-events-none rounded-md"></div>
-              <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-
               {isSuccess ? (
                 <>
-                  <CheckCircle2 className="h-4 w-4 mr-2 relative z-10 text-green-400" />
-                  <span className="relative z-10">Login realizado!</span>
+                  <CheckCircle2 className="h-4 w-4 mr-2 text-primary" />
+                  <span>Login realizado!</span>
                 </>
               ) : pending ? (
                 <>
-                  <Loader2
-                    className="h-4 w-4 animate-spin mr-2 relative z-10"
-                    aria-hidden="true"
-                  />
-                  <span className="relative z-10">Aguarde...</span>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" aria-hidden="true" />
+                  <span>Aguarde...</span>
                 </>
               ) : (
                 <>
-                  <span className="relative z-10">Entrar</span>
-                  <ArrowRight
-                    className="h-4 w-4 ml-2 relative z-10"
-                    aria-hidden="true"
-                  />
+                  <span>Entrar</span>
+                  <ArrowRight className="h-4 w-4 ml-2" aria-hidden="true" />
                 </>
               )}
             </Button>
           </form>
         </Form>
 
-        <div className="mt-8 text-center text-xs text-gray-300">
+        <div className="mt-8 text-center text-xs text-muted-foreground">
           Ao fazer login, você concorda com nossos termos de serviço e política
           de privacidade.
         </div>

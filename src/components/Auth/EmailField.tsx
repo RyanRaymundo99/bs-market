@@ -87,10 +87,10 @@ export const EmailField = forwardRef<HTMLInputElement, EmailFieldProps>(
       }
 
       if (validationResult?.isValid === false) {
-        return <AlertCircle className="h-5 w-5 text-red-500" />;
+        return <AlertCircle className="h-5 w-5 text-destructive" />;
       }
 
-      return <Mail className="h-5 w-5 text-gray-300" />;
+      return <Mail className="h-5 w-5 text-muted-foreground" />;
     };
 
     // Determine validation message
@@ -100,15 +100,15 @@ export const EmailField = forwardRef<HTMLInputElement, EmailFieldProps>(
       }
 
       if (validationResult?.isValid) {
-        return <span className="text-green-500 text-sm">Email válido</span>;
+        return <span className="text-primary text-sm">Email válido</span>;
       }
 
       if (validationResult?.isValid === false) {
-        return <span className="text-red-500 text-sm">Email inválido</span>;
+        return <span className="text-destructive text-sm">Email inválido</span>;
       }
 
       return (
-        <span className="text-gray-400 text-sm">
+        <span className="text-muted-foreground text-sm">
           Digite seu endereço de email
         </span>
       );
@@ -117,7 +117,7 @@ export const EmailField = forwardRef<HTMLInputElement, EmailFieldProps>(
     return (
       <div className={cn("space-y-2", className)}>
         {label && (
-          <Label htmlFor="email" className="text-sm font-medium text-gray-200">
+          <Label htmlFor="email" className="text-sm font-medium text-foreground">
             {label}
             {required && <span className="text-red-500 ml-1">*</span>}
           </Label>
@@ -139,12 +139,12 @@ export const EmailField = forwardRef<HTMLInputElement, EmailFieldProps>(
             aria-invalid={validationResult?.isValid === false || !!error}
             aria-required={required}
             className={cn(
-              "w-full pl-10 pr-10 h-12 bg-white/5 border border-white/10 text-white placeholder:text-gray-400 focus:border-[#12E0A1] focus:ring-1 focus:ring-[#12E0A1] transition-all duration-200",
+              "w-full pl-10 pr-10 h-12 bg-input border border-border text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring transition-all",
               validationResult?.isValid === true &&
-                "border-green-500 focus:border-green-500 focus:ring-green-500",
+                "border-primary focus-visible:ring-primary",
               validationResult?.isValid === false &&
-                "border-red-500 focus:border-red-500 focus:ring-red-500",
-              error && "border-red-500 focus:border-red-500 focus:ring-red-500"
+                "border-destructive focus-visible:ring-destructive",
+              error && "border-destructive focus-visible:ring-destructive"
             )}
           />
 

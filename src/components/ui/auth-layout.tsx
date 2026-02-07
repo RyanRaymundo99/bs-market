@@ -28,11 +28,11 @@ const AuthLayout = ({
   onBack,
 }: AuthLayoutProps) => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden">
-      {/* Gradient shapes - theme primary */}
-      <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-gradient-to-br from-primary/20 via-primary/10 to-primary/15 rounded-full blur-[100px] -translate-x-1/2 -translate-y-1/2 animate-pulse" />
-      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-gradient-to-tl from-primary/15 via-primary/10 to-primary/20 rounded-full blur-[100px] translate-x-1/2 translate-y-1/2 animate-pulse" />
-      <div className="absolute top-1/2 left-1/2 w-[300px] h-[300px] bg-gradient-to-r from-primary/10 to-primary/15 rounded-full blur-[80px] -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+    <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden auth-layout">
+      {/* Gradient shapes - theme primary (softer on bright theme via CSS) */}
+      <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-gradient-to-br from-primary/20 via-primary/10 to-primary/15 rounded-full blur-[100px] -translate-x-1/2 -translate-y-1/2 animate-pulse auth-layout-orb" />
+      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-gradient-to-tl from-primary/15 via-primary/10 to-primary/20 rounded-full blur-[100px] translate-x-1/2 translate-y-1/2 animate-pulse auth-layout-orb" />
+      <div className="absolute top-1/2 left-1/2 w-[300px] h-[300px] bg-gradient-to-r from-primary/10 to-primary/15 rounded-full blur-[80px] -translate-x-1/2 -translate-y-1/2 animate-pulse auth-layout-orb" />
       <div className="absolute top-1/4 right-1/4 w-32 h-32 bg-gradient-to-br from-foreground/5 to-transparent rounded-full blur-sm" />
       <div className="absolute bottom-1/4 left-1/4 w-24 h-24 bg-gradient-to-tl from-foreground/5 to-transparent rounded-full blur-sm" />
       <div className="absolute inset-0 bg-background/20 backdrop-blur-[2px]" />

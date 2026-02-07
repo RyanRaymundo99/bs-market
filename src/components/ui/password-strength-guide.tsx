@@ -58,17 +58,17 @@ export function PasswordStrengthGuide({
   if (!password) {
     return (
       <div
-        className={`rounded-md border border-white/10 bg-white/5 p-3 ${className}`}
+        className={`rounded-md border border-border bg-muted/50 p-3 ${className}`}
         role="status"
         aria-label="Requisitos da senha"
       >
-        <p className="mb-2 text-xs font-medium text-gray-400">
+        <p className="mb-2 text-xs font-medium text-muted-foreground">
           Sua senha deve conter:
         </p>
-        <ul className="space-y-1.5 text-xs text-red-400">
+        <ul className="space-y-1.5 text-xs text-destructive">
           {requirements.map((r) => (
             <li key={r.id} className="flex items-center gap-2">
-              <X className="h-4 w-4 shrink-0 text-red-500" />
+              <X className="h-4 w-4 shrink-0 text-destructive" />
               {r.label}
             </li>
           ))}
@@ -79,7 +79,7 @@ export function PasswordStrengthGuide({
 
   return (
     <div
-      className={`rounded-md border border-white/10 bg-white/5 p-3 ${className}`}
+      className={`rounded-md border border-border bg-muted/50 p-3 ${className}`}
       role="status"
       aria-live="polite"
       aria-label={
@@ -88,7 +88,7 @@ export function PasswordStrengthGuide({
           : "Requisitos da senha"
       }
     >
-      <p className="mb-2 text-xs font-medium text-gray-400">
+      <p className="mb-2 text-xs font-medium text-muted-foreground">
         Sua senha deve conter:
       </p>
       <ul className="space-y-1.5 text-xs">
@@ -96,13 +96,13 @@ export function PasswordStrengthGuide({
           <li
             key={r.id}
             className={`flex items-center gap-2 ${
-              r.met ? "text-green-400" : "text-red-400"
+              r.met ? "text-primary" : "text-destructive"
             }`}
           >
             {r.met ? (
-              <Check className="h-4 w-4 shrink-0 text-green-500" />
+              <Check className="h-4 w-4 shrink-0 text-primary" />
             ) : (
-              <X className="h-4 w-4 shrink-0 text-red-500" />
+              <X className="h-4 w-4 shrink-0 text-destructive" />
             )}
             {r.label}
           </li>

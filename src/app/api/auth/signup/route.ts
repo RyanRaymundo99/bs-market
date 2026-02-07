@@ -6,9 +6,18 @@ import {
   getAdminAlertSettings,
   sendAdminAlertToAll,
 } from "@/lib/admin-alert-email";
+import { getMoneyControls } from "@/lib/money-controls";
 
 export async function POST(request: NextRequest) {
   try {
+    const controls = await getMoneyControls();
+    if (controls.newSignupsDisabled) {
+      return NextResponse.json(
+        { error: "New signups are temporarily disabled. Please try again later." },
+        { status: 503 }
+      );
+    }
+
     const { name, email, phone, cpf, password } = await request.json();
 
     // Validate required fields

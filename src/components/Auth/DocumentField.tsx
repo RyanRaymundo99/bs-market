@@ -103,9 +103,9 @@ export const DocumentField: React.FC<DocumentFieldProps> = ({
   return (
     <div className={cn("space-y-2", className)}>
       {label && (
-        <Label className="text-sm font-medium text-gray-200">
+        <Label className="text-sm font-medium text-foreground">
           {dynamicLabel}
-          {required && <span className="text-red-400 ml-1">*</span>}
+          {required && <span className="text-destructive ml-1">*</span>}
         </Label>
       )}
 
@@ -120,29 +120,29 @@ export const DocumentField: React.FC<DocumentFieldProps> = ({
           disabled={disabled}
           maxLength={maxLength}
           className={cn(
-            "pr-10",
-            hasError && "border-red-400 focus:border-red-400",
-            isValid && "border-green-400 focus:border-green-400"
+            "pr-10 bg-input border-border text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring",
+            hasError && "border-destructive focus-visible:ring-destructive",
+            isValid && "border-primary focus-visible:ring-primary"
           )}
         />
 
         {/* Validation Icon */}
         <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
           {isValidating && (
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400"></div>
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
           )}
           {!isValidating && isValid && (
-            <CheckCircle2 className="h-4 w-4 text-green-400" />
+            <CheckCircle2 className="h-4 w-4 text-primary" />
           )}
           {!isValidating && hasError && (
-            <AlertCircle className="h-4 w-4 text-red-400" />
+            <AlertCircle className="h-4 w-4 text-destructive" />
           )}
         </div>
       </div>
 
       {/* Error Messages */}
       {hasError && (
-        <div className="text-sm text-red-400 space-y-1">
+        <div className="text-sm text-destructive space-y-1">
           {error && <p>{error}</p>}
           {validationResult?.errors.map((err, index) => (
             <p key={index}>{err}</p>
@@ -152,13 +152,13 @@ export const DocumentField: React.FC<DocumentFieldProps> = ({
 
       {/* Success Message */}
       {isValid && documentType && (
-        <div className="text-sm text-green-400">
+        <div className="text-sm text-primary">
           <p>{documentType} válido</p>
         </div>
       )}
 
       {/* Help Text */}
-      <p className="text-xs text-gray-400">
+      <p className="text-xs text-muted-foreground">
         {cleanValue.length === 0 
           ? "Digite apenas os números do CPF (11 dígitos) ou CNPJ (14 dígitos)"
           : cleanValue.length <= 11

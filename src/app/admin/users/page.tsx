@@ -80,6 +80,8 @@ interface User {
   kycStatus: "PENDING" | "APPROVED" | "REJECTED";
   emailVerified: boolean;
   createdAt: string;
+  tags?: string[];
+  riskFlags?: string[];
 }
 
 interface UserWithDetails extends User {
@@ -122,6 +124,7 @@ export default function AdminUsersPage() {
   );
   const [processingUser, setProcessingUser] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [tagFilter, setTagFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -164,6 +167,9 @@ export default function AdminUsersPage() {
   });
   const [showKYCResetDialog, setShowKYCResetDialog] = useState<string | null>(null);
   const [kycActionLoading, setKycActionLoading] = useState<string | null>(null);
+  const [bulkKycRejectOpen, setBulkKycRejectOpen] = useState(false);
+  const [bulkKycRejectReason, setBulkKycRejectReason] = useState("");
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
   const [selectedKYCImage, setSelectedKYCImage] = useState<{
     src: string;
     alt: string;
@@ -187,39 +193,37 @@ export default function AdminUsersPage() {
     return { total, pending, approved, rejected, kycPending, kycApproved };
   }, [users]);
 
-  const fetchUsers = useCallback(
-    async (status?: string) => {
-      try {
-        setLoading(true);
-        const url =
-          status && status !== "ALL"
-            ? `/api/admin/users?status=${status}&limit=1000`
-            : "/api/admin/users?limit=1000";
+  const fetchUsers = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      params.set("limit", "1000");
+      params.set("includeRiskFlags", "true");
+      if (statusFilter !== "ALL") params.set("status", statusFilter);
+      if (tagFilter.trim()) params.set("tag", tagFilter.trim());
 
-        const response = await fetch(url);
-        if (response.ok) {
-          const data = await response.json();
-          setUsers(data.users || []);
-        } else {
-          toast({
-            variant: "destructive",
-            title: "Erro",
-            description: "Falha ao carregar usuários",
-          });
-        }
-      } catch (error) {
-        console.error("Error fetching users:", error);
+      const response = await fetch(`/api/admin/users?${params.toString()}`);
+      if (response.ok) {
+        const data = await response.json();
+        setUsers(data.users || []);
+      } else {
         toast({
           variant: "destructive",
           title: "Erro",
-          description: "Erro ao carregar usuários",
+          description: "Falha ao carregar usuários",
         });
-      } finally {
-        setLoading(false);
       }
-    },
-    [toast]
-  );
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Erro ao carregar usuários",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast, statusFilter, tagFilter]);
 
   const fetchUserDetails = useCallback(
     async (userId: string) => {
@@ -293,12 +297,13 @@ export default function AdminUsersPage() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const status = urlParams.get("status");
-    if (status) {
+    if (status && ["PENDING", "APPROVED", "REJECTED"].includes(status)) {
       setStatusFilter(status);
-      fetchUsers(status);
-    } else {
-      fetchUsers();
     }
+  }, []);
+
+  useEffect(() => {
+    fetchUsers();
   }, [fetchUsers]);
 
   useEffect(() => {
@@ -657,6 +662,64 @@ export default function AdminUsersPage() {
     } else {
       setSelectedUsers(new Set(filteredUsers.map((u) => u.id)));
     }
+  };
+
+  const handleBulkKycApprove = async () => {
+    const ids = Array.from(selectedUsers);
+    if (ids.length === 0) return;
+    if (!window.confirm(`Approve KYC for ${ids.length} user(s)?`)) return;
+    setBulkActionLoading(true);
+    try {
+      const res = await fetch("/api/admin/users/bulk-kyc-approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userIds: ids }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast({ title: "Bulk KYC", description: `Approved: ${data.approved}, skipped: ${data.skipped}` });
+        setSelectedUsers(new Set());
+        fetchUsers();
+      } else {
+        toast({ variant: "destructive", title: "Error", description: data.error || "Bulk approve failed" });
+      }
+    } catch (e) {
+      toast({ variant: "destructive", title: "Error", description: "Bulk approve failed" });
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleBulkKycReject = async () => {
+    const ids = Array.from(selectedUsers);
+    if (ids.length === 0 || !bulkKycRejectReason.trim()) return;
+    setBulkActionLoading(true);
+    try {
+      const res = await fetch("/api/admin/users/bulk-kyc-reject", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userIds: ids, reason: bulkKycRejectReason.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast({ title: "Bulk KYC", description: `Rejected: ${data.rejected}, skipped: ${data.skipped}` });
+        setBulkKycRejectOpen(false);
+        setBulkKycRejectReason("");
+        setSelectedUsers(new Set());
+        fetchUsers();
+      } else {
+        toast({ variant: "destructive", title: "Error", description: data.error || "Bulk reject failed" });
+      }
+    } catch (e) {
+      toast({ variant: "destructive", title: "Error", description: "Bulk reject failed" });
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleOpenBulkNotify = () => {
+    setEmailRecipients("selected");
+    setEmailDialogOpen(true);
   };
 
   const handleOpenEmailForUser = (user: UserWithDetails) => {
@@ -1181,7 +1244,32 @@ export default function AdminUsersPage() {
               </Button>
             )}
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              placeholder="Filter by tag (e.g. VIP)"
+              value={tagFilter}
+              onChange={(e) => setTagFilter(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && fetchUsers()}
+              className="w-40 bg-muted border-border text-foreground placeholder-muted-foreground"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchUsers()}
+              className="border-border"
+            >
+              Apply tag
+            </Button>
+            {tagFilter && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setTagFilter("")}
+                className="text-muted-foreground"
+              >
+                Clear
+              </Button>
+            )}
             <Button
               variant={viewMode === "grid" ? "default" : "outline"}
               onClick={() => setViewMode("grid")}
@@ -1247,7 +1335,97 @@ export default function AdminUsersPage() {
           >
             Rejected ({stats.rejected})
           </Button>
+          {filteredUsers.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSelectAllUsers}
+              className="text-primary hover:text-primary/80"
+            >
+              {selectedUsers.size === filteredUsers.length ? "Deselect all" : "Select all"}
+            </Button>
+          )}
         </div>
+
+        {/* Bulk actions bar */}
+        {selectedUsers.size > 0 && (
+          <Card className="bg-card border-border">
+            <CardContent className="py-3 flex flex-wrap items-center gap-3">
+              <span className="text-sm font-medium text-foreground">
+                {selectedUsers.size} selected
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-green-600 text-green-600 hover:bg-green-600/10"
+                onClick={handleBulkKycApprove}
+                disabled={bulkActionLoading}
+              >
+                <CheckCircle className="w-4 h-4 mr-1" />
+                Approve KYC
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-red-600 text-red-600 hover:bg-red-600/10"
+                onClick={() => setBulkKycRejectOpen(true)}
+                disabled={bulkActionLoading}
+              >
+                <XCircle className="w-4 h-4 mr-1" />
+                Reject KYC
+              </Button>
+              <Button
+                size="sm"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                onClick={handleOpenBulkNotify}
+              >
+                <Mail className="w-4 h-4 mr-1" />
+                Send notification
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setSelectedUsers(new Set())}
+                className="text-muted-foreground"
+              >
+                Clear selection
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Bulk KYC Reject Dialog */}
+        <Dialog open={bulkKycRejectOpen} onOpenChange={setBulkKycRejectOpen}>
+          <DialogContent className="bg-card border-border">
+            <DialogHeader>
+              <DialogTitle className="text-foreground">Bulk reject KYC</DialogTitle>
+              <DialogDescription className="text-muted-foreground">
+                Reject KYC for {selectedUsers.size} user(s). Enter a reason (shown to users).
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 py-4">
+              <Label className="text-muted-foreground">Reason</Label>
+              <Textarea
+                placeholder="e.g. Documents unclear, please resubmit"
+                value={bulkKycRejectReason}
+                onChange={(e) => setBulkKycRejectReason(e.target.value)}
+                className="bg-muted border-border text-foreground min-h-[80px]"
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setBulkKycRejectOpen(false)} className="border-border">
+                Cancel
+              </Button>
+              <Button
+                onClick={handleBulkKycReject}
+                disabled={bulkActionLoading || !bulkKycRejectReason.trim()}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {bulkActionLoading ? "Rejecting..." : "Reject KYC"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Users Grid/List */}
         {filteredUsers.length === 0 ? (
@@ -1286,6 +1464,14 @@ export default function AdminUsersPage() {
                     {/* Header */}
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="flex-shrink-0 pt-0.5">
+                          <Checkbox
+                            checked={selectedUsers.has(user.id)}
+                            onCheckedChange={() => handleToggleUserSelection(user.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="border-border"
+                          />
+                        </div>
                         <div className="flex-shrink-0">
                           <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
                             <User className="w-6 h-6 text-primary" />
@@ -1295,8 +1481,26 @@ export default function AdminUsersPage() {
                           <h3 className="text-lg font-semibold truncate">
                             {user.name}
                           </h3>
-                          <div className="mt-1">
+                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
                             {getStatusBadge(user.approvalStatus)}
+                            {(user.tags?.length ?? 0) > 0 && (
+                              <span className="flex flex-wrap gap-1">
+                                {user.tags!.map((t) => (
+                                  <Badge key={t} variant="secondary" className="text-xs">
+                                    {t}
+                                  </Badge>
+                                ))}
+                              </span>
+                            )}
+                            {(user.riskFlags?.length ?? 0) > 0 && (
+                              <span className="flex flex-wrap gap-1">
+                                {user.riskFlags!.map((f) => (
+                                  <Badge key={f} variant="outline" className="text-xs border-amber-500/50 text-amber-600">
+                                    {f.replace(/_/g, " ")}
+                                  </Badge>
+                                ))}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1714,6 +1918,13 @@ export default function AdminUsersPage() {
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4 flex-1 min-w-0">
+                        <div className="flex-shrink-0">
+                          <Checkbox
+                            checked={selectedUsers.has(user.id)}
+                            onCheckedChange={() => handleToggleUserSelection(user.id)}
+                            className="border-border"
+                          />
+                        </div>
                         <div className="flex-shrink-0">
                           <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
                             <User className="w-5 h-5 text-primary" />

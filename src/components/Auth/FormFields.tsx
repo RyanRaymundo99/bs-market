@@ -46,17 +46,17 @@ export function InputField<T extends FieldValues = FieldValues>({
       render={({ field }) => (
         <FormItem>
           {labelPosition === "top" && (
-            <FormLabel className="text-gray-200 font-medium mb-2 block">
+            <FormLabel className="text-foreground font-medium mb-2 block">
               {label}
             </FormLabel>
           )}
           <FormControl>
             <div className="relative">
               {icon && (
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 z-10">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
                   <div
                     className={`transition-colors duration-200 ${
-                      isTyping ? "text-black" : "text-gray-300"
+                      isTyping ? "text-foreground" : "text-muted-foreground"
                     }`}
                   >
                     {icon}
@@ -73,14 +73,9 @@ export function InputField<T extends FieldValues = FieldValues>({
                     : type
                 }
                 placeholder={placeholder}
-                className={`pl-10 pr-10 bg-black/60 border-gray-800/50 text-white placeholder-gray-400 backdrop-blur-[15px] relative overflow-hidden focus:outline-none focus:ring-0 focus:border-gray-800/50 ${
-                  showPasswordToggle ? "pr-16" : ""
+                className={`pl-10 pr-10 bg-input border-border text-foreground placeholder:text-muted-foreground focus-visible:ring-ring focus-visible:ring-2 ${
+                  showPasswordToggle ? "pr-12" : ""
                 }`}
-                style={{
-                  boxShadow:
-                    "inset 0 2px 4px 0 rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.05)",
-                  backgroundColor: "rgba(0, 0, 0, 0.6)",
-                }}
                 onFocus={() => setIsTyping(true)}
                 onBlur={() => setIsTyping(false)}
                 onChange={(e) => {
@@ -88,40 +83,29 @@ export function InputField<T extends FieldValues = FieldValues>({
                   setIsTyping(e.target.value.length > 0);
                 }}
               />
-              {/* Black glass effect for input */}
-              <div className="absolute inset-0 bg-gradient-to-br from-black/40 via-transparent to-gray-900/20 opacity-70 pointer-events-none rounded-md"></div>
-              <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-gray-700/30 to-transparent"></div>
-              <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-transparent via-gray-700/20 to-transparent"></div>
 
               {showPasswordToggle && type === "password" && (
                 <button
                   type="button"
                   tabIndex={-1}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-white transition-colors z-10 bg-black/50 hover:bg-gray-900/60 border border-gray-800/50 hover:border-gray-700/50 rounded-md p-1 backdrop-blur-[10px]"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors z-10 p-1 rounded hover:bg-muted"
                   onClick={() => setShowPassword((prev) => !prev)}
-                  style={{
-                    boxShadow: "inset 0 1px 0 0 rgba(255, 255, 255, 0.05)",
-                  }}
                 >
-                  {/* Black glass effect for button */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-black/30 via-transparent to-gray-900/20 opacity-60 pointer-events-none rounded-md"></div>
-                  <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-gray-700/25 to-transparent"></div>
-
                   {showPassword ? (
-                    <EyeOff className="h-4 w-4 relative z-10" />
+                    <EyeOff className="h-4 w-4" />
                   ) : (
-                    <Eye className="h-4 w-4 relative z-10" />
+                    <Eye className="h-4 w-4" />
                   )}
                 </button>
               )}
             </div>
           </FormControl>
           {labelPosition === "bottom" && (
-            <FormLabel className="text-gray-200 font-medium mt-2 block">
+            <FormLabel className="text-foreground font-medium mt-2 block">
               {label}
             </FormLabel>
           )}
-          <FormMessage className="text-red-300" />
+          <FormMessage className="text-destructive" />
         </FormItem>
       )}
     />
@@ -151,10 +135,10 @@ export function CheckboxField<T extends FieldValues = FieldValues>({
             <Checkbox
               checked={field.value}
               onCheckedChange={field.onChange}
-              className="border-gray-700 data-[state=checked]:bg-[#12E0A1] data-[state=checked]:border-[#12E0A1] bg-black/50 backdrop-blur-[5px]"
+              className="border-border data-[state=checked]:bg-primary data-[state=checked]:border-primary bg-input"
             />
           </FormControl>
-          <FormLabel className="font-normal text-gray-200">{label}</FormLabel>
+          <FormLabel className="font-normal text-foreground">{label}</FormLabel>
         </FormItem>
       )}
     />

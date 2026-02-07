@@ -52,46 +52,27 @@ const Home = () => {
       <div className="home-bg-glass" aria-hidden />
 
       <div className="relative z-10 flex flex-col min-h-screen">
-        <header className="sticky top-0 z-20 shrink-0 border-b border-border bg-background/90 backdrop-blur-md">
-          <nav className="container mx-auto px-4 md:px-8 lg:px-12 xl:px-16 max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px]">
-            <div className="flex items-center justify-between h-20 md:h-24 py-2 md:py-3">
-              <Link href="/" className="flex items-center shrink-0" aria-label="Build Strategy - Início">
-                <Image
-                  src="/fullname-logo.svg"
-                  alt="Build Strategy"
-                  width={380}
-                  height={22}
-                  className="h-14 sm:h-16 md:h-20 lg:h-[88px] xl:h-[96px] w-auto object-contain"
-                />
-              </Link>
-              <div className="flex items-center gap-1 sm:gap-1.5">
-                <Link href="/login">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-muted-foreground hover:text-foreground hover:bg-muted rounded-md h-7 px-2 md:px-3 text-[11px] font-medium"
-                  >
-                    Entrar
-                  </Button>
-                </Link>
-                <Link href="/signup">
-                  <Button
-                    size="sm"
-                    className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold rounded-md h-7 px-2 md:px-3 text-[11px] shadow-sm"
-                  >
-                    Começar
-                  </Button>
+        {/* Hero area: image behind header + hero content */}
+        <div className="relative min-h-[85vh] flex flex-col">
+          <div className="absolute inset-0 hero-bg-image" aria-hidden />
+          <header className="relative z-10 shrink-0 bg-transparent">
+            <nav className="container mx-auto pl-4 pr-4 md:pl-6 md:pr-8 lg:pr-12 xl:pr-16 max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px]">
+              <div className="flex items-center justify-start h-20 md:h-24 py-2 md:py-3">
+                <Link href="/" className="flex items-center shrink-0" aria-label="Build Strategy - Início">
+                  <Image
+                    src="/fullname-logo.svg"
+                    alt="Build Strategy"
+                    width={380}
+                    height={22}
+                    className="h-16 sm:h-20 md:h-24 lg:h-28 xl:h-32 w-auto object-contain"
+                  />
                 </Link>
               </div>
-            </div>
-          </nav>
-        </header>
+            </nav>
+          </header>
 
-        <main className="flex-1 flex flex-col min-h-0">
-          {/* Hero — background image only in this section */}
-          <section className="relative min-h-[85vh] flex flex-col justify-center">
-            <div className="absolute inset-0 hero-bg-image" aria-hidden />
-            <div className="container relative z-10 mx-auto px-4 md:px-6 lg:px-8 max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px] pt-16 md:pt-24 lg:pt-28 pb-20 md:pb-28 lg:pb-32">
+          <section className="relative z-10 flex-1 flex flex-col justify-center">
+            <div className="container mx-auto px-4 md:px-6 lg:px-8 max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px] pt-16 md:pt-24 lg:pt-28 pb-20 md:pb-28 lg:pb-32">
               <div className="max-w-2xl">
                 <p className="text-primary text-sm font-medium uppercase tracking-widest mb-3">Compre e venda cripto</p>
                 <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-foreground tracking-tight leading-[1.05]">
@@ -107,8 +88,10 @@ const Home = () => {
                       <ArrowRight className="ml-2 w-4 h-4" />
                     </Button>
                   </Link>
-                  <Link href="/login" className="flex items-center justify-center sm:justify-start text-muted-foreground hover:text-foreground text-sm transition-colors">
-                    Já tem conta? <span className="ml-1 font-medium text-foreground">Entrar</span>
+                  <Link href="/login">
+                    <Button size="lg" variant="outline" className="w-full sm:w-auto bg-transparent border-2 border-primary text-foreground hover:bg-primary/10 font-semibold rounded-xl h-12 px-6 lg:h-14 lg:px-8">
+                      Entrar
+                    </Button>
                   </Link>
                 </div>
                 <p className="mt-8 text-sm text-muted-foreground">
@@ -135,7 +118,9 @@ const Home = () => {
               </div>
             </div>
           </section>
+        </div>
 
+        <main className="flex-1 flex flex-col min-h-0">
           {/* How it works */}
           <section id="como-funciona" className="container mx-auto px-4 md:px-6 lg:px-8 max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px] py-20 md:py-28 lg:py-32">
             <p className="landing-section-label">Como funciona</p>

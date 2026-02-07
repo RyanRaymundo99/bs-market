@@ -363,6 +363,21 @@ exports.Prisma.UserNoteScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
+exports.Prisma.UserTagScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  tag: 'tag'
+};
+
+exports.Prisma.NotificationTemplateScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  titleTemplate: 'titleTemplate',
+  messageTemplate: 'messageTemplate',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.SupportIssueScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
@@ -531,6 +546,8 @@ exports.Prisma.ModelName = {
   Notification: 'Notification',
   AdminAuditLog: 'AdminAuditLog',
   UserNote: 'UserNote',
+  UserTag: 'UserTag',
+  NotificationTemplate: 'NotificationTemplate',
   SupportIssue: 'SupportIssue',
   CommunicationLog: 'CommunicationLog',
   AdminAlertSettings: 'AdminAlertSettings',
