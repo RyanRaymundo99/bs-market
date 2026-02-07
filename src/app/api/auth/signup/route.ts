@@ -66,8 +66,8 @@ export async function POST(request: NextRequest) {
           password: hashedPassword,
           emailVerified: true,
           phoneVerified: true, // Phone is verified through the verification process
-          approvalStatus: "PENDING", // Require admin approval
-          kycStatus: "PENDING", // Require KYC submission
+          approvalStatus: "APPROVED", // Instant approval on signup; KYC can be completed later
+          kycStatus: "PENDING", // Require KYC submission (user sees finish-setup banner in dashboard)
           createdAt: new Date(),
           updatedAt: new Date(),
         },

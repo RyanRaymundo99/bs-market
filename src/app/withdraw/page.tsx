@@ -43,6 +43,8 @@ import {
   Minus,
 } from "lucide-react";
 import NavbarNew from "@/components/ui/navbar-new";
+import { PageLoader, ButtonLoader } from "@/components/ui/loading";
+import { GlobalKYCBanner } from "@/components/GlobalKYCBanner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useMobileMenuOpen } from "@/hooks/useMobileMenuOpen";
 import { formatUSDT, formatBRL } from "@/lib/format-currency";
@@ -531,25 +533,25 @@ export default function WithdrawPage() {
     switch (status) {
       case "PENDING":
         return (
-          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+          <Badge variant="secondary" className="bg-warning/20 text-warning">
             {t("pending")}
           </Badge>
         );
       case "PROCESSING":
         return (
-          <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+          <Badge variant="secondary" className="bg-primary/20 text-primary">
             {t("processingStatus")}
           </Badge>
         );
       case "COMPLETED":
         return (
-          <Badge variant="secondary" className="bg-green-100 text-green-800">
+          <Badge variant="secondary" className="bg-primary/20 text-primary">
             {t("completedStatus")}
           </Badge>
         );
       case "REJECTED":
         return (
-          <Badge variant="secondary" className="bg-red-100 text-red-800">
+          <Badge variant="secondary" className="bg-destructive/20 text-destructive">
             {t("rejectedStatus")}
           </Badge>
         );
@@ -561,15 +563,15 @@ export default function WithdrawPage() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "PENDING":
-        return <Clock className="h-4 w-4 text-yellow-600" />;
+        return <Clock className="h-4 w-4 text-warning" />;
       case "PROCESSING":
-        return <Clock className="h-4 w-4 text-blue-600" />;
+        return <Clock className="h-4 w-4 text-primary" />;
       case "COMPLETED":
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
+        return <CheckCircle className="h-4 w-4 text-primary" />;
       case "REJECTED":
-        return <XCircle className="h-4 w-4 text-red-600" />;
+        return <XCircle className="h-4 w-4 text-destructive" />;
       default:
-        return <Clock className="h-4 w-4 text-gray-600" />;
+        return <Clock className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
@@ -586,17 +588,15 @@ export default function WithdrawPage() {
     return (
       <div className="min-h-screen bg-background">
         <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
+        <GlobalKYCBanner />
         <div className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-center h-64">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-              <p>
-                {language === "pt"
-                  ? "Carregando página de saque..."
-                  : "Loading withdrawal page..."}
-              </p>
-            </div>
-          </div>
+          <PageLoader
+            message={
+              language === "pt"
+                ? "Carregando página de saque..."
+                : "Loading withdrawal page..."
+            }
+          />
         </div>
       </div>
     );
@@ -612,6 +612,7 @@ export default function WithdrawPage() {
       onTouchEnd={onTouchEnd}
     >
       <NavbarNew isLoggingOut={false} handleLogout={() => {}} />
+      <GlobalKYCBanner />
       <div
         className={`container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl ${
           isMobile ? "pb-16" : ""
@@ -625,26 +626,25 @@ export default function WithdrawPage() {
         <div className="max-w-4xl mx-auto">
           {/* Main Withdrawal Form */}
           <div>
-            <Card className="rounded-xl sm:rounded-2xl border-gray-800 bg-gray-900/50 backdrop-blur-sm">
+            <Card className="rounded-xl sm:rounded-2xl border-border bg-card shadow-sm">
               <CardHeader>
-                {/* Header inside card */}
                 <div className="text-center mb-6">
-                  <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
                     {t("withdrawUSDT")}
                   </h1>
-                  <p className="text-gray-400 text-sm sm:text-base">
+                  <p className="text-muted-foreground text-sm sm:text-base">
                     {t("chooseWithdrawalMethod")}
                   </p>
                 </div>
 
                 {withdrawalsDisabled ? (
-                  <div className="mb-4 rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4">
-                    <p className="text-sm font-medium text-yellow-200">
+                  <div className="mb-4 rounded-xl border border-warning/30 bg-warning/10 p-4">
+                    <p className="text-sm font-medium text-warning">
                       {language === "pt"
                         ? "Atualização da plataforma"
                         : "Platform update"}
                     </p>
-                    <p className="text-xs text-yellow-100/80 mt-1">
+                    <p className="text-xs text-warning/90 mt-1">
                       {withdrawalsDisabledMessage ||
                         (language === "pt"
                           ? "Saques estão temporariamente desativados."
@@ -653,15 +653,14 @@ export default function WithdrawPage() {
                   </div>
                 ) : null}
 
-                {/* Withdrawal Type Tabs */}
                 <div className="mb-4 flex justify-center">
-                  <div className="relative inline-flex items-center bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-1 shadow-lg">
+                  <div className="relative inline-flex items-center bg-muted/60 border border-border rounded-xl p-1">
                     <button
                       onClick={() => setWithdrawalType("USDT")}
                       className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
                         withdrawalType === "USDT"
-                          ? "bg-brand-500 text-white shadow-md"
-                          : "text-gray-400 hover:text-white hover:bg-gray-700/50"
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
                       }`}
                     >
                       <div className="flex items-center justify-center gap-2">
@@ -669,13 +668,13 @@ export default function WithdrawPage() {
                         <span>USDT</span>
                       </div>
                     </button>
-                    <div className="h-6 w-px bg-gray-700 mx-1"></div>
+                    <div className="h-6 w-px bg-border mx-1" />
                     <button
                       onClick={() => setWithdrawalType("PIX")}
                       className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
                         withdrawalType === "PIX"
-                          ? "bg-green-600 text-white shadow-md"
-                          : "text-gray-400 hover:text-white hover:bg-gray-700/50"
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
                       }`}
                     >
                       <div className="flex items-center justify-center gap-2">
@@ -685,20 +684,20 @@ export default function WithdrawPage() {
                     </button>
                   </div>
                 </div>
-                <CardTitle className="flex items-center gap-2 text-white">
+                <CardTitle className="flex items-center gap-2 text-foreground">
                   {withdrawalType === "USDT" ? (
                     <>
-                      <Coins className="h-5 w-5" />
+                      <Coins className="h-5 w-5 text-primary" />
                       {t("withdrawViaUSDT")}
                     </>
                   ) : (
                     <>
-                      <Wallet className="h-5 w-5 text-green-500" />
+                      <Wallet className="h-5 w-5 text-primary" />
                       {language === "pt" ? "Saque via PIX" : "Withdraw via PIX"}
                     </>
                   )}
                 </CardTitle>
-                <CardDescription className="text-gray-400">
+                <CardDescription className="text-muted-foreground">
                   {withdrawalType === "USDT"
                     ? t("sendUSDTToWallet")
                     : language === "pt"
@@ -709,25 +708,23 @@ export default function WithdrawPage() {
               <CardContent className="space-y-4 sm:space-y-6">
                 {withdrawalType === "USDT" ? (
                   <>
-                    {/* USDT Balance */}
-                    <div className="p-4 sm:p-6 bg-gradient-to-br from-brand-500/20 to-blue-500/20 rounded-xl border border-brand-500/30">
+                    <div className="p-4 sm:p-6 bg-primary/10 rounded-xl border border-primary/30">
                       <div className="flex items-center gap-2 mb-2">
-                        <Coins className="h-5 w-5 text-brand-400" />
-                        <span className="text-sm font-medium text-gray-300">
+                        <Coins className="h-5 w-5 text-primary" />
+                        <span className="text-sm font-medium text-muted-foreground">
                           {t("availableBalance")}
                         </span>
                       </div>
-                      <p className="text-2xl sm:text-3xl font-bold text-brand-400">
+                      <p className="text-2xl sm:text-3xl font-bold text-primary">
                         {usdtBalance && typeof usdtBalance.amount === "number"
                           ? formatUSDT(usdtBalance.amount)
                           : "0 USDT"}
                       </p>
                     </div>
 
-                    {/* USDT Form */}
                     <div className="space-y-4">
                       <div>
-                        <Label htmlFor="usdt-amount" className="text-gray-300">
+                        <Label htmlFor="usdt-amount" className="text-foreground">
                           {t("amountToWithdraw")}
                         </Label>
                         <Input
@@ -739,15 +736,12 @@ export default function WithdrawPage() {
                           min="0"
                           step="0.01"
                           max={usdtBalance ? usdtBalance.amount : undefined}
-                          className="bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 rounded-xl"
+                          className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground focus:ring-primary rounded-xl"
                         />
                       </div>
 
                       <div>
-                        <Label
-                          htmlFor="wallet-address"
-                          className="text-gray-300"
-                        >
+                        <Label htmlFor="wallet-address" className="text-foreground">
                           {t("walletAddress")}
                         </Label>
                         <Input
@@ -756,53 +750,46 @@ export default function WithdrawPage() {
                           placeholder={t("enterWalletAddress")}
                           value={walletAddress}
                           onChange={(e) => setWalletAddress(e.target.value)}
-                          className="bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 rounded-xl"
+                          className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground focus:ring-primary rounded-xl"
                         />
                       </div>
 
                       <div>
-                        <Label htmlFor="network" className="text-gray-300">
+                        <Label htmlFor="network" className="text-foreground">
                           {t("network")}
                         </Label>
                         <Select
                           value={selectedNetwork}
                           onValueChange={setSelectedNetwork}
                         >
-                          <SelectTrigger className="bg-gray-800/50 border-gray-700 text-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 rounded-xl">
+                          <SelectTrigger className="bg-muted/50 border-border text-foreground focus:ring-primary rounded-xl">
                             <SelectValue placeholder={t("selectNetwork")} />
                           </SelectTrigger>
-                          <SelectContent className="bg-gray-800 border-gray-700">
-                            <SelectItem
-                              value="TRC20"
-                              className="text-white hover:bg-gray-700"
-                            >
+                          <SelectContent>
+                            <SelectItem value="TRC20">
                               {t("trc20Option")}
                             </SelectItem>
-                            <SelectItem
-                              value="ERC20"
-                              className="text-white hover:bg-gray-700"
-                            >
+                            <SelectItem value="ERC20">
                               {t("erc20Option")}
                             </SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
 
-                      {/* Fee Calculation */}
-                      <div className="p-4 sm:p-6 bg-gray-800/30 rounded-xl border border-gray-700/50">
+                      <div className="p-4 sm:p-6 bg-muted/30 rounded-xl border border-border">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm text-gray-400">
+                          <span className="text-sm text-muted-foreground">
                             {t("networkFee")}
                           </span>
-                          <span className="text-sm font-medium text-red-400">
+                          <span className="text-sm font-medium text-destructive">
                             -{formatUSDT(getNetworkFee())}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between pt-2 border-t border-gray-700">
-                          <span className="text-sm font-medium text-gray-300">
+                        <div className="flex items-center justify-between pt-2 border-t border-border">
+                          <span className="text-sm font-medium text-foreground">
                             {t("netTotal")}
                           </span>
-                          <span className="text-lg sm:text-xl font-bold text-brand-400">
+                          <span className="text-lg sm:text-xl font-bold text-primary">
                             {formatUSDT(calculateUSDTNetAmount() || 0)}
                           </span>
                         </div>
@@ -817,13 +804,14 @@ export default function WithdrawPage() {
                           !walletAddress ||
                           parseFloat(usdtAmount) <= 0
                         }
-                        className="w-full h-12 sm:h-14 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors text-base sm:text-lg"
+                        className="w-full h-12 sm:h-14 font-semibold rounded-xl text-base sm:text-lg"
                       >
                         {processing ? (
-                          <>
-                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                            {t("processing")}
-                          </>
+                          <ButtonLoader
+                            label={t("processing")}
+                            size="default"
+                            className="text-primary-foreground"
+                          />
                         ) : (
                           t("sendUSDT")
                         )}
@@ -832,25 +820,23 @@ export default function WithdrawPage() {
                   </>
                 ) : (
                   <>
-                    {/* PIX / BRL Balance */}
-                    <div className="p-4 sm:p-6 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-xl border border-green-500/30">
+                    <div className="p-4 sm:p-6 bg-primary/10 rounded-xl border border-primary/30">
                       <div className="flex items-center gap-2 mb-2">
-                        <Wallet className="h-5 w-5 text-green-400" />
-                        <span className="text-sm font-medium text-gray-300">
+                        <Wallet className="h-5 w-5 text-primary" />
+                        <span className="text-sm font-medium text-muted-foreground">
                           {language === "pt"
                             ? "Saldo Disponível em BRL"
                             : "Available BRL Balance"}
                         </span>
                       </div>
-                      <p className="text-2xl sm:text-3xl font-bold text-green-400">
+                      <p className="text-2xl sm:text-3xl font-bold text-primary">
                         {formatBRL(getBrlBalance())}
                       </p>
                     </div>
 
-                    {/* PIX Form */}
                     <div className="space-y-4">
                       <div>
-                        <Label htmlFor="pix-amount" className="text-gray-300">
+                        <Label htmlFor="pix-amount" className="text-foreground">
                           {language === "pt"
                             ? "Valor a Sacar (R$)"
                             : "Amount to Withdraw (R$)"}
@@ -864,12 +850,12 @@ export default function WithdrawPage() {
                           min="0"
                           step="0.01"
                           max={getBrlBalance()}
-                          className="bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 rounded-xl"
+                          className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground focus:ring-primary rounded-xl"
                         />
                       </div>
 
                       <div>
-                        <Label htmlFor="pix-key" className="text-gray-300">
+                        <Label htmlFor="pix-key" className="text-foreground">
                           {language === "pt" ? "Chave PIX" : "PIX Key"}
                         </Label>
                         <Input
@@ -882,12 +868,12 @@ export default function WithdrawPage() {
                           }
                           value={pixKey}
                           onChange={(e) => setPixKey(e.target.value)}
-                          className="bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 rounded-xl"
+                          className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground focus:ring-primary rounded-xl"
                         />
                       </div>
 
                       <div>
-                        <Label htmlFor="pix-password" className="text-gray-300">
+                        <Label htmlFor="pix-password" className="text-foreground">
                           {language === "pt"
                             ? "Confirmar Senha"
                             : "Confirm Password"}
@@ -902,19 +888,18 @@ export default function WithdrawPage() {
                           }
                           value={pixPassword}
                           onChange={(e) => setPixPassword(e.target.value)}
-                          className="bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 rounded-xl"
+                          className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground focus:ring-primary rounded-xl"
                         />
                       </div>
 
-                      {/* PIX withdrawal summary (no fee) */}
-                      <div className="p-4 sm:p-6 bg-gray-800/30 rounded-xl border border-gray-700/50">
+                      <div className="p-4 sm:p-6 bg-muted/30 rounded-xl border border-border">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-gray-300">
+                          <span className="text-sm font-medium text-foreground">
                             {language === "pt"
                               ? "Valor a receber"
                               : "Amount to receive"}
                           </span>
-                          <span className="text-lg sm:text-xl font-bold text-green-400">
+                          <span className="text-lg sm:text-xl font-bold text-emerald-600 dark:text-emerald-400">
                             {formatBRL(calculatePixNetAmount())}
                           </span>
                         </div>
@@ -931,13 +916,14 @@ export default function WithdrawPage() {
                           parseFloat(pixAmount) <= 0 ||
                           parseFloat(pixAmount) > getBrlBalance()
                         }
-                        className="w-full h-12 sm:h-14 bg-green-600 hover:bg-green-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors text-base sm:text-lg"
+                        className="w-full h-12 sm:h-14 font-semibold rounded-xl text-base sm:text-lg"
                       >
                         {processingPix ? (
-                          <>
-                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                            {t("processing")}
-                          </>
+                          <ButtonLoader
+                            label={t("processing")}
+                            size="default"
+                            className="text-primary-foreground"
+                          />
                         ) : language === "pt" ? (
                           "Sacar via PIX"
                         ) : (
@@ -945,7 +931,7 @@ export default function WithdrawPage() {
                         )}
                       </Button>
 
-                      <p className="text-xs text-gray-500 text-center">
+                      <p className="text-xs text-muted-foreground text-center">
                         {language === "pt"
                           ? "O saque PIX é processado manualmente. Prazo de até 24 horas úteis."
                           : "PIX withdrawal is processed manually. Up to 24 business hours."}
@@ -958,14 +944,13 @@ export default function WithdrawPage() {
           </div>
         </div>
 
-        {/* Withdrawal History */}
-        <Card className="mt-6 sm:mt-8 rounded-xl sm:rounded-2xl border-gray-800 bg-gray-900/50 backdrop-blur-sm">
+        <Card className="mt-6 sm:mt-8 rounded-xl sm:rounded-2xl border-border bg-card shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-white">
-              <History className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-foreground">
+              <History className="h-5 w-5 text-primary" />
               {t("withdrawalHistory")}
             </CardTitle>
-            <CardDescription className="text-gray-400">
+            <CardDescription className="text-muted-foreground">
               {t("withdrawalHistoryDescription")}
             </CardDescription>
           </CardHeader>
@@ -1005,16 +990,12 @@ export default function WithdrawPage() {
                         <td className="py-3 px-4">
                           <Badge
                             variant="secondary"
-                            className={
-                              withdrawal.type === "PIX"
-                                ? "bg-green-500/20 text-green-400 border-green-500/30"
-                                : "bg-brand-500/20 text-brand-400 border-brand-500/30"
-                            }
+                            className="bg-primary/20 text-primary border-primary/30"
                           >
                             {withdrawal.type === "PIX" ? "PIX" : "USDT"}
                           </Badge>
                         </td>
-                        <td className="py-3 px-4 font-medium text-white">
+                        <td className="py-3 px-4 font-medium text-foreground">
                           {withdrawal.type === "PIX"
                             ? formatBRL(withdrawal.amount)
                             : formatUSDT(withdrawal.amount)}
@@ -1027,18 +1008,18 @@ export default function WithdrawPage() {
                         </td>
                         <td className="py-3 px-4">
                           {withdrawal.type === "PIX" && withdrawal.protocol ? (
-                            <code className="text-xs bg-gray-800 px-2 py-1 rounded text-gray-300">
+                            <code className="text-xs bg-muted px-2 py-1 rounded text-foreground">
                               {withdrawal.protocol}
                             </code>
                           ) : withdrawal.hash ? (
                             <div className="flex items-center gap-2">
-                              <code className="text-xs bg-gray-800 px-2 py-1 rounded text-gray-300">
+                              <code className="text-xs bg-muted px-2 py-1 rounded text-foreground">
                                 {withdrawal.hash.slice(0, 8)}...
                               </code>
-                              <ExternalLink className="h-3 w-3 text-gray-400" />
+                              <ExternalLink className="h-3 w-3 text-muted-foreground" />
                             </div>
                           ) : (
-                            <span className="text-gray-400">-</span>
+                            <span className="text-muted-foreground">-</span>
                           )}
                         </td>
                       </tr>
@@ -1060,7 +1041,7 @@ export default function WithdrawPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
+              <CheckCircle className="h-5 w-5 text-primary" />
               {t("withdrawalProcessed")}
             </DialogTitle>
             <DialogDescription>{successMessage}</DialogDescription>
@@ -1080,40 +1061,37 @@ export default function WithdrawPage() {
           style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}
         >
           <div className="flex justify-center pb-2 px-4">
-            <div className="relative inline-flex items-center bg-black/90 backdrop-blur-sm border border-gray-800 rounded-full px-1 py-1.5 shadow-lg">
-              {/* Deposit */}
+            <div className="relative inline-flex items-center bg-card/95 backdrop-blur-sm border border-border rounded-full px-1 py-1.5 shadow-lg">
               <button
                 onClick={() => router.push("/trade")}
                 className={`relative px-3 sm:px-4 py-1.5 rounded-full text-xs font-medium transition-all touch-manipulation ${
                   pathname === "/trade"
-                    ? "bg-green-500 text-white"
-                    : "text-gray-400 hover:text-white active:bg-gray-700/50"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground active:bg-muted"
                 }`}
                 style={{ minWidth: "44px", minHeight: "44px" }}
               >
                 <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </button>
 
-              {/* Dashboard */}
               <button
                 onClick={() => router.push("/dashboard")}
                 className={`relative px-3 sm:px-4 py-1.5 rounded-full text-xs font-medium transition-all touch-manipulation ${
                   pathname === "/dashboard"
-                    ? "bg-brand-500 text-white"
-                    : "text-gray-400 hover:text-white active:bg-gray-700/50"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground active:bg-muted"
                 }`}
                 style={{ minWidth: "44px", minHeight: "44px" }}
               >
                 <Home className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </button>
 
-              {/* Withdraw */}
               <button
                 onClick={() => router.push("/withdraw")}
                 className={`relative px-3 sm:px-4 py-1.5 rounded-full text-xs font-medium transition-all touch-manipulation ${
                   pathname === "/withdraw"
-                    ? "bg-red-500 text-white"
-                    : "text-gray-400 hover:text-white active:bg-gray-700/50"
+                    ? "bg-destructive text-destructive-foreground"
+                    : "text-muted-foreground hover:text-foreground active:bg-muted"
                 }`}
                 style={{ minWidth: "44px", minHeight: "44px" }}
               >

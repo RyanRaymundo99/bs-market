@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback } from "react";
 import { Mail, Lock, User, ArrowRight, Loader2, Shield, CheckCircle } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
@@ -29,13 +29,16 @@ const SignupWithMandatory2FA = () => {
   const [userName, setUserName] = useState("");
   
   const form = useForm<SignUpFormValues>({
-    resolver: zodResolver(signUpSchema),
+    resolver: zodResolver(signUpSchema) as Resolver<SignUpFormValues>,
     defaultValues: {
       name: "",
       email: "",
+      phone: "",
       cpf: "",
       password: "",
       confirmPassword: "",
+      acceptMarketing: false,
+      acceptTerms: false,
     },
   });
   

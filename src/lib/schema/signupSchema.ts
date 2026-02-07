@@ -46,7 +46,7 @@ export const signUpSchema = z
         message: "A senha deve conter pelo menos um caractere especial",
       }),
     confirmPassword: z.string(),
-    acceptMarketing: z.boolean(),
+    acceptMarketing: z.boolean().default(false),
     acceptTerms: z.boolean().refine((val) => val === true, {
       message: "Você deve aceitar os termos para criar uma conta",
     }),

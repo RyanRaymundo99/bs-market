@@ -1,6 +1,5 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { syncMobileMenuToBody } from "@/hooks/useMobileMenuOpen";
 import { Button } from "@/components/ui/button";
 import {
   LogOut,
@@ -10,8 +9,10 @@ import {
   TrendingDown,
   BarChart3,
   User,
+  LayoutList,
 } from "lucide-react";
 import { BalanceDisplay } from "./balance-display";
+import { UserNotificationBell } from "./user-notification-bell";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { FlagBR } from "@/components/icons/FlagBR";
 import { FlagUS } from "@/components/icons/FlagUS";
@@ -20,6 +21,7 @@ const NAV_LINKS_KEYS = [
   { key: "dashboard", href: "/dashboard", icon: Home },
   { key: "trade", href: "/trade", icon: BarChart3 },
   { key: "withdraw", href: "/withdraw", icon: TrendingDown },
+  { key: "activityPage", href: "/activity", icon: LayoutList },
   { key: "profile", href: "/profile", icon: User },
 ];
 
@@ -31,12 +33,8 @@ interface NavbarProps {
 export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [depositsDisabled, setDepositsDisabled] = useState(false);
-  const [withdrawalsDisabled, setWithdrawalsDisabled] = useState(false);
-  const [depositsDisabledMessage, setDepositsDisabledMessage] =
-    useState<string>("");
-  const [withdrawalsDisabledMessage, setWithdrawalsDisabledMessage] =
-    useState<string>("");
+  const [moneyDisabled, setMoneyDisabled] = useState(false);
+  const [moneyDisabledMessage, setMoneyDisabledMessage] = useState<string>("");
   const { language, setLanguage, t } = useLanguage();
 
   // Prevent hydration mismatch by only rendering translated content after mount
@@ -51,14 +49,8 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
         if (!response.ok) return;
         const data = await response.json();
         if (data?.success) {
-          setDepositsDisabled(Boolean(data.depositsDisabled));
-          setWithdrawalsDisabled(Boolean(data.withdrawalsDisabled));
-          setDepositsDisabledMessage(
-            String(data.depositsDisabledMessage || "")
-          );
-          setWithdrawalsDisabledMessage(
-            String(data.withdrawalsDisabledMessage || "")
-          );
+          setMoneyDisabled(Boolean(data.moneyDisabled));
+          setMoneyDisabledMessage(String(data.moneyDisabledMessage || ""));
         }
       } catch (error) {
         console.error("Failed to load site status:", error);
@@ -84,10 +76,9 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
     } else {
       document.body.style.overflow = "unset";
     }
-    syncMobileMenuToBody(isMobileMenuOpen);
+
     return () => {
       document.body.style.overflow = "unset";
-      syncMobileMenuToBody(false);
     };
   }, [isMobileMenuOpen]);
 
@@ -134,9 +125,9 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
                 <button
                   key={link.key}
                   onClick={() => handleNavigation(link.href)}
-                  className="text-white/80 hover:text-brand-300 font-medium transition-colors flex items-center gap-2 group cursor-pointer"
+                  className="text-foreground/80 hover:text-primary font-medium transition-colors flex items-center gap-2 group cursor-pointer"
                 >
-                  <IconComponent className="w-4 h-4 group-hover:text-brand-300 transition-colors" />
+                  <IconComponent className="w-4 h-4 group-hover:text-primary transition-colors" />
                   {mounted
                     ? t(link.key)
                     : link.key === "trade"
@@ -145,6 +136,8 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
                     ? "Dashboard"
                     : link.key === "withdraw"
                     ? "Sacar"
+                    : link.key === "activityPage"
+                    ? "Ver tudo"
                     : link.key === "profile"
                     ? "Perfil"
                     : link.key}
@@ -153,45 +146,53 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
             })}
           </nav>
         </div>
-        {/* Header Actions */}
-        <div className="flex items-center gap-4">
-          {/* Balance Display */}
+        {/* Header Actions - all pills match balance style (gradient, green border on hover) */}
+        <div className="flex items-center gap-2">
           <BalanceDisplay />
-
-          {/* Language Switcher */}
-          <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1 border border-white/10">
+          {mounted ? (
+            <UserNotificationBell />
+          ) : (
+            <div className="h-10 w-10 rounded-xl shrink-0" aria-hidden />
+          )}
+          <div
+            className="flex items-center h-10 rounded-xl bg-muted/50 border border-border hover:border-primary/30 p-0.5 transition-colors"
+            role="group"
+            aria-label="Idioma"
+          >
             <button
+              type="button"
               onClick={() => setLanguage("pt")}
-              className={`px-2 py-1 rounded text-sm transition-all flex items-center justify-center ${
+              className={`h-full rounded-lg px-2.5 flex items-center justify-center transition-all duration-200 ${
                 language === "pt"
-                  ? "bg-brand-500 text-white"
-                  : "text-white/60 hover:text-white hover:bg-white/10"
+                  ? "bg-primary/15 text-primary"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
               }`}
               title="Português"
             >
-              <FlagBR size={20} className="rounded-sm" />
+              <FlagBR size={18} className="rounded-sm" />
             </button>
             <button
+              type="button"
               onClick={() => setLanguage("en")}
-              className={`px-2 py-1 rounded text-sm transition-all flex items-center justify-center ${
+              className={`h-full rounded-lg px-2.5 flex items-center justify-center transition-all duration-200 ${
                 language === "en"
-                  ? "bg-brand-500 text-white"
-                  : "text-white/60 hover:text-white hover:bg-white/10"
+                  ? "bg-primary/15 text-primary"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
               }`}
               title="English"
             >
-              <FlagUS size={20} className="rounded-sm" />
+              <FlagUS size={18} className="rounded-sm" />
             </button>
           </div>
-
           <Button
+            type="button"
             variant="ghost"
             size="sm"
             onClick={handleLogout}
             disabled={isLoggingOut}
-            className="gap-2 text-white hover:text-brand-300 hover:bg-white/10"
+            className="h-10 rounded-xl gap-2 text-foreground/80 hover:text-primary hover:border-primary/30 border border-border bg-muted/50 hover:bg-muted px-3 text-sm font-medium transition-all duration-200"
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="h-4 w-4 shrink-0" />
             {mounted
               ? isLoggingOut
                 ? t("loggingOut")
@@ -223,7 +224,7 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
             size="sm"
             onClick={handleLogout}
             disabled={isLoggingOut}
-            className="text-white hover:text-blue-300 hover:bg-white/10 p-2"
+            className="text-foreground hover:text-primary hover:bg-muted p-2"
             title={mounted ? t("logout") : "Sair"}
           >
             <LogOut className="w-5 h-5" />
@@ -232,7 +233,7 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
             variant="ghost"
             size="sm"
             onClick={toggleMobileMenu}
-            className="bg-black/60 backdrop-blur-[20px] border border-white/10 text-white hover:text-blue-300 hover:bg-black/80 p-2 rounded-lg"
+            className="bg-card/60 backdrop-blur-[20px] border border-border text-foreground hover:text-primary hover:bg-muted p-2 rounded-lg"
           >
             {isMobileMenuOpen ? (
               <X className="w-5 h-5" />
@@ -243,30 +244,15 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
         </div>
       </header>
 
-      {depositsDisabled || withdrawalsDisabled ? (
-        <div className="w-full border-b border-yellow-500/30 bg-yellow-500/10 px-4 py-2">
-          <p className="text-xs text-yellow-200">
-            {depositsDisabled && withdrawalsDisabled
-              ? depositsDisabledMessage ||
-                withdrawalsDisabledMessage ||
-                (mounted
-                  ? language === "pt"
-                    ? "A plataforma está em atualização. Depósitos e saques estão temporariamente desativados."
-                    : "The platform is being updated. Deposits and withdrawals are temporarily disabled."
-                  : "Platform update in progress.")
-              : depositsDisabled
-              ? depositsDisabledMessage ||
-                (mounted
-                  ? language === "pt"
-                    ? "Depósitos estão temporariamente desativados."
-                    : "Deposits are temporarily disabled."
-                  : "Deposits disabled.")
-              : withdrawalsDisabledMessage ||
-                (mounted
-                  ? language === "pt"
-                    ? "Saques estão temporariamente desativados."
-                    : "Withdrawals are temporarily disabled."
-                  : "Withdrawals disabled.")}
+      {moneyDisabled ? (
+        <div className="w-full border-b border-warning/30 bg-warning/10 px-4 py-2">
+          <p className="text-xs text-warning">
+            {moneyDisabledMessage ||
+              (mounted
+                ? language === "pt"
+                  ? "A plataforma está em atualização. Depósitos e saques estão temporariamente desativados."
+                  : "The platform is being updated. Deposits and withdrawals are temporarily disabled."
+                : "Platform update in progress.")}
           </p>
         </div>
       ) : null}
@@ -293,7 +279,7 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
             variant="ghost"
             size="sm"
             onClick={toggleMobileMenu}
-            className="text-white hover:text-blue-300 hover:bg-white/10 p-2"
+            className="text-foreground hover:text-primary hover:bg-muted p-2"
           >
             <X className="w-6 h-6" />
           </Button>
@@ -322,6 +308,8 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
                         ? "Dashboard"
                         : link.key === "withdraw"
                         ? "Sacar"
+                        : link.key === "activityPage"
+                        ? "Ver tudo"
                         : link.key === "profile"
                         ? "Perfil"
                         : link.key}
@@ -334,9 +322,14 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
 
           {/* Mobile Menu Footer */}
           <div className="p-6 border-t border-white/10">
-            {/* Balance Display for Mobile */}
-            <div className="mb-4">
-              <BalanceDisplay className="w-full justify-center" />
+            {/* Notifications + Balance for Mobile */}
+            <div className="mb-4 flex items-center justify-center gap-3">
+              {mounted ? (
+                <UserNotificationBell />
+              ) : (
+                <div className="h-10 w-10 rounded-xl shrink-0" aria-hidden />
+              )}
+              <BalanceDisplay className="flex-1 justify-center" />
             </div>
 
             {/* Language Switcher for Mobile */}
@@ -345,8 +338,8 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
                 onClick={() => setLanguage("pt")}
                 className={`px-3 py-2 rounded text-sm transition-all flex items-center justify-center ${
                   language === "pt"
-                    ? "bg-brand-500 text-white"
-                    : "text-white/60 hover:text-white hover:bg-white/10"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 }`}
                 title="Português"
               >
@@ -356,8 +349,8 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
                 onClick={() => setLanguage("en")}
                 className={`px-3 py-2 rounded text-sm transition-all flex items-center justify-center ${
                   language === "en"
-                    ? "bg-brand-500 text-white"
-                    : "text-white/60 hover:text-white hover:bg-white/10"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 }`}
                 title="English"
               >
@@ -369,7 +362,7 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
               <button
                 onClick={handleLogout}
                 disabled={isLoggingOut}
-                className="w-full flex items-center justify-center gap-2 p-3 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-200 group"
+                className="w-full flex items-center justify-center gap-2 p-3 rounded-lg text-destructive hover:bg-destructive/10 transition-all duration-200 group"
               >
                 <LogOut className="w-5 h-5" />
                 <span className="font-medium">

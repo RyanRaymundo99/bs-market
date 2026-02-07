@@ -2,24 +2,22 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import {
   Wallet,
   TrendingUp,
-  Users,
   Shield,
   ArrowRight,
-  CheckCircle,
-  DollarSign,
-  Zap,
+  ArrowLeft,
+  FileCheck,
+  Sparkles,
+  ChevronRight,
 } from "lucide-react";
+
+const STEP_COUNT = 4;
 
 interface WelcomeTutorialProps {
   isOpen: boolean;
@@ -34,240 +32,166 @@ export function WelcomeTutorial({
 }: WelcomeTutorialProps) {
   const [currentStep, setCurrentStep] = useState(0);
 
-  const tutorialSteps = [
+  const steps = [
     {
-      title: "Welcome to BS Market! 🎉",
-      description: `Hi ${userName}! Welcome to your new crypto trading account. Let's get you started with a quick tour.`,
-      icon: <CheckCircle className="h-8 w-8 text-green-500" />,
-      content: (
-        <div className="space-y-4">
-          <div className="text-center">
-            <h3 className="text-xl font-semibold text-green-600 mb-2">
-              Your account is ready to go!
-            </h3>
-            <p className="text-gray-600">
-              You can start exploring the platform right away. Let us show you
-              around.
-            </p>
-          </div>
-        </div>
-      ),
+      icon: Sparkles,
+      title: "Bem-vindo ao BS Market",
+      subtitle: `Olá${userName ? `, ${userName}` : ""}! Sua conta foi criada.`,
+      body: "Você já pode acessar o dashboard. Complete o perfil quando quiser para liberar depósitos e saques.",
+      accent: "from-emerald-500/20 to-cyan-500/10",
+      iconBg: "bg-emerald-500/20",
+      iconColor: "text-emerald-400",
     },
     {
-      title: "Add Money to Your Account 💰",
-      description:
-        "Learn how to fund your account to start trading cryptocurrencies.",
-      icon: <DollarSign className="h-8 w-8 text-blue-500" />,
-      content: (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="text-center p-4">
-              <Zap className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
-              <h4 className="font-semibold">PIX</h4>
-              <p className="text-sm text-gray-600">
-                Instant Brazilian PIX transfers
-              </p>
-            </Card>
-          </div>
-        </div>
-      ),
+      icon: FileCheck,
+      title: "Complete seu perfil",
+      subtitle: "Verificação de identidade (KYC)",
+      body: "Envie seus documentos no menu Perfil para habilitar PIX, saques e operações completas. Você pode fazer isso a qualquer momento.",
+      accent: "from-blue-500/20 to-indigo-500/10",
+      iconBg: "bg-blue-500/20",
+      iconColor: "text-blue-400",
     },
     {
-      title: "Start Trading Crypto 📈",
-      description:
-        "Discover how to buy and sell cryptocurrencies on our platform.",
-      icon: <TrendingUp className="h-8 w-8 text-purple-500" />,
-      content: (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card className="p-4">
-              <h4 className="font-semibold text-green-600 mb-2">
-                Buying Crypto
-              </h4>
-              <ul className="text-sm text-gray-600 space-y-1">
-                <li>• Choose from BTC, ETH, USDT</li>
-                <li>• Enter amount in BRL</li>
-                <li>• Real-time market prices</li>
-                <li>• Instant execution</li>
-              </ul>
-            </Card>
-            <Card className="p-4">
-              <h4 className="font-semibold text-red-600 mb-2">
-                Selling Crypto
-              </h4>
-              <ul className="text-sm text-gray-600 space-y-1">
-                <li>• Sell your crypto for BRL</li>
-                <li>• Real-time market prices</li>
-                <li>• Instant settlement</li>
-                <li>• Withdraw to your bank</li>
-              </ul>
-            </Card>
-          </div>
-          <div className="bg-purple-50 p-4 rounded-lg">
-            <h4 className="font-semibold text-purple-800 mb-2">
-              Trading Features:
-            </h4>
-            <ul className="text-sm text-purple-700 space-y-1">
-              <li>• Real-time price updates</li>
-              <li>• Secure trading platform</li>
-              <li>• Complete transaction history</li>
-              <li>• Portfolio tracking</li>
-            </ul>
-          </div>
-        </div>
-      ),
+      icon: Wallet,
+      title: "Adicione saldo",
+      subtitle: "PIX e criptomoedas",
+      body: "Deposite via PIX (instantâneo) ou receba criptomoedas. Seu saldo aparece no dashboard e pode ser usado para comprar USDT e outras moedas.",
+      accent: "from-violet-500/20 to-purple-500/10",
+      iconBg: "bg-violet-500/20",
+      iconColor: "text-violet-400",
     },
     {
-      title: "Security & Safety 🔒",
-      description:
-        "Learn about the security measures protecting your account and funds.",
-      icon: <Shield className="h-8 w-8 text-green-500" />,
-      content: (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card className="p-4">
-              <h4 className="font-semibold text-green-600 mb-2">
-                Account Security
-              </h4>
-              <ul className="text-sm text-gray-600 space-y-1">
-                <li>• Encrypted passwords</li>
-                <li>• Secure session management</li>
-                <li>• HTTPS encryption</li>
-                <li>• Regular security audits</li>
-              </ul>
-            </Card>
-            <Card className="p-4">
-              <h4 className="font-semibold text-blue-600 mb-2">
-                Fund Protection
-              </h4>
-              <ul className="text-sm text-gray-600 space-y-1">
-                <li>• Segregated user accounts</li>
-                <li>• Real-time balance tracking</li>
-                <li>• Transaction verification</li>
-                <li>• Audit trail for all operations</li>
-              </ul>
-            </Card>
-          </div>
-          <div className="bg-green-50 p-4 rounded-lg">
-            <h4 className="font-semibold text-green-800 mb-2">
-              Best Practices:
-            </h4>
-            <ul className="text-sm text-green-700 space-y-1">
-              <li>• Never share your login credentials</li>
-              <li>• Use strong, unique passwords</li>
-              <li>• Enable 2FA when available</li>
-              <li>• Monitor your account regularly</li>
-            </ul>
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: "You're All Set! 🚀",
-      description:
-        "You now have everything you need to start your crypto trading journey.",
-      icon: <CheckCircle className="h-8 w-8 text-green-500" />,
-      content: (
-        <div className="space-y-4 text-center">
-          <div className="bg-gradient-to-r from-green-50 to-blue-50 p-6 rounded-lg">
-            <h3 className="text-xl font-semibold text-green-600 mb-4">
-              Ready to Start Trading!
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              <div className="text-center">
-                <Wallet className="h-6 w-6 text-blue-500 mx-auto mb-2" />
-                <p className="text-sm font-medium">Add Funds</p>
-              </div>
-              <div className="text-center">
-                <TrendingUp className="h-6 w-6 text-green-500 mx-auto mb-2" />
-                <p className="text-sm font-medium">Start Trading</p>
-              </div>
-              <div className="text-center">
-                <Users className="h-6 w-6 text-purple-500 mx-auto mb-2" />
-                <p className="text-sm font-medium">Join Community</p>
-              </div>
-            </div>
-            <p className="text-gray-600">
-              Your account is fully activated and ready for trading. Start by
-              adding some funds and exploring the platform!
-            </p>
-          </div>
-        </div>
-      ),
+      icon: TrendingUp,
+      title: "Compre e venda cripto",
+      subtitle: "USDT",
+      body: "Negocie com preços em tempo real, acompanhe seu portfólio e histórico de transações. Tudo no mesmo lugar.",
+      accent: "from-amber-500/20 to-orange-500/10",
+      iconBg: "bg-amber-500/20",
+      iconColor: "text-amber-400",
     },
   ];
 
-  const nextStep = () => {
-    if (currentStep < tutorialSteps.length - 1) {
-      setCurrentStep(currentStep + 1);
-    } else {
-      onClose();
-    }
+  const finalStep = {
+    icon: Shield,
+    title: "Pronto para começar",
+    subtitle: "Sua conta está ativa",
+    body: "Acesse o dashboard e explore. Se tiver dúvidas, use o menu e o suporte quando precisar.",
+    accent: "from-emerald-500/20 to-teal-500/10",
+    iconBg: "bg-emerald-500/20",
+    iconColor: "text-emerald-400",
   };
 
-  const skipTutorial = () => {
-    onClose();
+  const isLastStep = currentStep === STEP_COUNT;
+  const displayStep = currentStep < STEP_COUNT ? steps[currentStep] : finalStep;
+  const IconComponent = displayStep.icon;
+
+  const goNext = () => {
+    if (currentStep < STEP_COUNT) setCurrentStep((s) => s + 1);
+    else onClose();
+  };
+
+  const goBack = () => {
+    if (currentStep > 0) setCurrentStep((s) => s - 1);
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-3">
-            {tutorialSteps[currentStep].icon}
-            <div>
-              <h2 className="text-2xl font-bold">
-                {tutorialSteps[currentStep].title}
-              </h2>
-              <p className="text-gray-600 font-normal">
-                {tutorialSteps[currentStep].description}
-              </p>
-            </div>
-          </DialogTitle>
-        </DialogHeader>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        className="max-w-md border border-white/10 bg-black/90 backdrop-blur-xl shadow-2xl shadow-black/50 p-0 gap-0 overflow-hidden text-white"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={onClose}
+      >
+        {/* Top gradient bar */}
+        <div
+          className={`h-1 w-full bg-gradient-to-r ${displayStep.accent}`}
+          aria-hidden
+        />
 
-        <div className="py-4">{tutorialSteps[currentStep].content}</div>
-
-        <div className="flex items-center justify-between pt-4 border-t">
-          <div className="flex items-center gap-2">
-            <Badge variant="outline">
-              Step {currentStep + 1} of {tutorialSteps.length}
-            </Badge>
-            <Button variant="ghost" onClick={skipTutorial}>
-              Skip Tutorial
-            </Button>
+        <div className="p-6 sm:p-8">
+          {/* Step indicator dots */}
+          <div className="flex justify-center gap-2 mb-6" role="tablist" aria-label="Passos do tutorial">
+            {Array.from({ length: STEP_COUNT + 1 }).map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setCurrentStep(i)}
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  i === currentStep
+                    ? "w-6 bg-[#12E0A1]"
+                    : i < currentStep
+                    ? "w-2 bg-[#12E0A1]/60"
+                    : "w-2 bg-white/20"
+                }`}
+                aria-label={`Ir para o passo ${i + 1}`}
+                aria-selected={i === currentStep}
+              />
+            ))}
           </div>
 
-          <div className="flex gap-2">
-            {currentStep > 0 && (
-              <Button
-                variant="outline"
-                onClick={() => setCurrentStep(currentStep - 1)}
-              >
-                Previous
-              </Button>
-            )}
-            <Button onClick={nextStep}>
-              {currentStep === tutorialSteps.length - 1 ? (
-                "Get Started!"
+          {/* Content */}
+          <div
+            className="min-h-[200px] flex flex-col items-center text-center"
+            role="tabpanel"
+            aria-live="polite"
+          >
+            <div
+              className={`rounded-2xl p-4 mb-5 ${displayStep.iconBg} ${displayStep.iconColor}`}
+            >
+              <IconComponent className="h-10 w-10" strokeWidth={1.5} />
+            </div>
+            <h2 className="text-xl font-semibold text-white mb-1">
+              {displayStep.title}
+            </h2>
+            <p className="text-sm text-white/70 mb-4">{displayStep.subtitle}</p>
+            <p className="text-sm text-white/80 leading-relaxed max-w-sm">
+              {displayStep.body}
+            </p>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center justify-between gap-4 mt-8 pt-6 border-t border-white/10">
+            <div className="flex items-center gap-2">
+              {currentStep > 0 ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={goBack}
+                  className="text-white/80 hover:text-white hover:bg-white/10"
+                >
+                  <ArrowLeft className="h-4 w-4 mr-1" />
+                  Voltar
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={onClose}
+                  className="text-white/60 hover:text-white/90 hover:bg-white/10"
+                >
+                  Pular
+                </Button>
+              )}
+            </div>
+            <Button
+              type="button"
+              onClick={goNext}
+              className="bg-[#12E0A1] hover:bg-[#12E0A1]/90 text-black font-medium shadow-lg shadow-[#12E0A1]/20"
+            >
+              {isLastStep ? (
+                <>
+                  Ir ao dashboard
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </>
               ) : (
                 <>
-                  Next
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  Próximo
+                  <ChevronRight className="h-4 w-4 ml-1" />
                 </>
               )}
             </Button>
           </div>
-        </div>
-
-        {/* Progress bar */}
-        <div className="w-full bg-gray-200 rounded-full h-2 mt-4">
-          <div
-            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-            style={{
-              width: `${((currentStep + 1) / tutorialSteps.length) * 100}%`,
-            }}
-          />
         </div>
       </DialogContent>
     </Dialog>

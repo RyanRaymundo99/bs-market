@@ -102,7 +102,7 @@ export default function CalculatorModal({
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="h-8 w-8 p-0 text-white hover:text-brand-300 hover:bg-white/10 rounded-full"
+            className="h-8 w-8 p-0 text-foreground hover:text-primary hover:bg-muted rounded-full"
           >
             <X className="h-4 w-4" />
           </Button>
@@ -117,12 +117,12 @@ export default function CalculatorModal({
                 variant="outline"
                 className={`h-12 px-4 bg-black/60 border border-white/10 hover:bg-white/10 text-white ${
                   fromCurrency === "BRL"
-                    ? "border-green-500 bg-green-500/20"
+                    ? "border-primary bg-primary/20"
                     : ""
                 }`}
                 onClick={() => handleFromCurrencyChange("BRL")}
               >
-                <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center mr-2">
+                <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center mr-2">
                   <span className="text-white font-bold text-xs">R$</span>
                 </div>
                 BRL
@@ -133,7 +133,7 @@ export default function CalculatorModal({
               variant="ghost"
               size="sm"
               onClick={handleCurrencySwap}
-              className="mx-4 text-white hover:text-brand-300 hover:bg-white/10 rounded-full"
+              className="mx-4 text-foreground hover:text-primary hover:bg-muted rounded-full"
             >
               <ArrowLeftRight className="w-4 h-4" />
             </Button>
@@ -196,7 +196,7 @@ export default function CalculatorModal({
           {/* Trade Button */}
           <Button
             onClick={handleTrade}
-            className="w-full h-12 bg-brand-500 hover:bg-brand-600 text-white border border-brand-400 hover:border-brand-300 transition-all duration-200 text-lg font-semibold relative overflow-hidden"
+            className="w-full h-12 text-lg font-semibold relative overflow-hidden"
             style={{
               boxShadow: "inset 0 1px 0 0 rgba(255, 255, 255, 0.1)",
             }}

@@ -135,7 +135,7 @@ export default function SentEmailsPage() {
     return (
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center h-64">
-          <RefreshCw className="w-8 h-8 animate-spin text-gray-400" />
+          <RefreshCw className="w-8 h-8 animate-spin text-muted-foreground" />
         </div>
       </div>
     );
@@ -145,10 +145,10 @@ export default function SentEmailsPage() {
     <div className="container mx-auto p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">
+          <h1 className="text-3xl font-bold text-foreground mb-2">
             Emails enviados
           </h1>
-          <p className="text-gray-400">
+          <p className="text-muted-foreground">
             Registro de emails enviados aos usuários. Você pode remover
             registros da lista (não altera o email já enviado).
           </p>
@@ -165,28 +165,28 @@ export default function SentEmailsPage() {
       </div>
 
       {logs.length === 0 ? (
-        <div className="bg-gray-900 rounded-lg p-8 text-center">
-          <p className="text-gray-400">
+        <div className="bg-card rounded-lg p-8 text-center">
+          <p className="text-muted-foreground">
             Nenhum email registrado ainda. Os envios a partir de agora serão
             listados aqui.
           </p>
         </div>
       ) : (
-        <div className="bg-gray-900 rounded-lg overflow-hidden">
+        <div className="bg-card rounded-lg overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow className="border-gray-800">
-                <TableHead className="text-gray-300">Data/Hora</TableHead>
-                <TableHead className="text-gray-300">Tipo</TableHead>
-                <TableHead className="text-gray-300">Assunto</TableHead>
-                <TableHead className="text-gray-300">Usuário</TableHead>
-                <TableHead className="text-gray-300 w-[100px]">Ações</TableHead>
+              <TableRow className="border-border">
+                <TableHead className="text-muted-foreground">Data/Hora</TableHead>
+                <TableHead className="text-muted-foreground">Tipo</TableHead>
+                <TableHead className="text-muted-foreground">Assunto</TableHead>
+                <TableHead className="text-muted-foreground">Usuário</TableHead>
+                <TableHead className="text-muted-foreground w-[100px]">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {logs.map((log) => (
-                <TableRow key={log.id} className="border-gray-800">
-                  <TableCell className="text-gray-300 text-sm">
+                <TableRow key={log.id} className="border-border">
+                  <TableCell className="text-muted-foreground text-sm">
                     {formatDate(log.sentAt)}
                   </TableCell>
                   <TableCell>
@@ -194,15 +194,15 @@ export default function SentEmailsPage() {
                       {typeLabel[log.type] ?? log.type}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-gray-300 text-sm max-w-[280px] truncate">
+                  <TableCell className="text-muted-foreground text-sm max-w-[280px] truncate">
                     {log.subject || "—"}
                   </TableCell>
-                  <TableCell className="text-gray-300 text-sm">
+                  <TableCell className="text-muted-foreground text-sm">
                     <span title={log.user.email}>
                       {log.user.name || log.user.email}
                     </span>
                     <br />
-                    <span className="text-gray-500 text-xs">
+                    <span className="text-muted-foreground text-xs">
                       {log.user.email}
                     </span>
                   </TableCell>
@@ -225,18 +225,18 @@ export default function SentEmailsPage() {
       )}
 
       <Dialog open={!!confirmDelete} onOpenChange={() => setConfirmDelete(null)}>
-        <DialogContent className="bg-gray-900 border-gray-800 text-white">
+        <DialogContent className="bg-card border-border text-foreground">
           <DialogHeader>
-            <DialogTitle className="text-white">
+            <DialogTitle className="text-foreground">
               Remover registro de email?
             </DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogDescription className="text-muted-foreground">
               Isso só remove o registro da lista. O email já enviado não é
               alterado. O usuário não é afetado.
             </DialogDescription>
           </DialogHeader>
           {confirmDelete && (
-            <div className="text-sm text-gray-300 py-2">
+            <div className="text-sm text-muted-foreground py-2">
               <p>
                 <strong>Assunto:</strong> {confirmDelete.subject || "—"}
               </p>
@@ -252,7 +252,7 @@ export default function SentEmailsPage() {
             <Button
               variant="outline"
               onClick={() => setConfirmDelete(null)}
-              className="border-gray-600"
+              className="border-border"
             >
               Cancelar
             </Button>

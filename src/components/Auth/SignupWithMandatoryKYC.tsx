@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signUpSchema, SignUpFormValues } from "@/lib/schema/signupSchema";
 import {
@@ -54,7 +54,7 @@ const SignupWithMandatoryKYC = () => {
   const router = useRouter();
 
   const form = useForm<SignUpFormValues>({
-    resolver: zodResolver(signUpSchema),
+    resolver: zodResolver(signUpSchema) as Resolver<SignUpFormValues>,
     defaultValues: {
       name: "",
       email: "",

@@ -51,7 +51,7 @@ export function FloatingSupportWidget() {
         <div className="rounded-xl border border-white/20 bg-black/95 backdrop-blur-xl shadow-xl p-4 w-72 animate-in fade-in slide-in-from-bottom-2 duration-200">
           <div className="flex items-center justify-between mb-3">
             <span className="font-medium text-white flex items-center gap-2">
-              <MessageCircle className="w-4 h-4 text-brand-400" />
+              <MessageCircle className="w-4 h-4 text-primary" />
               {t("contactSupport")}
             </span>
             <button
@@ -88,7 +88,7 @@ export function FloatingSupportWidget() {
       )}
       <button
         onClick={() => setOpen(!open)}
-        className="rounded-full bg-brand-500 hover:bg-brand-600 text-white shadow-lg hover:shadow-brand-500/30 transition-all p-3 md:p-4"
+        className="rounded-full bg-primary text-primary-foreground shadow-lg hover:opacity-90 transition-all p-3 md:p-4"
         aria-label={t("contactSupport")}
         title={t("contactSupport")}
       >

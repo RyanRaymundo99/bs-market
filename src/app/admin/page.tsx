@@ -73,6 +73,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useAdminSettings } from "@/contexts/AdminSettingsContext";
+import type { DashboardSectionId } from "@/contexts/AdminSettingsContext";
 import NotificationBell from "@/components/admin/NotificationBell";
 import {
   LineChart,
@@ -362,6 +364,8 @@ function AdminDashboardContent() {
   const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { settings } = useAdminSettings();
+  const dashboardSectionOrder = settings.dashboardSectionOrder;
 
   // Open transaction details from URL (e.g. from webhook logs: /admin?openTransaction=<id_or_external_id>)
   useEffect(() => {
@@ -726,18 +730,18 @@ function AdminDashboardContent() {
 
     if (loading) {
       return (
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-xl min-w-[280px]">
-          <div className="text-sm font-semibold text-white mb-2">{title}</div>
-          <div className="text-xs text-gray-400">Carregando...</div>
+        <div className="bg-muted border border-border rounded-lg p-4 shadow-xl min-w-[280px]">
+          <div className="text-sm font-semibold text-foreground mb-2">{title}</div>
+          <div className="text-xs text-muted-foreground">Carregando...</div>
         </div>
       );
     }
 
     if (!data || data.length === 0) {
       return (
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-xl min-w-[280px]">
-          <div className="text-sm font-semibold text-white mb-2">{title}</div>
-          <div className="text-xs text-gray-400">Sem dados históricos</div>
+        <div className="bg-muted border border-border rounded-lg p-4 shadow-xl min-w-[280px]">
+          <div className="text-sm font-semibold text-foreground mb-2">{title}</div>
+          <div className="text-xs text-muted-foreground">Sem dados históricos</div>
         </div>
       );
     }
@@ -747,20 +751,20 @@ function AdminDashboardContent() {
     const avg = total / data.length;
 
     return (
-      <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-xl min-w-[280px] max-w-[320px]">
-        <div className="text-sm font-semibold text-white mb-3">
+      <div className="bg-muted border border-border rounded-lg p-4 shadow-xl min-w-[280px] max-w-[320px]">
+        <div className="text-sm font-semibold text-foreground mb-3">
           {title} - Últimos {data.length} dias
         </div>
         <div className="space-y-2 mb-3">
           <div className="flex justify-between text-xs">
-            <span className="text-gray-400">Total:</span>
-            <span className="text-white font-medium">
+            <span className="text-muted-foreground">Total:</span>
+            <span className="text-foreground font-medium">
               {formatCurrency(total)}
             </span>
           </div>
           <div className="flex justify-between text-xs">
-            <span className="text-gray-400">Média diária:</span>
-            <span className="text-white font-medium">
+            <span className="text-muted-foreground">Média diária:</span>
+            <span className="text-foreground font-medium">
               {formatCurrency(avg)}
             </span>
           </div>
@@ -781,14 +785,14 @@ function AdminDashboardContent() {
 
               return (
                 <div key={index} className="flex items-center gap-2">
-                  <div className="text-xs text-gray-400 w-12">{dateStr}</div>
-                  <div className="flex-1 bg-gray-700 rounded-full h-2 relative overflow-hidden">
+                  <div className="text-xs text-muted-foreground w-12">{dateStr}</div>
+                  <div className="flex-1 bg-muted rounded-full h-2 relative overflow-hidden">
                     <div
-                      className="bg-green-500 h-full rounded-full transition-all"
+                      className="bg-primary h-full rounded-full transition-all"
                       style={{ width: `${percentage}%` }}
                     />
                   </div>
-                  <div className="text-xs text-white font-medium w-20 text-right">
+                  <div className="text-xs text-foreground font-medium w-20 text-right">
                     {formatCurrency(item.value)}
                   </div>
                 </div>
@@ -1837,21 +1841,21 @@ function AdminDashboardContent() {
   // Don't block the entire page - show skeleton loaders instead
 
   return (
-    <div className="min-h-full bg-black text-white">
+    <div className="min-h-full bg-background text-foreground">
       <div className="max-w-[1920px] mx-auto space-y-8">
         {/* Page header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white lg:text-3xl">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground lg:text-3xl">
               Dashboard
             </h1>
-            <p className="mt-1 text-sm text-gray-400">
+            <p className="mt-1 text-sm text-muted-foreground">
               Visão geral e configurações
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative quick-search-container order-first w-full sm:order-none sm:w-52">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Buscar..."
                 value={quickSearchQuery}
@@ -1860,11 +1864,11 @@ function AdminDashboardContent() {
                   setShowQuickSearch(true);
                 }}
                 onFocus={() => setShowQuickSearch(true)}
-                className="h-9 pl-9 pr-8 bg-gray-900 border-gray-700 text-white placeholder-gray-400 text-sm"
+                className="h-9 pl-9 pr-8 bg-card border-border text-foreground placeholder-muted-foreground text-sm"
               />
               {quickSearchQuery && (
                 <X
-                  className="absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 cursor-pointer text-gray-400 hover:text-white"
+                  className="absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
                   onClick={() => {
                     setQuickSearchQuery("");
                     setShowQuickSearch(false);
@@ -1875,10 +1879,10 @@ function AdminDashboardContent() {
               {showQuickSearch &&
                 (quickSearchQuery.length >= 2 ||
                   quickSearchResults.length > 0) && (
-                  <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-auto rounded-lg border border-gray-700 bg-gray-900 shadow-xl">
+                  <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-auto rounded-lg border border-border bg-card shadow-xl">
                     {loadingQuickSearch ? (
                       <div className="flex items-center justify-center p-4">
-                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
+                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                       </div>
                     ) : quickSearchResults.length > 0 ? (
                       <div className="py-1">
@@ -1887,20 +1891,20 @@ function AdminDashboardContent() {
                           return (
                             <div
                               key={idx}
-                              className="flex cursor-pointer items-center gap-3 px-3 py-2 hover:bg-gray-800"
+                              className="flex cursor-pointer items-center gap-3 px-3 py-2 hover:bg-muted"
                               onClick={() => {
                                 router.push(result.link);
                                 setShowQuickSearch(false);
                                 setQuickSearchQuery("");
                               }}
                             >
-                              <Icon className="h-4 w-4 flex-shrink-0 text-gray-400" />
+                              <Icon className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
                               <div className="min-w-0 flex-1">
-                                <p className="truncate text-sm text-white">
+                                <p className="truncate text-sm text-foreground">
                                   {result.title}
                                 </p>
                                 {result.subtitle && (
-                                  <p className="truncate text-xs text-gray-400">
+                                  <p className="truncate text-xs text-muted-foreground">
                                     {result.subtitle}
                                   </p>
                                 )}
@@ -1910,23 +1914,23 @@ function AdminDashboardContent() {
                         })}
                       </div>
                     ) : quickSearchQuery.length >= 2 ? (
-                      <p className="p-3 text-center text-sm text-gray-400">
+                      <p className="p-3 text-center text-sm text-muted-foreground">
                         Nenhum resultado
                       </p>
                     ) : null}
                   </div>
                 )}
             </div>
-            <div className="flex items-center gap-1.5 rounded-lg border border-gray-700 bg-gray-900/80 px-2 py-1.5">
+            <div className="flex items-center gap-1.5 rounded-lg border border-border bg-card/80 px-2 py-1.5">
               {isPolling ? (
                 <>
-                  <Wifi className="h-4 w-4 text-green-400 animate-pulse" />
-                  <span className="text-xs text-gray-300">Live</span>
+                  <Wifi className="h-4 w-4 text-primary animate-pulse" />
+                  <span className="text-xs text-muted-foreground">Live</span>
                 </>
               ) : (
                 <>
-                  <WifiOff className="h-4 w-4 text-gray-500" />
-                  <span className="text-xs text-gray-500">Offline</span>
+                  <WifiOff className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Offline</span>
                 </>
               )}
             </div>
@@ -1934,7 +1938,7 @@ function AdminDashboardContent() {
               size="sm"
               onClick={fetchStats}
               variant="outline"
-              className="h-9 border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white"
+              className="h-9 border-border text-muted-foreground hover:bg-muted hover:text-foreground"
             >
               <RefreshCw className="h-4 w-4 mr-1.5" />
               Atualizar
@@ -1944,7 +1948,7 @@ function AdminDashboardContent() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-9 border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white"
+                  className="h-9 border-border text-muted-foreground hover:bg-muted hover:text-foreground"
                   disabled={downloadingReport}
                 >
                   <FileDown className="h-4 w-4 mr-1.5" />
@@ -1953,31 +1957,31 @@ function AdminDashboardContent() {
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="end"
-                className="w-56 border-gray-700 bg-gray-900"
+                className="w-56 border-border bg-card"
               >
-                <DropdownMenuLabel className="text-white">
+                <DropdownMenuLabel className="text-foreground">
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
                     Período
                   </div>
                 </DropdownMenuLabel>
-                <DropdownMenuSeparator className="bg-gray-700" />
+                <DropdownMenuSeparator className="bg-muted" />
                 <div className="space-y-2 p-2">
                   <div className="flex gap-2">
                     <Select
                       value={String(selectedMonth)}
                       onValueChange={(v) => setSelectedMonth(parseInt(v))}
                     >
-                      <SelectTrigger className="h-8 w-24 border-gray-700 bg-gray-800 text-white">
+                      <SelectTrigger className="h-8 w-24 border-border bg-muted text-foreground">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="border-gray-700 bg-gray-900">
+                      <SelectContent className="border-border bg-card">
                         {Array.from({ length: 12 }, (_, i) => i + 1).map(
                           (m) => (
                             <SelectItem
                               key={m}
                               value={String(m)}
-                              className="text-white hover:bg-gray-800"
+                              className="text-foreground hover:bg-muted"
                             >
                               {String(m).padStart(2, "0")}
                             </SelectItem>
@@ -1989,10 +1993,10 @@ function AdminDashboardContent() {
                       value={String(selectedYear)}
                       onValueChange={(v) => setSelectedYear(parseInt(v))}
                     >
-                      <SelectTrigger className="h-8 w-28 border-gray-700 bg-gray-800 text-white">
+                      <SelectTrigger className="h-8 w-28 border-border bg-muted text-foreground">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="border-gray-700 bg-gray-900">
+                      <SelectContent className="border-border bg-card">
                         {Array.from(
                           { length: 10 },
                           (_, i) => new Date().getFullYear() - i
@@ -2000,7 +2004,7 @@ function AdminDashboardContent() {
                           <SelectItem
                             key={y}
                             value={String(y)}
-                            className="text-white hover:bg-gray-800"
+                            className="text-foreground hover:bg-muted"
                           >
                             {y}
                           </SelectItem>
@@ -2009,11 +2013,11 @@ function AdminDashboardContent() {
                     </Select>
                   </div>
                 </div>
-                <DropdownMenuSeparator className="bg-gray-700" />
+                <DropdownMenuSeparator className="bg-muted" />
                 <DropdownMenuItem
                   onClick={() => handleDownloadReport("pdf")}
                   disabled={downloadingReport}
-                  className="cursor-pointer text-gray-300 hover:bg-gray-800 hover:text-white focus:bg-gray-800 focus:text-white"
+                  className="cursor-pointer text-muted-foreground hover:bg-muted hover:text-foreground focus:bg-muted focus:text-foreground"
                 >
                   <FileText className="mr-2 h-4 w-4" />
                   PDF
@@ -2021,7 +2025,7 @@ function AdminDashboardContent() {
                 <DropdownMenuItem
                   onClick={() => handleDownloadReport("excel")}
                   disabled={downloadingReport}
-                  className="cursor-pointer text-gray-300 hover:bg-gray-800 hover:text-white focus:bg-gray-800 focus:text-white"
+                  className="cursor-pointer text-muted-foreground hover:bg-muted hover:text-foreground focus:bg-muted focus:text-foreground"
                 >
                   <FileDown className="mr-2 h-4 w-4" />
                   Excel
@@ -2040,160 +2044,164 @@ function AdminDashboardContent() {
           </div>
         </div>
 
+        <div className="flex flex-col gap-6">
         {/* Métricas */}
-        <section>
-          <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-gray-500">
+        <section
+          key="metrics"
+          style={{ order: dashboardSectionOrder.indexOf("metrics" as DashboardSectionId) }}
+        >
+          <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-muted-foreground">
             Métricas
           </h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8">
             {/* Total Users */}
             <Link href="/admin/users">
-              <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-blue-500 transition-all duration-200 cursor-pointer group h-full">
+              <Card className="bg-card border-border hover:bg-muted hover:border-primary transition-all duration-200 cursor-pointer group h-full">
                 <CardContent className="p-3 lg:p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <Users className="h-4 w-4 text-blue-400 group-hover:text-blue-300" />
+                    <Users className="h-4 w-4 text-primary group-hover:text-primary" />
                     {statsLoading ? (
-                      <div className="h-5 w-8 bg-gray-700 rounded animate-pulse"></div>
+                      <div className="h-5 w-8 bg-muted rounded animate-pulse"></div>
                     ) : (
-                      <div className="text-xl lg:text-2xl font-bold text-white">
+                      <div className="text-xl lg:text-2xl font-bold text-foreground">
                         {stats.totalUsers}
                       </div>
                     )}
                   </div>
-                  <p className="text-xs text-gray-400">Total Users</p>
+                  <p className="text-xs text-muted-foreground">Total Users</p>
                 </CardContent>
               </Card>
             </Link>
 
             {/* Pending Approvals */}
             <Link href="/admin/users">
-              <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-yellow-500 transition-all duration-200 cursor-pointer group h-full">
+              <Card className="bg-card border-border hover:bg-muted hover:border-yellow-500 transition-all duration-200 cursor-pointer group h-full">
                 <CardContent className="p-3 lg:p-4">
                   <div className="flex items-center justify-between mb-2">
                     <Clock className="h-4 w-4 text-yellow-400 group-hover:text-yellow-300" />
                     {statsLoading ? (
-                      <div className="h-5 w-8 bg-gray-700 rounded animate-pulse"></div>
+                      <div className="h-5 w-8 bg-muted rounded animate-pulse"></div>
                     ) : (
                       <div className="text-xl lg:text-2xl font-bold text-yellow-400">
                         {stats.pendingApprovals}
                       </div>
                     )}
                   </div>
-                  <p className="text-xs text-gray-400">Pendentes</p>
+                  <p className="text-xs text-muted-foreground">Pendentes</p>
                 </CardContent>
               </Card>
             </Link>
 
             {/* Approved Users */}
             <Link href="/admin/users">
-              <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-green-500 transition-all duration-200 cursor-pointer group h-full">
+              <Card className="bg-card border-border hover:bg-muted hover:border-primary transition-all duration-200 cursor-pointer group h-full">
                 <CardContent className="p-3 lg:p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <CheckCircle className="h-4 w-4 text-green-400 group-hover:text-green-300" />
+                    <CheckCircle className="h-4 w-4 text-primary group-hover:text-primary" />
                     {statsLoading ? (
-                      <div className="h-5 w-8 bg-gray-700 rounded animate-pulse"></div>
+                      <div className="h-5 w-8 bg-muted rounded animate-pulse"></div>
                     ) : (
-                      <div className="text-xl lg:text-2xl font-bold text-green-400">
+                      <div className="text-xl lg:text-2xl font-bold text-primary">
                         {stats.approvedUsers}
                       </div>
                     )}
                   </div>
-                  <p className="text-xs text-gray-400">Aprovados</p>
+                  <p className="text-xs text-muted-foreground">Aprovados</p>
                 </CardContent>
               </Card>
             </Link>
 
             {/* Rejected Users */}
             <Link href="/admin/users">
-              <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-red-500 transition-all duration-200 cursor-pointer group h-full">
+              <Card className="bg-card border-border hover:bg-muted hover:border-destructive transition-all duration-200 cursor-pointer group h-full">
                 <CardContent className="p-3 lg:p-4">
                   <div className="flex items-center justify-between mb-2">
                     <X className="h-4 w-4 text-red-400 group-hover:text-red-300" />
                     {statsLoading ? (
-                      <div className="h-5 w-8 bg-gray-700 rounded animate-pulse"></div>
+                      <div className="h-5 w-8 bg-muted rounded animate-pulse"></div>
                     ) : (
                       <div className="text-xl lg:text-2xl font-bold text-red-400">
                         {stats.rejectedUsers}
                       </div>
                     )}
                   </div>
-                  <p className="text-xs text-gray-400">Rejeitados</p>
+                  <p className="text-xs text-muted-foreground">Rejeitados</p>
                 </CardContent>
               </Card>
             </Link>
 
             {/* Approved without KYC */}
             <Link href="/admin/users">
-              <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-amber-500 transition-all duration-200 cursor-pointer group h-full">
+              <Card className="bg-card border-border hover:bg-muted hover:border-primary transition-all duration-200 cursor-pointer group h-full">
                 <CardContent className="p-3 lg:p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <AlertCircle className="h-4 w-4 text-amber-400 group-hover:text-amber-300" />
+                    <AlertCircle className="h-4 w-4 text-primary group-hover:text-primary" />
                     {statsLoading ? (
-                      <div className="h-5 w-8 bg-gray-700 rounded animate-pulse"></div>
+                      <div className="h-5 w-8 bg-muted rounded animate-pulse"></div>
                     ) : (
-                      <div className="text-xl lg:text-2xl font-bold text-amber-400">
+                      <div className="text-xl lg:text-2xl font-bold text-primary">
                         {stats.approvedWithoutKYC}
                       </div>
                     )}
                   </div>
-                  <p className="text-xs text-gray-400">Aprovados sem KYC</p>
+                  <p className="text-xs text-muted-foreground">Aprovados sem KYC</p>
                 </CardContent>
               </Card>
             </Link>
 
             {/* Pending KYC */}
             <Link href="/admin/kyc">
-              <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-orange-500 transition-all duration-200 cursor-pointer group h-full">
+              <Card className="bg-card border-border hover:bg-muted hover:border-orange-500 transition-all duration-200 cursor-pointer group h-full">
                 <CardContent className="p-3 lg:p-4">
                   <div className="flex items-center justify-between mb-2">
                     <FileText className="h-4 w-4 text-orange-400 group-hover:text-orange-300" />
                     {statsLoading ? (
-                      <div className="h-5 w-8 bg-gray-700 rounded animate-pulse"></div>
+                      <div className="h-5 w-8 bg-muted rounded animate-pulse"></div>
                     ) : (
                       <div className="text-xl lg:text-2xl font-bold text-orange-400">
                         {stats.pendingKYC}
                       </div>
                     )}
                   </div>
-                  <p className="text-xs text-gray-400">KYC Pendente</p>
+                  <p className="text-xs text-muted-foreground">KYC Pendente</p>
                 </CardContent>
               </Card>
             </Link>
 
             {/* Approved KYC */}
             <Link href="/admin/kyc">
-              <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-green-500 transition-all duration-200 cursor-pointer group h-full">
+              <Card className="bg-card border-border hover:bg-muted hover:border-primary transition-all duration-200 cursor-pointer group h-full">
                 <CardContent className="p-3 lg:p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <Shield className="h-4 w-4 text-green-400 group-hover:text-green-300" />
+                    <Shield className="h-4 w-4 text-primary group-hover:text-primary" />
                     {statsLoading ? (
-                      <div className="h-5 w-8 bg-gray-700 rounded animate-pulse"></div>
+                      <div className="h-5 w-8 bg-muted rounded animate-pulse"></div>
                     ) : (
-                      <div className="text-xl lg:text-2xl font-bold text-green-400">
+                      <div className="text-xl lg:text-2xl font-bold text-primary">
                         {stats.approvedKYC}
                       </div>
                     )}
                   </div>
-                  <p className="text-xs text-gray-400">KYC Aprovado</p>
+                  <p className="text-xs text-muted-foreground">KYC Aprovado</p>
                 </CardContent>
               </Card>
             </Link>
 
             {/* Rejected KYC */}
             <Link href="/admin/kyc">
-              <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-red-500 transition-all duration-200 cursor-pointer group h-full">
+              <Card className="bg-card border-border hover:bg-muted hover:border-destructive transition-all duration-200 cursor-pointer group h-full">
                 <CardContent className="p-3 lg:p-4">
                   <div className="flex items-center justify-between mb-2">
                     <Shield className="h-4 w-4 text-red-400 group-hover:text-red-300" />
                     {statsLoading ? (
-                      <div className="h-5 w-8 bg-gray-700 rounded animate-pulse"></div>
+                      <div className="h-5 w-8 bg-muted rounded animate-pulse"></div>
                     ) : (
                       <div className="text-xl lg:text-2xl font-bold text-red-400">
                         {stats.rejectedKYC}
                       </div>
                     )}
                   </div>
-                  <p className="text-xs text-gray-400">KYC Rejeitado</p>
+                  <p className="text-xs text-muted-foreground">KYC Rejeitado</p>
                 </CardContent>
               </Card>
             </Link>
@@ -2201,65 +2209,68 @@ function AdminDashboardContent() {
         </section>
 
         {/* Atalhos */}
-        <section>
-          <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-gray-500">
+        <section
+          key="shortcuts"
+          style={{ order: dashboardSectionOrder.indexOf("shortcuts" as DashboardSectionId) }}
+        >
+          <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-muted-foreground">
             Atalhos
           </h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6">
             <Link href="/admin/users">
-              <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-blue-500 transition-all cursor-pointer h-full">
+              <Card className="bg-card border-border hover:bg-muted hover:border-primary transition-all cursor-pointer h-full">
                 <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
-                  <Users className="w-6 h-6 text-blue-400 mb-2" />
-                  <CardTitle className="text-sm text-white mb-1">
+                  <Users className="w-6 h-6 text-primary mb-2" />
+                  <CardTitle className="text-sm text-foreground mb-1">
                     Usuários
                   </CardTitle>
-                  <p className="text-xs text-gray-400">Gerenciar usuários</p>
+                  <p className="text-xs text-muted-foreground">Gerenciar usuários</p>
                 </CardContent>
               </Card>
             </Link>
 
             <Link href="/admin/kyc">
-              <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-green-500 transition-all cursor-pointer h-full">
+              <Card className="bg-card border-border hover:bg-muted hover:border-primary transition-all cursor-pointer h-full">
                 <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
-                  <FileText className="w-6 h-6 text-green-400 mb-2" />
-                  <CardTitle className="text-sm text-white mb-1">KYC</CardTitle>
-                  <p className="text-xs text-gray-400">Verificar documentos</p>
+                  <FileText className="w-6 h-6 text-primary mb-2" />
+                  <CardTitle className="text-sm text-foreground mb-1">KYC</CardTitle>
+                  <p className="text-xs text-muted-foreground">Verificar documentos</p>
                 </CardContent>
               </Card>
             </Link>
 
             <Link href="/admin/notification-center">
-              <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-purple-500 transition-all cursor-pointer h-full">
+              <Card className="bg-card border-border hover:bg-muted hover:border-primary transition-all cursor-pointer h-full">
                 <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
-                  <Mail className="w-6 h-6 text-purple-400 mb-2" />
-                  <CardTitle className="text-sm text-white mb-1">
+                  <Mail className="w-6 h-6 text-primary mb-2" />
+                  <CardTitle className="text-sm text-foreground mb-1">
                     Notificações
                   </CardTitle>
-                  <p className="text-xs text-gray-400">Enviar mensagens</p>
+                  <p className="text-xs text-muted-foreground">Enviar mensagens</p>
                 </CardContent>
               </Card>
             </Link>
 
             <Link href="/admin/webhook-logs">
-              <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-blue-500 transition-all cursor-pointer h-full">
+              <Card className="bg-card border-border hover:bg-muted hover:border-primary transition-all cursor-pointer h-full">
                 <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
-                  <Webhook className="w-6 h-6 text-blue-400 mb-2" />
-                  <CardTitle className="text-sm text-white mb-1">
+                  <Webhook className="w-6 h-6 text-primary mb-2" />
+                  <CardTitle className="text-sm text-foreground mb-1">
                     Webhooks
                   </CardTitle>
-                  <p className="text-xs text-gray-400">Ver logs</p>
+                  <p className="text-xs text-muted-foreground">Ver logs</p>
                 </CardContent>
               </Card>
             </Link>
 
             <Link href="/admin/audit-log">
-              <Card className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-amber-500 transition-all cursor-pointer h-full">
+              <Card className="bg-card border-border hover:bg-muted hover:border-primary transition-all cursor-pointer h-full">
                 <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
-                  <ScrollText className="w-6 h-6 text-amber-400 mb-2" />
-                  <CardTitle className="text-sm text-white mb-1">
+                  <ScrollText className="w-6 h-6 text-primary mb-2" />
+                  <CardTitle className="text-sm text-foreground mb-1">
                     Audit log
                   </CardTitle>
-                  <p className="text-xs text-gray-400">Histórico de ações</p>
+                  <p className="text-xs text-muted-foreground">Histórico de ações</p>
                 </CardContent>
               </Card>
             </Link>
@@ -2267,18 +2278,21 @@ function AdminDashboardContent() {
         </section>
 
         {/* Configuração da plataforma */}
-        <section>
-          <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-gray-500">
+        <section
+          key="config"
+          style={{ order: dashboardSectionOrder.indexOf("config" as DashboardSectionId) }}
+        >
+          <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-muted-foreground">
             Configuração da plataforma
           </h2>
-          <Card className="bg-gray-900 border-gray-800">
+          <Card className="bg-card border-border">
             <CardHeader className="pb-4">
-              <CardTitle className="flex items-center justify-between text-base text-white">
+              <CardTitle className="flex items-center justify-between text-base text-foreground">
                 Depósitos e saques
                 {depositsDisabled || withdrawalsDisabled ? (
                   <WifiOff className="h-4 w-4 text-red-400" />
                 ) : (
-                  <Wifi className="h-4 w-4 text-green-400" />
+                  <Wifi className="h-4 w-4 text-primary" />
                 )}
               </CardTitle>
             </CardHeader>
@@ -2292,13 +2306,13 @@ function AdminDashboardContent() {
                       setDepositsDisabled(checked === true)
                     }
                     disabled={moneyControlsLoading || savingMoneyControls}
-                    className="mt-1 border-gray-600 data-[state=checked]:bg-red-600"
+                    className="mt-1 border-border data-[state=checked]:bg-red-600"
                   />
                   <div className="flex-1 space-y-1">
-                    <p className="text-sm font-medium text-gray-200">
+                    <p className="text-sm font-medium text-foreground">
                       Desativar depósitos
                     </p>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-muted-foreground">
                       Bloqueia APIs de depósito e exibe a mensagem aos usuários.
                     </p>
                   </div>
@@ -2306,7 +2320,7 @@ function AdminDashboardContent() {
 
                 {depositsDisabled && (
                   <div className="ml-7 space-y-2">
-                    <Label className="text-xs text-gray-300">
+                    <Label className="text-xs text-muted-foreground">
                       Mensagem de depósito
                     </Label>
                     <Textarea
@@ -2315,7 +2329,7 @@ function AdminDashboardContent() {
                         setDepositsDisabledMessage(e.target.value)
                       }
                       placeholder="Deposits are temporarily disabled..."
-                      className="bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 text-sm"
+                      className="bg-muted/50 border-border text-foreground placeholder-muted-foreground text-sm"
                       rows={3}
                       disabled={moneyControlsLoading || savingMoneyControls}
                     />
@@ -2332,13 +2346,13 @@ function AdminDashboardContent() {
                       setWithdrawalsDisabled(checked === true)
                     }
                     disabled={moneyControlsLoading || savingMoneyControls}
-                    className="mt-1 border-gray-600 data-[state=checked]:bg-red-600"
+                    className="mt-1 border-border data-[state=checked]:bg-red-600"
                   />
                   <div className="flex-1 space-y-1">
-                    <p className="text-sm font-medium text-gray-200">
+                    <p className="text-sm font-medium text-foreground">
                       Desativar saques
                     </p>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-muted-foreground">
                       Bloqueia APIs de saque e exibe a mensagem aos usuários.
                     </p>
                   </div>
@@ -2346,7 +2360,7 @@ function AdminDashboardContent() {
 
                 {withdrawalsDisabled && (
                   <div className="ml-7 space-y-2">
-                    <Label className="text-xs text-gray-300">
+                    <Label className="text-xs text-muted-foreground">
                       Mensagem de saque
                     </Label>
                     <Textarea
@@ -2355,7 +2369,7 @@ function AdminDashboardContent() {
                         setWithdrawalsDisabledMessage(e.target.value)
                       }
                       placeholder="Withdrawals are temporarily disabled..."
-                      className="bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 text-sm"
+                      className="bg-muted/50 border-border text-foreground placeholder-muted-foreground text-sm"
                       rows={3}
                       disabled={moneyControlsLoading || savingMoneyControls}
                     />
@@ -2363,13 +2377,13 @@ function AdminDashboardContent() {
                 )}
               </div>
 
-              <div className="border-t border-gray-800 pt-6">
-                <p className="mb-4 text-sm font-medium text-gray-300">
+              <div className="border-t border-border pt-6">
+                <p className="mb-4 text-sm font-medium text-muted-foreground">
                   Limites e manutenção
                 </p>
               </div>
               <div className="space-y-3">
-                <Label className="text-gray-300 text-sm font-medium">
+                <Label className="text-muted-foreground text-sm font-medium">
                   Máx. depósito (USDT)
                 </Label>
                 <Input
@@ -2383,9 +2397,9 @@ function AdminDashboardContent() {
                     )
                   }
                   disabled={moneyControlsLoading || savingMoneyControls}
-                  className="bg-gray-800/50 border-gray-700 text-white max-w-[160px]"
+                  className="bg-muted/50 border-border text-foreground max-w-[160px]"
                 />
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   Above this limit users are directed to contact support via
                   WhatsApp.
                 </p>
@@ -2393,20 +2407,20 @@ function AdminDashboardContent() {
 
               {/* Manutenção programada */}
               <div className="space-y-3">
-                <Label className="text-sm font-medium text-gray-300">
+                <Label className="text-sm font-medium text-muted-foreground">
                   Manutenção programada
                 </Label>
                 <Textarea
                   value={maintenanceMessage}
                   onChange={(e) => setMaintenanceMessage(e.target.value)}
                   placeholder="e.g. Maintenance on Sunday 2am–4am BRT"
-                  className="bg-gray-800/50 border-gray-700 text-white placeholder-gray-500 text-sm"
+                  className="bg-muted/50 border-border text-foreground placeholder-muted-foreground text-sm"
                   rows={2}
                   disabled={moneyControlsLoading || savingMoneyControls}
                 />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-xs text-gray-400">
+                    <Label className="text-xs text-muted-foreground">
                       Início (local)
                     </Label>
                     <Input
@@ -2414,21 +2428,21 @@ function AdminDashboardContent() {
                       value={maintenanceStartAt}
                       onChange={(e) => setMaintenanceStartAt(e.target.value)}
                       disabled={moneyControlsLoading || savingMoneyControls}
-                      className="bg-gray-800/50 border-gray-700 text-white text-sm"
+                      className="bg-muted/50 border-border text-foreground text-sm"
                     />
                   </div>
                   <div>
-                    <Label className="text-xs text-gray-400">Fim (local)</Label>
+                    <Label className="text-xs text-muted-foreground">Fim (local)</Label>
                     <Input
                       type="datetime-local"
                       value={maintenanceEndAt}
                       onChange={(e) => setMaintenanceEndAt(e.target.value)}
                       disabled={moneyControlsLoading || savingMoneyControls}
-                      className="bg-gray-800/50 border-gray-700 text-white text-sm"
+                      className="bg-muted/50 border-border text-foreground text-sm"
                     />
                   </div>
                 </div>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   Mensagem exibida na página de trade quando estiver no período.
                 </p>
               </div>
@@ -2438,9 +2452,9 @@ function AdminDashboardContent() {
                 disabled={moneyControlsLoading || savingMoneyControls}
                 className={`w-full ${
                   depositsDisabled || withdrawalsDisabled
-                    ? "bg-red-600 hover:bg-red-700"
-                    : "bg-green-600 hover:bg-green-700"
-                } text-white`}
+                    ? "bg-destructive hover:bg-destructive/90"
+                    : "bg-primary hover:bg-primary/90"
+                } text-foreground`}
               >
                 <Send className="mr-2 h-4 w-4" />
                 {savingMoneyControls
@@ -2449,7 +2463,7 @@ function AdminDashboardContent() {
               </Button>
 
               {moneyControlsMeta?.updatedAt ? (
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   Última atualização:{" "}
                   {new Date(moneyControlsMeta.updatedAt).toLocaleString()}{" "}
                   {moneyControlsMeta.updatedBy
@@ -2462,23 +2476,26 @@ function AdminDashboardContent() {
         </section>
 
         {/* Atividade e transações */}
-        <section>
-          <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-gray-500">
+        <section
+          key="activity"
+          style={{ order: dashboardSectionOrder.indexOf("activity" as DashboardSectionId) }}
+        >
+          <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-muted-foreground">
             Atividade e transações
           </h2>
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-            <Card className="bg-gray-900 border-gray-800 lg:col-span-2">
+            <Card className="bg-card border-border lg:col-span-2">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-white flex items-center gap-2">
-                    <Activity className="h-5 w-5 text-blue-400" />
+                  <CardTitle className="text-foreground flex items-center gap-2">
+                    <Activity className="h-5 w-5 text-primary" />
                     Atividade Recente
                   </CardTitle>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={fetchRecentActivity}
-                    className="text-gray-400 hover:text-white"
+                    className="text-muted-foreground hover:text-foreground"
                   >
                     <RefreshCw className="h-4 w-4" />
                   </Button>
@@ -2487,7 +2504,7 @@ function AdminDashboardContent() {
               <CardContent>
                 <div className="space-y-3 max-h-[400px] overflow-y-auto">
                   {recentActivity.length === 0 ? (
-                    <div className="text-center py-8 text-gray-400">
+                    <div className="text-center py-8 text-muted-foreground">
                       <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
                       <p className="text-sm">Nenhuma atividade recente</p>
                     </div>
@@ -2498,40 +2515,40 @@ function AdminDashboardContent() {
                       return (
                         <div
                           key={idx}
-                          className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-800/50 transition-colors cursor-pointer"
+                          className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
                           onClick={() => router.push(activity.link)}
                         >
                           <div
                             className={`p-2 rounded-lg ${
                               activity.color === "blue"
-                                ? "bg-blue-900/30"
+                                ? "bg-primary/15"
                                 : activity.color === "green"
-                                ? "bg-green-900/30"
+                                ? "bg-primary/15"
                                 : activity.color === "orange"
-                                ? "bg-orange-900/30"
-                                : "bg-gray-800"
+                                ? "bg-primary/10"
+                                : "bg-muted"
                             }`}
                           >
                             <Icon
                               className={`h-4 w-4 ${
                                 activity.color === "blue"
-                                  ? "text-blue-400"
+                                  ? "text-primary"
                                   : activity.color === "green"
-                                  ? "text-green-400"
+                                  ? "text-primary"
                                   : activity.color === "orange"
                                   ? "text-orange-400"
-                                  : "text-gray-400"
+                                  : "text-muted-foreground"
                               }`}
                             />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-white">
+                            <p className="text-sm font-medium text-foreground">
                               {activity.title}
                             </p>
-                            <p className="text-xs text-gray-400 mt-0.5">
+                            <p className="text-xs text-muted-foreground mt-0.5">
                               {activity.description}
                             </p>
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-muted-foreground mt-1">
                               {timeAgo}
                             </p>
                           </div>
@@ -2546,35 +2563,35 @@ function AdminDashboardContent() {
             {/* Top Users & System Health */}
             <div className="space-y-4">
               {/* Top Priority Users */}
-              <Card className="bg-gray-900 border-gray-800">
+              <Card className="bg-card border-border">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-white flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-green-400" />
+                  <CardTitle className="text-foreground flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-primary" />
                     Top Priority Users
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
                     {topUsers.length === 0 ? (
-                      <div className="text-center py-4 text-gray-400 text-sm">
+                      <div className="text-center py-4 text-muted-foreground text-sm">
                         Carregando...
                       </div>
                     ) : (
                       topUsers.map((user, idx) => (
                         <div
                           key={user.id}
-                          className="flex items-center p-2 rounded-lg hover:bg-gray-800/50 transition-colors cursor-pointer"
+                          className="flex items-center p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
                           onClick={() => router.push(`/admin/users/${user.id}`)}
                         >
                           <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold text-white">
+                            <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary flex items-center justify-center text-xs font-bold text-foreground">
                               {idx + 1}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-white truncate">
+                              <p className="text-sm font-medium text-foreground truncate">
                                 {user.name}
                               </p>
-                              <p className="text-xs text-gray-400 truncate">
+                              <p className="text-xs text-muted-foreground truncate">
                                 {user.email}
                               </p>
                             </div>
@@ -2587,27 +2604,27 @@ function AdminDashboardContent() {
               </Card>
 
               {/* System Health */}
-              <Card className="bg-gray-900 border-gray-800">
+              <Card className="bg-card border-border">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-white flex items-center gap-2">
-                    <Server className="h-5 w-5 text-blue-400" />
+                  <CardTitle className="text-foreground flex items-center gap-2">
+                    <Server className="h-5 w-5 text-primary" />
                     Status do Sistema
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between p-2 rounded-lg bg-gray-800/30">
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
                       <div className="flex items-center gap-2">
-                        <Database className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm text-gray-300">
+                        <Database className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">
                           Banco de Dados
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
                         {systemHealth.database === "healthy" ? (
                           <>
-                            <CheckCircle2 className="h-4 w-4 text-green-400" />
-                            <span className="text-xs text-green-400">
+                            <CheckCircle2 className="h-4 w-4 text-primary" />
+                            <span className="text-xs text-primary">
                               Online
                             </span>
                           </>
@@ -2628,16 +2645,16 @@ function AdminDashboardContent() {
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center justify-between p-2 rounded-lg bg-gray-800/30">
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
                       <div className="flex items-center gap-2">
-                        <Zap className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm text-gray-300">API</span>
+                        <Zap className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">API</span>
                       </div>
                       <div className="flex items-center gap-2">
                         {systemHealth.api === "healthy" ? (
                           <>
-                            <CheckCircle2 className="h-4 w-4 text-green-400" />
-                            <span className="text-xs text-green-400">
+                            <CheckCircle2 className="h-4 w-4 text-primary" />
+                            <span className="text-xs text-primary">
                               Online
                             </span>
                           </>
@@ -2662,7 +2679,7 @@ function AdminDashboardContent() {
                       variant="outline"
                       size="sm"
                       onClick={checkSystemHealth}
-                      className="w-full border-gray-700 text-gray-300 hover:bg-gray-800"
+                      className="w-full border-border text-muted-foreground hover:bg-muted"
                     >
                       <RefreshCw className="h-4 w-4 mr-2" />
                       Verificar Status
@@ -2672,52 +2689,55 @@ function AdminDashboardContent() {
               </Card>
             </div>
           </div>
+
+          {/* Admin Activity Log (inside activity section so it reorders with it) */}
+          {adminActivityLog.length > 0 && (
+            <Card className="bg-card border-border mt-4">
+              <CardHeader>
+                <CardTitle className="text-foreground flex items-center gap-2">
+                  <Activity className="h-5 w-5 text-primary" />
+                  Log de Atividades do Admin
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                  {adminActivityLog.slice(0, 10).map((log, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-3 p-2 rounded-lg bg-muted/30"
+                    >
+                      <div className="flex-shrink-0">
+                        {log.type.includes("approve") ? (
+                          <CheckCircle className="h-4 w-4 text-primary" />
+                        ) : log.type.includes("reject") ? (
+                          <X className="h-4 w-4 text-red-400" />
+                        ) : (
+                          <Activity className="h-4 w-4 text-primary" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-foreground">{log.description}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatTimeAgo(log.timestamp)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </section>
 
-        {/* Admin Activity Log */}
-        {adminActivityLog.length > 0 && (
-          <Card className="bg-gray-900 border-gray-800">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <Activity className="h-5 w-5 text-purple-400" />
-                Log de Atividades do Admin
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                {adminActivityLog.slice(0, 10).map((log, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center gap-3 p-2 rounded-lg bg-gray-800/30"
-                  >
-                    <div className="flex-shrink-0">
-                      {log.type.includes("approve") ? (
-                        <CheckCircle className="h-4 w-4 text-green-400" />
-                      ) : log.type.includes("reject") ? (
-                        <X className="h-4 w-4 text-red-400" />
-                      ) : (
-                        <Activity className="h-4 w-4 text-blue-400" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white">{log.description}</p>
-                      <p className="text-xs text-gray-400">
-                        {formatTimeAgo(log.timestamp)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Visão financeira */}
-        <section>
-          <h2 className="mb-1 text-sm font-medium uppercase tracking-wider text-gray-500">
+        <section
+          key="finance"
+          style={{ order: dashboardSectionOrder.indexOf("finance" as DashboardSectionId) }}
+        >
+          <h2 className="mb-1 text-sm font-medium uppercase tracking-wider text-muted-foreground">
             Visão financeira
           </h2>
-          <p className="mb-4 text-sm text-gray-400">
+          <p className="mb-4 text-sm text-muted-foreground">
             Movimentação financeira em tempo real
           </p>
           <div className="space-y-4">
@@ -2735,17 +2755,17 @@ function AdminDashboardContent() {
                 hoverable
               >
                 <Card
-                  className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-green-500 transition-all duration-200 cursor-pointer h-full"
+                  className="bg-card border-border hover:bg-muted hover:border-primary transition-all duration-200 cursor-pointer h-full"
                   onMouseEnter={() => fetchHistory("deposits", 7)}
                   onClick={() => handleMetricCardClick("DEPOSIT")}
                 >
                   <CardContent className="p-3 lg:p-4">
                     <div className="flex items-center justify-between mb-2">
-                      <DollarSign className="h-4 w-4 text-green-400" />
+                      <DollarSign className="h-4 w-4 text-primary" />
                       {financeLoading ? (
-                        <div className="h-5 w-16 bg-gray-700 rounded animate-pulse"></div>
+                        <div className="h-5 w-16 bg-muted rounded animate-pulse"></div>
                       ) : (
-                        <div className="text-lg lg:text-xl font-bold text-white">
+                        <div className="text-lg lg:text-xl font-bold text-foreground">
                           {formatCurrency(financeStats.totalDeposits).replace(
                             "R$",
                             "R$"
@@ -2758,18 +2778,18 @@ function AdminDashboardContent() {
                       )}
                     </div>
                     <div className="flex items-center justify-between">
-                      <p className="text-xs text-gray-400">Depósitos</p>
+                      <p className="text-xs text-muted-foreground">Depósitos</p>
                       {!financeLoading && (
                         <div className="flex items-center">
                           {financeStats.depositsChange >= 0 ? (
-                            <ArrowUpRight className="h-3 w-3 text-green-400" />
+                            <ArrowUpRight className="h-3 w-3 text-primary" />
                           ) : (
                             <ArrowDownRight className="h-3 w-3 text-red-400" />
                           )}
                           <span
                             className={`text-xs ml-0.5 ${
                               financeStats.depositsChange >= 0
-                                ? "text-green-400"
+                                ? "text-primary"
                                 : "text-red-400"
                             }`}
                           >
@@ -2794,7 +2814,7 @@ function AdminDashboardContent() {
                 hoverable
               >
                 <Card
-                  className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-red-500 transition-all duration-200 cursor-pointer h-full"
+                  className="bg-card border-border hover:bg-muted hover:border-destructive transition-all duration-200 cursor-pointer h-full"
                   onMouseEnter={() => fetchHistory("withdrawals", 7)}
                   onClick={() => handleMetricCardClick("WITHDRAWAL")}
                 >
@@ -2802,9 +2822,9 @@ function AdminDashboardContent() {
                     <div className="flex items-center justify-between mb-2">
                       <ArrowDownRight className="h-4 w-4 text-red-400" />
                       {financeLoading ? (
-                        <div className="h-5 w-16 bg-gray-700 rounded animate-pulse"></div>
+                        <div className="h-5 w-16 bg-muted rounded animate-pulse"></div>
                       ) : (
-                        <div className="text-lg lg:text-xl font-bold text-white">
+                        <div className="text-lg lg:text-xl font-bold text-foreground">
                           {formatCurrency(
                             financeStats.totalWithdrawals
                           ).replace("R$", "R$").length > 15
@@ -2816,18 +2836,18 @@ function AdminDashboardContent() {
                       )}
                     </div>
                     <div className="flex items-center justify-between">
-                      <p className="text-xs text-gray-400">Saques</p>
+                      <p className="text-xs text-muted-foreground">Saques</p>
                       {!financeLoading && (
                         <div className="flex items-center">
                           {financeStats.withdrawalsChange >= 0 ? (
-                            <ArrowUpRight className="h-3 w-3 text-green-400" />
+                            <ArrowUpRight className="h-3 w-3 text-primary" />
                           ) : (
                             <ArrowDownRight className="h-3 w-3 text-red-400" />
                           )}
                           <span
                             className={`text-xs ml-0.5 ${
                               financeStats.withdrawalsChange >= 0
-                                ? "text-green-400"
+                                ? "text-primary"
                                 : "text-red-400"
                             }`}
                           >
@@ -2852,16 +2872,16 @@ function AdminDashboardContent() {
                 hoverable
               >
                 <Card
-                  className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-blue-500 transition-all duration-200 cursor-pointer h-full"
+                  className="bg-card border-border hover:bg-muted hover:border-primary transition-all duration-200 cursor-pointer h-full"
                   onMouseEnter={() => fetchHistory("trades", 7)}
                 >
                   <CardContent className="p-3 lg:p-4">
                     <div className="flex items-center justify-between mb-2">
-                      <BarChart3 className="h-4 w-4 text-blue-400" />
+                      <BarChart3 className="h-4 w-4 text-primary" />
                       {financeLoading ? (
-                        <div className="h-5 w-16 bg-gray-700 rounded animate-pulse"></div>
+                        <div className="h-5 w-16 bg-muted rounded animate-pulse"></div>
                       ) : (
-                        <div className="text-lg lg:text-xl font-bold text-white">
+                        <div className="text-lg lg:text-xl font-bold text-foreground">
                           {formatCurrency(financeStats.totalTrades).replace(
                             "R$",
                             "R$"
@@ -2874,18 +2894,18 @@ function AdminDashboardContent() {
                       )}
                     </div>
                     <div className="flex items-center justify-between">
-                      <p className="text-xs text-gray-400">Trades</p>
+                      <p className="text-xs text-muted-foreground">Trades</p>
                       {!financeLoading && (
                         <div className="flex items-center">
                           {financeStats.tradesChange >= 0 ? (
-                            <ArrowUpRight className="h-3 w-3 text-green-400" />
+                            <ArrowUpRight className="h-3 w-3 text-primary" />
                           ) : (
                             <ArrowDownRight className="h-3 w-3 text-red-400" />
                           )}
                           <span
                             className={`text-xs ml-0.5 ${
                               financeStats.tradesChange >= 0
-                                ? "text-green-400"
+                                ? "text-primary"
                                 : "text-red-400"
                             }`}
                           >
@@ -2910,16 +2930,16 @@ function AdminDashboardContent() {
                 hoverable
               >
                 <Card
-                  className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-purple-500 transition-all duration-200 cursor-pointer h-full"
+                  className="bg-card border-border hover:bg-muted hover:border-primary transition-all duration-200 cursor-pointer h-full"
                   onMouseEnter={() => fetchHistory("commissions", 7)}
                 >
                   <CardContent className="p-3 lg:p-4">
                     <div className="flex items-center justify-between mb-2">
-                      <PieChart className="h-4 w-4 text-purple-400" />
+                      <PieChart className="h-4 w-4 text-primary" />
                       {financeLoading ? (
-                        <div className="h-5 w-16 bg-gray-700 rounded animate-pulse"></div>
+                        <div className="h-5 w-16 bg-muted rounded animate-pulse"></div>
                       ) : (
-                        <div className="text-lg lg:text-xl font-bold text-white">
+                        <div className="text-lg lg:text-xl font-bold text-foreground">
                           {formatCurrency(
                             financeStats.totalCommissions
                           ).replace("R$", "R$").length > 15
@@ -2931,18 +2951,18 @@ function AdminDashboardContent() {
                       )}
                     </div>
                     <div className="flex items-center justify-between">
-                      <p className="text-xs text-gray-400">Comissões</p>
+                      <p className="text-xs text-muted-foreground">Comissões</p>
                       {!financeLoading && (
                         <div className="flex items-center">
                           {financeStats.commissionsChange >= 0 ? (
-                            <ArrowUpRight className="h-3 w-3 text-green-400" />
+                            <ArrowUpRight className="h-3 w-3 text-primary" />
                           ) : (
                             <ArrowDownRight className="h-3 w-3 text-red-400" />
                           )}
                           <span
                             className={`text-xs ml-0.5 ${
                               financeStats.commissionsChange >= 0
-                                ? "text-green-400"
+                                ? "text-primary"
                                 : "text-red-400"
                             }`}
                           >
@@ -2967,16 +2987,16 @@ function AdminDashboardContent() {
                 hoverable
               >
                 <Card
-                  className="bg-gray-900 border-gray-800 hover:bg-gray-800 hover:border-yellow-500 transition-all duration-200 cursor-pointer h-full"
+                  className="bg-card border-border hover:bg-muted hover:border-yellow-500 transition-all duration-200 cursor-pointer h-full"
                   onMouseEnter={() => fetchHistory("balance", 7)}
                 >
                   <CardContent className="p-3 lg:p-4">
                     <div className="flex items-center justify-between mb-2">
                       <TrendingUp className="h-4 w-4 text-yellow-400" />
                       {financeLoading ? (
-                        <div className="h-5 w-16 bg-gray-700 rounded animate-pulse"></div>
+                        <div className="h-5 w-16 bg-muted rounded animate-pulse"></div>
                       ) : (
-                        <div className="text-lg lg:text-xl font-bold text-white">
+                        <div className="text-lg lg:text-xl font-bold text-foreground">
                           {formatCurrency(
                             financeStats.averageUserBalance
                           ).replace("R$", "R$").length > 15
@@ -2988,18 +3008,18 @@ function AdminDashboardContent() {
                       )}
                     </div>
                     <div className="flex items-center justify-between">
-                      <p className="text-xs text-gray-400">Saldo Médio</p>
+                      <p className="text-xs text-muted-foreground">Saldo Médio</p>
                       {!financeLoading && (
                         <div className="flex items-center">
                           {financeStats.balanceChange >= 0 ? (
-                            <ArrowUpRight className="h-3 w-3 text-green-400" />
+                            <ArrowUpRight className="h-3 w-3 text-primary" />
                           ) : (
                             <ArrowDownRight className="h-3 w-3 text-red-400" />
                           )}
                           <span
                             className={`text-xs ml-0.5 ${
                               financeStats.balanceChange >= 0
-                                ? "text-green-400"
+                                ? "text-primary"
                                 : "text-red-400"
                             }`}
                           >
@@ -3016,11 +3036,11 @@ function AdminDashboardContent() {
             {/* Charts Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
               {/* Area Chart - Deposits and Withdrawals */}
-              <Card className="bg-gray-900 border-gray-800">
+              <Card className="bg-card border-border">
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-white flex items-center gap-2">
-                      <TrendingUp className="w-5 h-5 text-green-400" />
+                    <CardTitle className="text-foreground flex items-center gap-2">
+                      <TrendingUp className="w-5 h-5 text-primary" />
                       Evolução dos Depósitos e Saques
                     </CardTitle>
                     <Select
@@ -3029,25 +3049,25 @@ function AdminDashboardContent() {
                         setChartDateRange(Number(value))
                       }
                     >
-                      <SelectTrigger className="w-32 h-8 bg-gray-800 border-gray-700 text-white text-xs">
+                      <SelectTrigger className="w-32 h-8 bg-muted border-border text-foreground text-xs">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-gray-900 border-gray-700">
+                      <SelectContent className="bg-card border-border">
                         <SelectItem
                           value="7"
-                          className="text-white hover:bg-gray-800"
+                          className="text-foreground hover:bg-muted"
                         >
                           7 dias
                         </SelectItem>
                         <SelectItem
                           value="30"
-                          className="text-white hover:bg-gray-800"
+                          className="text-foreground hover:bg-muted"
                         >
                           30 dias
                         </SelectItem>
                         <SelectItem
                           value="90"
-                          className="text-white hover:bg-gray-800"
+                          className="text-foreground hover:bg-muted"
                         >
                           90 dias
                         </SelectItem>
@@ -3072,12 +3092,12 @@ function AdminDashboardContent() {
                           >
                             <stop
                               offset="5%"
-                              stopColor="#10B981"
+                              stopColor="#06B6D4"
                               stopOpacity={0.3}
                             />
                             <stop
                               offset="95%"
-                              stopColor="#10B981"
+                              stopColor="#06B6D4"
                               stopOpacity={0}
                             />
                           </linearGradient>
@@ -3183,15 +3203,15 @@ function AdminDashboardContent() {
                         <Area
                           type="monotone"
                           dataKey="deposits"
-                          stroke="#10B981"
+                          stroke="#06B6D4"
                           strokeWidth={2.5}
                           fill="url(#colorDeposits)"
                           name="Depósitos"
                           dot={false}
                           activeDot={{
                             r: 5,
-                            fill: "#10B981",
-                            stroke: "#10B981",
+                            fill: "#06B6D4",
+                            stroke: "#06B6D4",
                             strokeWidth: 2,
                           }}
                         />
@@ -3219,7 +3239,7 @@ function AdminDashboardContent() {
                     </ResponsiveContainer>
                   ) : (
                     <div className="h-64 flex items-center justify-center">
-                      <div className="text-center text-gray-400">
+                      <div className="text-center text-muted-foreground">
                         <BarChart3 className="h-12 w-12 mx-auto mb-2 opacity-50" />
                         <p>Carregando dados...</p>
                       </div>
@@ -3229,11 +3249,11 @@ function AdminDashboardContent() {
               </Card>
 
               {/* Bar Chart - Daily Trade Volume */}
-              <Card className="bg-gray-900 border-gray-800">
+              <Card className="bg-card border-border">
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-white flex items-center gap-2">
-                      <BarChart3 className="w-5 h-5 text-blue-400" />
+                    <CardTitle className="text-foreground flex items-center gap-2">
+                      <BarChart3 className="w-5 h-5 text-primary" />
                       Volume Diário de Trades
                     </CardTitle>
                     <Select
@@ -3242,25 +3262,25 @@ function AdminDashboardContent() {
                         setChartDateRange(Number(value))
                       }
                     >
-                      <SelectTrigger className="w-32 h-8 bg-gray-800 border-gray-700 text-white text-xs">
+                      <SelectTrigger className="w-32 h-8 bg-muted border-border text-foreground text-xs">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-gray-900 border-gray-700">
+                      <SelectContent className="bg-card border-border">
                         <SelectItem
                           value="7"
-                          className="text-white hover:bg-gray-800"
+                          className="text-foreground hover:bg-muted"
                         >
                           7 dias
                         </SelectItem>
                         <SelectItem
                           value="30"
-                          className="text-white hover:bg-gray-800"
+                          className="text-foreground hover:bg-muted"
                         >
                           30 dias
                         </SelectItem>
                         <SelectItem
                           value="90"
-                          className="text-white hover:bg-gray-800"
+                          className="text-foreground hover:bg-muted"
                         >
                           90 dias
                         </SelectItem>
@@ -3285,12 +3305,12 @@ function AdminDashboardContent() {
                           >
                             <stop
                               offset="5%"
-                              stopColor="#3B82F6"
+                              stopColor="#06B6D4"
                               stopOpacity={0.8}
                             />
                             <stop
                               offset="95%"
-                              stopColor="#3B82F6"
+                              stopColor="#06B6D4"
                               stopOpacity={0.4}
                             />
                           </linearGradient>
@@ -3362,7 +3382,7 @@ function AdminDashboardContent() {
                                 : `R$ ${value.toFixed(2)}`;
                             return [formatted, "Volume de Trades"];
                           }}
-                          cursor={{ fill: "#3B82F6", fillOpacity: 0.1 }}
+                          cursor={{ fill: "#06B6D4", fillOpacity: 0.1 }}
                         />
                         <Legend
                           wrapperStyle={{
@@ -3377,14 +3397,14 @@ function AdminDashboardContent() {
                           fill="url(#colorTrades)"
                           name="Volume de Trades"
                           radius={[6, 6, 0, 0]}
-                          stroke="#3B82F6"
+                          stroke="#06B6D4"
                           strokeWidth={1}
                         />
                       </BarChart>
                     </ResponsiveContainer>
                   ) : (
                     <div className="h-64 flex items-center justify-center">
-                      <div className="text-center text-gray-400">
+                      <div className="text-center text-muted-foreground">
                         <BarChart3 className="h-12 w-12 mx-auto mb-2 opacity-50" />
                         <p>Carregando dados...</p>
                       </div>
@@ -3397,17 +3417,20 @@ function AdminDashboardContent() {
         </section>
 
         {/* Transações */}
-        <section>
-          <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-gray-500">
+        <section
+          key="transactions"
+          style={{ order: dashboardSectionOrder.indexOf("transactions" as DashboardSectionId) }}
+        >
+          <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-muted-foreground">
             Transações
           </h2>
-          <Card className="bg-gray-900 border-gray-800">
+          <Card className="bg-card border-border">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="text-white">Tabela detalhada</CardTitle>
+                <CardTitle className="text-foreground">Tabela detalhada</CardTitle>
                 <Button
                   onClick={handleOpenBalanceDialog}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
                   <Wallet className="h-4 w-4 mr-2" />
                   Ajustar Saldo
@@ -3415,77 +3438,77 @@ function AdminDashboardContent() {
               </div>
               <div className="flex flex-wrap items-center gap-3 mt-4">
                 <div className="relative flex-1 max-w-sm">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <Input
                     placeholder="Buscar transações..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 bg-gray-800 border-gray-700 text-white placeholder-gray-400"
+                    className="pl-10 bg-muted border-border text-foreground placeholder-muted-foreground"
                   />
                 </div>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-40 bg-gray-800 border-gray-700 text-white">
+                  <SelectTrigger className="w-40 bg-muted border-border text-foreground">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
-                  <SelectContent className="bg-gray-900 border-gray-700">
+                  <SelectContent className="bg-card border-border">
                     <SelectItem
                       value="all"
-                      className="text-white hover:bg-gray-800"
+                      className="text-foreground hover:bg-muted"
                     >
                       Todos Status
                     </SelectItem>
                     <SelectItem
                       value="PENDING"
-                      className="text-white hover:bg-gray-800"
+                      className="text-foreground hover:bg-muted"
                     >
                       Pendente
                     </SelectItem>
                     <SelectItem
                       value="APPROVED"
-                      className="text-white hover:bg-gray-800"
+                      className="text-foreground hover:bg-muted"
                     >
                       Aprovado
                     </SelectItem>
                     <SelectItem
                       value="REJECTED"
-                      className="text-white hover:bg-gray-800"
+                      className="text-foreground hover:bg-muted"
                     >
                       Rejeitado
                     </SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
-                  <SelectTrigger className="w-40 bg-gray-800 border-gray-700 text-white">
+                  <SelectTrigger className="w-40 bg-muted border-border text-foreground">
                     <SelectValue placeholder="Tipo" />
                   </SelectTrigger>
-                  <SelectContent className="bg-gray-900 border-gray-700">
+                  <SelectContent className="bg-card border-border">
                     <SelectItem
                       value="all"
-                      className="text-white hover:bg-gray-800"
+                      className="text-foreground hover:bg-muted"
                     >
                       Todos Tipos
                     </SelectItem>
                     <SelectItem
                       value="DEPOSIT"
-                      className="text-white hover:bg-gray-800"
+                      className="text-foreground hover:bg-muted"
                     >
                       Depósito
                     </SelectItem>
                     <SelectItem
                       value="WITHDRAWAL"
-                      className="text-white hover:bg-gray-800"
+                      className="text-foreground hover:bg-muted"
                     >
                       Saque
                     </SelectItem>
                     <SelectItem
                       value="FEE"
-                      className="text-white hover:bg-gray-800"
+                      className="text-foreground hover:bg-muted"
                     >
                       Comissão
                     </SelectItem>
                     <SelectItem
                       value="BUY_CRYPTO"
-                      className="text-white hover:bg-gray-800"
+                      className="text-foreground hover:bg-muted"
                     >
                       Compra Crypto
                     </SelectItem>
@@ -3496,21 +3519,21 @@ function AdminDashboardContent() {
                   placeholder="De"
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
-                  className="w-36 bg-gray-800 border-gray-700 text-white text-sm"
+                  className="w-36 bg-muted border-border text-foreground text-sm"
                 />
                 <Input
                   type="date"
                   placeholder="Até"
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
-                  className="w-36 bg-gray-800 border-gray-700 text-white text-sm"
+                  className="w-36 bg-muted border-border text-foreground text-sm"
                 />
                 <Input
                   type="number"
                   placeholder="Valor mín."
                   value={amountMin}
                   onChange={(e) => setAmountMin(e.target.value)}
-                  className="w-28 bg-gray-800 border-gray-700 text-white text-sm"
+                  className="w-28 bg-muted border-border text-foreground text-sm"
                   min={0}
                   step="any"
                 />
@@ -3519,7 +3542,7 @@ function AdminDashboardContent() {
                   placeholder="Valor máx."
                   value={amountMax}
                   onChange={(e) => setAmountMax(e.target.value)}
-                  className="w-28 bg-gray-800 border-gray-700 text-white text-sm"
+                  className="w-28 bg-muted border-border text-foreground text-sm"
                   min={0}
                   step="any"
                 />
@@ -3527,7 +3550,7 @@ function AdminDashboardContent() {
                   size="sm"
                   onClick={() => fetchRealtimeTransactions()}
                   variant="outline"
-                  className="border-gray-600 text-gray-300 hover:bg-gray-800"
+                  className="border-border text-muted-foreground hover:bg-muted"
                 >
                   <RefreshCw className="h-4 w-4 mr-1" />
                   Aplicar
@@ -3536,7 +3559,7 @@ function AdminDashboardContent() {
                   <Button
                     size="sm"
                     onClick={() => handleBulkAction("approve")}
-                    className="bg-green-600 hover:bg-green-700 text-white"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
                   >
                     <CheckCircle className="h-4 w-4 mr-1" />
                     Aprovar ({selectedTransactions.size})
@@ -3546,7 +3569,7 @@ function AdminDashboardContent() {
                   size="sm"
                   onClick={handleExportCSV}
                   variant="outline"
-                  className="border-gray-700 text-gray-300 hover:bg-gray-800"
+                  className="border-border text-muted-foreground hover:bg-muted"
                 >
                   <Download className="h-4 w-4 mr-2" />
                   Exportar CSV
@@ -3571,7 +3594,7 @@ function AdminDashboardContent() {
                       fetchRealtimeTransactions();
                     }}
                     variant="ghost"
-                    className="text-gray-400 hover:text-white"
+                    className="text-muted-foreground hover:text-foreground"
                   >
                     <X className="h-4 w-4 mr-1" />
                     Limpar Filtros
@@ -3583,7 +3606,7 @@ function AdminDashboardContent() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-gray-700">
+                    <tr className="border-b border-border">
                       <th className="text-left py-3 px-4 w-12">
                         <Checkbox
                           checked={
@@ -3592,11 +3615,11 @@ function AdminDashboardContent() {
                               filteredAndSortedTransactions.length
                           }
                           onCheckedChange={toggleSelectAll}
-                          className="border-gray-600"
+                          className="border-border"
                         />
                       </th>
                       <th
-                        className="text-left py-3 px-4 cursor-pointer hover:text-white text-gray-300"
+                        className="text-left py-3 px-4 cursor-pointer hover:text-foreground text-muted-foreground"
                         onClick={() => handleSort("date")}
                       >
                         <div className="flex items-center">
@@ -3605,7 +3628,7 @@ function AdminDashboardContent() {
                         </div>
                       </th>
                       <th
-                        className="text-left py-3 px-4 cursor-pointer hover:text-white text-gray-300"
+                        className="text-left py-3 px-4 cursor-pointer hover:text-foreground text-muted-foreground"
                         onClick={() => handleSort("type")}
                       >
                         <div className="flex items-center">
@@ -3614,7 +3637,7 @@ function AdminDashboardContent() {
                         </div>
                       </th>
                       <th
-                        className="text-left py-3 px-4 cursor-pointer hover:text-white text-gray-300"
+                        className="text-left py-3 px-4 cursor-pointer hover:text-foreground text-muted-foreground"
                         onClick={() => handleSort("user")}
                       >
                         <div className="flex items-center">
@@ -3623,7 +3646,7 @@ function AdminDashboardContent() {
                         </div>
                       </th>
                       <th
-                        className="text-left py-3 px-4 cursor-pointer hover:text-white text-gray-300"
+                        className="text-left py-3 px-4 cursor-pointer hover:text-foreground text-muted-foreground"
                         onClick={() => handleSort("value")}
                       >
                         <div className="flex items-center">
@@ -3632,7 +3655,7 @@ function AdminDashboardContent() {
                         </div>
                       </th>
                       <th
-                        className="text-left py-3 px-4 cursor-pointer hover:text-white text-gray-300"
+                        className="text-left py-3 px-4 cursor-pointer hover:text-foreground text-muted-foreground"
                         onClick={() => handleSort("status")}
                       >
                         <div className="flex items-center">
@@ -3647,8 +3670,8 @@ function AdminDashboardContent() {
                       <tr>
                         <td colSpan={6} className="py-8 text-center">
                           <div className="flex flex-col items-center justify-center space-y-2">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400"></div>
-                            <p className="text-gray-400">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                            <p className="text-muted-foreground">
                               Carregando transações...
                             </p>
                           </div>
@@ -3658,7 +3681,7 @@ function AdminDashboardContent() {
                       <tr>
                         <td
                           colSpan={6}
-                          className="py-8 text-center text-gray-400"
+                          className="py-8 text-center text-muted-foreground"
                         >
                           Nenhuma transação encontrada
                         </td>
@@ -3667,7 +3690,7 @@ function AdminDashboardContent() {
                       filteredAndSortedTransactions.map((transaction) => (
                         <tr
                           key={transaction.id}
-                          className="border-b border-gray-800 hover:bg-gray-800 transition-colors"
+                          className="border-b border-border hover:bg-muted transition-colors"
                         >
                           <td
                             className="py-3 px-4"
@@ -3678,11 +3701,11 @@ function AdminDashboardContent() {
                               onCheckedChange={() =>
                                 toggleTransactionSelection(transaction.id)
                               }
-                              className="border-gray-600"
+                              className="border-border"
                             />
                           </td>
                           <td
-                            className="py-3 px-4 text-gray-300 cursor-pointer"
+                            className="py-3 px-4 text-muted-foreground cursor-pointer"
                             onClick={() => handleTransactionClick(transaction)}
                           >
                             {new Date(transaction.date).toLocaleString(
@@ -3701,25 +3724,25 @@ function AdminDashboardContent() {
                             <span
                               className={`px-2 py-1 rounded text-xs font-medium ${
                                 transaction.type === "DEPOSIT"
-                                  ? "bg-green-900 text-green-300"
+                                  ? "bg-primary/20 text-primary"
                                   : transaction.type === "WITHDRAWAL"
                                   ? "bg-red-900 text-red-300"
                                   : transaction.type === "FEE"
-                                  ? "bg-purple-900 text-purple-300"
+                                  ? "bg-primary/20 text-primary"
                                   : transaction.type === "BUY_CRYPTO"
                                   ? "bg-emerald-900 text-emerald-300"
                                   : transaction.type === "SELL_CRYPTO"
                                   ? "bg-orange-900 text-orange-300"
                                   : transaction.type === "REFUND"
-                                  ? "bg-gray-900 text-gray-300"
-                                  : "bg-gray-900 text-gray-300"
+                                  ? "bg-card text-muted-foreground"
+                                  : "bg-card text-muted-foreground"
                               }`}
                             >
                               {getTransactionTypeLabel(transaction.type)}
                             </span>
                           </td>
                           <td
-                            className="py-3 px-4 text-gray-300"
+                            className="py-3 px-4 text-muted-foreground"
                             onClick={(e) => e.stopPropagation()}
                           >
                             {typeof transaction.user === "string" ? (
@@ -3733,7 +3756,7 @@ function AdminDashboardContent() {
                                     );
                                   }
                                 }}
-                                className="text-blue-400 hover:text-blue-300 hover:underline"
+                                className="text-primary hover:text-primary hover:underline"
                               >
                                 {transaction.user.name} (
                                 {transaction.user.email})
@@ -3742,7 +3765,7 @@ function AdminDashboardContent() {
                               "N/A"
                             )}
                           </td>
-                          <td className="py-3 px-4 text-white font-medium">
+                          <td className="py-3 px-4 text-foreground font-medium">
                             {transaction.value && !isNaN(transaction.value)
                               ? formatCurrency(transaction.value)
                               : transaction.currency === "USDT"
@@ -3756,7 +3779,7 @@ function AdminDashboardContent() {
                                   transaction.status === "APPROVED" ||
                                   transaction.status === "COMPLETED" ||
                                   transaction.status === "CONFIRMED"
-                                    ? "bg-green-900 text-green-300"
+                                    ? "bg-primary/20 text-primary"
                                     : transaction.status === "PENDING" ||
                                       transaction.status === "PROCESSING" ||
                                       transaction.status === "EXECUTING"
@@ -3765,7 +3788,7 @@ function AdminDashboardContent() {
                                       transaction.status === "FAILED" ||
                                       transaction.status === "CANCELLED"
                                     ? "bg-red-900 text-red-300"
-                                    : "bg-gray-900 text-gray-300"
+                                    : "bg-card text-muted-foreground"
                                 }`}
                               >
                                 {getStatusLabel(transaction.status)}
@@ -3786,7 +3809,7 @@ function AdminDashboardContent() {
                                     disabled={
                                       processingTransaction === transaction.id
                                     }
-                                    className="h-6 w-6 p-0 text-green-400 hover:text-green-300 hover:bg-green-900/30"
+                                    className="h-6 w-6 p-0 text-primary hover:text-primary hover:bg-primary/15"
                                   >
                                     <CheckCircle className="h-3 w-3" />
                                   </Button>
@@ -3803,14 +3826,16 @@ function AdminDashboardContent() {
           </Card>
         </section>
 
+        </div>
+
         {/* Transaction Details Dialog */}
         <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-          <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="bg-card border-border text-foreground max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="text-white">
+              <DialogTitle className="text-foreground">
                 Detalhes da Transação
               </DialogTitle>
-              <DialogDescription className="text-gray-400">
+              <DialogDescription className="text-muted-foreground">
                 Informações completas da transação
               </DialogDescription>
             </DialogHeader>
@@ -3823,27 +3848,27 @@ function AdminDashboardContent() {
                 {/* Basic Info */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-400">ID da Transação</p>
-                    <p className="text-white font-mono text-sm">
+                    <p className="text-sm text-muted-foreground">ID da Transação</p>
+                    <p className="text-foreground font-mono text-sm">
                       {transactionDetails.id}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-400">Tipo</p>
-                    <p className="text-white">
+                    <p className="text-sm text-muted-foreground">Tipo</p>
+                    <p className="text-foreground">
                       {getTransactionTypeLabel(transactionDetails.type)}
                     </p>
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
                       <div>
-                        <p className="text-sm text-gray-400">Status</p>
+                        <p className="text-sm text-muted-foreground">Status</p>
                         <span
                           className={`px-2 py-1 rounded text-xs font-medium inline-block ${
                             transactionDetails.status === "APPROVED" ||
                             transactionDetails.status === "COMPLETED" ||
                             transactionDetails.status === "CONFIRMED"
-                              ? "bg-green-900 text-green-300"
+                              ? "bg-primary/20 text-primary"
                               : transactionDetails.status === "PENDING" ||
                                 transactionDetails.status === "PROCESSING" ||
                                 transactionDetails.status === "EXECUTING"
@@ -3863,7 +3888,7 @@ function AdminDashboardContent() {
                             disabled={markingCompleted}
                             variant="outline"
                             size="sm"
-                            className="border-green-600 text-green-400 hover:bg-green-900 hover:text-green-300 mt-5"
+                            className="border-primary text-primary hover:bg-primary/15 hover:text-primary mt-5"
                           >
                             {markingCompleted ? (
                               <>
@@ -3881,8 +3906,8 @@ function AdminDashboardContent() {
                     </div>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-400">Data</p>
-                    <p className="text-white">
+                    <p className="text-sm text-muted-foreground">Data</p>
+                    <p className="text-foreground">
                       {new Date(transactionDetails.createdAt).toLocaleString(
                         "pt-BR"
                       )}
@@ -3890,8 +3915,8 @@ function AdminDashboardContent() {
                   </div>
                   {transactionDetails.description && (
                     <div className="col-span-2">
-                      <p className="text-sm text-gray-400">Descrição</p>
-                      <p className="text-white text-sm">
+                      <p className="text-sm text-muted-foreground">Descrição</p>
+                      <p className="text-foreground text-sm">
                         {transactionDetails.description}
                       </p>
                     </div>
@@ -3899,18 +3924,18 @@ function AdminDashboardContent() {
                 </div>
 
                 {/* User Info */}
-                <div className="border-t border-gray-800 pt-4">
+                <div className="border-t border-border pt-4">
                   <h3 className="text-lg font-semibold mb-3">Usuário</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm text-gray-400">Nome</p>
-                      <p className="text-white">
+                      <p className="text-sm text-muted-foreground">Nome</p>
+                      <p className="text-foreground">
                         {transactionDetails.user.name}
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-400">Email</p>
-                      <p className="text-white">
+                      <p className="text-sm text-muted-foreground">Email</p>
+                      <p className="text-foreground">
                         {transactionDetails.user.email}
                       </p>
                     </div>
@@ -3918,12 +3943,12 @@ function AdminDashboardContent() {
                     {(transactionDetails.type === "BUY_CRYPTO" ||
                       transactionDetails.type === "WITHDRAWAL") &&
                       !transactionDetails.id.startsWith("order_") && (
-                        <div className="col-span-2 border-t border-gray-800 pt-4 mt-2">
+                        <div className="col-span-2 border-t border-border pt-4 mt-2">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                              <Mail className="h-4 w-4 text-gray-400" />
+                              <Mail className="h-4 w-4 text-muted-foreground" />
                               <div>
-                                <p className="text-sm text-gray-400">
+                                <p className="text-sm text-muted-foreground">
                                   Status do Recibo por Email
                                 </p>
                                 {(() => {
@@ -3939,8 +3964,8 @@ function AdminDashboardContent() {
                                     <div className="flex items-center gap-2">
                                       {receiptStatus.sent ? (
                                         <>
-                                          <CheckCircle className="h-4 w-4 text-green-400" />
-                                          <p className="text-green-400 text-sm">
+                                          <CheckCircle className="h-4 w-4 text-primary" />
+                                          <p className="text-primary text-sm">
                                             Enviado em{" "}
                                             {new Date(
                                               receiptStatus.sentAt
@@ -3958,7 +3983,7 @@ function AdminDashboardContent() {
                                         </>
                                       )}
                                       {receiptStatus.count > 1 && (
-                                        <span className="text-xs text-gray-500">
+                                        <span className="text-xs text-muted-foreground">
                                           ({receiptStatus.count} tentativas)
                                         </span>
                                       )}
@@ -3972,7 +3997,7 @@ function AdminDashboardContent() {
                               disabled={resendingReceipt}
                               variant="outline"
                               size="sm"
-                              className="border-gray-700 text-white hover:bg-gray-800"
+                              className="border-border text-foreground hover:bg-muted"
                             >
                               {resendingReceipt ? (
                                 <>
@@ -3991,16 +4016,16 @@ function AdminDashboardContent() {
                       )}
                     {transactionDetails.user.cpf && (
                       <div>
-                        <p className="text-sm text-gray-400">CPF</p>
-                        <p className="text-white">
+                        <p className="text-sm text-muted-foreground">CPF</p>
+                        <p className="text-foreground">
                           {transactionDetails.user.cpf}
                         </p>
                       </div>
                     )}
                     {transactionDetails.user.phone && (
                       <div>
-                        <p className="text-sm text-gray-400">Telefone</p>
-                        <p className="text-white">
+                        <p className="text-sm text-muted-foreground">Telefone</p>
+                        <p className="text-foreground">
                           {transactionDetails.user.phone}
                         </p>
                       </div>
@@ -4009,21 +4034,21 @@ function AdminDashboardContent() {
                 </div>
 
                 {/* Transaction Amount */}
-                <div className="border-t border-gray-800 pt-4">
+                <div className="border-t border-border pt-4">
                   <h3 className="text-lg font-semibold mb-3">Valores</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm text-gray-400">Valor</p>
-                      <p className="text-white font-semibold">
+                      <p className="text-sm text-muted-foreground">Valor</p>
+                      <p className="text-foreground font-semibold">
                         {formatCurrency(transactionDetails.amount)}{" "}
                         {transactionDetails.currency}
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-400">
+                      <p className="text-sm text-muted-foreground">
                         Saldo após transação
                       </p>
-                      <p className="text-white">
+                      <p className="text-foreground">
                         {formatCurrency(transactionDetails.balance)}{" "}
                         {transactionDetails.currency}
                       </p>
@@ -4033,37 +4058,37 @@ function AdminDashboardContent() {
 
                 {/* Order Details (for BUY_CRYPTO) */}
                 {transactionDetails.order && (
-                  <div className="border-t border-gray-800 pt-4">
+                  <div className="border-t border-border pt-4">
                     <h3 className="text-lg font-semibold mb-3">
                       Detalhes do Pedido
                     </h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-sm text-gray-400">ID do Pedido</p>
-                        <p className="text-white font-mono text-sm">
+                        <p className="text-sm text-muted-foreground">ID do Pedido</p>
+                        <p className="text-foreground font-mono text-sm">
                           {transactionDetails.order.id}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-400">
+                        <p className="text-sm text-muted-foreground">
                           Status do Pedido
                         </p>
-                        <p className="text-white">
+                        <p className="text-foreground">
                           {transactionDetails.order.status}
                         </p>
                       </div>
                       {transactionDetails.order.externalOrderId && (
                         <div>
-                          <p className="text-sm text-gray-400">ID Externo</p>
-                          <p className="text-white font-mono text-sm">
+                          <p className="text-sm text-muted-foreground">ID Externo</p>
+                          <p className="text-foreground font-mono text-sm">
                             {transactionDetails.order.externalOrderId}
                           </p>
                         </div>
                       )}
                       {transactionDetails.order.createdAt && (
                         <div>
-                          <p className="text-sm text-gray-400">Criado em</p>
-                          <p className="text-white">
+                          <p className="text-sm text-muted-foreground">Criado em</p>
+                          <p className="text-foreground">
                             {new Date(
                               transactionDetails.order.createdAt
                             ).toLocaleString("pt-BR")}
@@ -4072,8 +4097,8 @@ function AdminDashboardContent() {
                       )}
                       {transactionDetails.order.executedAt && (
                         <div>
-                          <p className="text-sm text-gray-400">Executado em</p>
-                          <p className="text-white">
+                          <p className="text-sm text-muted-foreground">Executado em</p>
+                          <p className="text-foreground">
                             {new Date(
                               transactionDetails.order.executedAt
                             ).toLocaleString("pt-BR")}
@@ -4081,22 +4106,22 @@ function AdminDashboardContent() {
                         </div>
                       )}
                       <div>
-                        <p className="text-sm text-gray-400">Quantidade USDT</p>
-                        <p className="text-white">
+                        <p className="text-sm text-muted-foreground">Quantidade USDT</p>
+                        <p className="text-foreground">
                           {Number(transactionDetails.order.amount)} USDT
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-400">Valor Total BRL</p>
-                        <p className="text-white">
+                        <p className="text-sm text-muted-foreground">Valor Total BRL</p>
+                        <p className="text-foreground">
                           {formatCurrency(
                             Number(transactionDetails.order.total)
                           )}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-400">Taxa de Câmbio</p>
-                        <p className="text-white">
+                        <p className="text-sm text-muted-foreground">Taxa de Câmbio</p>
+                        <p className="text-foreground">
                           {formatCurrency(
                             Number(transactionDetails.order.total) /
                               Number(transactionDetails.order.amount)
@@ -4111,20 +4136,20 @@ function AdminDashboardContent() {
                 {/* Calculation Breakdown (for BUY_CRYPTO orders) */}
                 {transactionDetails.order &&
                   transactionDetails.type === "BUY_CRYPTO" && (
-                    <div className="border-t border-gray-800 pt-4 mt-4">
-                      <Card className="bg-gray-800 border-gray-700">
+                    <div className="border-t border-border pt-4 mt-4">
+                      <Card className="bg-muted border-border">
                         <CardHeader>
-                          <CardTitle className="text-white text-lg">
+                          <CardTitle className="text-foreground text-lg">
                             📊 Cálculo do Valor Total
                           </CardTitle>
                         </CardHeader>
                         <CardContent>
                           <div className="space-y-3">
-                            <div className="flex items-center justify-between py-2 border-b border-gray-700">
-                              <span className="text-gray-400">
+                            <div className="flex items-center justify-between py-2 border-b border-border">
+                              <span className="text-muted-foreground">
                                 Quantidade USDT:
                               </span>
-                              <span className="text-white font-semibold">
+                              <span className="text-foreground font-semibold">
                                 {Number(
                                   transactionDetails.order.amount
                                 ).toLocaleString("pt-BR", {
@@ -4134,11 +4159,11 @@ function AdminDashboardContent() {
                                 USDT
                               </span>
                             </div>
-                            <div className="flex items-center justify-between py-2 border-b border-gray-700">
-                              <span className="text-gray-400">
+                            <div className="flex items-center justify-between py-2 border-b border-border">
+                              <span className="text-muted-foreground">
                                 Taxa de Câmbio:
                               </span>
-                              <span className="text-white font-semibold">
+                              <span className="text-foreground font-semibold">
                                 {formatCurrency(
                                   Number(transactionDetails.order.total) /
                                     Number(transactionDetails.order.amount)
@@ -4146,15 +4171,15 @@ function AdminDashboardContent() {
                                 BRL/USDT
                               </span>
                             </div>
-                            <div className="bg-gray-900 rounded-lg p-4 my-3">
+                            <div className="bg-card rounded-lg p-4 my-3">
                               <div className="flex items-center justify-between mb-2">
-                                <span className="text-gray-300 text-sm">
+                                <span className="text-muted-foreground text-sm">
                                   Cálculo:
                                 </span>
                               </div>
-                              <div className="text-white font-mono text-sm space-y-1">
+                              <div className="text-foreground font-mono text-sm space-y-1">
                                 <div className="flex items-center gap-2">
-                                  <span className="text-gray-400">=</span>
+                                  <span className="text-muted-foreground">=</span>
                                   <span>
                                     {Number(
                                       transactionDetails.order.amount
@@ -4164,7 +4189,7 @@ function AdminDashboardContent() {
                                     })}{" "}
                                     USDT
                                   </span>
-                                  <span className="text-gray-500">×</span>
+                                  <span className="text-muted-foreground">×</span>
                                   <span>
                                     {formatCurrency(
                                       Number(transactionDetails.order.total) /
@@ -4172,9 +4197,9 @@ function AdminDashboardContent() {
                                     )}
                                   </span>
                                 </div>
-                                <div className="flex items-center gap-2 pt-2 border-t border-gray-700">
-                                  <span className="text-gray-400">=</span>
-                                  <span className="text-green-400 font-bold">
+                                <div className="flex items-center gap-2 pt-2 border-t border-border">
+                                  <span className="text-muted-foreground">=</span>
+                                  <span className="text-primary font-bold">
                                     {formatCurrency(
                                       Number(transactionDetails.order.total)
                                     )}
@@ -4182,7 +4207,7 @@ function AdminDashboardContent() {
                                 </div>
                               </div>
                             </div>
-                            <div className="text-xs text-gray-500 italic">
+                            <div className="text-xs text-muted-foreground italic">
                               * A taxa de câmbio já inclui todas as taxas e
                               comissões aplicadas
                             </div>
@@ -4194,7 +4219,7 @@ function AdminDashboardContent() {
 
                 {/* Deposit Details */}
                 {transactionDetails.deposit && (
-                  <div className="border-t border-gray-800 pt-4">
+                  <div className="border-t border-border pt-4">
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="text-lg font-semibold">
                         Detalhes do Depósito
@@ -4205,7 +4230,7 @@ function AdminDashboardContent() {
                           disabled={markingCompleted}
                           variant="outline"
                           size="sm"
-                          className="border-green-600 text-green-400 hover:bg-green-900 hover:text-green-300"
+                          className="border-primary text-primary hover:bg-primary/15 hover:text-primary"
                         >
                           {markingCompleted ? (
                             <>
@@ -4223,14 +4248,14 @@ function AdminDashboardContent() {
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-sm text-gray-400">Status</p>
-                        <p className="text-white">
+                        <p className="text-sm text-muted-foreground">Status</p>
+                        <p className="text-foreground">
                           {transactionDetails.deposit.status}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-400">Valor</p>
-                        <p className="text-white">
+                        <p className="text-sm text-muted-foreground">Valor</p>
+                        <p className="text-foreground">
                           {formatCurrency(
                             Number(transactionDetails.deposit.amount)
                           )}
@@ -4238,16 +4263,16 @@ function AdminDashboardContent() {
                       </div>
                       {transactionDetails.deposit.externalId && (
                         <div>
-                          <p className="text-sm text-gray-400">ID Externo</p>
-                          <p className="text-white font-mono text-sm">
+                          <p className="text-sm text-muted-foreground">ID Externo</p>
+                          <p className="text-foreground font-mono text-sm">
                             {transactionDetails.deposit.externalId}
                           </p>
                         </div>
                       )}
                       {transactionDetails.deposit.confirmedAt && (
                         <div>
-                          <p className="text-sm text-gray-400">Confirmado em</p>
-                          <p className="text-white">
+                          <p className="text-sm text-muted-foreground">Confirmado em</p>
+                          <p className="text-foreground">
                             {new Date(
                               transactionDetails.deposit.confirmedAt
                             ).toLocaleString("pt-BR")}
@@ -4260,7 +4285,7 @@ function AdminDashboardContent() {
 
                 {/* Withdrawal Details */}
                 {transactionDetails.withdrawal && (
-                  <div className="border-t border-gray-800 pt-4">
+                  <div className="border-t border-border pt-4">
                     <div className="flex items-center justify-between mb-3">
                       <h3 className="text-lg font-semibold">
                         Detalhes do Saque
@@ -4276,7 +4301,7 @@ function AdminDashboardContent() {
                               disabled={syncingStatus}
                               variant="outline"
                               size="sm"
-                              className="border-blue-600 text-blue-400 hover:bg-blue-900 hover:text-blue-300"
+                              className="border-primary text-primary hover:bg-primary/15 hover:text-primary"
                             >
                               {syncingStatus ? (
                                 <>
@@ -4295,7 +4320,7 @@ function AdminDashboardContent() {
                               disabled={markingCompleted}
                               variant="outline"
                               size="sm"
-                              className="border-green-600 text-green-400 hover:bg-green-900 hover:text-green-300"
+                              className="border-primary text-primary hover:bg-primary/15 hover:text-primary"
                             >
                               {markingCompleted ? (
                                 <>
@@ -4315,14 +4340,14 @@ function AdminDashboardContent() {
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-sm text-gray-400">Status</p>
-                        <p className="text-white">
+                        <p className="text-sm text-muted-foreground">Status</p>
+                        <p className="text-foreground">
                           {transactionDetails.withdrawal.status}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-400">Valor</p>
-                        <p className="text-white">
+                        <p className="text-sm text-muted-foreground">Valor</p>
+                        <p className="text-foreground">
                           {formatCurrency(
                             Number(transactionDetails.withdrawal.amount)
                           )}
@@ -4330,34 +4355,34 @@ function AdminDashboardContent() {
                       </div>
                       {transactionDetails.withdrawal.hash && (
                         <div>
-                          <p className="text-sm text-gray-400">Hash</p>
-                          <p className="text-white font-mono text-sm break-all">
+                          <p className="text-sm text-muted-foreground">Hash</p>
+                          <p className="text-foreground font-mono text-sm break-all">
                             {transactionDetails.withdrawal.hash}
                           </p>
                         </div>
                       )}
                       {transactionDetails.withdrawal.protocol && (
                         <div>
-                          <p className="text-sm text-gray-400">Protocolo</p>
-                          <p className="text-white">
+                          <p className="text-sm text-muted-foreground">Protocolo</p>
+                          <p className="text-foreground">
                             {transactionDetails.withdrawal.protocol}
                           </p>
                         </div>
                       )}
                       {transactionDetails.withdrawal.walletAddress && (
                         <div>
-                          <p className="text-sm text-gray-400">
+                          <p className="text-sm text-muted-foreground">
                             Endereço da Carteira
                           </p>
-                          <p className="text-white font-mono text-sm break-all">
+                          <p className="text-foreground font-mono text-sm break-all">
                             {transactionDetails.withdrawal.walletAddress}
                           </p>
                         </div>
                       )}
                       {transactionDetails.withdrawal.network && (
                         <div>
-                          <p className="text-sm text-gray-400">Rede</p>
-                          <p className="text-white">
+                          <p className="text-sm text-muted-foreground">Rede</p>
+                          <p className="text-foreground">
                             {transactionDetails.withdrawal.network}
                           </p>
                         </div>
@@ -4368,19 +4393,19 @@ function AdminDashboardContent() {
 
                 {/* Metadata */}
                 {transactionDetails.metadata && (
-                  <div className="border-t border-gray-800 pt-4">
+                  <div className="border-t border-border pt-4">
                     <h3 className="text-lg font-semibold mb-3">Metadados</h3>
-                    <pre className="bg-gray-800 p-4 rounded text-xs overflow-x-auto">
+                    <pre className="bg-muted p-4 rounded text-xs overflow-x-auto">
                       {JSON.stringify(transactionDetails.metadata, null, 2)}
                     </pre>
                   </div>
                 )}
 
                 {/* Webhook logs link */}
-                <div className="border-t border-gray-800 pt-4 flex flex-wrap items-center gap-2">
+                <div className="border-t border-border pt-4 flex flex-wrap items-center gap-2">
                   <Link
                     href="/admin/webhook-logs"
-                    className="text-sm text-blue-400 hover:text-blue-300 hover:underline"
+                    className="text-sm text-primary hover:text-primary hover:underline"
                   >
                     Ver logs de webhook
                   </Link>
@@ -4389,29 +4414,29 @@ function AdminDashboardContent() {
                       (transactionDetails.metadata as Record<string, unknown>)
                         ?.orderId
                   ) && (
-                    <span className="text-gray-500 text-xs">
+                    <span className="text-muted-foreground text-xs">
                       (ID externo / pedido para buscar nos logs)
                     </span>
                   )}
                 </div>
 
                 {/* Full log - complete transaction object */}
-                <div className="border-t border-gray-800 pt-4">
+                <div className="border-t border-border pt-4">
                   <details className="group">
-                    <summary className="cursor-pointer list-none flex items-center gap-2 text-lg font-semibold mb-3 text-gray-300 hover:text-white">
+                    <summary className="cursor-pointer list-none flex items-center gap-2 text-lg font-semibold mb-3 text-muted-foreground hover:text-foreground">
                       <span className="group-open:rotate-90 transition-transform inline-block">
                         ▶
                       </span>
                       Log completo
                     </summary>
-                    <pre className="bg-gray-800 p-4 rounded text-xs overflow-x-auto max-h-80 overflow-y-auto border border-gray-700">
+                    <pre className="bg-muted p-4 rounded text-xs overflow-x-auto max-h-80 overflow-y-auto border border-border">
                       {JSON.stringify(transactionDetails, null, 2)}
                     </pre>
                   </details>
                 </div>
               </div>
             ) : (
-              <div className="text-center py-8 text-gray-400">
+              <div className="text-center py-8 text-muted-foreground">
                 Nenhum detalhe disponível
               </div>
             )}
@@ -4419,20 +4444,20 @@ function AdminDashboardContent() {
         </Dialog>
 
         {/* Recent Activity Summary */}
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-card border-border">
           <CardHeader>
-            <CardTitle className="text-white">System Status</CardTitle>
+            <CardTitle className="text-foreground">System Status</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="text-center">
                 <div className="flex items-center justify-center mb-2">
-                  <CheckCircle className="h-6 w-6 text-green-400 mr-2" />
-                  <div className="text-2xl font-bold text-green-400">
+                  <CheckCircle className="h-6 w-6 text-primary mr-2" />
+                  <div className="text-2xl font-bold text-primary">
                     {stats.approvedUsers}
                   </div>
                 </div>
-                <div className="text-sm text-gray-300">Approved Users</div>
+                <div className="text-sm text-muted-foreground">Approved Users</div>
               </div>
               <div className="text-center">
                 <div className="flex items-center justify-center mb-2">
@@ -4441,7 +4466,7 @@ function AdminDashboardContent() {
                     {stats.pendingApprovals}
                   </div>
                 </div>
-                <div className="text-sm text-gray-300">Pending Approvals</div>
+                <div className="text-sm text-muted-foreground">Pending Approvals</div>
               </div>
               <div className="text-center">
                 <div className="flex items-center justify-center mb-2">
@@ -4450,7 +4475,7 @@ function AdminDashboardContent() {
                     {stats.pendingKYC}
                   </div>
                 </div>
-                <div className="text-sm text-gray-300">Pending KYC</div>
+                <div className="text-sm text-muted-foreground">Pending KYC</div>
               </div>
             </div>
           </CardContent>
@@ -4459,19 +4484,19 @@ function AdminDashboardContent() {
 
       {/* Balance Adjustment Dialog */}
       <Dialog open={showBalanceDialog} onOpenChange={setShowBalanceDialog}>
-        <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-md">
+        <DialogContent className="bg-card border-border text-foreground max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-white flex items-center">
+            <DialogTitle className="text-foreground flex items-center">
               <Wallet className="h-5 w-5 mr-2" />
               Ajustar Saldo do Usuário
             </DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogDescription className="text-muted-foreground">
               Creditar ou deduzir saldo de um usuário
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-4">
             <div>
-              <Label htmlFor="user-select" className="text-gray-300">
+              <Label htmlFor="user-select" className="text-muted-foreground">
                 Usuário
               </Label>
               <Select
@@ -4481,16 +4506,16 @@ function AdminDashboardContent() {
               >
                 <SelectTrigger
                   id="user-select"
-                  className="bg-gray-800 border-gray-700 text-white"
+                  className="bg-muted border-border text-foreground"
                 >
                   <SelectValue placeholder="Selecione um usuário" />
                 </SelectTrigger>
-                <SelectContent className="bg-gray-800 border-gray-700">
+                <SelectContent className="bg-muted border-border">
                   {usersList.map((user) => (
                     <SelectItem
                       key={user.id}
                       value={user.id}
-                      className="text-white hover:bg-gray-700"
+                      className="text-foreground hover:bg-muted"
                     >
                       {user.name} ({user.email})
                     </SelectItem>
@@ -4500,7 +4525,7 @@ function AdminDashboardContent() {
             </div>
 
             <div>
-              <Label htmlFor="currency-select" className="text-gray-300">
+              <Label htmlFor="currency-select" className="text-muted-foreground">
                 Moeda
               </Label>
               <Select
@@ -4511,20 +4536,20 @@ function AdminDashboardContent() {
               >
                 <SelectTrigger
                   id="currency-select"
-                  className="bg-gray-800 border-gray-700 text-white"
+                  className="bg-muted border-border text-foreground"
                 >
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-gray-800 border-gray-700">
+                <SelectContent className="bg-muted border-border">
                   <SelectItem
                     value="USDT"
-                    className="text-white hover:bg-gray-700"
+                    className="text-foreground hover:bg-muted"
                   >
                     USDT
                   </SelectItem>
                   <SelectItem
                     value="BRL"
-                    className="text-white hover:bg-gray-700"
+                    className="text-foreground hover:bg-muted"
                   >
                     BRL
                   </SelectItem>
@@ -4533,7 +4558,7 @@ function AdminDashboardContent() {
             </div>
 
             <div>
-              <Label htmlFor="operation-select" className="text-gray-300">
+              <Label htmlFor="operation-select" className="text-muted-foreground">
                 Operação
               </Label>
               <Select
@@ -4544,23 +4569,23 @@ function AdminDashboardContent() {
               >
                 <SelectTrigger
                   id="operation-select"
-                  className="bg-gray-800 border-gray-700 text-white"
+                  className="bg-muted border-border text-foreground"
                 >
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-gray-800 border-gray-700">
+                <SelectContent className="bg-muted border-border">
                   <SelectItem
                     value="CREDIT"
-                    className="text-white hover:bg-gray-700"
+                    className="text-foreground hover:bg-muted"
                   >
                     <div className="flex items-center">
-                      <Plus className="h-4 w-4 mr-2 text-green-400" />
+                      <Plus className="h-4 w-4 mr-2 text-primary" />
                       Creditar
                     </div>
                   </SelectItem>
                   <SelectItem
                     value="DEDUCT"
-                    className="text-white hover:bg-gray-700"
+                    className="text-foreground hover:bg-muted"
                   >
                     <div className="flex items-center">
                       <Minus className="h-4 w-4 mr-2 text-red-400" />
@@ -4572,7 +4597,7 @@ function AdminDashboardContent() {
             </div>
 
             <div>
-              <Label htmlFor="amount-input" className="text-gray-300">
+              <Label htmlFor="amount-input" className="text-muted-foreground">
                 Valor
               </Label>
               <Input
@@ -4583,12 +4608,12 @@ function AdminDashboardContent() {
                 value={balanceAmount}
                 onChange={(e) => setBalanceAmount(e.target.value)}
                 placeholder="0.00"
-                className="bg-gray-800 border-gray-700 text-white"
+                className="bg-muted border-border text-foreground"
               />
             </div>
 
             <div>
-              <Label htmlFor="reason-textarea" className="text-gray-300">
+              <Label htmlFor="reason-textarea" className="text-muted-foreground">
                 Motivo (opcional)
               </Label>
               <Textarea
@@ -4596,7 +4621,7 @@ function AdminDashboardContent() {
                 value={balanceReason}
                 onChange={(e) => setBalanceReason(e.target.value)}
                 placeholder="Descreva o motivo do ajuste..."
-                className="bg-gray-800 border-gray-700 text-white min-h-[80px]"
+                className="bg-muted border-border text-foreground min-h-[80px]"
                 rows={3}
               />
             </div>
@@ -4610,7 +4635,7 @@ function AdminDashboardContent() {
                   setBalanceAmount("");
                   setBalanceReason("");
                 }}
-                className="border-gray-700 text-gray-300 hover:bg-gray-800"
+                className="border-border text-muted-foreground hover:bg-muted"
               >
                 Cancelar
               </Button>
@@ -4620,9 +4645,9 @@ function AdminDashboardContent() {
                 disabled={processingBalance || !balanceUserId || !balanceAmount}
                 className={`${
                   balanceOperation === "CREDIT"
-                    ? "bg-green-600 hover:bg-green-700"
-                    : "bg-red-600 hover:bg-red-700"
-                } text-white`}
+                    ? "bg-primary hover:bg-primary/90"
+                    : "bg-destructive hover:bg-destructive/90"
+                } text-foreground`}
               >
                 {processingBalance
                   ? "Processando..."
@@ -4645,14 +4670,14 @@ function AdminDashboardContent() {
           }
         }}
       >
-        <DialogContent className="bg-gray-900 border-gray-800">
+        <DialogContent className="bg-card border-border">
           <DialogHeader>
-            <DialogTitle className="text-white">
+            <DialogTitle className="text-foreground">
               {balanceConfirmStep === 1
                 ? "Confirmar Ajuste de Saldo"
                 : "Confirmação Final"}
             </DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogDescription className="text-muted-foreground">
               {balanceConfirmStep === 1 ? (
                 <>
                   Você está prestes a{" "}
@@ -4683,7 +4708,7 @@ function AdminDashboardContent() {
                   Você confirma que deseja{" "}
                   {balanceOperation === "CREDIT" ? "creditar" : "deduzir"}{" "}
                   {balanceAmount} {balanceCurrency} do usuário{" "}
-                  <strong className="text-white">
+                  <strong className="text-foreground">
                     {usersList.find((u) => u.id === balanceUserId)?.name ||
                       balanceUserId}
                   </strong>
@@ -4705,7 +4730,7 @@ function AdminDashboardContent() {
                 setShowBalanceConfirmDialog(false);
                 setBalanceConfirmStep(1);
               }}
-              className="border-gray-700 text-gray-300 hover:bg-gray-800"
+              className="border-border text-muted-foreground hover:bg-muted"
             >
               Cancelar
             </Button>
@@ -4714,7 +4739,7 @@ function AdminDashboardContent() {
               className={
                 balanceConfirmStep === 1
                   ? "bg-yellow-600 hover:bg-yellow-700"
-                  : "bg-red-600 hover:bg-red-700"
+                  : "bg-destructive hover:bg-destructive/90"
               }
             >
               {balanceConfirmStep === 1 ? "Sim, Continuar" : "Confirmar Ajuste"}

@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import AdminShell from "@/components/admin/AdminShell";
+import { AdminSettingsProvider } from "@/contexts/AdminSettingsContext";
 
 export default function AdminLayout({
   children,
@@ -15,5 +16,9 @@ export default function AdminLayout({
     return <>{children}</>;
   }
 
-  return <AdminShell>{children}</AdminShell>;
+  return (
+    <AdminSettingsProvider>
+      <AdminShell>{children}</AdminShell>
+    </AdminSettingsProvider>
+  );
 }

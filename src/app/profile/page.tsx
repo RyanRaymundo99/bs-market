@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import NavbarNew from "@/components/ui/navbar-new";
+import { GlobalKYCBanner } from "@/components/GlobalKYCBanner";
 import Breadcrumb from "@/components/ui/breadcrumb";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getKycImageSrc } from "@/lib/kyc-image-src";
@@ -63,11 +64,16 @@ export default function ProfilePage() {
     phone: "",
     cpf: "",
   });
-  const [selectedFile, setSelectedFile] = useState<{
-    type: "front" | "back" | "selfie";
-    file: File;
-  } | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [pendingFiles, setPendingFiles] = useState<{
+    front?: File;
+    back?: File;
+    selfie?: File;
+  }>({});
+  const [pendingPreviews, setPendingPreviews] = useState<{
+    front?: string;
+    back?: string;
+    selfie?: string;
+  }>({});
 
   const { toast } = useToast();
   const { t, language } = useLanguage();
@@ -134,6 +140,18 @@ export default function ProfilePage() {
       }
     }
   }, [userProfile, editing]);
+
+  const pendingPreviewsRef = useRef(pendingPreviews);
+  useEffect(() => {
+    pendingPreviewsRef.current = pendingPreviews;
+  }, [pendingPreviews]);
+  useEffect(() => {
+    return () => {
+      (Object.values(pendingPreviewsRef.current) as string[]).forEach(
+        (url) => url && URL.revokeObjectURL(url)
+      );
+    };
+  }, []);
 
   const fetchUserProfile = async () => {
     try {
@@ -292,41 +310,76 @@ export default function ProfilePage() {
   };
 
   const handleFileSelect = (type: "front" | "back" | "selfie", file: File) => {
-    setSelectedFile({ type, file });
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
+    setPendingFiles((prev) => ({ ...prev, [type]: file }));
+    setPendingPreviews((prev) => {
+      const next = { ...prev };
+      if (next[type]) URL.revokeObjectURL(next[type]!);
+      next[type] = URL.createObjectURL(file);
+      return next;
+    });
   };
 
-  const handleFileUpload = async () => {
-    if (!selectedFile) return;
+  const clearPending = (type?: "front" | "back" | "selfie") => {
+    if (type) {
+      setPendingPreviews((prev) => {
+        if (prev[type]) URL.revokeObjectURL(prev[type]!);
+        const next = { ...prev };
+        delete next[type];
+        return next;
+      });
+      setPendingFiles((prev) => {
+        const next = { ...prev };
+        delete next[type];
+        return next;
+      });
+    } else {
+      setPendingPreviews((prev) => {
+        (Object.keys(prev) as ("front" | "back" | "selfie")[]).forEach(
+          (k) => prev[k] && URL.revokeObjectURL(prev[k]!)
+        );
+        return {};
+      });
+      setPendingFiles({});
+    }
+  };
+
+  const handleUploadAll = async () => {
+    const { front, back, selfie } = pendingFiles;
+    if (!front && !back && !selfie) return;
 
     try {
       setUploading(true);
       const formData = new FormData();
-      formData.append("file", selectedFile.file);
-      formData.append("type", selectedFile.type);
+      if (front) formData.append("documentFront", front);
+      if (back) formData.append("documentBack", back);
+      if (selfie) formData.append("documentSelfie", selfie);
 
-      const response = await fetch("/api/user/upload-kyc-document", {
+      const response = await fetch("/api/user/upload-kyc-documents", {
         method: "POST",
         body: formData,
       });
 
+      const data = await response.json().catch(() => ({}));
       if (response.ok) {
         toast({
           title: t("documentUploaded"),
-          description: t("documentUploadedSuccess"),
+          description:
+            language === "pt"
+              ? "Seus documentos foram enviados com sucesso."
+              : "Your documents have been uploaded successfully.",
         });
-        setSelectedFile(null);
-        setPreviewUrl(null);
+        clearPending();
         fetchKycDocuments();
+        fetchUserProfile();
       } else {
-        throw new Error("Failed to upload document");
+        throw new Error(data?.error || "Failed to upload documents");
       }
-    } catch {
+    } catch (e) {
       toast({
         variant: "destructive",
         title: t("uploadFailed"),
-        description: t("failedToUpload"),
+        description:
+          e instanceof Error ? e.message : t("failedToUpload"),
       });
     } finally {
       setUploading(false);
@@ -392,6 +445,7 @@ export default function ProfilePage() {
     return (
       <div className="min-h-screen bg-background text-foreground">
         <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
+        <GlobalKYCBanner />
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
@@ -407,6 +461,7 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
+      <GlobalKYCBanner />
       <div className="container mx-auto px-4 py-6">
         <Breadcrumb
           items={[
@@ -730,7 +785,48 @@ export default function ProfilePage() {
                   {t("documentFrontTip")}
                 </p>
                 <div className="relative border-2 border-dashed border-border rounded-xl p-4 text-center min-h-[140px] flex flex-col justify-center">
-                  {kycDocuments?.documentFront ? (
+                  {pendingFiles.front ? (
+                    <div className="space-y-2">
+                      <img
+                        src={pendingPreviews.front}
+                        alt={t("documentFront")}
+                        className="w-full h-28 object-cover rounded-lg"
+                      />
+                      <p className="text-xs text-muted-foreground truncate">
+                        {pendingFiles.front.name}
+                      </p>
+                      <div className="flex gap-1">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleFileSelect("front", file);
+                          }}
+                          className="hidden"
+                          id="front-upload"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            document.getElementById("front-upload")?.click()
+                          }
+                          className="flex-1 text-xs"
+                        >
+                          {t("replacePhoto")}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => clearPending("front")}
+                          className="text-xs"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  ) : kycDocuments?.documentFront ? (
                     isApproved ? (
                       <div className="space-y-2 py-4">
                         <CheckCircle className="w-12 h-12 mx-auto text-primary" />
@@ -820,7 +916,48 @@ export default function ProfilePage() {
                   {t("documentBackTip")}
                 </p>
                 <div className="relative border-2 border-dashed border-border rounded-xl p-4 text-center min-h-[140px] flex flex-col justify-center">
-                  {kycDocuments?.documentBack ? (
+                  {pendingFiles.back ? (
+                    <div className="space-y-2">
+                      <img
+                        src={pendingPreviews.back}
+                        alt={t("documentBack")}
+                        className="w-full h-28 object-cover rounded-lg"
+                      />
+                      <p className="text-xs text-muted-foreground truncate">
+                        {pendingFiles.back.name}
+                      </p>
+                      <div className="flex gap-1">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleFileSelect("back", file);
+                          }}
+                          className="hidden"
+                          id="back-upload"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            document.getElementById("back-upload")?.click()
+                          }
+                          className="flex-1 text-xs"
+                        >
+                          {t("replacePhoto")}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => clearPending("back")}
+                          className="text-xs"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  ) : kycDocuments?.documentBack ? (
                     isApproved ? (
                       <div className="space-y-2 py-4">
                         <CheckCircle className="w-12 h-12 mx-auto text-primary" />
@@ -910,7 +1047,48 @@ export default function ProfilePage() {
                   {t("selfieTip")}
                 </p>
                 <div className="relative border-2 border-dashed border-border rounded-xl p-4 text-center min-h-[140px] flex flex-col justify-center">
-                  {kycDocuments?.documentSelfie ? (
+                  {pendingFiles.selfie ? (
+                    <div className="space-y-2">
+                      <img
+                        src={pendingPreviews.selfie}
+                        alt={t("selfieWithDocument")}
+                        className="w-full h-28 object-cover rounded-lg"
+                      />
+                      <p className="text-xs text-muted-foreground truncate">
+                        {pendingFiles.selfie.name}
+                      </p>
+                      <div className="flex gap-1">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleFileSelect("selfie", file);
+                          }}
+                          className="hidden"
+                          id="selfie-upload"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            document.getElementById("selfie-upload")?.click()
+                          }
+                          className="flex-1 text-xs"
+                        >
+                          {t("replacePhoto")}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => clearPending("selfie")}
+                          className="text-xs"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  ) : kycDocuments?.documentSelfie ? (
                     isApproved ? (
                       <div className="space-y-2 py-4">
                         <CheckCircle className="w-12 h-12 mx-auto text-primary" />
@@ -984,40 +1162,21 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* Preview & confirm upload */}
-            {selectedFile && !isApproved && (
+            {/* Send all documents at once */}
+            {!isApproved && (pendingFiles.front || pendingFiles.back || pendingFiles.selfie) && (
               <div className="mt-6 p-5 rounded-xl border border-border bg-muted/30">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-medium text-foreground">
-                    {t("preview")} —{" "}
-                    {selectedFile.type === "front"
-                      ? t("documentFront")
-                      : selectedFile.type === "back"
-                      ? t("documentBack")
-                      : t("selfieWithDocument")}
-                  </h3>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedFile(null);
-                      setPreviewUrl(null);
-                    }}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-                {previewUrl && (
-                  <img
-                    src={previewUrl}
-                    alt={t("preview")}
-                    className="w-full max-w-sm h-44 object-contain rounded-lg mb-4 bg-background/50"
-                  />
-                )}
+                <p className="text-sm text-muted-foreground mb-3">
+                  {[pendingFiles.front, pendingFiles.back, pendingFiles.selfie].filter(Boolean).length}{" "}
+                  {t("documentsSelected")}
+                </p>
                 <Button
-                  onClick={handleFileUpload}
-                  disabled={uploading}
+                  onClick={handleUploadAll}
+                  disabled={
+                    uploading ||
+                    (hasAllDocs
+                      ? false
+                      : !pendingFiles.front || !pendingFiles.back || !pendingFiles.selfie)
+                  }
                   className="w-full bg-primary text-primary-foreground hover:opacity-90"
                 >
                   {uploading ? (
@@ -1028,10 +1187,16 @@ export default function ProfilePage() {
                   ) : (
                     <>
                       <Upload className="w-4 h-4 mr-2" />
-                      {t("uploadDocument")}
+                      {t("uploadAllDocuments")}
                     </>
                   )}
                 </Button>
+                {!hasAllDocs &&
+                  (!pendingFiles.front || !pendingFiles.back || !pendingFiles.selfie) && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {t("allThreeRequired")}
+                  </p>
+                )}
               </div>
             )}
 

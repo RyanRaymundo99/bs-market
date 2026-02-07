@@ -1038,6 +1038,27 @@ export async function POST(request: NextRequest) {
           const fee = (totalAmount * 0.03) / 1.03; // 3% fee calculation
           const baseAmount = totalAmount - fee;
 
+          // In-app notification so user sees "Receipt ready" in the notification bell
+          try {
+            await prisma.notification.create({
+              data: {
+                userId: order.userId,
+                type: "receipt_ready",
+                title:
+                  "Pagamento confirmado! Recibo disponível.",
+                message: `Seu depósito de R$ ${totalAmount.toFixed(2)} foi confirmado. Você recebeu ${usdtAmount.toFixed(2)} USDT. Verifique o histórico na página Depositar.`,
+                metadata: {
+                  orderId: order.id,
+                  transactionId: transaction?.id,
+                  amountBRL: totalAmount,
+                  amountUSDT: usdtAmount,
+                },
+              },
+            });
+          } catch (notificationErr) {
+            console.error("Failed to create receipt notification:", notificationErr);
+          }
+
           sendPurchaseReceipt({
             userName: purchaseUser.name,
             userEmail: purchaseUser.email,

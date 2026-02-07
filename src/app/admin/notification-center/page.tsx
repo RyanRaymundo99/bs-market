@@ -448,19 +448,19 @@ export default function NotificationCenterPage() {
     switch (status) {
       case "APPROVED":
         return (
-          <Badge className="bg-green-600 text-white text-xs">Aprovado</Badge>
+          <Badge className="bg-primary text-primary-foreground text-xs">Aprovado</Badge>
         );
       case "PENDING":
         return (
-          <Badge className="bg-yellow-600 text-white text-xs">Pendente</Badge>
+          <Badge className="bg-yellow-600 text-foreground text-xs">Pendente</Badge>
         );
       case "REJECTED":
         return (
-          <Badge className="bg-red-600 text-white text-xs">Rejeitado</Badge>
+          <Badge className="bg-red-600 text-foreground text-xs">Rejeitado</Badge>
         );
       default:
         return (
-          <Badge className="bg-gray-600 text-white text-xs">{status}</Badge>
+          <Badge className="bg-muted text-muted-foreground text-xs">{status}</Badge>
         );
     }
   };
@@ -486,7 +486,7 @@ export default function NotificationCenterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black p-4 lg:p-6 text-white">
+    <div className="min-h-screen p-4 lg:p-6">
       <div className="max-w-[1920px] mx-auto space-y-6">
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -495,14 +495,14 @@ export default function NotificationCenterPage() {
               <Mail className="w-8 h-8" />
               Centro de Notificações
             </h1>
-            <p className="text-gray-400">
+            <p className="text-muted-foreground">
               Envie notificações e emails para usuários
             </p>
           </div>
           <Button
             onClick={fetchUsers}
             variant="outline"
-            className="border-gray-700 hover:bg-gray-800"
+            className="border-border hover:bg-muted"
           >
             <RefreshCw className="w-4 h-4 mr-2" />
             Atualizar
@@ -511,44 +511,44 @@ export default function NotificationCenterPage() {
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="bg-gray-900 border-gray-800">
+          <Card className="bg-card border-border">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-400">Total Usuários</p>
-                  <p className="text-2xl font-bold text-white">{stats.total}</p>
+                  <p className="text-xs text-muted-foreground">Total Usuários</p>
+                  <p className="text-2xl font-bold text-foreground">{stats.total}</p>
                 </div>
-                <User className="w-8 h-8 text-blue-400 opacity-50" />
+                <User className="w-8 h-8 text-primary opacity-50" />
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-gray-900 border-gray-800">
+          <Card className="bg-card border-border">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-400">Com Não Lidas</p>
+                  <p className="text-xs text-muted-foreground">Com Não Lidas</p>
                   <p className="text-2xl font-bold text-yellow-400">{stats.withUnread}</p>
                 </div>
                 <Bell className="w-8 h-8 text-yellow-400 opacity-50" />
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-gray-900 border-gray-800">
+          <Card className="bg-card border-border">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-400">Total Notificações</p>
-                  <p className="text-2xl font-bold text-white">{stats.totalNotifications}</p>
+                  <p className="text-xs text-muted-foreground">Total Notificações</p>
+                  <p className="text-2xl font-bold text-foreground">{stats.totalNotifications}</p>
                 </div>
-                <Mail className="w-8 h-8 text-green-400 opacity-50" />
+                <Mail className="w-8 h-8 text-primary opacity-50" />
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-gray-900 border-gray-800">
+          <Card className="bg-card border-border">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-400">Não Lidas</p>
+                  <p className="text-xs text-muted-foreground">Não Lidas</p>
                   <p className="text-2xl font-bold text-red-400">{stats.totalUnread}</p>
                 </div>
                 <AlertCircle className="w-8 h-8 text-red-400 opacity-50" />
@@ -558,23 +558,23 @@ export default function NotificationCenterPage() {
         </div>
 
         {/* Email alerts – notify admin on high-value and key events */}
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-card border-border">
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-foreground flex items-center gap-2">
               <Mail className="w-5 h-5" />
               Alertas por email
             </CardTitle>
-            <p className="text-gray-400 text-sm">
+            <p className="text-muted-foreground text-sm">
               Receba um email nos endereços abaixo quando esses eventos acontecerem.
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
             {loadingAlertSettings ? (
-              <p className="text-gray-400">Carregando...</p>
+              <p className="text-muted-foreground">Carregando...</p>
             ) : (
               <>
                 <div className="space-y-2">
-                  <Label className="text-gray-300">Emails para notificar</Label>
+                  <Label className="text-muted-foreground">Emails para notificar</Label>
                   <div className="space-y-2">
                     {alertSettings.emails.map((email, i) => (
                       <div key={i} className="flex gap-2 items-center">
@@ -587,13 +587,13 @@ export default function NotificationCenterPage() {
                             setAlertSettings((s) => ({ ...s, emails: next }));
                           }}
                           placeholder="email@exemplo.com"
-                          className="bg-gray-800 border-gray-700 text-white flex-1 max-w-md"
+                          className="bg-muted border-border text-foreground flex-1 max-w-md"
                         />
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="text-gray-400 hover:text-red-400 shrink-0"
+                          className="text-muted-foreground hover:text-destructive shrink-0"
                           onClick={() => {
                             const next = alertSettings.emails.filter((_, j) => j !== i);
                             setAlertSettings((s) => ({
@@ -612,7 +612,7 @@ export default function NotificationCenterPage() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="border-gray-600 text-gray-300 hover:bg-gray-800"
+                    className="border-border text-muted-foreground hover:bg-muted"
                     onClick={() =>
                       setAlertSettings((s) => ({ ...s, emails: [...s.emails, ""] }))
                     }
@@ -622,7 +622,7 @@ export default function NotificationCenterPage() {
                   </Button>
                 </div>
                 <div className="flex flex-col gap-3">
-                  <Label className="text-gray-300">Notificar quando:</Label>
+                  <Label className="text-muted-foreground">Notificar quando:</Label>
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="deposit-over-500"
@@ -633,11 +633,11 @@ export default function NotificationCenterPage() {
                           notifyDepositOver500: checked === true,
                         }))
                       }
-                      className="border-gray-600 data-[state=checked]:bg-blue-600"
+                      className="border-border data-[state=checked]:bg-primary"
                     />
                     <label
                       htmlFor="deposit-over-500"
-                      className="text-gray-300 cursor-pointer"
+                      className="text-muted-foreground cursor-pointer"
                     >
                       Tentativa de depósito acima de 500 USDT
                     </label>
@@ -652,11 +652,11 @@ export default function NotificationCenterPage() {
                           notifyWithdrawOver500: checked === true,
                         }))
                       }
-                      className="border-gray-600 data-[state=checked]:bg-blue-600"
+                      className="border-border data-[state=checked]:bg-primary"
                     />
                     <label
                       htmlFor="withdraw-over-500"
-                      className="text-gray-300 cursor-pointer"
+                      className="text-muted-foreground cursor-pointer"
                     >
                       Tentativa de saque acima de 500 USDT
                     </label>
@@ -671,11 +671,11 @@ export default function NotificationCenterPage() {
                           notifyNewAccount: checked === true,
                         }))
                       }
-                      className="border-gray-600 data-[state=checked]:bg-blue-600"
+                      className="border-border data-[state=checked]:bg-primary"
                     />
                     <label
                       htmlFor="new-account"
-                      className="text-gray-300 cursor-pointer"
+                      className="text-muted-foreground cursor-pointer"
                     >
                       Nova conta criada (aguardando aprovação)
                     </label>
@@ -690,11 +690,11 @@ export default function NotificationCenterPage() {
                           notifyKycReady: checked === true,
                         }))
                       }
-                      className="border-gray-600 data-[state=checked]:bg-blue-600"
+                      className="border-border data-[state=checked]:bg-primary"
                     />
                     <label
                       htmlFor="kyc-ready"
-                      className="text-gray-300 cursor-pointer"
+                      className="text-muted-foreground cursor-pointer"
                     >
                       KYC enviado (pronto para validação)
                     </label>
@@ -703,7 +703,7 @@ export default function NotificationCenterPage() {
                 <Button
                   onClick={saveAlertSettings}
                   disabled={savingAlertSettings}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
                   {savingAlertSettings ? (
                     <>Salvando...</>
@@ -720,24 +720,24 @@ export default function NotificationCenterPage() {
         </Card>
 
         {/* Filters */}
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-card border-border">
           <CardContent className="p-4">
             <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
               <div className="flex-1 w-full">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                   <Input
                     type="text"
                     placeholder="Buscar por nome, email ou CPF..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 bg-gray-800 border-gray-700 text-white placeholder:text-gray-400"
+                    className="pl-10 bg-muted border-border text-foreground placeholder:text-muted-foreground"
                   />
                 </div>
               </div>
               <div className="flex gap-2 flex-wrap">
                 <Select value={unreadFilter} onValueChange={setUnreadFilter}>
-                  <SelectTrigger className="w-[180px] bg-gray-800 border-gray-700 text-white">
+                  <SelectTrigger className="w-[180px] bg-muted border-border text-foreground">
                     <Filter className="w-4 h-4 mr-2" />
                     <SelectValue placeholder="Não Lidas" />
                   </SelectTrigger>
@@ -748,7 +748,7 @@ export default function NotificationCenterPage() {
                   </SelectContent>
                 </Select>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[180px] bg-gray-800 border-gray-700 text-white">
+                  <SelectTrigger className="w-[180px] bg-muted border-border text-foreground">
                     <Shield className="w-4 h-4 mr-2" />
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
@@ -759,12 +759,12 @@ export default function NotificationCenterPage() {
                     <SelectItem value="REJECTED">Rejeitado</SelectItem>
                   </SelectContent>
                 </Select>
-                <div className="flex gap-1 border border-gray-700 rounded-md p-1">
+                <div className="flex gap-1 border border-border rounded-md p-1">
                   <Button
                     variant={viewMode === "table" ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setViewMode("table")}
-                    className={viewMode === "table" ? "bg-gray-700" : ""}
+                    className={viewMode === "table" ? "bg-muted" : ""}
                   >
                     <List className="w-4 h-4" />
                   </Button>
@@ -772,7 +772,7 @@ export default function NotificationCenterPage() {
                     variant={viewMode === "grid" ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setViewMode("grid")}
-                    className={viewMode === "grid" ? "bg-gray-700" : ""}
+                    className={viewMode === "grid" ? "bg-muted" : ""}
                   >
                     <Grid3x3 className="w-4 h-4" />
                   </Button>
@@ -782,8 +782,8 @@ export default function NotificationCenterPage() {
 
             {/* Batch Actions */}
             {selectedUsers.size > 0 && (
-              <div className="mt-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg flex items-center justify-between">
-                <span className="text-sm text-blue-300">
+              <div className="mt-4 p-3 bg-primary/20 border border-primary/30 rounded-lg flex items-center justify-between">
+                <span className="text-sm text-primary">
                   {selectedUsers.size} usuário(s) selecionado(s)
                 </span>
                 <Button
@@ -793,7 +793,7 @@ export default function NotificationCenterPage() {
                     setNotificationMessage("");
                     setSendDialogOpen(true);
                   }}
-                  className="bg-green-600 hover:bg-green-700"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
                   <Send className="w-4 h-4 mr-2" />
                   Enviar para Selecionados
@@ -812,11 +812,11 @@ export default function NotificationCenterPage() {
             </div>
           </div>
         ) : filteredUsers.length === 0 ? (
-          <Card className="bg-gray-900 border-gray-800">
+          <Card className="bg-card border-border">
             <CardContent className="p-8 text-center">
-              <User className="w-16 h-16 text-gray-500 mx-auto mb-4" />
+              <User className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-xl font-semibold mb-2">Nenhum usuário encontrado</h3>
-              <p className="text-gray-400">
+              <p className="text-muted-foreground">
                 {searchTerm
                   ? "Tente uma busca diferente"
                   : "Não há usuários cadastrados"}
@@ -824,24 +824,24 @@ export default function NotificationCenterPage() {
             </CardContent>
           </Card>
         ) : viewMode === "table" ? (
-          <Card className="bg-gray-900 border-gray-800">
+          <Card className="bg-card border-border">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-gray-700 hover:bg-gray-800">
+                    <TableRow className="border-border hover:bg-muted">
                       <TableHead className="w-12">
                         <Checkbox
                           checked={selectedUsers.size === filteredUsers.length && filteredUsers.length > 0}
                           onCheckedChange={selectAllUsers}
-                          className="border-gray-600"
+                          className="border-border"
                         />
                       </TableHead>
-                      <TableHead className="text-gray-300">Usuário</TableHead>
-                      <TableHead className="text-gray-300">Status</TableHead>
-                      <TableHead className="text-gray-300">Notificações</TableHead>
-                      <TableHead className="text-gray-300">Não Lidas</TableHead>
-                      <TableHead className="text-gray-300 text-right">Ações</TableHead>
+                      <TableHead className="text-muted-foreground">Usuário</TableHead>
+                      <TableHead className="text-muted-foreground">Status</TableHead>
+                      <TableHead className="text-muted-foreground">Notificações</TableHead>
+                      <TableHead className="text-muted-foreground">Não Lidas</TableHead>
+                      <TableHead className="text-muted-foreground text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -853,24 +853,24 @@ export default function NotificationCenterPage() {
 
                       return (
                         <React.Fragment key={user.id}>
-                          <TableRow className={`border-gray-700 hover:bg-gray-800/50 ${hasUnread ? "bg-blue-900/10" : ""}`}>
+                          <TableRow className={`border-border hover:bg-muted/50 ${hasUnread ? "bg-primary/10" : ""}`}>
                             <TableCell>
                               <Checkbox
                                 checked={isSelected}
                                 onCheckedChange={() => toggleUserSelection(user.id)}
-                                className="border-gray-600"
+                                className="border-border"
                               />
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                                  <User className="w-4 h-4 text-white" />
+                                <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+                                  <User className="w-4 h-4 text-foreground" />
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                  <p className="font-medium text-white truncate">{user.name}</p>
-                                  <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                                  <p className="font-medium text-foreground truncate">{user.name}</p>
+                                  <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                                   {user.cpf && (
-                                    <p className="text-xs text-gray-500">CPF: {user.cpf}</p>
+                                    <p className="text-xs text-muted-foreground">CPF: {user.cpf}</p>
                                   )}
                                 </div>
                               </div>
@@ -883,17 +883,17 @@ export default function NotificationCenterPage() {
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                <Bell className="w-4 h-4 text-gray-400" />
-                                <span className="text-sm text-gray-300">{user.notificationCount}</span>
+                                <Bell className="w-4 h-4 text-muted-foreground" />
+                                <span className="text-sm text-muted-foreground">{user.notificationCount}</span>
                               </div>
                             </TableCell>
                             <TableCell>
                               {hasUnread ? (
-                                <Badge className="bg-blue-600 text-white">
+                                <Badge className="bg-primary text-primary-foreground">
                                   {user.unreadNotificationCount}
                                 </Badge>
                               ) : (
-                                <span className="text-sm text-gray-500">0</span>
+                                <span className="text-sm text-muted-foreground">0</span>
                               )}
                             </TableCell>
                             <TableCell className="text-right">
@@ -905,7 +905,7 @@ export default function NotificationCenterPage() {
                                     setSelectedUser(user);
                                     setSendDialogOpen(true);
                                   }}
-                                  className="border-gray-600 text-white hover:bg-gray-700 h-7 px-2"
+                                  className="border-border text-foreground hover:bg-muted h-7 px-2"
                                   title="Enviar Notificação"
                                 >
                                   <Send className="w-3 h-3" />
@@ -914,7 +914,7 @@ export default function NotificationCenterPage() {
                                   size="sm"
                                   variant="outline"
                                   onClick={() => toggleUserExpanded(user.id)}
-                                  className="border-gray-600 text-white hover:bg-gray-700 h-7 px-2"
+                                  className="border-border text-foreground hover:bg-muted h-7 px-2"
                                   title="Ver Notificações"
                                 >
                                   {isExpanded ? (
@@ -927,11 +927,11 @@ export default function NotificationCenterPage() {
                             </TableCell>
                           </TableRow>
                           {isExpanded && (
-                            <TableRow className="border-gray-700 bg-gray-800/30">
+                            <TableRow className="border-border bg-muted/30">
                               <TableCell colSpan={6} className="p-4">
                                 <div className="space-y-3">
                                   {notifications.length === 0 ? (
-                                    <p className="text-gray-400 text-sm text-center py-4">
+                                    <p className="text-muted-foreground text-sm text-center py-4">
                                       Nenhuma notificação encontrada
                                     </p>
                                   ) : (
@@ -940,26 +940,26 @@ export default function NotificationCenterPage() {
                                         key={notification.id}
                                         className={`p-3 rounded-lg border ${
                                           notification.read
-                                            ? "bg-gray-800/50 border-gray-700"
-                                            : "bg-blue-900/20 border-blue-500/30"
+                                            ? "bg-muted/50 border-border"
+                                            : "bg-primary/20 border-primary/30"
                                         }`}
                                       >
                                         <div className="flex items-start justify-between">
                                           <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 mb-1">
-                                              <h4 className="font-semibold text-white truncate">
+                                              <h4 className="font-semibold text-foreground truncate">
                                                 {notification.title}
                                               </h4>
                                               {!notification.read && (
-                                                <Badge className="bg-blue-600 text-white text-xs">
+                                                <Badge className="bg-primary text-primary-foreground text-xs">
                                                   Nova
                                                 </Badge>
                                               )}
                                             </div>
-                                            <p className="text-sm text-gray-300 mb-2 line-clamp-2">
+                                            <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
                                               {notification.message}
                                             </p>
-                                            <div className="flex items-center gap-4 text-xs text-gray-400 flex-wrap">
+                                            <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
                                               <span className="flex items-center gap-1">
                                                 <Clock className="w-3 h-3" />
                                                 {formatTimeAgo(notification.createdAt)}
@@ -969,7 +969,7 @@ export default function NotificationCenterPage() {
                                                 typeof notification.metadata === "object" &&
                                                 "emailSent" in notification.metadata &&
                                                 Boolean(notification.metadata.emailSent) && (
-                                                  <span className="flex items-center gap-1 text-green-400">
+                                                  <span className="flex items-center gap-1 text-primary">
                                                     <Mail className="w-3 h-3" />
                                                     Email enviado
                                                   </span>
@@ -1002,25 +1002,25 @@ export default function NotificationCenterPage() {
               return (
                 <Card
                   key={user.id}
-                  className={`bg-gray-900 border-gray-800 ${
-                    hasUnread ? "border-blue-500/30 bg-blue-900/10" : ""
+                  className={`bg-card border-border ${
+                    hasUnread ? "border-primary/30 bg-primary/10" : ""
                   }`}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                          <User className="w-5 h-5 text-white" />
+                        <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+                          <User className="w-5 h-5 text-foreground" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h3 className="font-semibold text-white truncate">{user.name}</h3>
-                          <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                          <h3 className="font-semibold text-foreground truncate">{user.name}</h3>
+                          <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                         </div>
                       </div>
                       <Checkbox
                         checked={selectedUsers.has(user.id)}
                         onCheckedChange={() => toggleUserSelection(user.id)}
-                        className="border-gray-600"
+                        className="border-border"
                       />
                     </div>
 
@@ -1030,17 +1030,17 @@ export default function NotificationCenterPage() {
                         {getStatusBadge(user.kycStatus)}
                       </div>
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-gray-400">Notificações:</span>
-                        <span className="text-white font-medium">{user.notificationCount}</span>
+                        <span className="text-muted-foreground">Notificações:</span>
+                        <span className="text-foreground font-medium">{user.notificationCount}</span>
                       </div>
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-gray-400">Não lidas:</span>
+                        <span className="text-muted-foreground">Não lidas:</span>
                         {hasUnread ? (
-                          <Badge className="bg-blue-600 text-white">
+                          <Badge className="bg-primary text-primary-foreground">
                             {user.unreadNotificationCount}
                           </Badge>
                         ) : (
-                          <span className="text-gray-500">0</span>
+                          <span className="text-muted-foreground">0</span>
                         )}
                       </div>
                     </div>
@@ -1053,12 +1053,12 @@ export default function NotificationCenterPage() {
                             key={notification.id}
                             className={`p-2 rounded border text-xs ${
                               notification.read
-                                ? "bg-gray-800/50 border-gray-700"
-                                : "bg-blue-900/20 border-blue-500/30"
+                                ? "bg-muted/50 border-border"
+                                : "bg-primary/20 border-primary/30"
                             }`}
                           >
-                            <p className="font-medium text-white truncate">{notification.title}</p>
-                            <p className="text-gray-400 line-clamp-1">{notification.message}</p>
+                            <p className="font-medium text-foreground truncate">{notification.title}</p>
+                            <p className="text-muted-foreground line-clamp-1">{notification.message}</p>
                           </div>
                         ))}
                       </div>
@@ -1071,7 +1071,7 @@ export default function NotificationCenterPage() {
                           setSelectedUser(user);
                           setSendDialogOpen(true);
                         }}
-                        className="bg-green-600 hover:bg-green-700 flex-1 text-xs"
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground flex-1 text-xs"
                       >
                         <Send className="w-3 h-3 mr-1" />
                         Enviar
@@ -1080,7 +1080,7 @@ export default function NotificationCenterPage() {
                         size="sm"
                         variant="outline"
                         onClick={() => toggleUserExpanded(user.id)}
-                        className="border-gray-600 text-white hover:bg-gray-700 text-xs"
+                        className="border-border text-foreground hover:bg-muted text-xs"
                       >
                         {isExpanded ? (
                           <ChevronDown className="w-3 h-3" />
@@ -1098,19 +1098,19 @@ export default function NotificationCenterPage() {
 
         {/* Send Notification Dialog */}
         <Dialog open={sendDialogOpen} onOpenChange={setSendDialogOpen}>
-          <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-2xl">
+          <DialogContent className="bg-card border-border text-foreground max-w-2xl">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Send className="w-5 h-5" />
                 {selectedUsers.size > 0 ? "Enviar Notificação em Lote" : "Enviar Notificação"}
               </DialogTitle>
-              <DialogDescription className="text-gray-400">
+              <DialogDescription className="text-muted-foreground">
                 {selectedUsers.size > 0 ? (
                   <>Enviar para {selectedUsers.size} usuário(s) selecionado(s)</>
                 ) : selectedUser ? (
                   <>
                     Enviar notificação para{" "}
-                    <span className="font-semibold text-white">{selectedUser.name}</span> (
+                    <span className="font-semibold text-foreground">{selectedUser.name}</span> (
                     {selectedUser.email})
                   </>
                 ) : null}
@@ -1119,7 +1119,7 @@ export default function NotificationCenterPage() {
 
             <div className="space-y-4 mt-4">
               <div>
-                <Label htmlFor="subject" className="text-white">
+                <Label htmlFor="subject" className="text-foreground">
                   Assunto *
                 </Label>
                 <Input
@@ -1127,12 +1127,12 @@ export default function NotificationCenterPage() {
                   value={notificationSubject}
                   onChange={(e) => setNotificationSubject(e.target.value)}
                   placeholder="Digite o assunto da notificação"
-                  className="bg-gray-800 border-gray-700 text-white mt-1"
+                  className="bg-muted border-border text-foreground mt-1"
                 />
               </div>
 
               <div>
-                <Label htmlFor="message" className="text-white">
+                <Label htmlFor="message" className="text-foreground">
                   Mensagem *
                 </Label>
                 <Textarea
@@ -1141,11 +1141,11 @@ export default function NotificationCenterPage() {
                   onChange={(e) => setNotificationMessage(e.target.value)}
                   placeholder="Digite a mensagem da notificação"
                   rows={6}
-                  className="bg-gray-800 border-gray-700 text-white mt-1"
+                  className="bg-muted border-border text-foreground mt-1"
                 />
               </div>
 
-              <div className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
                 <div className="flex-1">
                   <div className="flex items-center space-x-2">
                     <Checkbox
@@ -1153,11 +1153,11 @@ export default function NotificationCenterPage() {
                       checked={sendEmail}
                       onCheckedChange={(checked) => setSendEmail(checked === true)}
                     />
-                    <Label htmlFor="send-email" className="text-white cursor-pointer">
+                    <Label htmlFor="send-email" className="text-foreground cursor-pointer">
                       Enviar também por email
                     </Label>
                   </div>
-                  <p className="text-sm text-gray-400 mt-1 ml-6">
+                  <p className="text-sm text-muted-foreground mt-1 ml-6">
                     A notificação será salva e um email será enviado para o(s) usuário(s)
                   </p>
                 </div>
@@ -1173,7 +1173,7 @@ export default function NotificationCenterPage() {
                     setSelectedUser(null);
                     setSelectedUsers(new Set());
                   }}
-                  className="border-gray-600 text-white hover:bg-gray-800"
+                  className="border-border text-foreground hover:bg-muted"
                 >
                   Cancelar
                 </Button>
@@ -1186,7 +1186,7 @@ export default function NotificationCenterPage() {
                     !notificationSubject.trim() ||
                     !notificationMessage.trim()
                   }
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
                   {sending ? (
                     <>

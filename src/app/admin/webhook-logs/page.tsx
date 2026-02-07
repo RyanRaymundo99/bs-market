@@ -127,7 +127,7 @@ export default function WebhookLogsPage() {
     return (
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center h-64">
-          <RefreshCw className="w-8 h-8 animate-spin text-gray-400" />
+          <RefreshCw className="w-8 h-8 animate-spin text-muted-foreground" />
         </div>
       </div>
     );
@@ -137,8 +137,8 @@ export default function WebhookLogsPage() {
     <div className="container mx-auto p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Webhook Logs</h1>
-          <p className="text-gray-400">
+          <h1 className="text-3xl font-bold text-foreground mb-2">Webhook Logs</h1>
+          <p className="text-muted-foreground">
             Monitoramento de webhooks recebidos do NutzPay
           </p>
         </div>
@@ -154,31 +154,31 @@ export default function WebhookLogsPage() {
       </div>
 
       {webhooks.length === 0 ? (
-        <div className="bg-gray-900 rounded-lg p-8 text-center">
-          <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-400">
+        <div className="bg-card rounded-lg p-8 text-center">
+          <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+          <p className="text-muted-foreground">
             Nenhum webhook recebido ainda. Os webhooks aparecerão aqui quando
             forem recebidos.
           </p>
         </div>
       ) : (
-        <div className="bg-gray-900 rounded-lg overflow-hidden">
+        <div className="bg-card rounded-lg overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow className="border-gray-800">
-                <TableHead className="text-gray-300">Data/Hora</TableHead>
-                <TableHead className="text-gray-300">Evento</TableHead>
-                <TableHead className="text-gray-300">Transaction ID</TableHead>
-                <TableHead className="text-gray-300">Status</TableHead>
-                <TableHead className="text-gray-300">Processado</TableHead>
-                <TableHead className="text-gray-300">Assinatura</TableHead>
-                <TableHead className="text-gray-300">Ações</TableHead>
+              <TableRow className="border-border">
+                <TableHead className="text-muted-foreground">Data/Hora</TableHead>
+                <TableHead className="text-muted-foreground">Evento</TableHead>
+                <TableHead className="text-muted-foreground">Transaction ID</TableHead>
+                <TableHead className="text-muted-foreground">Status</TableHead>
+                <TableHead className="text-muted-foreground">Processado</TableHead>
+                <TableHead className="text-muted-foreground">Assinatura</TableHead>
+                <TableHead className="text-muted-foreground">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {webhooks.map((webhook) => (
-                <TableRow key={webhook.id} className="border-gray-800">
-                  <TableCell className="text-gray-300 text-sm">
+                <TableRow key={webhook.id} className="border-border">
+                  <TableCell className="text-muted-foreground text-sm">
                     {formatDate(webhook.createdAt)}
                   </TableCell>
                   <TableCell>{getEventTypeBadge(webhook.eventType)}</TableCell>
@@ -191,16 +191,16 @@ export default function WebhookLogsPage() {
                             ? "border-green-500 text-green-400"
                             : webhook.transactionType === "Withdrawal"
                               ? "border-amber-500 text-amber-400"
-                              : "border-blue-500 text-blue-400"
+                              : "border-primary text-primary"
                         }
                       >
                         {webhook.transactionType}
                       </Badge>
                     ) : (
-                      <span className="text-gray-500">—</span>
+                      <span className="text-muted-foreground">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="text-gray-300 text-sm">
+                  <TableCell className="text-muted-foreground text-sm">
                     {webhook.userName ?? webhook.userEmail ? (
                       <span title={webhook.userEmail ?? undefined}>
                         {webhook.userName || webhook.userEmail || "—"}
@@ -209,7 +209,7 @@ export default function WebhookLogsPage() {
                       "—"
                     )}
                   </TableCell>
-                  <TableCell className="text-gray-300 text-sm font-mono">
+                  <TableCell className="text-muted-foreground text-sm font-mono">
                     {webhook.transactionId || webhook.externalId || "-"}
                   </TableCell>
                   <TableCell>
@@ -252,10 +252,10 @@ export default function WebhookLogsPage() {
 
       {/* Payload Viewer Dialog */}
       <Dialog open={showPayload} onOpenChange={setShowPayload}>
-        <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="bg-card border-border text-foreground max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-white">Webhook Payload</DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogTitle className="text-foreground">Webhook Payload</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
               Detalhes completos do webhook recebido
             </DialogDescription>
           </DialogHeader>
@@ -263,46 +263,46 @@ export default function WebhookLogsPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-gray-400 mb-1">ID do Evento</p>
-                  <p className="text-white font-mono text-sm">
+                  <p className="text-sm text-muted-foreground mb-1">ID do Evento</p>
+                  <p className="text-foreground font-mono text-sm">
                     {selectedWebhook.id}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-400 mb-1">Tipo de Evento</p>
-                  <p className="text-white">{selectedWebhook.eventType}</p>
+                  <p className="text-sm text-muted-foreground mb-1">Tipo de Evento</p>
+                  <p className="text-foreground">{selectedWebhook.eventType}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-400 mb-1">Transaction ID</p>
-                  <p className="text-white font-mono text-sm">
+                  <p className="text-sm text-muted-foreground mb-1">Transaction ID</p>
+                  <p className="text-foreground font-mono text-sm">
                     {selectedWebhook.transactionId || "-"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-400 mb-1">External ID</p>
-                  <p className="text-white font-mono text-sm">
+                  <p className="text-sm text-muted-foreground mb-1">External ID</p>
+                  <p className="text-foreground font-mono text-sm">
                     {selectedWebhook.externalId || "-"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-400 mb-1">Order ID</p>
-                  <p className="text-white font-mono text-sm">
+                  <p className="text-sm text-muted-foreground mb-1">Order ID</p>
+                  <p className="text-foreground font-mono text-sm">
                     {selectedWebhook.orderId || "-"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-400 mb-1">Tipo</p>
-                  <p className="text-white">
+                  <p className="text-sm text-muted-foreground mb-1">Tipo</p>
+                  <p className="text-foreground">
                     {selectedWebhook.transactionType || "-"}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-400 mb-1">Usuário</p>
-                  <p className="text-white text-sm">
+                  <p className="text-sm text-muted-foreground mb-1">Usuário</p>
+                  <p className="text-foreground text-sm">
                     {selectedWebhook.userName || selectedWebhook.userEmail || "-"}
                   </p>
                   {selectedWebhook.userEmail && (
-                    <p className="text-gray-400 text-xs mt-0.5">
+                    <p className="text-muted-foreground text-xs mt-0.5">
                       {selectedWebhook.userEmail}
                     </p>
                   )}
@@ -318,7 +318,7 @@ export default function WebhookLogsPage() {
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="gap-2 border-gray-600 text-gray-300 hover:bg-gray-800"
+                        className="gap-2 border-border text-muted-foreground hover:bg-muted"
                       >
                         <ExternalLink className="h-4 w-4" />
                         Ver transação no painel
@@ -327,14 +327,14 @@ export default function WebhookLogsPage() {
                   </div>
                 )}
                 <div>
-                  <p className="text-sm text-gray-400 mb-1">IP Address</p>
-                  <p className="text-white text-sm">
+                  <p className="text-sm text-muted-foreground mb-1">IP Address</p>
+                  <p className="text-foreground text-sm">
                     {selectedWebhook.ipAddress || "-"}
                   </p>
                 </div>
                 {selectedWebhook.error && (
                   <div className="col-span-2">
-                    <p className="text-sm text-gray-400 mb-1">Erro</p>
+                    <p className="text-sm text-muted-foreground mb-1">Erro</p>
                     <p className="text-red-400 text-sm">
                       {selectedWebhook.error}
                     </p>
@@ -342,8 +342,8 @@ export default function WebhookLogsPage() {
                 )}
               </div>
               <div>
-                <p className="text-sm text-gray-400 mb-2">Payload Completo</p>
-                <pre className="bg-gray-800 p-4 rounded-lg overflow-x-auto text-xs">
+                <p className="text-sm text-muted-foreground mb-2">Payload Completo</p>
+                <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-xs">
                   {JSON.stringify(selectedWebhook.payload, null, 2)}
                 </pre>
               </div>

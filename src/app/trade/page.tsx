@@ -3,6 +3,7 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import NavbarNew from "@/components/ui/navbar-new";
+import { GlobalKYCBanner } from "@/components/GlobalKYCBanner";
 import {
   Dialog,
   DialogContent,
@@ -20,7 +21,6 @@ import {
   TrendingUp,
   Clock,
   QrCode,
-  Loader2,
   Wallet,
   Coins,
   Home,
@@ -29,6 +29,7 @@ import {
   Minus,
   MessageCircle,
 } from "lucide-react";
+import { ButtonLoader, Spinner } from "@/components/ui/loading";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const WHATSAPP_SUPPORT_URL = `https://wa.me/${
@@ -937,6 +938,7 @@ const TradePage = () => {
       onTouchEnd={onTouchEnd}
     >
       <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
+      <GlobalKYCBanner />
       <div
         className={`container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl ${
           isMobile ? "pb-16" : ""
@@ -948,13 +950,13 @@ const TradePage = () => {
         }
       >
         {moneyDisabled ? (
-          <div className="max-w-4xl mx-auto mb-6 rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-4">
-            <p className="text-sm font-medium text-yellow-200">
+          <div className="max-w-4xl mx-auto mb-6 rounded-xl border border-warning/30 bg-warning/10 p-4">
+            <p className="text-sm font-medium text-warning">
               {language === "pt"
                 ? "Atualização da plataforma"
                 : "Platform update"}
             </p>
-            <p className="text-xs text-yellow-100/80 mt-1">
+            <p className="text-xs text-warning/90 mt-1">
               {moneyDisabledMessage ||
                 (language === "pt"
                   ? "Depósitos e saques estão temporariamente desativados."
@@ -964,27 +966,26 @@ const TradePage = () => {
         ) : null}
 
         {inMaintenance && maintenanceMessage ? (
-          <div className="max-w-4xl mx-auto mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
-            <p className="text-sm font-medium text-amber-200">
+          <div className="max-w-4xl mx-auto mb-6 rounded-xl border border-warning/30 bg-warning/10 p-4">
+            <p className="text-sm font-medium text-warning">
               {language === "pt"
                 ? "Manutenção programada"
                 : "Scheduled maintenance"}
             </p>
-            <p className="text-xs text-amber-100/80 mt-1">
+            <p className="text-xs text-warning/90 mt-1">
               {maintenanceMessage}
             </p>
           </div>
         ) : null}
 
         {/* Purchase Card */}
-        <Card className="rounded-xl sm:rounded-2xl border-gray-800 bg-gray-900/50 backdrop-blur-sm mb-6 sm:mb-8">
+        <Card className="rounded-xl sm:rounded-2xl border-border bg-card shadow-sm mb-6 sm:mb-8">
           <CardHeader className="pb-4">
-            {/* Header inside card */}
             <div className="text-center mb-6">
-              <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
                 {language === "pt" ? "Depositar USDT" : "Deposit USDT"}
               </h1>
-              <p className="text-gray-400 text-sm sm:text-base">
+              <p className="text-muted-foreground text-sm sm:text-base">
                 {depositMethod === "PIX"
                   ? `${t("buyUSDTViaPIX")} • ${t("fee")}`
                   : language === "pt"
@@ -993,15 +994,14 @@ const TradePage = () => {
               </p>
             </div>
 
-            {/* Toggle Button for Deposit Method */}
             <div className="mb-4 flex justify-center">
-              <div className="relative inline-flex items-center bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-1 shadow-lg">
+              <div className="relative inline-flex items-center bg-muted/60 border border-border rounded-xl p-1">
                 <button
                   onClick={() => setDepositMethod("PIX")}
                   className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
                     depositMethod === "PIX"
-                      ? "bg-green-600 text-white shadow-md"
-                      : "text-gray-400 hover:text-white hover:bg-gray-700/50"
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
                   }`}
                 >
                   <div className="flex items-center justify-center gap-2">
@@ -1009,15 +1009,11 @@ const TradePage = () => {
                     <span>PIX</span>
                   </div>
                 </button>
-                <div className="h-6 w-px bg-gray-700 mx-1"></div>
+                <div className="h-6 w-px bg-border mx-1" />
                 <button
                   onClick={() => setDepositMethod("CRYPTO")}
                   disabled
-                  className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all opacity-50 cursor-not-allowed ${
-                    depositMethod === "CRYPTO"
-                      ? "bg-gray-700 text-gray-500"
-                      : "text-gray-500 hover:text-gray-500"
-                  }`}
+                  className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium opacity-50 cursor-not-allowed text-muted-foreground"
                   title={language === "pt" ? "Em breve" : "Coming soon"}
                 >
                   <div className="flex items-center justify-center gap-2">
@@ -1033,13 +1029,16 @@ const TradePage = () => {
               <div className="flex justify-center mb-4">
                 <Badge
                   variant="secondary"
-                  className="bg-brand-500/20 text-brand-400 border-brand-500/30"
+                  className="bg-primary/20 text-primary border-primary/30 inline-flex items-center gap-2"
                 >
-                  {priceLoading
-                    ? language === "pt"
-                      ? "Carregando..."
-                      : "Loading..."
-                    : `1 USDT = ${formatBRL(usdtPrice)}`}
+                  {priceLoading ? (
+                    <>
+                      <Spinner size="sm" />
+                      {language === "pt" ? "Carregando..." : "Loading..."}
+                    </>
+                  ) : (
+                    `1 USDT = ${formatBRL(usdtPrice)}`
+                  )}
                 </Badge>
               </div>
             )}
@@ -1048,7 +1047,7 @@ const TradePage = () => {
             {depositMethod === "PIX" ? (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     {language === "pt" ? "Quantidade de USDT:" : "USDT Amount:"}
                   </label>
                   <input
@@ -1057,9 +1056,9 @@ const TradePage = () => {
                     onChange={handleUSDTInputChange}
                     placeholder="0,00"
                     inputMode="decimal"
-                    className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition-all"
+                    className="w-full px-4 py-3 bg-muted/50 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all"
                   />
-                  <p className="mt-1.5 text-xs text-gray-400">
+                  <p className="mt-1.5 text-xs text-muted-foreground">
                     {language === "pt"
                       ? `Máximo ${ONLINE_MAX_USDT.toLocaleString(
                           "pt-BR"
@@ -1070,35 +1069,35 @@ const TradePage = () => {
 
                 {/* Total BRL to pay with PIX icon */}
                 {buyUSDTAmount > 0 && (
-                  <div className="bg-gradient-to-br from-green-500/20 to-brand-500/20 rounded-xl p-4 sm:p-6 border border-green-500/30">
+                  <div className="bg-primary/10 rounded-xl p-4 sm:p-6 border border-primary/30">
                     <div className="flex items-center gap-2 mb-2">
-                      <QrCode className="w-5 h-5 text-green-400" />
-                      <div className="text-sm text-gray-300">
+                      <QrCode className="w-5 h-5 text-primary" />
+                      <div className="text-sm text-muted-foreground">
                         {language === "pt"
                           ? "Total a pagar via PIX:"
                           : "Total to pay via PIX:"}
                       </div>
                     </div>
-                    <div className="text-2xl sm:text-3xl font-bold text-green-400 flex items-center gap-2">
+                    <div className="text-2xl sm:text-3xl font-bold text-primary flex items-center gap-2">
                       {formatBRL(buyTotalBRL)}
-                      <span className="text-sm font-normal text-gray-400">
+                      <span className="text-sm font-normal text-muted-foreground">
                         BRL
                       </span>
                     </div>
-                    <div className="mt-3 pt-3 border-t border-gray-700/50 space-y-1.5">
-                      <div className="flex justify-between text-xs text-gray-400">
+                    <div className="mt-3 pt-3 border-t border-border space-y-1.5">
+                      <div className="flex justify-between text-xs text-muted-foreground">
                         <span>
                           {language === "pt" ? "Valor base:" : "Base amount:"}
                         </span>
-                        <span className="text-gray-300">
+                        <span className="text-foreground">
                           {formatBRL(buyBaseBRL)}
                         </span>
                       </div>
-                      <div className="flex justify-between text-xs text-gray-400">
+                      <div className="flex justify-between text-xs text-muted-foreground">
                         <span>
                           {language === "pt" ? "Taxa (3%):" : "Fee (3%):"}
                         </span>
-                        <span className="text-red-400">
+                        <span className="text-destructive">
                           {formatBRL(buyFeeBRL)}
                         </span>
                       </div>
@@ -1106,18 +1105,18 @@ const TradePage = () => {
                   </div>
                 )}
 
-                <div className="bg-gradient-to-br from-brand-500/20 to-green-500/20 rounded-xl p-4 sm:p-6 border border-brand-500/30">
-                  <div className="text-sm text-gray-300 mb-2">
+                <div className="bg-primary/10 rounded-xl p-4 sm:p-6 border border-primary/30">
+                  <div className="text-sm text-muted-foreground mb-2">
                     {language === "pt" ? "Você receberá:" : "You will receive:"}
                   </div>
-                  <div className="text-2xl sm:text-3xl font-bold text-brand-400">
+                  <div className="text-2xl sm:text-3xl font-bold text-primary">
                     {formatUSDT(buyUSDTAmount)} USDT
                   </div>
                 </div>
 
                 {buyUSDTAmount > ONLINE_MAX_USDT ? (
                   <div className="space-y-3">
-                    <p className="text-sm text-amber-400 text-center">
+                    <p className="text-sm text-warning text-center">
                       {language === "pt"
                         ? `O limite máximo para compras online é ${ONLINE_MAX_USDT.toLocaleString(
                             "pt-BR"
@@ -1126,7 +1125,7 @@ const TradePage = () => {
                     </p>
                     <Button
                       asChild
-                      className="w-full h-12 sm:h-14 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-colors text-base sm:text-lg flex items-center justify-center gap-2"
+                      className="w-full h-12 sm:h-14 font-semibold rounded-xl text-base sm:text-lg flex items-center justify-center gap-2"
                     >
                       <a
                         href={getWhatsAppUrlForLargeDeposit(
@@ -1145,14 +1144,14 @@ const TradePage = () => {
                   </div>
                 ) : buyUSDTAmount > maxDepositUsdt ? (
                   <div className="space-y-3">
-                    <p className="text-sm text-amber-400 text-center">
+                    <p className="text-sm text-warning text-center">
                       {language === "pt"
                         ? `Para depósitos acima de ${maxDepositUsdt} USDT, entre em contato conosco via WhatsApp.`
                         : `For deposits above ${maxDepositUsdt} USDT, please contact us via WhatsApp.`}
                     </p>
                     <Button
                       asChild
-                      className="w-full h-12 sm:h-14 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-colors text-base sm:text-lg flex items-center justify-center gap-2"
+                      className="w-full h-12 sm:h-14 font-semibold rounded-xl text-base sm:text-lg flex items-center justify-center gap-2"
                     >
                       <a
                         href={WHATSAPP_SUPPORT_URL}
@@ -1170,13 +1169,14 @@ const TradePage = () => {
                   <Button
                     onClick={handleBuyConfirm}
                     disabled={buyUSDTAmount <= 0 || loading || moneyDisabled}
-                    className="w-full h-12 sm:h-14 bg-brand-500 hover:bg-brand-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors text-base sm:text-lg"
+                    className="w-full h-12 sm:h-14 font-semibold rounded-xl text-base sm:text-lg"
                   >
                     {loading ? (
-                      <>
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                        {language === "pt" ? "Processando..." : "Processing..."}
-                      </>
+                      <ButtonLoader
+                        label={language === "pt" ? "Processando..." : "Processing..."}
+                        size="default"
+                        className="text-primary-foreground"
+                      />
                     ) : (
                       t("confirmPurchase")
                     )}
@@ -1186,26 +1186,23 @@ const TradePage = () => {
             ) : (
               <>
                 {/* Crypto Deposit Form - Temporarily Unavailable */}
-                <div className="p-8 sm:p-12 bg-gray-800/30 rounded-xl border border-gray-700/50 text-center">
+                <div className="p-8 sm:p-12 bg-muted/30 rounded-xl border border-border text-center">
                   <div className="flex flex-col items-center gap-4">
-                    <div className="p-4 bg-gray-700/50 rounded-full">
-                      <Coins className="h-8 w-8 text-gray-500" />
+                    <div className="p-4 bg-muted rounded-full">
+                      <Coins className="h-8 w-8 text-muted-foreground" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-white mb-2">
+                      <h3 className="text-lg font-semibold text-foreground mb-2">
                         {language === "pt" ? "Em Breve" : "Coming Soon"}
                       </h3>
-                      <p className="text-sm text-gray-400 max-w-md">
+                      <p className="text-sm text-muted-foreground max-w-md">
                         {language === "pt"
                           ? "A funcionalidade de depósito via cripto está em desenvolvimento e estará disponível em breve."
                           : "Crypto deposit functionality is under development and will be available soon."}
                       </p>
                     </div>
                     <div className="mt-4">
-                      <Button
-                        onClick={() => setDepositMethod("PIX")}
-                        className="bg-brand-500 hover:bg-brand-600 text-white"
-                      >
+                      <Button onClick={() => setDepositMethod("PIX")}>
                         {language === "pt" ? "Usar PIX" : "Use PIX"}
                       </Button>
                     </div>
@@ -1217,19 +1214,19 @@ const TradePage = () => {
         </Card>
 
         {/* Transaction History */}
-        <Card className="rounded-xl sm:rounded-2xl border-gray-800 bg-gray-900/50 backdrop-blur-sm">
+        <Card className="rounded-xl sm:rounded-2xl border-border bg-card shadow-sm">
           <CardHeader>
-            <CardTitle className="text-lg sm:text-xl text-white flex items-center gap-2">
-              <Clock className="w-5 h-5" />
+            <CardTitle className="text-lg sm:text-xl text-foreground flex items-center gap-2">
+              <Clock className="w-5 h-5 text-primary" />
               {t("purchaseHistory")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {transactionHistory.length === 0 ? (
               <div className="text-center py-12">
-                <TrendingUp className="w-12 h-12 mx-auto mb-3 text-gray-600" />
-                <p className="text-gray-400 mb-1">{t("noPurchases")}</p>
-                <p className="text-sm text-gray-500">
+                <TrendingUp className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+                <p className="text-muted-foreground mb-1">{t("noPurchases")}</p>
+                <p className="text-sm text-muted-foreground">
                   {t("purchasesWillAppear")}
                 </p>
               </div>
@@ -1253,18 +1250,18 @@ const TradePage = () => {
                           }
                         }
                       }}
-                      className={`p-4 rounded-xl bg-gray-800/30 border border-gray-700/50 transition-colors ${
+                      className={`p-4 rounded-xl bg-muted/30 border border-border transition-colors ${
                         isClickable
-                          ? "hover:bg-gray-800/60 cursor-pointer hover:border-yellow-500/50"
-                          : "hover:bg-gray-800/50"
+                          ? "hover:bg-muted/50 cursor-pointer hover:border-warning/50"
+                          : "hover:bg-muted/40"
                       }`}
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
                             {isLoading ? (
-                              <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 flex items-center gap-1.5">
-                                <Loader2 className="w-3 h-3 animate-spin" />
+                              <Badge className="bg-primary/20 text-primary border-primary/30 flex items-center gap-1.5">
+                                <Spinner size="sm" />
                                 {language === "pt"
                                   ? "Verificando..."
                                   : "Checking..."}
@@ -1273,10 +1270,10 @@ const TradePage = () => {
                               <Badge
                                 className={
                                   transaction.status === "COMPLETED"
-                                    ? "bg-green-500/20 text-green-400 border-green-500/30"
+                                    ? "bg-primary/20 text-primary border-primary/30"
                                     : transaction.status === "PENDING"
-                                    ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
-                                    : "bg-red-500/20 text-red-400 border-red-500/30"
+                                    ? "bg-warning/20 text-warning border-warning/30"
+                                    : "bg-destructive/20 text-destructive border-destructive/30"
                                 }
                               >
                                 {transaction.status === "COMPLETED"
@@ -1286,7 +1283,7 @@ const TradePage = () => {
                                   : t("failed")}
                               </Badge>
                             )}
-                            <span className="text-xs text-gray-400">
+                            <span className="text-xs text-muted-foreground">
                               {transaction.date.toLocaleDateString(
                                 language === "pt" ? "pt-BR" : "en-US"
                               )}{" "}
@@ -1300,7 +1297,7 @@ const TradePage = () => {
                               )}
                             </span>
                             {isPending && hasPixData && (
-                              <span className="text-xs text-yellow-400/70 flex items-center gap-1">
+                              <span className="text-xs text-warning/80 flex items-center gap-1">
                                 <QrCode className="w-3 h-3" />
                                 {t("clickToSeeQRCode")}
                               </span>
@@ -1311,31 +1308,31 @@ const TradePage = () => {
                               <p className="text-gray-400 text-xs">
                                 {t("amountPaid")}
                               </p>
-                              <p className="text-white font-medium">
+                              <p className="text-foreground font-medium">
                                 {formatBRL(transaction.amount)}
                               </p>
                             </div>
                             <div>
-                              <p className="text-gray-400 text-xs">
+                              <p className="text-muted-foreground text-xs">
                                 {t("received")}
                               </p>
-                              <p className="text-brand-400 font-semibold">
+                              <p className="text-primary font-semibold">
                                 {formatUSDT(transaction.received)} USDT
                               </p>
                             </div>
                             <div>
-                              <p className="text-gray-400 text-xs">
+                              <p className="text-muted-foreground text-xs">
                                 {t("feeAmount")}
                               </p>
-                              <p className="text-gray-300">
+                              <p className="text-foreground">
                                 {formatBRL(transaction.fee)}
                               </p>
                             </div>
                             <div>
-                              <p className="text-gray-400 text-xs">
+                              <p className="text-muted-foreground text-xs">
                                 {t("feeAmount")}
                               </p>
-                              <p className="text-gray-300">
+                              <p className="text-foreground">
                                 @ {formatBRL(transaction.rate)}
                               </p>
                             </div>
@@ -1352,7 +1349,7 @@ const TradePage = () => {
 
         {/* Additional Info */}
         <div className="mt-6 text-center">
-          <p className="text-xs sm:text-sm text-gray-400">
+          <p className="text-xs sm:text-sm text-muted-foreground">
             • {t("quotesUpdated")}
             <br />• {t("feeApplied")}
             <br />• {t("pixPayment")}
@@ -1385,12 +1382,12 @@ const TradePage = () => {
           }
         }}
       >
-        <DialogContent className="bg-[#1E1E1E] border-gray-800 text-white max-w-2xl w-full p-4 sm:p-6">
+        <DialogContent className="bg-card border-border text-foreground max-w-2xl w-full p-4 sm:p-6">
           <DialogHeader className="pb-3">
-            <DialogTitle className="text-white text-lg sm:text-xl">
+            <DialogTitle className="text-foreground text-lg sm:text-xl">
               {t("scanQRCode")}
             </DialogTitle>
-            <DialogDescription className="text-[#A1A1AA] text-sm">
+            <DialogDescription className="text-muted-foreground text-sm">
               {language === "pt"
                 ? "Escaneie o código abaixo com o app do seu banco para finalizar o pagamento"
                 : "Scan the code below with your bank app to complete payment"}
@@ -1404,11 +1401,11 @@ const TradePage = () => {
                   <img
                     src={`data:image/png;base64,${pixData.qrCodeBase64}`}
                     alt="QR Code PIX"
-                    className="w-48 h-48 sm:w-56 sm:h-56 border-2 border-gray-700 rounded-xl"
+                    className="w-48 h-48 sm:w-56 sm:h-56 border-2 border-border rounded-xl"
                   />
                 ) : (
-                  <div className="w-48 h-48 sm:w-56 sm:h-56 bg-gray-900 border-2 border-gray-700 rounded-xl flex items-center justify-center">
-                    <p className="text-[#A1A1AA] text-sm">
+                  <div className="w-48 h-48 sm:w-56 sm:h-56 bg-muted border-2 border-border rounded-xl flex items-center justify-center">
+                    <p className="text-muted-foreground text-sm">
                       {language === "pt"
                         ? "QR Code não disponível"
                         : "QR Code not available"}
@@ -1416,11 +1413,11 @@ const TradePage = () => {
                   </div>
                 )}
                 <div className="text-center space-y-1">
-                  <p className="text-xs text-[#A1A1AA]">Valor:</p>
-                  <p className="text-xl sm:text-2xl font-bold text-[#10B981]">
+                  <p className="text-xs text-muted-foreground">Valor:</p>
+                  <p className="text-xl sm:text-2xl font-bold text-primary">
                     {formatBRL(pixData.amount)}
                   </p>
-                  <p className="text-xs sm:text-sm text-[#A1A1AA]">
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     Você receberá: {formatUSDT(pixData.usdtAmount)} USDT
                   </p>
                 </div>
@@ -1428,31 +1425,31 @@ const TradePage = () => {
 
               {/* Copy Button with PIX Code */}
               <div className="space-y-2">
-                <label className="text-xs sm:text-sm font-medium text-gray-300">
+                <label className="text-xs sm:text-sm font-medium text-foreground">
                   Código PIX (Copia e Cola):
                 </label>
                 <button
                   onClick={copyPixCode}
                   disabled={!pixData.qrCode}
-                  className="w-full py-2.5 px-3 sm:py-3 sm:px-4 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-800/50 disabled:cursor-not-allowed border-2 border-yellow-500/50 hover:border-yellow-500/70 text-white rounded-lg transition-colors flex items-center justify-between gap-2 font-medium min-h-[52px]"
+                  className="w-full py-2.5 px-3 sm:py-3 sm:px-4 bg-muted hover:bg-muted/80 disabled:bg-muted/50 disabled:cursor-not-allowed border-2 border-warning/50 hover:border-warning/70 text-foreground rounded-lg transition-colors flex items-center justify-between gap-2 font-medium min-h-[52px]"
                 >
                   {copied ? (
                     <>
-                      <Check className="w-4 h-4 sm:w-5 sm:h-5 text-green-400 flex-shrink-0" />
-                      <span className="text-sm sm:text-base text-green-400 font-semibold">
+                      <Check className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
+                      <span className="text-sm sm:text-base text-primary font-semibold">
                         {t("codeCopied")}
                       </span>
                     </>
                   ) : pixData.qrCode ? (
                     <>
-                      <code className="flex-1 text-[10px] sm:text-xs text-left font-mono break-all pr-2 text-gray-200">
+                      <code className="flex-1 text-[10px] sm:text-xs text-left font-mono break-all pr-2 text-foreground">
                         {pixData.qrCode}
                       </code>
-                      <Copy className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 text-yellow-400" />
+                      <Copy className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 text-warning" />
                     </>
                   ) : (
                     <>
-                      <span className="flex-1 text-xs sm:text-sm text-gray-400 text-left">
+                      <span className="flex-1 text-xs sm:text-sm text-muted-foreground text-left">
                         {t("pixCodeNotAvailable")}
                       </span>
                       <Copy className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 text-gray-500" />
@@ -1461,7 +1458,7 @@ const TradePage = () => {
                 </button>
               </div>
 
-              <p className="text-[10px] sm:text-xs text-[#A1A1AA] text-center pt-2">
+              <p className="text-[10px] sm:text-xs text-muted-foreground text-center pt-2">
                 {t("paymentInstructions")}
               </p>
             </div>
@@ -1471,57 +1468,57 @@ const TradePage = () => {
 
       {/* Receipt Modal */}
       <Dialog open={showReceipt} onOpenChange={setShowReceipt}>
-        <DialogContent className="bg-[#1E1E1E] border-gray-800 text-white max-w-md">
+        <DialogContent className="bg-card border-border text-foreground max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-white flex items-center gap-2">
-              <Check className="w-6 h-6 text-green-400" />
+            <DialogTitle className="text-foreground flex items-center gap-2">
+              <Check className="w-6 h-6 text-primary" />
               Pagamento Confirmado!
             </DialogTitle>
-            <DialogDescription className="text-[#A1A1AA]">
+            <DialogDescription className="text-muted-foreground">
               Seu pagamento foi processado com sucesso
             </DialogDescription>
           </DialogHeader>
           {receiptData && (
             <div className="space-y-4">
-              <div className="bg-gray-900 rounded-lg p-6 space-y-4">
+              <div className="bg-muted/50 rounded-lg p-6 space-y-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-[#A1A1AA]">Valor pago:</span>
-                  <span className="text-xl font-bold text-white">
+                  <span className="text-muted-foreground">Valor pago:</span>
+                  <span className="text-xl font-bold text-foreground">
                     {formatBRL(receiptData.amount)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-[#A1A1AA]">USDT recebido:</span>
-                  <span className="text-xl font-bold text-[#10B981]">
+                  <span className="text-muted-foreground">USDT recebido:</span>
+                  <span className="text-xl font-bold text-primary">
                     {formatUSDT(receiptData.usdtAmount)} USDT
                   </span>
                 </div>
-                <div className="border-t border-gray-700 pt-4">
+                <div className="border-t border-border pt-4">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm text-[#A1A1AA]">
+                    <span className="text-sm text-muted-foreground">
                       ID da transação:
                     </span>
-                    <span className="text-xs font-mono text-white">
+                    <span className="text-xs font-mono text-foreground">
                       {receiptData.transactionId.substring(0, 20)}...
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-[#A1A1AA]">Data:</span>
-                    <span className="text-sm text-white">
+                    <span className="text-sm text-muted-foreground">Data:</span>
+                    <span className="text-sm text-foreground">
                       {receiptData.date.toLocaleString("pt-BR")}
                     </span>
                   </div>
                 </div>
               </div>
-              <button
+              <Button
                 onClick={() => {
                   setShowReceipt(false);
                   setReceiptData(null);
                 }}
-                className="w-full py-3 bg-[#10B981] hover:bg-[#059669] text-white font-semibold rounded-lg transition-colors"
+                className="w-full py-3"
               >
                 Fechar
-              </button>
+              </Button>
             </div>
           )}
         </DialogContent>
@@ -1534,40 +1531,37 @@ const TradePage = () => {
           style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}
         >
           <div className="flex justify-center pb-2 px-4">
-            <div className="relative inline-flex items-center bg-black/90 backdrop-blur-sm border border-gray-800 rounded-full px-1 py-1.5 shadow-lg">
-              {/* Deposit */}
+            <div className="relative inline-flex items-center bg-card/95 backdrop-blur-sm border border-border rounded-full px-1 py-1.5 shadow-lg">
               <button
                 onClick={() => router.push("/trade")}
                 className={`relative px-3 sm:px-4 py-1.5 rounded-full text-xs font-medium transition-all touch-manipulation ${
                   pathname === "/trade" || pathname === "/deposit"
-                    ? "bg-green-500 text-white"
-                    : "text-gray-400 hover:text-white active:bg-gray-700/50"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground active:bg-muted"
                 }`}
                 style={{ minWidth: "44px", minHeight: "44px" }}
               >
                 <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </button>
 
-              {/* Dashboard */}
               <button
                 onClick={() => router.push("/dashboard")}
                 className={`relative px-3 sm:px-4 py-1.5 rounded-full text-xs font-medium transition-all touch-manipulation ${
                   pathname === "/dashboard"
-                    ? "bg-brand-500 text-white"
-                    : "text-gray-400 hover:text-white active:bg-gray-700/50"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground active:bg-muted"
                 }`}
                 style={{ minWidth: "44px", minHeight: "44px" }}
               >
                 <Home className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </button>
 
-              {/* Withdraw */}
               <button
                 onClick={() => router.push("/withdraw")}
                 className={`relative px-3 sm:px-4 py-1.5 rounded-full text-xs font-medium transition-all touch-manipulation ${
                   pathname === "/withdraw"
-                    ? "bg-red-500 text-white"
-                    : "text-gray-400 hover:text-white active:bg-gray-700/50"
+                    ? "bg-destructive text-destructive-foreground"
+                    : "text-muted-foreground hover:text-foreground active:bg-muted"
                 }`}
                 style={{ minWidth: "44px", minHeight: "44px" }}
               >

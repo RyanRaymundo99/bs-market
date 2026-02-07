@@ -93,45 +93,45 @@ export default function WebhookDebugPage() {
   return (
     <div className="container mx-auto p-6 max-w-4xl">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-white mb-2">
+        <h1 className="text-3xl font-bold mb-2">
           Debug de Webhook - Verificar Correspondência de Pedidos
         </h1>
-        <p className="text-gray-400">
+        <p className="text-muted-foreground">
           Verifique se um webhook consegue encontrar o pedido correspondente
         </p>
       </div>
 
-      <Card className="bg-gray-900 border-gray-800 mb-6">
+      <Card className="bg-card border-border mb-6">
         <CardHeader>
-          <CardTitle className="text-white">Buscar Pedido</CardTitle>
+          <CardTitle className="text-foreground">Buscar Pedido</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <label className="text-sm text-gray-400 mb-2 block">
+            <label className="text-sm text-muted-foreground mb-2 block">
               Transaction ID (do NutzPay)
             </label>
             <Input
               value={transactionId}
               onChange={(e) => setTransactionId(e.target.value)}
               placeholder="Ex: 136688691130"
-              className="bg-gray-800 border-gray-700 text-white"
+              className="bg-muted border-border text-foreground"
             />
           </div>
           <div>
-            <label className="text-sm text-gray-400 mb-2 block">
+            <label className="text-sm text-muted-foreground mb-2 block">
               External ID (nosso ID original)
             </label>
             <Input
               value={externalId}
               onChange={(e) => setExternalId(e.target.value)}
               placeholder="Ex: purchase_user123_timestamp"
-              className="bg-gray-800 border-gray-700 text-white"
+              className="bg-muted border-border text-foreground"
             />
           </div>
           <Button
             onClick={checkMatching}
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700"
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
           >
             {loading ? (
               <>
@@ -160,32 +160,32 @@ export default function WebhookDebugPage() {
               </CardHeader>
               <CardContent>
                 {results.matches.map((match, index) => (
-                  <div key={index} className="mb-4 p-4 bg-gray-800 rounded-lg">
-                    <p className="text-sm text-gray-400 mb-2">
+                  <div key={index} className="mb-4 p-4 bg-muted rounded-lg">
+                    <p className="text-sm text-muted-foreground mb-2">
                       Método: {match.method}
                     </p>
                     <div className="space-y-2 text-sm">
                       <div>
-                        <span className="text-gray-400">Order ID:</span>{" "}
-                        <span className="text-white font-mono">
+                        <span className="text-muted-foreground">Order ID:</span>{" "}
+                        <span className="text-foreground font-mono">
                           {match.order.id}
                         </span>
                       </div>
                       <div>
-                        <span className="text-gray-400">
+                        <span className="text-muted-foreground">
                           External Order ID:
                         </span>{" "}
-                        <span className="text-white font-mono">
+                        <span className="text-foreground font-mono">
                           {match.order.externalOrderId || "N/A"}
                         </span>
                       </div>
                       <div>
-                        <span className="text-gray-400">Status:</span>{" "}
-                        <span className="text-white">{match.order.status}</span>
+                        <span className="text-muted-foreground">Status:</span>{" "}
+                        <span className="text-foreground">{match.order.status}</span>
                       </div>
                       <div>
-                        <span className="text-gray-400">Total:</span>{" "}
-                        <span className="text-white">
+                        <span className="text-muted-foreground">Total:</span>{" "}
+                        <span className="text-foreground">
                           R$ {match.order.total.toFixed(2)}
                         </span>
                       </div>
@@ -203,31 +203,31 @@ export default function WebhookDebugPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-400 mb-4">
+                <p className="text-muted-foreground mb-4">
                   O webhook não conseguiria encontrar o pedido com os IDs
                   fornecidos.
                 </p>
                 {results.deposit && (
-                  <div className="mb-4 p-4 bg-gray-800 rounded-lg">
-                    <p className="text-sm font-semibold text-white mb-2">
+                  <div className="mb-4 p-4 bg-muted rounded-lg">
+                    <p className="text-sm font-semibold text-foreground mb-2">
                       Deposit Encontrado:
                     </p>
                     <div className="space-y-1 text-sm">
                       <div>
-                        <span className="text-gray-400">Deposit ID:</span>{" "}
-                        <span className="text-white font-mono">
+                        <span className="text-muted-foreground">Deposit ID:</span>{" "}
+                        <span className="text-foreground font-mono">
                           {results.deposit.id}
                         </span>
                       </div>
                       <div>
-                        <span className="text-gray-400">External ID:</span>{" "}
-                        <span className="text-white font-mono">
+                        <span className="text-muted-foreground">External ID:</span>{" "}
+                        <span className="text-foreground font-mono">
                           {results.deposit.externalId}
                         </span>
                       </div>
                       <div>
-                        <span className="text-gray-400">Amount:</span>{" "}
-                        <span className="text-white">
+                        <span className="text-muted-foreground">Amount:</span>{" "}
+                        <span className="text-foreground">
                           R$ {results.deposit.amount.toFixed(2)}
                         </span>
                       </div>
@@ -239,9 +239,9 @@ export default function WebhookDebugPage() {
           )}
 
           {results.recentOrders && results.recentOrders.length > 0 && (
-            <Card className="bg-gray-900 border-gray-800">
+            <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle className="text-white">
+                <CardTitle className="text-foreground">
                   Pedidos Recentes (últimos 5)
                 </CardTitle>
               </CardHeader>
@@ -250,21 +250,21 @@ export default function WebhookDebugPage() {
                   {results.recentOrders.map((order) => (
                     <div
                       key={order.id}
-                      className="p-3 bg-gray-800 rounded text-sm"
+                      className="p-3 bg-muted rounded text-sm"
                     >
                       <div className="flex justify-between">
-                        <span className="text-gray-400">ID:</span>
-                        <span className="text-white font-mono">{order.id}</span>
+                        <span className="text-muted-foreground">ID:</span>
+                        <span className="text-foreground font-mono">{order.id}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-400">External ID:</span>
-                        <span className="text-white font-mono">
+                        <span className="text-muted-foreground">External ID:</span>
+                        <span className="text-foreground font-mono">
                           {order.externalOrderId || "N/A"}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-400">Status:</span>
-                        <span className="text-white">{order.status}</span>
+                        <span className="text-muted-foreground">Status:</span>
+                        <span className="text-foreground">{order.status}</span>
                       </div>
                     </div>
                   ))}

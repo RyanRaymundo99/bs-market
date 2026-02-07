@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -16,7 +16,12 @@ import {
   ChevronRight,
   Menu,
   Database,
+  Search,
+  Settings,
 } from "lucide-react";
+import { useAdminSettings } from "@/contexts/AdminSettingsContext";
+import { AdminSettingsDialog } from "@/components/admin/AdminSettingsDialog";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -25,7 +30,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import NotificationBell from "@/components/admin/NotificationBell";
-import { cn } from "@/lib/utils";
+import { AdminCommandPalette } from "@/components/admin/AdminCommandPalette";
 
 const SIDEBAR_LINKS = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -60,8 +65,8 @@ function NavLinks({
             className={cn(
               "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
               isActive
-                ? "bg-blue-600/20 text-blue-400 border border-blue-500/30"
-                : "text-gray-400 hover:bg-gray-800 hover:text-white",
+                ? "bg-primary/15 text-primary border border-primary/30"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground",
             )}
           >
             <Icon className="h-5 w-5 flex-shrink-0" />
@@ -69,7 +74,7 @@ function NavLinks({
             <ChevronRight
               className={cn(
                 "h-4 w-4 flex-shrink-0",
-                isActive ? "text-blue-400" : "text-gray-500",
+                isActive ? "text-primary" : "text-muted-foreground",
               )}
             />
           </Link>
@@ -82,7 +87,28 @@ function NavLinks({
 export default function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { settings } = useAdminSettings();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  const openCommandPalette = useCallback(() => setCommandPaletteOpen(true), []);
+
+  const themeClass = settings.theme === "bright" ? "admin-theme-bright" : "";
+  const primaryClass = `admin-primary-${settings.primaryColor}`;
+  const secondaryClass = `admin-secondary-${settings.secondaryColor}`;
+  const buttonStyleClass = `admin-button-${settings.buttonStyle}`;
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setCommandPaletteOpen((open) => !open);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const handleLogout = () => {
     document.cookie =
@@ -91,18 +117,26 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   };
 
   return (
-    <div className="flex min-h-screen bg-black text-white">
+    <div
+      className={cn(
+        "admin-theme flex min-h-screen bg-background text-foreground",
+        themeClass,
+        primaryClass,
+        secondaryClass,
+        buttonStyleClass
+      )}
+    >
       {/* Sidebar - fixed left, desktop-first */}
       <aside
         className={cn(
           "fixed left-0 top-0 z-40 h-screen w-60 flex-shrink-0",
-          "border-r border-gray-800 bg-gray-900/95 backdrop-blur",
+          "border-r border-border bg-card backdrop-blur",
           "hidden lg:flex lg:flex-col",
         )}
       >
-        <div className="flex h-14 items-center gap-2 border-b border-gray-800 px-4">
-          <Shield className="h-6 w-6 text-blue-400" />
-          <span className="font-semibold text-white">Admin</span>
+        <div className="flex h-14 items-center gap-2 border-b border-border px-4">
+          <Shield className="h-6 w-6 text-primary" />
+          <span className="font-semibold text-foreground">Admin</span>
         </div>
         <div className="flex-1 overflow-y-auto p-3">
           <NavLinks pathname={pathname} />
@@ -112,15 +146,14 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       {/* Main area: top bar + content */}
       <div className="flex flex-1 flex-col lg:pl-60">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between border-b border-gray-800 bg-gray-900/95 px-4 backdrop-blur lg:px-6">
+        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between border-b border-border bg-card/95 px-4 backdrop-blur lg:px-6">
           <div className="flex items-center gap-3">
-            {/* Mobile menu */}
             <DropdownMenu open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="lg:hidden text-gray-400 hover:text-white hover:bg-gray-800"
+                  className="lg:hidden text-muted-foreground hover:text-foreground hover:bg-muted"
                   aria-label="Abrir menu"
                 >
                   <Menu className="h-5 w-5" />
@@ -129,14 +162,14 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
               <DropdownMenuContent
                 side="bottom"
                 align="start"
-                className="w-56 border-gray-700 bg-gray-900 p-2 lg:hidden"
+                className="w-56 border-border bg-card p-2 lg:hidden"
               >
                 {SIDEBAR_LINKS.map(({ href, label, icon: Icon }) => (
                   <DropdownMenuItem key={href} asChild>
                     <Link
                       href={href}
                       onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white cursor-pointer"
+                      className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
                     >
                       <Icon className="h-4 w-4" />
                       {label}
@@ -147,19 +180,47 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             </DropdownMenu>
             <Link
               href="/admin"
-              className="text-lg font-semibold text-white hover:text-blue-400 transition-colors"
+              className="text-lg font-semibold text-foreground hover:text-primary transition-colors"
             >
               BS Market Admin
             </Link>
+            <AdminCommandPalette
+              open={commandPaletteOpen}
+              onOpenChange={setCommandPaletteOpen}
+              trigger={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={openCommandPalette}
+                  className="h-9 border-border text-muted-foreground hover:bg-muted hover:text-foreground ml-2"
+                >
+                  <Search className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">Buscar...</span>
+                  <kbd className="hidden sm:inline ml-1.5 rounded border border-border bg-muted px-1 text-[10px] text-muted-foreground">
+                    ⌘K
+                  </kbd>
+                </Button>
+              }
+            />
           </div>
           <div className="flex items-center gap-2">
-            <NotificationBell className="text-white hover:text-blue-400" />
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Aparência e layout"
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+            <NotificationBell className="text-foreground hover:text-primary" />
+            <AdminSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white"
+                  className="border-border text-muted-foreground hover:bg-muted hover:text-foreground"
                 >
                   <Shield className="h-4 w-4 mr-2" />
                   Conta
@@ -167,11 +228,11 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="end"
-                className="w-48 bg-gray-900 border-gray-700"
+                className="w-48 bg-card border-border"
               >
                 <DropdownMenuItem
                   onClick={handleLogout}
-                  className="text-gray-300 hover:bg-gray-800 hover:text-white cursor-pointer focus:bg-gray-800 focus:text-white"
+                  className="text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer focus:bg-muted focus:text-foreground"
                 >
                   <LogOut className="h-4 w-4 mr-2" />
                   Sair
@@ -182,7 +243,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-auto p-4 lg:p-6">{children}</main>
+        <main className="flex-1 overflow-auto bg-background p-4 lg:p-6">{children}</main>
       </div>
     </div>
   );

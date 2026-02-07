@@ -1,12 +1,12 @@
 "use client";
 
 import React from "react";
-import SignupWithMandatoryKYC from "@/components/Auth/SignupWithMandatoryKYC";
+import Signup from "@/components/pages/Signup";
 
 const signupPage = () => {
   return (
     <>
-      <SignupWithMandatoryKYC />
+      <Signup />
     </>
   );
 };

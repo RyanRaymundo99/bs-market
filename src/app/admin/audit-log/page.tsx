@@ -97,21 +97,21 @@ export default function AuditLogPage() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <Link href="/admin">
-            <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white gap-1">
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground gap-1">
               <ChevronLeft className="h-4 w-4" />
               Voltar
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-bold text-white">Audit Log</h1>
-            <p className="text-gray-400 text-sm mt-0.5">
+            <h1 className="text-3xl font-bold text-foreground">Audit Log</h1>
+            <p className="text-muted-foreground text-sm mt-0.5">
               Registro de ações administrativas (quem fez o quê e quando)
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <Select value={resourceType} onValueChange={setResourceType}>
-            <SelectTrigger className="w-[180px] bg-gray-800 border-gray-700 text-white">
+            <SelectTrigger className="w-[180px] bg-muted border-border text-foreground">
               <SelectValue placeholder="Tipo de recurso" />
             </SelectTrigger>
             <SelectContent>
@@ -129,7 +129,7 @@ export default function AuditLogPage() {
             onClick={fetchLogs}
             disabled={loading}
             variant="outline"
-            className="gap-2 border-gray-600 text-gray-300"
+            className="gap-2 border-border text-muted-foreground"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             Atualizar
@@ -137,38 +137,38 @@ export default function AuditLogPage() {
         </div>
       </div>
 
-      <div className="bg-gray-900 rounded-lg overflow-hidden border border-gray-800">
+      <div className="bg-card rounded-lg overflow-hidden border border-border">
         <Table>
           <TableHeader>
-            <TableRow className="border-gray-800">
-              <TableHead className="text-gray-300">Data/Hora</TableHead>
-              <TableHead className="text-gray-300">Admin</TableHead>
-              <TableHead className="text-gray-300">Ação</TableHead>
-              <TableHead className="text-gray-300">Recurso</TableHead>
-              <TableHead className="text-gray-300">ID Recurso</TableHead>
-              <TableHead className="text-gray-300">IP</TableHead>
+            <TableRow className="border-border">
+              <TableHead className="text-muted-foreground">Data/Hora</TableHead>
+              <TableHead className="text-muted-foreground">Admin</TableHead>
+              <TableHead className="text-muted-foreground">Ação</TableHead>
+              <TableHead className="text-muted-foreground">Recurso</TableHead>
+              <TableHead className="text-muted-foreground">ID Recurso</TableHead>
+              <TableHead className="text-muted-foreground">IP</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading && logs.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-gray-400">
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                   Carregando...
                 </TableCell>
               </TableRow>
             ) : logs.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-gray-400">
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                   Nenhum registro encontrado
                 </TableCell>
               </TableRow>
             ) : (
               logs.map((log) => (
-                <TableRow key={log.id} className="border-gray-800">
-                  <TableCell className="text-gray-300 text-sm font-mono">
+                <TableRow key={log.id} className="border-border">
+                  <TableCell className="text-muted-foreground text-sm font-mono">
                     {formatDate(log.createdAt)}
                   </TableCell>
-                  <TableCell className="text-gray-300 text-sm">
+                  <TableCell className="text-muted-foreground text-sm">
                     {log.adminEmail || log.adminId}
                   </TableCell>
                   <TableCell>
@@ -176,18 +176,18 @@ export default function AuditLogPage() {
                       {log.action}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-gray-300 text-sm">{log.resourceType}</TableCell>
-                  <TableCell className="text-gray-400 text-xs font-mono max-w-[120px] truncate">
+                  <TableCell className="text-muted-foreground text-sm">{log.resourceType}</TableCell>
+                  <TableCell className="text-muted-foreground text-xs font-mono max-w-[120px] truncate">
                     {log.resourceId || "—"}
                   </TableCell>
-                  <TableCell className="text-gray-500 text-xs">{log.ipAddress || "—"}</TableCell>
+                  <TableCell className="text-muted-foreground text-xs">{log.ipAddress || "—"}</TableCell>
                 </TableRow>
               ))
             )}
           </TableBody>
         </Table>
-        <div className="flex items-center justify-between p-3 border-t border-gray-800">
-          <span className="text-sm text-gray-400">
+        <div className="flex items-center justify-between p-3 border-t border-border">
+          <span className="text-sm text-muted-foreground">
             Total: {total} | Exibindo {offset + 1}–{Math.min(offset + limit, total)}
           </span>
           <div className="flex gap-2">
@@ -196,7 +196,7 @@ export default function AuditLogPage() {
               size="sm"
               disabled={offset === 0}
               onClick={() => setOffset((o) => Math.max(0, o - limit))}
-              className="border-gray-600 text-gray-300"
+              className="border-border text-muted-foreground"
             >
               Anterior
             </Button>
@@ -205,7 +205,7 @@ export default function AuditLogPage() {
               size="sm"
               disabled={offset + limit >= total}
               onClick={() => setOffset((o) => o + limit)}
-              className="border-gray-600 text-gray-300"
+              className="border-border text-muted-foreground"
             >
               Próxima
             </Button>

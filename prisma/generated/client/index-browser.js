@@ -394,6 +394,13 @@ exports.Prisma.AdminAlertSettingsScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
+exports.Prisma.SiteSettingScalarFieldEnum = {
+  id: 'id',
+  key: 'key',
+  value: 'value',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -526,7 +533,8 @@ exports.Prisma.ModelName = {
   UserNote: 'UserNote',
   SupportIssue: 'SupportIssue',
   CommunicationLog: 'CommunicationLog',
-  AdminAlertSettings: 'AdminAlertSettings'
+  AdminAlertSettings: 'AdminAlertSettings',
+  SiteSetting: 'SiteSetting'
 };
 
 /**

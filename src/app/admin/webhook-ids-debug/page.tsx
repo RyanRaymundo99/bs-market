@@ -134,7 +134,7 @@ export default function WebhookIdsDebugPage() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-white">
+        <h1 className="text-3xl font-bold">
           🔍 Debug: IDs e Pagamentos dos Webhooks
         </h1>
         <div className="flex gap-2">
@@ -182,7 +182,7 @@ export default function WebhookIdsDebugPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{summary.totalWebhooks}</div>
-              <div className="text-xs text-gray-400">
+              <div className="text-xs text-muted-foreground">
                 {summary.processedWebhooks} processados,{" "}
                 {summary.failedWebhooks} com erro
               </div>
@@ -196,7 +196,7 @@ export default function WebhookIdsDebugPage() {
               <div className="text-2xl font-bold text-yellow-500">
                 {summary.unmatchedWebhooks}
               </div>
-              <div className="text-xs text-gray-400">
+              <div className="text-xs text-muted-foreground">
                 Webhooks sem ordem correspondente
               </div>
             </CardContent>
@@ -209,7 +209,7 @@ export default function WebhookIdsDebugPage() {
               <div className="text-2xl font-bold text-orange-500">
                 {summary.pendingOrders}
               </div>
-              <div className="text-xs text-gray-400">
+              <div className="text-xs text-muted-foreground">
                 {summary.unmatchedOrders} sem webhook
               </div>
             </CardContent>
@@ -222,7 +222,7 @@ export default function WebhookIdsDebugPage() {
               <div className="text-2xl font-bold text-green-500">
                 {summary.completedOrders}
               </div>
-              <div className="text-xs text-gray-400">
+              <div className="text-xs text-muted-foreground">
                 Pagamentos confirmados
               </div>
             </CardContent>
@@ -261,7 +261,7 @@ export default function WebhookIdsDebugPage() {
           {loading ? (
             <div className="text-center py-8">Carregando...</div>
           ) : filteredWebhooks.length === 0 ? (
-            <div className="text-center py-8 text-gray-400">
+            <div className="text-center py-8 text-muted-foreground">
               Nenhum webhook encontrado
             </div>
           ) : (
@@ -290,12 +290,12 @@ export default function WebhookIdsDebugPage() {
                       </TableCell>
                       <TableCell className="font-mono text-xs">
                         {webhook.transactionId || (
-                          <span className="text-gray-500">N/A</span>
+                          <span className="text-muted-foreground">N/A</span>
                         )}
                       </TableCell>
                       <TableCell className="font-mono text-xs">
                         {webhook.externalId || (
-                          <span className="text-gray-500">N/A</span>
+                          <span className="text-muted-foreground">N/A</span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -360,7 +360,7 @@ export default function WebhookIdsDebugPage() {
           {loading ? (
             <div className="text-center py-8">Carregando...</div>
           ) : filteredOrders.length === 0 ? (
-            <div className="text-center py-8 text-gray-400">
+            <div className="text-center py-8 text-muted-foreground">
               Nenhuma ordem encontrada
             </div>
           ) : (
@@ -430,12 +430,12 @@ export default function WebhookIdsDebugPage() {
                               {order.relatedDeposit.externalId?.slice(-12) ||
                                 "N/A"}
                             </div>
-                            <div className="text-gray-400">
+                            <div className="text-muted-foreground">
                               Status: {order.relatedDeposit.status}
                             </div>
                           </div>
                         ) : (
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-muted-foreground">
                             Não encontrado
                           </span>
                         )}
@@ -458,7 +458,7 @@ export default function WebhookIdsDebugPage() {
               Todos os dados enviados pelo NutzPay
             </DialogDescription>
           </DialogHeader>
-          <pre className="bg-gray-900 p-4 rounded text-xs overflow-x-auto">
+          <pre className="bg-card p-4 rounded text-xs overflow-x-auto">
             {JSON.stringify(selectedPayload, null, 2)}
           </pre>
         </DialogContent>

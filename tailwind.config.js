@@ -47,15 +47,20 @@ module.exports = {
   				DEFAULT: 'hsl(var(--destructive))',
   				foreground: 'hsl(var(--destructive-foreground))'
   			},
+  			warning: {
+  				DEFAULT: 'hsl(var(--warning))',
+  				foreground: 'hsl(var(--warning-foreground))'
+  			},
   			border: 'hsl(var(--border))',
   			input: 'hsl(var(--input))',
   			ring: 'hsl(var(--ring))',
+  			/* brand kept as alias so existing class names still work; prefer primary */
   			brand: {
-  				DEFAULT: '#12E0A1',
-  				300: '#12E0A1',
-  				400: '#0FB88A',
-  				500: '#12E0A1',
-  				600: '#0DA578'
+  				DEFAULT: 'hsl(var(--primary))',
+  				300: 'hsl(var(--primary) / 0.9)',
+  				400: 'hsl(var(--primary) / 0.85)',
+  				500: 'hsl(var(--primary))',
+  				600: 'hsl(var(--primary) / 0.8)'
   			},
   			chart: {
   				'1': 'hsl(var(--chart-1))',

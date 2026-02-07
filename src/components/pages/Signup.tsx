@@ -1,10 +1,11 @@
 "use client";
 import React, { useState, useCallback } from "react";
 import { Mail, Lock, User, ArrowRight, Loader2 } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
-import { Form } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
+import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { InputField } from "@/components/Auth/FormFields";
@@ -12,11 +13,11 @@ import { DocumentField } from "@/components/Auth/DocumentField";
 import { PhoneField } from "@/components/Auth/PhoneField";
 import { SignUpFormValues, signUpSchema } from "@/lib/schema/signupSchema";
 import { AuthLayout } from "@/components/ui/auth-layout";
-import { WelcomeTutorial } from "@/components/ui/welcome-tutorial";
+import { PasswordStrengthGuide } from "@/components/ui/password-strength-guide";
 
 const Signup = () => {
   const form = useForm<SignUpFormValues>({
-    resolver: zodResolver(signUpSchema),
+    resolver: zodResolver(signUpSchema) as Resolver<SignUpFormValues>,
     defaultValues: {
       name: "",
       email: "",
@@ -24,11 +25,11 @@ const Signup = () => {
       cpf: "",
       password: "",
       confirmPassword: "",
+      acceptMarketing: false,
+      acceptTerms: false,
     },
   });
   const [pending, setPending] = useState(false);
-  const [showWelcomeTutorial, setShowWelcomeTutorial] = useState(false);
-  const [userName, setUserName] = useState("");
   const { toast } = useToast();
 
   const onSubmit = useCallback(
@@ -53,12 +54,14 @@ const Signup = () => {
         const result = await response.json();
 
         if (response.ok) {
-          setUserName(data.name);
-          setShowWelcomeTutorial(true);
+          sessionStorage.setItem("show-welcome-tutorial", "1");
+          sessionStorage.setItem("welcome-tutorial-name", data.name || "");
           toast({
             title: "Conta criada com sucesso!",
-            description: "Bem-vindo ao BS Market! Vamos começar.",
+            description: "Bem-vindo ao BS Market! Redirecionando...",
           });
+          window.location.href = "/dashboard";
+          return;
         } else {
           toast({
             variant: "destructive",
@@ -80,14 +83,6 @@ const Signup = () => {
     [toast]
   );
 
-  const handleTutorialClose = () => {
-    setShowWelcomeTutorial(false);
-    // Redirect to dashboard after tutorial closes
-    setTimeout(() => {
-      window.location.href = "/dashboard";
-    }, 500);
-  };
-
   return (
     <AuthLayout
       title="Criar uma conta"
@@ -96,7 +91,7 @@ const Signup = () => {
           Já tem uma conta?{" "}
           <Link
             href="/login"
-            className="text-brand-300 hover:text-brand-400 hover:underline transition-colors"
+            className="text-primary hover:text-primary/80 hover:underline transition-colors"
           >
             Fazer login
           </Link>
@@ -106,7 +101,19 @@ const Signup = () => {
       showLogo={false}
     >
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form
+          onSubmit={form.handleSubmit(onSubmit, (errors) => {
+            const firstError = Object.values(errors)[0]?.message;
+            if (firstError) {
+              toast({
+                variant: "destructive",
+                title: "Verifique o formulário",
+                description: firstError,
+              });
+            }
+          })}
+          className="space-y-6"
+        >
           <InputField
             control={form.control}
             name="name"
@@ -157,6 +164,10 @@ const Signup = () => {
             showPasswordToggle={true}
             labelPosition="top"
           />
+          <PasswordStrengthGuide
+            password={form.watch("password") ?? ""}
+            className="mt-1"
+          />
 
           <InputField
             control={form.control}
@@ -167,6 +178,52 @@ const Signup = () => {
             icon={<Lock className="h-5 w-5 text-gray-300" />}
             showPasswordToggle={true}
             labelPosition="top"
+          />
+
+          <FormField
+            control={form.control}
+            name="acceptTerms"
+            render={({ field }) => (
+              <FormItem>
+                <div className="flex items-start gap-3">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      className="border-gray-500 data-[state=checked]:bg-brand-500 data-[state=checked]:border-brand-500 bg-white/5 mt-0.5"
+                    />
+                  </FormControl>
+                  <label
+                    htmlFor="acceptTerms"
+                    className="text-sm text-gray-300 leading-relaxed cursor-pointer flex-1"
+                    onClick={() => field.onChange(!field.value)}
+                  >
+                    Ao criar a conta, aceito os{" "}
+                    <Link
+                      href="/terms"
+                      className="text-blue-300 hover:text-blue-200 underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Termos
+                    </Link>{" "}
+                    e{" "}
+                    <Link
+                      href="/privacy"
+                      className="text-blue-300 hover:text-blue-200 underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Política de Privacidade
+                    </Link>
+                    .
+                  </label>
+                </div>
+                {form.formState.errors.acceptTerms && (
+                  <p className="text-sm text-red-400 mt-1">
+                    {form.formState.errors.acceptTerms.message}
+                  </p>
+                )}
+              </FormItem>
+            )}
           />
 
           <Button
@@ -213,12 +270,6 @@ const Signup = () => {
         </Link>
         .
       </div>
-
-      <WelcomeTutorial
-        isOpen={showWelcomeTutorial}
-        onClose={handleTutorialClose}
-        userName={userName}
-      />
     </AuthLayout>
   );
 };

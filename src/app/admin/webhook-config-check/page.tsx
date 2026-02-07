@@ -84,7 +84,7 @@ export default function WebhookConfigCheckPage() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-white">
+        <h1 className="text-3xl font-bold text-foreground">
           🔧 Verificação de Configuração de Webhook
         </h1>
         <Button onClick={checkConfig} disabled={loading}>
@@ -119,25 +119,25 @@ export default function WebhookConfigCheckPage() {
                 )}
               </div>
               <div>
-                <p className="text-sm text-gray-400 mb-1">URL do Webhook:</p>
-                <code className="bg-gray-800 p-2 rounded text-sm text-white block">
+                <p className="text-sm text-muted-foreground mb-1">URL do Webhook:</p>
+                <code className="bg-muted p-2 rounded text-sm text-foreground block">
                   {config.webhookEndpoint}
                 </code>
               </div>
               <div>
-                <p className="text-sm text-gray-400 mb-1">
+                <p className="text-sm text-muted-foreground mb-1">
                   URL Esperada (para configurar no NutzPay):
                 </p>
-                <code className="bg-gray-800 p-2 rounded text-sm text-white block">
+                <code className="bg-muted p-2 rounded text-sm text-foreground block">
                   {config.expectedUrl}
                 </code>
               </div>
               {config.webhookResponse != null ? (
                 <div>
-                  <p className="text-sm text-gray-400 mb-1">
+                  <p className="text-sm text-muted-foreground mb-1">
                     Resposta do Endpoint:
                   </p>
-                  <pre className="bg-gray-800 p-2 rounded text-xs text-white overflow-x-auto">
+                  <pre className="bg-muted p-2 rounded text-xs text-foreground overflow-x-auto">
                     {JSON.stringify(config.webhookResponse, null, 2)}
                   </pre>
                 </div>
@@ -175,13 +175,13 @@ export default function WebhookConfigCheckPage() {
                   </div>
                   {config.reception.webhookReception?.latestWebhook && (
                     <div>
-                      <p className="text-sm text-gray-400 mb-1">
+                      <p className="text-sm text-muted-foreground mb-1">
                         Último Webhook Recebido:
                       </p>
-                      <div className="bg-gray-800 p-3 rounded space-y-1 text-sm">
+                      <div className="bg-muted p-3 rounded space-y-1 text-sm">
                         <div>
-                          <span className="text-gray-400">Evento:</span>{" "}
-                          <span className="text-white">
+                          <span className="text-muted-foreground">Evento:</span>{" "}
+                          <span className="text-foreground">
                             {
                               config.reception.webhookReception.latestWebhook
                                 .eventType
@@ -189,21 +189,21 @@ export default function WebhookConfigCheckPage() {
                           </span>
                         </div>
                         <div>
-                          <span className="text-gray-400">Transaction ID:</span>{" "}
-                          <span className="text-white font-mono">
+                          <span className="text-muted-foreground">Transaction ID:</span>{" "}
+                          <span className="text-foreground font-mono">
                             {config.reception.webhookReception.latestWebhook
                               .transactionId || "N/A"}
                           </span>
                         </div>
                         <div>
-                          <span className="text-gray-400">External ID:</span>{" "}
-                          <span className="text-white font-mono">
+                          <span className="text-muted-foreground">External ID:</span>{" "}
+                          <span className="text-foreground font-mono">
                             {config.reception.webhookReception.latestWebhook
                               .externalId || "N/A"}
                           </span>
                         </div>
                         <div>
-                          <span className="text-gray-400">Status:</span>{" "}
+                          <span className="text-muted-foreground">Status:</span>{" "}
                           <Badge variant="outline">
                             {
                               config.reception.webhookReception.latestWebhook
@@ -212,7 +212,7 @@ export default function WebhookConfigCheckPage() {
                           </Badge>
                         </div>
                         <div>
-                          <span className="text-gray-400">Processado:</span>{" "}
+                          <span className="text-muted-foreground">Processado:</span>{" "}
                           {config.reception.webhookReception.latestWebhook
                             .processed ? (
                             <Badge className="bg-green-600">Sim</Badge>
@@ -221,8 +221,8 @@ export default function WebhookConfigCheckPage() {
                           )}
                         </div>
                         <div>
-                          <span className="text-gray-400">Data:</span>{" "}
-                          <span className="text-white">
+                          <span className="text-muted-foreground">Data:</span>{" "}
+                          <span className="text-foreground">
                             {new Date(
                               config.reception.webhookReception.latestWebhook.createdAt
                             ).toLocaleString("pt-BR")}
@@ -247,23 +247,23 @@ export default function WebhookConfigCheckPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <p className="text-sm font-medium text-white mb-2">
+                <p className="text-sm font-medium text-foreground mb-2">
                   1. Configure o Webhook no Dashboard do NutzPay:
                 </p>
-                <ol className="list-decimal list-inside space-y-1 text-sm text-gray-300 ml-4">
+                <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground ml-4">
                   <li>Acesse o dashboard do NutzPay</li>
                   <li>Vá para Configurações → Webhooks</li>
                   <li>Adicione a URL do webhook:</li>
                 </ol>
-                <code className="bg-gray-800 p-2 rounded text-sm text-white block mt-2">
+                <code className="bg-muted p-2 rounded text-sm text-foreground block mt-2">
                   {config.expectedUrl}
                 </code>
               </div>
               <div>
-                <p className="text-sm font-medium text-white mb-2">
+                <p className="text-sm font-medium text-foreground mb-2">
                   2. Eventos a Configurar:
                 </p>
-                <ul className="list-disc list-inside space-y-1 text-sm text-gray-300 ml-4">
+                <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-4">
                   <li>transaction.created</li>
                   <li>transaction.completed</li>
                   <li>transaction.failed</li>
@@ -275,22 +275,22 @@ export default function WebhookConfigCheckPage() {
                 </ul>
               </div>
               <div>
-                <p className="text-sm font-medium text-white mb-2">
+                <p className="text-sm font-medium text-foreground mb-2">
                   3. Verifique o Webhook Secret:
                 </p>
-                <p className="text-sm text-gray-300">
+                <p className="text-sm text-muted-foreground">
                   O webhook secret deve estar configurado na variável de
                   ambiente{" "}
-                  <code className="bg-gray-800 px-1 rounded">
+                  <code className="bg-muted px-1 rounded">
                     NUTZPAY_WEBHOOK_SECRET
                   </code>
                 </p>
               </div>
               <div>
-                <p className="text-sm font-medium text-white mb-2">
+                <p className="text-sm font-medium text-foreground mb-2">
                   4. Teste o Webhook:
                 </p>
-                <p className="text-sm text-gray-300">
+                <p className="text-sm text-muted-foreground">
                   Use a página de teste de webhook ou faça um pagamento de teste
                   para verificar se os webhooks estão sendo recebidos.
                 </p>
@@ -310,12 +310,12 @@ export default function WebhookConfigCheckPage() {
                     {config.reception.recentOrders.slice(0, 5).map((order) => (
                       <div
                         key={order.id}
-                        className="bg-gray-800 p-3 rounded text-sm"
+                        className="bg-muted p-3 rounded text-sm"
                       >
                         <div className="flex justify-between items-center">
                           <div>
-                            <span className="text-gray-400">Order ID:</span>{" "}
-                            <span className="text-white font-mono">
+                            <span className="text-muted-foreground">Order ID:</span>{" "}
+                            <span className="text-foreground font-mono">
                               {order.id.slice(-12)}
                             </span>
                           </div>
@@ -330,14 +330,14 @@ export default function WebhookConfigCheckPage() {
                           </Badge>
                         </div>
                         <div className="mt-1">
-                          <span className="text-gray-400">
+                          <span className="text-muted-foreground">
                             External Order ID:
                           </span>{" "}
-                          <span className="text-white font-mono">
+                          <span className="text-foreground font-mono">
                             {order.externalOrderId || "NÃO DEFINIDO"}
                           </span>
                         </div>
-                        <div className="mt-1 text-xs text-gray-500">
+                        <div className="mt-1 text-xs text-muted-foreground">
                           {new Date(order.createdAt).toLocaleString("pt-BR")}
                         </div>
                       </div>
@@ -348,7 +348,7 @@ export default function WebhookConfigCheckPage() {
             )}
         </div>
       ) : (
-        <div className="text-center py-8 text-gray-400">
+        <div className="text-center py-8 text-muted-foreground">
           Erro ao carregar configuração
         </div>
       )}

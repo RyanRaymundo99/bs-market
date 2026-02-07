@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
     // Get query parameters for filtering
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
+    const search = searchParams.get("search")?.trim() || "";
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "50");
     const offset = (page - 1) * limit;
@@ -22,6 +23,13 @@ export async function GET(request: NextRequest) {
     const where: Record<string, unknown> = {};
     if (status && ["PENDING", "APPROVED", "REJECTED"].includes(status)) {
       where.approvalStatus = status;
+    }
+    if (search.length >= 2) {
+      where.OR = [
+        { name: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } },
+        { cpf: { contains: search } },
+      ];
     }
 
     // Fetch users with pagination

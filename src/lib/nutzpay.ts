@@ -367,6 +367,24 @@ export class NutzPayService {
           helpfulError.name = "InvalidTransactionAmountFormat";
           throw helpfulError;
         }
+
+        // 500 PAYMENT_ERROR: upstream acquirer failed (e.g. provider returned invalid JSON)
+        const code = error.response?.data?.code;
+        const msg = error.response?.data?.message || "";
+        if (
+          error.response?.status === 500 &&
+          (code === "PAYMENT_ERROR" ||
+            msg.includes("adquirentes falharam") ||
+            msg.includes("is not valid JSON") ||
+            msg.includes("Payment Creation Failed"))
+        ) {
+          console.error(
+            "NutzPay upstream/acquirer failure. Ask user to retry or contact NutzPay support."
+          );
+          throw new Error(
+            "Não foi possível criar o pagamento no momento. O provedor de pagamento está com instabilidade. Tente novamente em alguns minutos. Se o problema continuar, entre em contato com o suporte."
+          );
+        }
       }
 
       throw error;

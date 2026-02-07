@@ -251,14 +251,18 @@ export default function AdminUserDetailsPage({
     if (!userId || !balanceAdjustment.amount) return;
     setAdjustingBalance(true);
     try {
+      const rawAmount = parseFloat(balanceAdjustment.amount);
+      const isCredit = rawAmount > 0;
+      const amount = Math.abs(rawAmount);
       const response = await fetch("/api/admin/balance/adjust", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId,
-          amount: parseFloat(balanceAdjustment.amount),
-          reason: balanceAdjustment.reason || "Admin adjustment",
           currency: "USDT",
+          amount,
+          operation: isCredit ? "CREDIT" : "DEDUCT",
+          reason: balanceAdjustment.reason || "Admin adjustment",
         }),
       });
 
@@ -286,13 +290,15 @@ export default function AdminUserDetailsPage({
           description: "Balance adjusted successfully",
         });
       } else {
-        throw new Error("Failed to adjust balance");
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data?.error || data?.details || "Failed to adjust balance");
       }
     } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to adjust balance";
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to adjust balance",
+        description: message,
       });
     } finally {
       setAdjustingBalance(false);
@@ -462,7 +468,7 @@ export default function AdminUserDetailsPage({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black p-6 text-white">
+      <div className="min-h-screen p-6">
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4"></div>
@@ -475,7 +481,7 @@ export default function AdminUserDetailsPage({
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-black p-6 text-white">
+      <div className="min-h-screen p-6">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">User Not Found</h1>
           <Button onClick={() => router.push("/admin/users")}>
@@ -488,7 +494,7 @@ export default function AdminUserDetailsPage({
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 p-6 text-white">
+    <div className="min-h-screen p-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -496,16 +502,16 @@ export default function AdminUserDetailsPage({
             <BackToDashboardButton />
             <div>
               <h1 className="text-3xl font-bold">{user.name}</h1>
-              <p className="text-gray-400">{user.email}</p>
+              <p className="text-muted-foreground">{user.email}</p>
             </div>
           </div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Personal Information */}
-          <Card className="bg-gray-900 border-gray-800">
+          <Card className="bg-card border-border">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
+              <CardTitle className="flex items-center gap-2 text-foreground">
                 <User className="w-5 h-5" />
                 Personal Information
               </CardTitle>
@@ -515,7 +521,7 @@ export default function AdminUserDetailsPage({
                 {isEditing ? (
                   <>
                     <div>
-                      <Label className="text-sm font-medium text-gray-300">
+                      <Label className="text-sm font-medium text-muted-foreground">
                         Nome Completo
                       </Label>
                       <Input
@@ -523,11 +529,11 @@ export default function AdminUserDetailsPage({
                         onChange={(e) =>
                           setEditForm({ ...editForm, name: e.target.value })
                         }
-                        className="mt-1 bg-gray-700 border-gray-600 text-white"
+                        className="mt-1 bg-muted border-border text-foreground"
                       />
                     </div>
                     <div>
-                      <Label className="text-sm font-medium text-gray-300">
+                      <Label className="text-sm font-medium text-muted-foreground">
                         Telefone
                       </Label>
                       <Input
@@ -535,11 +541,11 @@ export default function AdminUserDetailsPage({
                         onChange={(e) =>
                           setEditForm({ ...editForm, phone: e.target.value })
                         }
-                        className="mt-1 bg-gray-700 border-gray-600 text-white"
+                        className="mt-1 bg-muted border-border text-foreground"
                       />
                     </div>
                     <div>
-                      <Label className="text-sm font-medium text-gray-300">
+                      <Label className="text-sm font-medium text-muted-foreground">
                         CPF/CNPJ
                       </Label>
                       <Input
@@ -547,7 +553,7 @@ export default function AdminUserDetailsPage({
                         onChange={(e) =>
                           setEditForm({ ...editForm, cpf: e.target.value })
                         }
-                        className="mt-1 bg-gray-700 border-gray-600 text-white"
+                        className="mt-1 bg-muted border-border text-foreground"
                       />
                     </div>
                     <div className="flex gap-2 pt-2">
@@ -555,7 +561,7 @@ export default function AdminUserDetailsPage({
                         size="sm"
                         onClick={handleSaveProfileClick}
                         disabled={saving}
-                        className="bg-green-600 hover:bg-green-700"
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground"
                       >
                         <Save className="w-4 h-4 mr-1" />
                         {saving ? "Salvando..." : "Salvar"}
@@ -571,7 +577,7 @@ export default function AdminUserDetailsPage({
                             cpf: user.cpf || "",
                           });
                         }}
-                        className="border-gray-600"
+                        className="border-border"
                       >
                         <X className="w-4 h-4 mr-1" />
                         Cancelar
@@ -581,19 +587,19 @@ export default function AdminUserDetailsPage({
                 ) : (
                   <>
                     <div>
-                      <label className="text-sm font-medium text-gray-300">
+                      <label className="text-sm font-medium text-muted-foreground">
                         Full Name
                       </label>
-                      <p className="text-white">{user.name}</p>
+                      <p className="text-foreground">{user.name}</p>
                     </div>
 
                     <div>
-                      <label className="text-sm font-medium text-gray-300">
+                      <label className="text-sm font-medium text-muted-foreground">
                         Email
                       </label>
                       <div className="flex items-center gap-2">
-                        <Mail className="w-4 h-4 text-gray-400" />
-                        <span className="text-white">{user.email}</span>
+                        <Mail className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-foreground">{user.email}</span>
                         {user.emailVerified ? (
                           <CheckCircle className="w-4 h-4 text-green-500" />
                         ) : (
@@ -603,12 +609,12 @@ export default function AdminUserDetailsPage({
                     </div>
 
                     <div>
-                      <label className="text-sm font-medium text-gray-300">
+                      <label className="text-sm font-medium text-muted-foreground">
                         Phone
                       </label>
                       <div className="flex items-center gap-2">
-                        <Phone className="w-4 h-4 text-gray-400" />
-                        <span className="text-white">
+                        <Phone className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-foreground">
                           {formatPhone(user.phone)}
                         </span>
                         {user.phoneVerified ? (
@@ -620,12 +626,12 @@ export default function AdminUserDetailsPage({
                     </div>
 
                     <div>
-                      <label className="text-sm font-medium text-gray-300">
+                      <label className="text-sm font-medium text-muted-foreground">
                         CPF/CNPJ
                       </label>
                       <div className="flex items-center gap-2">
-                        <CreditCard className="w-4 h-4 text-gray-400" />
-                        <span className="text-white">
+                        <CreditCard className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-foreground">
                           {formatCPF(user.cpf)}
                         </span>
                       </div>
@@ -635,7 +641,7 @@ export default function AdminUserDetailsPage({
                       size="sm"
                       variant="outline"
                       onClick={() => setIsEditing(true)}
-                      className="mt-2 border-gray-600 text-gray-300 hover:bg-gray-700"
+                      className="mt-2 border-border text-muted-foreground hover:bg-muted"
                     >
                       <Edit className="w-4 h-4 mr-1" />
                       Editar Dados
@@ -647,10 +653,10 @@ export default function AdminUserDetailsPage({
           </Card>
 
           {/* Account Status */}
-          <Card className="bg-gray-900 border-gray-800">
+          <Card className="bg-card border-border">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-white">
+                <CardTitle className="flex items-center gap-2 text-foreground">
                   <FileText className="w-5 h-5" />
                   Account Status
                 </CardTitle>
@@ -658,7 +664,7 @@ export default function AdminUserDetailsPage({
                   size="sm"
                   onClick={handleLoginAsUser}
                   disabled={loggingInAsUser}
-                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
                   {loggingInAsUser ? (
                     <>
@@ -677,14 +683,14 @@ export default function AdminUserDetailsPage({
             <CardContent className="space-y-4">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-300">
+                  <span className="text-sm font-medium text-muted-foreground">
                     Account Approval
                   </span>
                   {getStatusBadge(user.approvalStatus)}
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-300">
+                  <span className="text-sm font-medium text-muted-foreground">
                     KYC Status
                   </span>
                   {getStatusBadge(user.kycStatus)}
@@ -701,7 +707,7 @@ export default function AdminUserDetailsPage({
                   </div>
                 )}
 
-                <div className="text-sm text-gray-400 space-y-1">
+                <div className="text-sm text-muted-foreground space-y-1">
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4" />
                     <span>
@@ -733,17 +739,17 @@ export default function AdminUserDetailsPage({
         </div>
 
         {/* User Balance & Quick Actions */}
-        <Card className="bg-gray-900 border-gray-800 mt-6">
+        <Card className="bg-card border-border mt-6">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2 text-white">
+              <CardTitle className="flex items-center gap-2 text-foreground">
                 <Wallet className="w-5 h-5 text-green-500" />
                 Saldo do Usuário
               </CardTitle>
               <Button
                 size="sm"
                 onClick={() => setShowBalanceDialog(true)}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
               >
                 <DollarSign className="w-4 h-4 mr-1" />
                 Ajustar Saldo
@@ -766,15 +772,15 @@ export default function AdminUserDetailsPage({
                       return (
                         <div
                           key={balance.currency}
-                          className="bg-gray-800 rounded-lg p-4 border border-gray-700"
+                          className="bg-muted rounded-lg p-4 border border-border"
                         >
-                          <div className="text-sm text-gray-400 mb-1">
+                          <div className="text-sm text-muted-foreground mb-1">
                             {balance.currency}{" "}
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs text-muted-foreground">
                               (calculado)
                             </span>
                           </div>
-                          <div className="text-2xl font-bold text-white">
+                          <div className="text-2xl font-bold text-foreground">
                             {formatCurrency(calculatedBrl, "BRL")}
                           </div>
                           {balance.locked > 0 && (
@@ -790,12 +796,12 @@ export default function AdminUserDetailsPage({
                     return (
                       <div
                         key={balance.currency}
-                        className="bg-gray-800 rounded-lg p-4 border border-gray-700"
+                        className="bg-muted rounded-lg p-4 border border-border"
                       >
-                        <div className="text-sm text-gray-400 mb-1">
+                        <div className="text-sm text-muted-foreground mb-1">
                           {balance.currency}
                         </div>
-                        <div className="text-2xl font-bold text-white">
+                        <div className="text-2xl font-bold text-foreground">
                           {formatCurrency(balance.amount, "BRL")}
                         </div>
                         {balance.locked > 0 && (
@@ -811,12 +817,12 @@ export default function AdminUserDetailsPage({
                   return (
                     <div
                       key={balance.currency}
-                      className="bg-gray-800 rounded-lg p-4 border border-gray-700"
+                      className="bg-muted rounded-lg p-4 border border-border"
                     >
-                      <div className="text-sm text-gray-400 mb-1">
+                      <div className="text-sm text-muted-foreground mb-1">
                         {balance.currency}
                       </div>
-                      <div className="text-2xl font-bold text-white">
+                      <div className="text-2xl font-bold text-foreground">
                         {formatCurrency(balance.amount, "USDT")}
                       </div>
                       {balance.locked > 0 && (
@@ -829,7 +835,7 @@ export default function AdminUserDetailsPage({
                   );
                 })
               ) : (
-                <div className="col-span-3 text-center text-gray-400 py-4">
+                <div className="col-span-3 text-center text-muted-foreground py-4">
                   Nenhum saldo encontrado
                 </div>
               )}
@@ -838,10 +844,10 @@ export default function AdminUserDetailsPage({
         </Card>
 
         {/* Transaction History */}
-        <Card className="bg-gray-900 border-gray-800 mt-6">
+        <Card className="bg-card border-border mt-6">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-white">
-              <TrendingUp className="w-5 h-5 text-blue-500" />
+            <CardTitle className="flex items-center gap-2 text-foreground">
+              <TrendingUp className="w-5 h-5 text-primary" />
               Histórico de Transações
             </CardTitle>
           </CardHeader>
@@ -855,15 +861,15 @@ export default function AdminUserDetailsPage({
                 {transactions.map((tx) => (
                   <div
                     key={tx.id}
-                    className="flex items-center justify-between p-3 bg-gray-800 rounded-lg border border-gray-700"
+                    className="flex items-center justify-between p-3 bg-muted rounded-lg border border-border"
                   >
                     <div className="flex items-center gap-3">
                       {getTransactionIcon(tx.type)}
                       <div>
-                        <div className="text-sm font-medium text-white">
+                        <div className="text-sm font-medium text-foreground">
                           {tx.type.replace(/_/g, " ")}
                         </div>
-                        <div className="text-xs text-gray-400">
+                        <div className="text-xs text-muted-foreground">
                           {new Date(tx.createdAt).toLocaleDateString("pt-BR", {
                             day: "2-digit",
                             month: "2-digit",
@@ -899,7 +905,7 @@ export default function AdminUserDetailsPage({
                 ))}
               </div>
             ) : (
-              <div className="text-center text-gray-400 py-8">
+              <div className="text-center text-muted-foreground py-8">
                 Nenhuma transação encontrada
               </div>
             )}
@@ -908,18 +914,18 @@ export default function AdminUserDetailsPage({
 
         {/* Balance Adjustment Dialog */}
         <Dialog open={showBalanceDialog} onOpenChange={setShowBalanceDialog}>
-          <DialogContent className="bg-gray-900 border-gray-700">
+          <DialogContent className="bg-card border-border">
             <DialogHeader>
-              <DialogTitle className="text-white">
+              <DialogTitle className="text-foreground">
                 Ajustar Saldo do Usuário
               </DialogTitle>
-              <DialogDescription className="text-gray-400">
+              <DialogDescription className="text-muted-foreground">
                 Adicione ou remova saldo da conta de {user.name}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 pt-4">
               <div>
-                <Label className="text-gray-300">
+                <Label className="text-muted-foreground">
                   Valor (use negativo para remover)
                 </Label>
                 <Input
@@ -933,11 +939,11 @@ export default function AdminUserDetailsPage({
                       amount: e.target.value,
                     })
                   }
-                  className="mt-1 bg-gray-800 border-gray-600 text-white"
+                  className="mt-1 bg-muted border-border text-foreground"
                 />
               </div>
               <div>
-                <Label className="text-gray-300">Motivo</Label>
+                <Label className="text-muted-foreground">Motivo</Label>
                 <Input
                   placeholder="Motivo do ajuste..."
                   value={balanceAdjustment.reason}
@@ -947,21 +953,21 @@ export default function AdminUserDetailsPage({
                       reason: e.target.value,
                     })
                   }
-                  className="mt-1 bg-gray-800 border-gray-600 text-white"
+                  className="mt-1 bg-muted border-border text-foreground"
                 />
               </div>
               <div className="flex gap-2 justify-end pt-2">
                 <Button
                   variant="outline"
                   onClick={() => setShowBalanceDialog(false)}
-                  className="border-gray-600"
+                  className="border-border"
                 >
                   Cancelar
                 </Button>
                 <Button
                   onClick={handleAdjustBalanceClick}
                   disabled={adjustingBalance || !balanceAdjustment.amount}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
                   {adjustingBalance ? "Ajustando..." : "Confirmar Ajuste"}
                 </Button>
@@ -980,18 +986,18 @@ export default function AdminUserDetailsPage({
             }
           }}
         >
-          <DialogContent className="bg-gray-900 border-gray-800">
+          <DialogContent className="bg-card border-border">
             <DialogHeader>
-              <DialogTitle className="text-white">
+              <DialogTitle className="text-foreground">
                 {balanceConfirmStep === 1
                   ? "Confirmar Ajuste de Saldo"
                   : "Confirmação Final"}
               </DialogTitle>
-              <DialogDescription className="text-gray-400">
+              <DialogDescription className="text-muted-foreground">
                 {balanceConfirmStep === 1 ? (
                   <>
                     Você está prestes a ajustar o saldo do usuário{" "}
-                    <strong className="text-white">{user?.name}</strong>.
+                    <strong className="text-foreground">{user?.name}</strong>.
                     <br />
                     <br />
                     <strong>Valor:</strong>{" "}
@@ -1016,7 +1022,7 @@ export default function AdminUserDetailsPage({
                     <br />
                     <br />
                     Você confirma que deseja ajustar o saldo do usuário{" "}
-                    <strong className="text-white">{user?.name}</strong>?
+                    <strong className="text-foreground">{user?.name}</strong>?
                     <br />
                     <br />
                     <strong>Valor:</strong>{" "}
@@ -1041,7 +1047,7 @@ export default function AdminUserDetailsPage({
                   setShowBalanceConfirmDialog(false);
                   setBalanceConfirmStep(1);
                 }}
-                className="border-gray-700 text-gray-300 hover:bg-gray-800"
+                className="border-border text-muted-foreground hover:bg-muted"
               >
                 Cancelar
               </Button>
@@ -1071,18 +1077,18 @@ export default function AdminUserDetailsPage({
             }
           }}
         >
-          <DialogContent className="bg-gray-900 border-gray-800">
+          <DialogContent className="bg-card border-border">
             <DialogHeader>
-              <DialogTitle className="text-white">
+              <DialogTitle className="text-foreground">
                 {editConfirmStep === 1
                   ? "Confirmar Edição"
                   : "Confirmação Final"}
               </DialogTitle>
-              <DialogDescription className="text-gray-400">
+              <DialogDescription className="text-muted-foreground">
                 {editConfirmStep === 1 ? (
                   <>
                     Você está prestes a editar as informações do usuário{" "}
-                    <strong className="text-white">{user?.name}</strong>.
+                    <strong className="text-foreground">{user?.name}</strong>.
                     <br />
                     <br />
                     Esta ação alterará os dados do usuário. Deseja continuar?
@@ -1094,7 +1100,7 @@ export default function AdminUserDetailsPage({
                     <br />
                     <br />
                     Você confirma que deseja editar as informações do usuário{" "}
-                    <strong className="text-white">{user?.name}</strong>?
+                    <strong className="text-foreground">{user?.name}</strong>?
                     <br />
                     <br />
                     Clique em &quot;Confirmar&quot; novamente para prosseguir.
@@ -1109,7 +1115,7 @@ export default function AdminUserDetailsPage({
                   setShowEditConfirmDialog(false);
                   setEditConfirmStep(1);
                 }}
-                className="border-gray-700 text-gray-300 hover:bg-gray-800"
+                className="border-border text-muted-foreground hover:bg-muted"
               >
                 Cancelar
               </Button>
@@ -1162,9 +1168,9 @@ export default function AdminUserDetailsPage({
 
           return hasDocuments;
         })() ? (
-          <Card className="bg-gray-800 border-gray-700 mt-6">
+          <Card className="bg-muted border-border mt-6">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
+              <CardTitle className="flex items-center gap-2 text-foreground">
                 <FileText className="w-5 h-5" />
                 KYC Documents
               </CardTitle>
@@ -1174,7 +1180,7 @@ export default function AdminUserDetailsPage({
                 {/* Document Front */}
                 {user.documentFront && user.documentFront.trim() !== "" && (
                   <div className="space-y-3">
-                    <label className="text-sm font-medium text-gray-300">
+                    <label className="text-sm font-medium text-muted-foreground">
                       Document Front
                     </label>
                     <div
@@ -1190,7 +1196,7 @@ export default function AdminUserDetailsPage({
                       <img
                         src={getKycImageSrc(user.documentFront)}
                         alt="Document Front"
-                        className="w-full h-48 object-cover rounded-lg border border-gray-600 group-hover:border-blue-500 transition-colors"
+                        className="w-full h-48 object-cover rounded-lg border border-border group-hover:border-primary transition-colors"
                         onError={(e) => {
                           console.error(
                             "Failed to load document front image:",
@@ -1200,7 +1206,7 @@ export default function AdminUserDetailsPage({
                         }}
                       />
                       <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-lg flex items-center justify-center">
-                        <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <ZoomIn className="w-8 h-8 text-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
                     </div>
                   </div>
@@ -1209,7 +1215,7 @@ export default function AdminUserDetailsPage({
                 {/* Document Back */}
                 {user.documentBack && user.documentBack.trim() !== "" && (
                   <div className="space-y-3">
-                    <label className="text-sm font-medium text-gray-300">
+                    <label className="text-sm font-medium text-muted-foreground">
                       Document Back
                     </label>
                     <div
@@ -1225,7 +1231,7 @@ export default function AdminUserDetailsPage({
                       <img
                         src={getKycImageSrc(user.documentBack)}
                         alt="Document Back"
-                        className="w-full h-48 object-cover rounded-lg border border-gray-600 group-hover:border-blue-500 transition-colors"
+                        className="w-full h-48 object-cover rounded-lg border border-border group-hover:border-primary transition-colors"
                         onError={(e) => {
                           console.error(
                             "Failed to load document back image:",
@@ -1235,7 +1241,7 @@ export default function AdminUserDetailsPage({
                         }}
                       />
                       <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-lg flex items-center justify-center">
-                        <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <ZoomIn className="w-8 h-8 text-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
                     </div>
                   </div>
@@ -1244,7 +1250,7 @@ export default function AdminUserDetailsPage({
                 {/* Selfie */}
                 {user.documentSelfie && user.documentSelfie.trim() !== "" && (
                   <div className="space-y-3">
-                    <label className="text-sm font-medium text-gray-300">
+                    <label className="text-sm font-medium text-muted-foreground">
                       Selfie with Document
                     </label>
                     <div
@@ -1260,7 +1266,7 @@ export default function AdminUserDetailsPage({
                       <img
                         src={getKycImageSrc(user.documentSelfie)}
                         alt="Document Selfie"
-                        className="w-full h-48 object-cover rounded-lg border border-gray-600 group-hover:border-blue-500 transition-colors"
+                        className="w-full h-48 object-cover rounded-lg border border-border group-hover:border-primary transition-colors"
                         onError={(e) => {
                           console.error(
                             "Failed to load document selfie image:",
@@ -1270,7 +1276,7 @@ export default function AdminUserDetailsPage({
                         }}
                       />
                       <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-lg flex items-center justify-center">
-                        <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <ZoomIn className="w-8 h-8 text-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
                     </div>
                   </div>
@@ -1279,12 +1285,12 @@ export default function AdminUserDetailsPage({
             </CardContent>
           </Card>
         ) : (
-          <Card className="bg-gray-800 border-gray-700 mt-6">
+          <Card className="bg-muted border-border mt-6">
             <CardContent className="p-6 text-center">
-              <FileText className="w-12 h-12 text-gray-500 mx-auto mb-4" />
-              <p className="text-gray-400">No KYC documents uploaded</p>
+              <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">No KYC documents uploaded</p>
               {user.kycSubmittedAt && (
-                <p className="text-gray-500 text-sm mt-2">
+                <p className="text-muted-foreground text-sm mt-2">
                   KYC was submitted on{" "}
                   {new Date(user.kycSubmittedAt).toLocaleDateString()} but
                   documents are missing.

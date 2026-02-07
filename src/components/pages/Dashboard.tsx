@@ -31,7 +31,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useMobileMenuOpen } from "@/hooks/useMobileMenuOpen";
 import NavbarNew from "@/components/ui/navbar-new";
+import { GlobalKYCBanner } from "@/components/GlobalKYCBanner";
+import { WelcomeTutorial } from "@/components/ui/welcome-tutorial";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { usePrimaryColor } from "@/hooks/use-primary-color";
 import { formatUSDT } from "@/lib/format-currency";
 import {
   LineChart,
@@ -126,6 +129,9 @@ export default function Dashboard() {
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const mobileMenuOpen = useMobileMenuOpen();
+  const primaryHex = usePrimaryColor();
+  const [showWelcomeTutorial, setShowWelcomeTutorial] = useState(false);
+  const [welcomeTutorialName, setWelcomeTutorialName] = useState("");
 
   // Minimum swipe distance (in pixels)
   const minSwipeDistance = 50;
@@ -143,6 +149,23 @@ export default function Dashboard() {
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
+
+  // Show welcome tutorial after signup redirect (pre-load dashboard then show tutorial)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const show = sessionStorage.getItem("show-welcome-tutorial");
+    const name = sessionStorage.getItem("welcome-tutorial-name") || "";
+    if (show === "1") {
+      setShowWelcomeTutorial(true);
+      setWelcomeTutorialName(name);
+    }
+  }, []);
+
+  const handleWelcomeTutorialClose = () => {
+    sessionStorage.removeItem("show-welcome-tutorial");
+    sessionStorage.removeItem("welcome-tutorial-name");
+    setShowWelcomeTutorial(false);
+  };
 
   // Swipe gesture handlers
   const onTouchStart = (e: React.TouchEvent) => {
@@ -230,16 +253,16 @@ export default function Dashboard() {
       case "BTC":
         return <Bitcoin className="w-8 h-8 text-orange-500" />;
       case "ETH":
-        return <Globe className="w-8 h-8 text-brand-300" />;
+        return <Globe className="w-8 h-8 text-primary" />;
       case "BNB":
         return (
-          <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center text-white font-bold text-xs">
+          <div className="w-8 h-8 bg-warning rounded-full flex items-center justify-center text-warning-foreground font-bold text-xs">
             BNB
           </div>
         );
       case "ADA":
         return (
-          <div className="w-8 h-8 bg-brand-500 rounded-full flex items-center justify-center text-white font-bold text-xs">
+          <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-bold text-xs">
             ADA
           </div>
         );
@@ -551,6 +574,7 @@ export default function Dashboard() {
     return (
       <div className="min-h-screen bg-background text-foreground">
         <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
+        <GlobalKYCBanner />
         <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl">
           {/* Skeleton loader for balance section */}
           <div className="mb-6 sm:mb-8">
@@ -631,7 +655,13 @@ export default function Dashboard() {
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
+      <WelcomeTutorial
+        isOpen={showWelcomeTutorial}
+        onClose={handleWelcomeTutorialClose}
+        userName={welcomeTutorialName}
+      />
       <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
+      <GlobalKYCBanner />
 
       <div
         className={`container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl ${
@@ -643,7 +673,6 @@ export default function Dashboard() {
             : undefined
         }
       >
-        {/* KYC banner is shown once by GlobalKYCBanner in layout - no duplicate here */}
 
         {/* Main Balance Display - Centered Hero Section */}
         <div className="mb-6 sm:mb-8">
@@ -718,51 +747,51 @@ export default function Dashboard() {
                   return (
                     <>
                       {/* Mobile - Simple version */}
-                      <div className="md:hidden absolute top-2 right-2 z-10 bg-black/90 backdrop-blur-sm border border-brand-500/30 rounded-lg px-2.5 py-1.5 shadow-xl">
-                        <div className="text-xs text-brand-300 font-bold">
+                      <div className="md:hidden absolute top-2 right-2 z-10 bg-card/90 backdrop-blur-sm border border-primary/30 rounded-lg px-2.5 py-1.5 shadow-xl">
+                        <div className="text-xs text-primary font-bold">
                           U$ {lastDataPoint.USDT.toFixed(2)}
                         </div>
                       </div>
 
                       {/* Desktop - Full version */}
-                      <div className="hidden md:block absolute top-4 left-4 z-10 bg-black/90 backdrop-blur-sm border border-brand-500/30 rounded-lg p-3 shadow-xl min-w-[140px]">
+                      <div className="hidden md:block absolute top-4 left-4 z-10 bg-card/90 backdrop-blur-sm border border-primary/30 rounded-lg p-3 shadow-xl min-w-[140px]">
                         <div className="space-y-2">
-                          <div className="text-xs text-gray-400 font-medium">
+                          <div className="text-xs text-muted-foreground font-medium">
                             Data
                           </div>
-                          <div className="text-sm text-white font-semibold">
+                          <div className="text-sm text-foreground font-semibold">
                             {lastDataPoint.date}
                           </div>
-                          <div className="border-t border-gray-700 pt-2">
-                            <div className="text-xs text-gray-400 font-medium mb-1">
+                          <div className="border-t border-border pt-2">
+                            <div className="text-xs text-muted-foreground font-medium mb-1">
                               Saldo
                             </div>
-                            <div className="text-base text-brand-300 font-bold">
+                            <div className="text-base text-primary font-bold">
                               U${" "}
                               {formatUSDT(lastDataPoint.USDT).replace(
                                 " USDT",
                                 ""
                               )}
                             </div>
-                            <div className="text-xs text-gray-500 mt-1">
+                            <div className="text-xs text-muted-foreground mt-1">
                               USDT
                             </div>
                           </div>
                           {chartData.length >= 2 && (
-                            <div className="border-t border-gray-700 pt-2">
+                            <div className="border-t border-border pt-2">
                               <div className="flex items-center gap-1.5">
                                 <TrendingUp
                                   className={`w-3 h-3 ${
                                     isPositive
-                                      ? "text-green-400"
-                                      : "text-red-400 rotate-180"
+                                      ? "text-primary"
+                                      : "text-destructive rotate-180"
                                   }`}
                                 />
                                 <span
                                   className={`text-xs font-medium ${
                                     isPositive
-                                      ? "text-green-400"
-                                      : "text-red-400"
+                                      ? "text-primary"
+                                      : "text-destructive"
                                   }`}
                                 >
                                   {isPositive ? "+" : ""}
@@ -791,17 +820,17 @@ export default function Dashboard() {
                       >
                         <stop
                           offset="0%"
-                          stopColor="#12E0A1"
+                          stopColor={primaryHex}
                           stopOpacity={0.3}
                         />
                         <stop
                           offset="50%"
-                          stopColor="#12E0A1"
+                          stopColor={primaryHex}
                           stopOpacity={0.15}
                         />
                         <stop
                           offset="100%"
-                          stopColor="#12E0A1"
+                          stopColor={primaryHex}
                           stopOpacity={0}
                         />
                       </linearGradient>
@@ -839,22 +868,22 @@ export default function Dashboard() {
                                 })();
 
                           return (
-                            <div className="bg-black/90 backdrop-blur-sm border border-brand-500/30 rounded-lg p-3 shadow-xl">
+                            <div className="bg-card/90 backdrop-blur-sm border border-primary/30 rounded-lg p-3 shadow-xl">
                               <div className="space-y-2">
-                                <div className="text-xs text-gray-400 font-medium">
+                                <div className="text-xs text-muted-foreground font-medium">
                                   Data
                                 </div>
-                                <div className="text-sm text-white font-semibold">
+                                <div className="text-sm text-foreground font-semibold">
                                   {formattedDate}
                                 </div>
-                                <div className="border-t border-gray-700 pt-2">
-                                  <div className="text-xs text-gray-400 font-medium mb-1">
+                                <div className="border-t border-border pt-2">
+                                  <div className="text-xs text-muted-foreground font-medium mb-1">
                                     Saldo
                                   </div>
-                                  <div className="text-base text-brand-300 font-bold">
+                                  <div className="text-base text-primary font-bold">
                                     U$ {formatUSDT(value).replace(" USDT", "")}
                                   </div>
-                                  <div className="text-xs text-gray-500 mt-1">
+                                  <div className="text-xs text-muted-foreground mt-1">
                                     USDT
                                   </div>
                                 </div>
@@ -869,13 +898,13 @@ export default function Dashboard() {
                     <Area
                       type="monotone"
                       dataKey="USDT"
-                      stroke="#12E0A1"
+                      stroke={primaryHex}
                       strokeWidth={2.5}
                       fill="url(#areaGradient)"
                       dot={false}
                       activeDot={{
                         r: 5,
-                        fill: "#12E0A1",
+                        fill: primaryHex,
                         strokeWidth: 2,
                         stroke: "#000",
                       }}
@@ -927,27 +956,27 @@ export default function Dashboard() {
                   name: t("deposit"),
                   icon: ArrowUpRight,
                   value: totalDeposits,
-                  color: "text-green-400",
-                  bgColor: "bg-green-500/10",
-                  progressColor: "bg-green-500",
+                  color: "text-primary",
+                  bgColor: "bg-primary/10",
+                  progressColor: "bg-primary",
                   count: deposits.length,
                 },
                 {
                   name: t("withdrawal"),
                   icon: ArrowDownRight,
                   value: totalWithdrawals,
-                  color: "text-red-400",
-                  bgColor: "bg-red-500/10",
-                  progressColor: "bg-red-500",
+                  color: "text-destructive",
+                  bgColor: "bg-destructive/10",
+                  progressColor: "bg-destructive",
                   count: withdrawals.length,
                 },
                 {
                   name: "Reembolso",
                   icon: RotateCcw,
                   value: totalRefunds,
-                  color: "text-purple-400",
-                  bgColor: "bg-purple-500/10",
-                  progressColor: "bg-purple-500",
+                  color: "text-accent",
+                  bgColor: "bg-accent/10",
+                  progressColor: "bg-accent",
                   count: refunds.length,
                 },
               ];
@@ -959,7 +988,7 @@ export default function Dashboard() {
                 return (
                   <Card
                     key={index}
-                    className="rounded-xl border-gray-800 bg-black/40 backdrop-blur-sm shadow-lg"
+                    className="rounded-xl border-border bg-card/60 backdrop-blur-sm shadow-lg"
                   >
                     <CardContent className="p-4 sm:p-5">
                       <div
@@ -967,10 +996,10 @@ export default function Dashboard() {
                       >
                         <Icon className={`w-6 h-6 ${category.color}`} />
                       </div>
-                      <h3 className="text-sm sm:text-base font-semibold text-white mb-2">
+                      <h3 className="text-sm sm:text-base font-semibold text-foreground mb-2">
                         {category.name}
                       </h3>
-                      <p className="text-xs text-gray-400 mb-3">
+                      <p className="text-xs text-muted-foreground mb-3">
                         {category.count}{" "}
                         {category.count === 1
                           ? language === "pt"
@@ -980,7 +1009,7 @@ export default function Dashboard() {
                           ? "transações"
                           : "transactions"}
                       </p>
-                      <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                      <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
                         <div
                           className={`h-full ${category.progressColor} transition-all duration-300`}
                           style={{ width: `${Math.min(progress, 100)}%` }}
@@ -995,18 +1024,18 @@ export default function Dashboard() {
         </div>
 
         {/* Recent Activity */}
-        <Card className="rounded-xl sm:rounded-2xl border-gray-800 bg-gray-900/50 backdrop-blur-sm">
+        <Card className="rounded-xl sm:rounded-2xl border-border bg-card shadow-sm">
           <CardHeader className="pb-3 sm:pb-4 px-4 sm:px-6 pt-4 sm:pt-6">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base sm:text-lg text-white flex items-center gap-2">
-                <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
+              <CardTitle className="text-base sm:text-lg text-foreground flex items-center gap-2">
+                <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                 {t("recentActivity")}
               </CardTitle>
               {transactions.length > 5 && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-gray-400 hover:text-white text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3"
+                  className="text-muted-foreground hover:text-foreground text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3"
                 >
                   {t("seeAll")} →
                   <ArrowRight className="w-3 h-3 ml-1" />
@@ -1035,10 +1064,10 @@ export default function Dashboard() {
                   );
 
                   let icon = <ArrowUpRight className="w-4 h-4" />;
-                  let bgColor = "bg-green-500/10";
-                  let iconColor = "text-green-400";
+                  let bgColor = "bg-primary/10";
+                  let iconColor = "text-primary";
                   let title = "";
-                  let amountColor = "text-green-400";
+                  let amountColor = "text-primary";
                   let prefix = "+";
 
                   const formattedAmount =
@@ -1054,9 +1083,9 @@ export default function Dashboard() {
                     transaction.type === "BUY_CRYPTO"
                   ) {
                     icon = <ArrowUpRight className="w-4 h-4" />;
-                    bgColor = "bg-green-500/10";
-                    iconColor = "text-green-400";
-                    amountColor = "text-green-400";
+                    bgColor = "bg-primary/10";
+                    iconColor = "text-primary";
+                    amountColor = "text-primary";
                     title =
                       transaction.type === "BUY_CRYPTO"
                         ? t("buyUSDTTransaction")
@@ -1067,9 +1096,9 @@ export default function Dashboard() {
                     transaction.type === "WITHDRAW"
                   ) {
                     icon = <ArrowDownRight className="w-4 h-4" />;
-                    bgColor = "bg-red-500/10";
-                    iconColor = "text-red-400";
-                    amountColor = "text-red-400";
+                    bgColor = "bg-destructive/10";
+                    iconColor = "text-destructive";
+                    amountColor = "text-destructive";
                     title = t("withdrawal");
                     prefix = "-";
                   } else if (transaction.type === "SELL") {
@@ -1086,7 +1115,7 @@ export default function Dashboard() {
                   return (
                     <div
                       key={transaction.id || index}
-                      className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gray-800/30 hover:bg-gray-800/50 transition-colors active:bg-gray-800/60"
+                      className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors active:bg-muted/60"
                     >
                       <div
                         className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl ${bgColor} flex items-center justify-center flex-shrink-0`}
@@ -1095,7 +1124,7 @@ export default function Dashboard() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 sm:gap-2 mb-0.5">
-                          <h4 className="font-medium text-white text-xs sm:text-sm truncate">
+                          <h4 className="font-medium text-foreground text-xs sm:text-sm truncate">
                             {title}
                           </h4>
                           <p
@@ -1106,7 +1135,7 @@ export default function Dashboard() {
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
-                          <p className="text-[10px] sm:text-xs text-gray-500">
+                          <p className="text-[10px] sm:text-xs text-muted-foreground">
                             {dateStr} {language === "pt" ? "às" : "at"} {time}
                           </p>
                           {transaction.status && (
@@ -1115,14 +1144,14 @@ export default function Dashboard() {
                                 transaction.status === "COMPLETED" ||
                                 transaction.status === "APPROVED" ||
                                 transaction.status === "CONFIRMED"
-                                  ? "bg-green-500/20 text-green-400"
+                                  ? "bg-primary/20 text-primary"
                                   : transaction.status === "PENDING" ||
                                     transaction.status === "Pendente"
-                                  ? "bg-yellow-500/20 text-yellow-400"
+                                  ? "bg-warning/20 text-warning"
                                   : transaction.status === "FAILED" ||
                                     transaction.status === "REJECTED"
-                                  ? "bg-red-500/20 text-red-400"
-                                  : "bg-gray-500/20 text-gray-400"
+                                  ? "bg-destructive/20 text-destructive"
+                                  : "bg-muted text-muted-foreground"
                               }`}
                             >
                               {transaction.status === "PENDING"
@@ -1152,13 +1181,13 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="text-center py-8 sm:py-12">
-                <Wallet className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 text-gray-600" />
-                <p className="text-sm sm:text-base text-gray-400 mb-4">
+                <Wallet className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 text-muted-foreground" />
+                <p className="text-sm sm:text-base text-muted-foreground mb-4">
                   Nenhuma transação recente
                 </p>
                 <Button
                   onClick={() => router.push("/trade")}
-                  className="bg-brand-500 hover:bg-brand-600 h-10 sm:h-11 text-sm sm:text-base"
+                  className="h-10 sm:h-11 text-sm sm:text-base"
                 >
                   {t("makeFirstPurchase")}
                 </Button>
@@ -1175,40 +1204,37 @@ export default function Dashboard() {
           style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}
         >
           <div className="flex justify-center pb-2 px-4">
-            <div className="relative inline-flex items-center bg-black/90 backdrop-blur-sm border border-gray-800 rounded-full px-1 py-1.5 shadow-lg">
-              {/* Deposit */}
+            <div className="relative inline-flex items-center bg-card/95 backdrop-blur-sm border border-border rounded-full px-1 py-1.5 shadow-lg">
               <button
                 onClick={() => router.push("/trade")}
                 className={`relative px-3 sm:px-4 py-1.5 rounded-full text-xs font-medium transition-all touch-manipulation ${
                   pathname === "/trade"
-                    ? "bg-green-500 text-white"
-                    : "text-gray-400 hover:text-white active:bg-gray-700/50"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground active:bg-muted"
                 }`}
                 style={{ minWidth: "44px", minHeight: "44px" }}
               >
                 <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </button>
 
-              {/* Dashboard */}
               <button
                 onClick={() => router.push("/dashboard")}
                 className={`relative px-3 sm:px-4 py-1.5 rounded-full text-xs font-medium transition-all touch-manipulation ${
                   pathname === "/dashboard"
-                    ? "bg-brand-500 text-white"
-                    : "text-gray-400 hover:text-white active:bg-gray-700/50"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground active:bg-muted"
                 }`}
                 style={{ minWidth: "44px", minHeight: "44px" }}
               >
                 <Home className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </button>
 
-              {/* Withdraw */}
               <button
                 onClick={() => router.push("/withdraw")}
                 className={`relative px-3 sm:px-4 py-1.5 rounded-full text-xs font-medium transition-all touch-manipulation ${
                   pathname === "/withdraw"
-                    ? "bg-red-500 text-white"
-                    : "text-gray-400 hover:text-white active:bg-gray-700/50"
+                    ? "bg-destructive text-destructive-foreground"
+                    : "text-muted-foreground hover:text-foreground active:bg-muted"
                 }`}
                 style={{ minWidth: "44px", minHeight: "44px" }}
               >

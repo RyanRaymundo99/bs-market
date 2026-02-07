@@ -219,13 +219,13 @@ export default function AdminNotificationsPage() {
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case "new_user":
-        return <Users className="w-5 h-5 text-blue-500" />;
+        return <Users className="w-5 h-5 text-primary" />;
       case "kyc_pending":
         return <FileText className="w-5 h-5 text-orange-500" />;
       case "approval_needed":
         return <Clock className="w-5 h-5 text-yellow-500" />;
       default:
-        return <Bell className="w-5 h-5 text-gray-500" />;
+        return <Bell className="w-5 h-5 text-muted-foreground" />;
     }
   };
 
@@ -246,7 +246,7 @@ export default function AdminNotificationsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black p-6 text-white">
+      <div className="min-h-screen p-6">
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4"></div>
@@ -258,7 +258,7 @@ export default function AdminNotificationsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 p-6 text-white">
+    <div className="min-h-screen p-6">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -269,7 +269,7 @@ export default function AdminNotificationsPage() {
                 <Bell className="w-8 h-8" />
                 Notifications
               </h1>
-              <p className="text-gray-400">
+              <p className="text-muted-foreground">
                 {notifications.length} total notifications, {unreadCount} unread
               </p>
             </div>
@@ -278,7 +278,7 @@ export default function AdminNotificationsPage() {
             <Button
               variant="outline"
               onClick={fetchNotifications}
-              className="border-gray-600 text-white hover:bg-gray-800"
+              className="border-border hover:bg-muted"
             >
               <RefreshCw className="w-4 h-4 mr-2" />
               Refresh
@@ -287,7 +287,7 @@ export default function AdminNotificationsPage() {
               <Button
                 onClick={markAllAsRead}
                 disabled={markingAllRead}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
               >
                 {markingAllRead ? (
                   <>
@@ -306,23 +306,23 @@ export default function AdminNotificationsPage() {
         </div>
 
         {/* Email alerts – notify admin on high-value and key events */}
-        <Card className="bg-gray-900 border-gray-800 mb-6">
+        <Card className="bg-card border-border mb-6">
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-foreground flex items-center gap-2">
               <Mail className="w-5 h-5" />
               Email alerts
             </CardTitle>
-            <p className="text-gray-400 text-sm">
+            <p className="text-muted-foreground text-sm">
               Receive an email at the addresses below when these events happen.
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
             {loadingAlertSettings ? (
-              <p className="text-gray-400">Loading settings...</p>
+              <p className="text-muted-foreground">Loading settings...</p>
             ) : (
               <>
                 <div className="space-y-2">
-                  <Label className="text-gray-300">
+                  <Label className="text-muted-foreground">
                     Email addresses to notify
                   </Label>
                   <div className="space-y-2">
@@ -337,13 +337,13 @@ export default function AdminNotificationsPage() {
                             setAlertSettings((s) => ({ ...s, emails: next }));
                           }}
                           placeholder="email@example.com"
-                          className="bg-gray-800 border-gray-700 text-white flex-1 max-w-md"
+                          className="bg-muted border-border text-foreground flex-1 max-w-md"
                         />
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="text-gray-400 hover:text-red-400 shrink-0"
+                          className="text-muted-foreground hover:text-destructive shrink-0"
                           onClick={() => {
                             const next = alertSettings.emails.filter((_, j) => j !== i);
                             setAlertSettings((s) => ({
@@ -362,7 +362,7 @@ export default function AdminNotificationsPage() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="border-gray-600 text-gray-300 hover:bg-gray-800"
+                    className="border-border text-muted-foreground hover:bg-muted"
                     onClick={() =>
                       setAlertSettings((s) => ({ ...s, emails: [...s.emails, ""] }))
                     }
@@ -372,7 +372,7 @@ export default function AdminNotificationsPage() {
                   </Button>
                 </div>
                 <div className="flex flex-col gap-3">
-                  <Label className="text-gray-300">Notify when:</Label>
+                  <Label className="text-muted-foreground">Notify when:</Label>
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="deposit-over-500"
@@ -383,11 +383,11 @@ export default function AdminNotificationsPage() {
                           notifyDepositOver500: checked === true,
                         }))
                       }
-                      className="border-gray-600 data-[state=checked]:bg-blue-600"
+                      className="border-border data-[state=checked]:bg-primary"
                     />
                     <label
                       htmlFor="deposit-over-500"
-                      className="text-gray-300 cursor-pointer"
+                      className="text-muted-foreground cursor-pointer"
                     >
                       Deposit attempt over 500 USDT
                     </label>
@@ -402,11 +402,11 @@ export default function AdminNotificationsPage() {
                           notifyWithdrawOver500: checked === true,
                         }))
                       }
-                      className="border-gray-600 data-[state=checked]:bg-blue-600"
+                      className="border-border data-[state=checked]:bg-primary"
                     />
                     <label
                       htmlFor="withdraw-over-500"
-                      className="text-gray-300 cursor-pointer"
+                      className="text-muted-foreground cursor-pointer"
                     >
                       Withdrawal attempt over 500 USDT
                     </label>
@@ -421,11 +421,11 @@ export default function AdminNotificationsPage() {
                           notifyNewAccount: checked === true,
                         }))
                       }
-                      className="border-gray-600 data-[state=checked]:bg-blue-600"
+                      className="border-border data-[state=checked]:bg-primary"
                     />
                     <label
                       htmlFor="new-account"
-                      className="text-gray-300 cursor-pointer"
+                      className="text-muted-foreground cursor-pointer"
                     >
                       New account created (ready for approval)
                     </label>
@@ -440,11 +440,11 @@ export default function AdminNotificationsPage() {
                           notifyKycReady: checked === true,
                         }))
                       }
-                      className="border-gray-600 data-[state=checked]:bg-blue-600"
+                      className="border-border data-[state=checked]:bg-primary"
                     />
                     <label
                       htmlFor="kyc-ready"
-                      className="text-gray-300 cursor-pointer"
+                      className="text-muted-foreground cursor-pointer"
                     >
                       KYC submitted (ready for validation)
                     </label>
@@ -453,7 +453,7 @@ export default function AdminNotificationsPage() {
                 <Button
                   onClick={saveAlertSettings}
                   disabled={savingAlertSettings}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
                   {savingAlertSettings ? (
                     <>Saving...</>
@@ -472,11 +472,11 @@ export default function AdminNotificationsPage() {
         {/* Notifications List */}
         <div className="space-y-4">
           {notifications.length === 0 ? (
-            <Card className="bg-gray-900 border-gray-800">
+            <Card className="bg-card border-border">
               <CardContent className="p-8 text-center">
-                <Bell className="w-16 h-16 text-gray-500 mx-auto mb-4" />
+                <Bell className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-xl font-semibold mb-2">No Notifications</h3>
-                <p className="text-gray-400">
+                <p className="text-muted-foreground">
                   You&apos;re all caught up! No new notifications at the moment.
                 </p>
               </CardContent>
@@ -485,8 +485,8 @@ export default function AdminNotificationsPage() {
             notifications.map((notification) => (
               <Card
                 key={notification.id}
-                className={`bg-gray-900 border-gray-800 hover:bg-gray-800 transition-colors cursor-pointer ${
-                  !notification.read ? "bg-blue-900/20 border-blue-500/30" : ""
+                className={`bg-card border-border hover:bg-muted transition-colors cursor-pointer ${
+                  !notification.read ? "bg-primary/20 border-primary/30" : ""
                 }`}
                 onClick={() => handleNotificationClick(notification)}
               >
@@ -497,25 +497,25 @@ export default function AdminNotificationsPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-lg font-semibold text-white">
+                        <h3 className="text-lg font-semibold text-foreground">
                           {notification.title}
                         </h3>
                         <div className="flex items-center space-x-2">
                           {!notification.read && (
-                            <Badge className="bg-blue-600 text-white">
+                            <Badge className="bg-primary text-primary-foreground">
                               <Eye className="w-3 h-3 mr-1" />
                               New
                             </Badge>
                           )}
-                          <span className="text-sm text-gray-400">
+                          <span className="text-sm text-muted-foreground">
                             {formatTimeAgo(notification.timestamp)}
                           </span>
                         </div>
                       </div>
-                      <p className="text-gray-300 mb-2">
+                      <p className="text-muted-foreground mb-2">
                         {notification.message}
                       </p>
-                      <div className="flex items-center space-x-4 text-sm text-gray-400">
+                      <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                         <span className="capitalize">
                           {notification.type.replace("_", " ")}
                         </span>
@@ -533,17 +533,17 @@ export default function AdminNotificationsPage() {
 
         {/* Summary Stats */}
         {notifications.length > 0 && (
-          <Card className="bg-gray-800 border-gray-700 mt-6">
+          <Card className="bg-muted border-border mt-6">
             <CardHeader>
-              <CardTitle className="text-white">Notification Summary</CardTitle>
+              <CardTitle className="text-foreground">Notification Summary</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-400">
+                  <div className="text-2xl font-bold text-primary">
                     {notifications.filter((n) => n.type === "new_user").length}
                   </div>
-                  <div className="text-sm text-gray-400">New Users</div>
+                  <div className="text-sm text-muted-foreground">New Users</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-orange-400">
@@ -552,7 +552,7 @@ export default function AdminNotificationsPage() {
                         .length
                     }
                   </div>
-                  <div className="text-sm text-gray-400">KYC Pending</div>
+                  <div className="text-sm text-muted-foreground">KYC Pending</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-yellow-400">
@@ -561,7 +561,7 @@ export default function AdminNotificationsPage() {
                         .length
                     }
                   </div>
-                  <div className="text-sm text-gray-400">Approval Needed</div>
+                  <div className="text-sm text-muted-foreground">Approval Needed</div>
                 </div>
               </div>
             </CardContent>

@@ -473,3 +473,13 @@ model AdminAlertSettings {
 
   @@map("admin_alert_settings")
 }
+
+// Site-wide settings (key-value); e.g. appearance controlled by admin
+model SiteSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  updatedAt DateTime @updatedAt
+
+  @@map("site_setting")
+}

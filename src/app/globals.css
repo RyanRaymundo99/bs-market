@@ -20,11 +20,249 @@
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
+    --warning: 38 92% 50%; /* amber – pending/warning states */
+    --warning-foreground: 0 0% 0%;
     --border: 0 0% 20%; /* gray border */
     --input: 0 0% 10%; /* dark input */
     --ring: 162 85% 47%; /* RGB(18, 224, 161) / #12E0A1 */
     --radius: 1rem;
   }
+
+  /* Admin dashboard: dark theme with black + cyan */
+  .admin-theme {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 6%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 6%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 187 100% 50%;
+    --primary-foreground: 0 0% 0%;
+    --secondary: 187 25% 16%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 10%;
+    --muted-foreground: 0 0% 58%;
+    --accent: 187 100% 50%;
+    --accent-foreground: 0 0% 0%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 0%;
+    --border: 0 0% 14%;
+    --input: 0 0% 10%;
+    --ring: 187 100% 50%;
+    --chart-1: 187 100% 50%;
+    --chart-2: 187 85% 45%;
+    --chart-3: 187 70% 40%;
+    --chart-4: 187 55% 35%;
+    --chart-5: 187 40% 30%;
+    --radius: 0.5rem;
+  }
+
+  /* Admin bright theme (light backgrounds) */
+  .admin-theme.admin-theme-bright {
+    --background: 0 0% 98%;
+    --foreground: 0 0% 9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 9%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+  }
+
+  /* Admin primary color presets (HSL) */
+  .admin-theme.admin-primary-cyan {
+    --primary: 187 100% 50%;
+    --primary-foreground: 0 0% 0%;
+    --accent: 187 100% 50%;
+    --accent-foreground: 0 0% 0%;
+    --ring: 187 100% 50%;
+    --chart-1: 187 100% 50%;
+    --chart-2: 187 85% 45%;
+    --chart-3: 187 70% 40%;
+    --chart-4: 187 55% 35%;
+    --chart-5: 187 40% 30%;
+  }
+  .admin-theme.admin-primary-blue {
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 217 91% 60%;
+    --accent-foreground: 0 0% 100%;
+    --ring: 217 91% 60%;
+    --chart-1: 217 91% 60%;
+    --chart-2: 217 85% 55%;
+    --chart-3: 217 75% 50%;
+    --chart-4: 217 65% 45%;
+    --chart-5: 217 55% 40%;
+  }
+  .admin-theme.admin-primary-green {
+    --primary: 142 71% 45%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 142 71% 45%;
+    --accent-foreground: 0 0% 100%;
+    --ring: 142 71% 45%;
+    --chart-1: 142 71% 45%;
+    --chart-2: 142 65% 40%;
+    --chart-3: 142 58% 35%;
+    --chart-4: 142 50% 30%;
+    --chart-5: 142 42% 25%;
+  }
+  .admin-theme.admin-primary-purple {
+    --primary: 263 70% 50%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 263 70% 50%;
+    --accent-foreground: 0 0% 100%;
+    --ring: 263 70% 50%;
+    --chart-1: 263 70% 50%;
+    --chart-2: 263 65% 45%;
+    --chart-3: 263 58% 40%;
+    --chart-4: 263 50% 35%;
+    --chart-5: 263 42% 30%;
+  }
+  .admin-theme.admin-primary-orange {
+    --primary: 25 95% 53%;
+    --primary-foreground: 0 0% 0%;
+    --accent: 25 95% 53%;
+    --accent-foreground: 0 0% 0%;
+    --ring: 25 95% 53%;
+    --chart-1: 25 95% 53%;
+    --chart-2: 25 90% 48%;
+    --chart-3: 25 85% 43%;
+    --chart-4: 25 78% 38%;
+    --chart-5: 25 70% 33%;
+  }
+
+  /* Admin secondary color presets */
+  .admin-theme.admin-secondary-cyan {
+    --secondary: 187 25% 16%;
+    --secondary-foreground: 0 0% 98%;
+  }
+  .admin-theme.admin-theme-bright.admin-secondary-cyan {
+    --secondary: 187 30% 92%;
+    --secondary-foreground: 187 50% 25%;
+  }
+  .admin-theme.admin-secondary-blue {
+    --secondary: 217 25% 18%;
+    --secondary-foreground: 0 0% 98%;
+  }
+  .admin-theme.admin-theme-bright.admin-secondary-blue {
+    --secondary: 217 30% 92%;
+    --secondary-foreground: 217 50% 25%;
+  }
+  .admin-theme.admin-secondary-green {
+    --secondary: 142 25% 16%;
+    --secondary-foreground: 0 0% 98%;
+  }
+  .admin-theme.admin-theme-bright.admin-secondary-green {
+    --secondary: 142 30% 92%;
+    --secondary-foreground: 142 50% 25%;
+  }
+  .admin-theme.admin-secondary-purple {
+    --secondary: 263 25% 18%;
+    --secondary-foreground: 0 0% 98%;
+  }
+  .admin-theme.admin-theme-bright.admin-secondary-purple {
+    --secondary: 263 30% 92%;
+    --secondary-foreground: 263 50% 25%;
+  }
+  .admin-theme.admin-secondary-orange {
+    --secondary: 25 30% 18%;
+    --secondary-foreground: 0 0% 98%;
+  }
+  .admin-theme.admin-theme-bright.admin-secondary-orange {
+    --secondary: 25 40% 92%;
+    --secondary-foreground: 25 60% 25%;
+  }
+
+  /* Admin button style: primary buttons (default variant) - attribute selector to avoid Tailwind parsing issues */
+  .admin-theme.admin-button-outline button[class*="bg-primary"],
+  .admin-theme.admin-button-outline a[class*="bg-primary"] {
+    background-color: transparent !important;
+    border: 1px solid hsl(var(--primary)) !important;
+    color: hsl(var(--primary)) !important;
+    box-shadow: none;
+  }
+  .admin-theme.admin-button-outline button[class*="bg-primary"]:hover:not(:disabled),
+  .admin-theme.admin-button-outline a[class*="bg-primary"]:hover {
+    background-color: hsl(var(--primary) / 0.1) !important;
+  }
+  .admin-theme.admin-button-soft button[class*="bg-primary"],
+  .admin-theme.admin-button-soft a[class*="bg-primary"] {
+    background-color: hsl(var(--primary) / 0.2) !important;
+    border: 1px solid transparent !important;
+    color: hsl(var(--primary)) !important;
+    box-shadow: none;
+  }
+  .admin-theme.admin-button-soft button[class*="bg-primary"]:hover:not(:disabled),
+  .admin-theme.admin-button-soft a[class*="bg-primary"]:hover {
+    background-color: hsl(var(--primary) / 0.3) !important;
+  }
+}
+
+/* Site theme (public app) – controlled by admin; uses data attributes on html */
+[data-site-theme="dark"] {
+  --background: 0 0% 0%;
+  --foreground: 0 0% 98%;
+  --card: 0 0% 6%;
+  --card-foreground: 0 0% 98%;
+  --popover: 0 0% 6%;
+  --popover-foreground: 0 0% 98%;
+  --muted: 0 0% 10%;
+  --muted-foreground: 0 0% 58%;
+  --border: 0 0% 14%;
+  --input: 0 0% 10%;
+}
+[data-site-theme="bright"] {
+  --background: 0 0% 98%;
+  --foreground: 0 0% 9%;
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 9%;
+  --muted: 0 0% 96%;
+  --muted-foreground: 0 0% 45%;
+  --border: 0 0% 90%;
+  --input: 0 0% 90%;
+}
+[data-site-primary="cyan"] { --primary: 187 100% 50%; --primary-foreground: 0 0% 0%; --accent: 187 100% 50%; --accent-foreground: 0 0% 0%; --ring: 187 100% 50%; }
+[data-site-primary="blue"] { --primary: 217 91% 60%; --primary-foreground: 0 0% 100%; --accent: 217 91% 60%; --accent-foreground: 0 0% 100%; --ring: 217 91% 60%; }
+[data-site-primary="green"] { --primary: 142 71% 45%; --primary-foreground: 0 0% 100%; --accent: 142 71% 45%; --accent-foreground: 0 0% 100%; --ring: 142 71% 45%; }
+[data-site-primary="purple"] { --primary: 263 70% 50%; --primary-foreground: 0 0% 100%; --accent: 263 70% 50%; --accent-foreground: 0 0% 100%; --ring: 263 70% 50%; }
+[data-site-primary="orange"] { --primary: 25 95% 53%; --primary-foreground: 0 0% 0%; --accent: 25 95% 53%; --accent-foreground: 0 0% 0%; --ring: 25 95% 53%; --warning: 25 95% 53%; --warning-foreground: 0 0% 0%; }
+[data-site-secondary="cyan"] { --secondary: 187 25% 16%; --secondary-foreground: 0 0% 98%; }
+[data-site-theme="bright"][data-site-secondary="cyan"] { --secondary: 187 30% 92%; --secondary-foreground: 187 50% 25%; }
+[data-site-secondary="blue"] { --secondary: 217 25% 18%; --secondary-foreground: 0 0% 98%; }
+[data-site-theme="bright"][data-site-secondary="blue"] { --secondary: 217 30% 92%; --secondary-foreground: 217 50% 25%; }
+[data-site-secondary="green"] { --secondary: 142 25% 16%; --secondary-foreground: 0 0% 98%; }
+[data-site-theme="bright"][data-site-secondary="green"] { --secondary: 142 30% 92%; --secondary-foreground: 142 50% 25%; }
+[data-site-secondary="purple"] { --secondary: 263 25% 18%; --secondary-foreground: 0 0% 98%; }
+[data-site-theme="bright"][data-site-secondary="purple"] { --secondary: 263 30% 92%; --secondary-foreground: 263 50% 25%; }
+[data-site-secondary="orange"] { --secondary: 25 30% 18%; --secondary-foreground: 0 0% 98%; }
+[data-site-theme="bright"][data-site-secondary="orange"] { --secondary: 25 40% 92%; --secondary-foreground: 25 60% 25%; }
+[data-site-button-style="outline"] button[class*="bg-primary"],
+[data-site-button-style="outline"] a[class*="bg-primary"] {
+  background-color: transparent !important;
+  border: 1px solid hsl(var(--primary)) !important;
+  color: hsl(var(--primary)) !important;
+  box-shadow: none;
+}
+[data-site-button-style="outline"] button[class*="bg-primary"]:hover:not(:disabled),
+[data-site-button-style="outline"] a[class*="bg-primary"]:hover {
+  background-color: hsl(var(--primary) / 0.1) !important;
+}
+[data-site-button-style="soft"] button[class*="bg-primary"],
+[data-site-button-style="soft"] a[class*="bg-primary"] {
+  background-color: hsl(var(--primary) / 0.2) !important;
+  border: 1px solid transparent !important;
+  color: hsl(var(--primary)) !important;
+  box-shadow: none;
+}
+[data-site-button-style="soft"] button[class*="bg-primary"]:hover:not(:disabled),
+[data-site-button-style="soft"] a[class*="bg-primary"]:hover {
+  background-color: hsl(var(--primary) / 0.3) !important;
 }
 
 @layer base {
@@ -33,7 +271,7 @@
   }
 
   body {
-    @apply bg-black text-white antialiased overflow-x-hidden;
+    @apply bg-background text-foreground antialiased overflow-x-hidden;
   }
 
   html {
@@ -60,7 +298,7 @@
   }
 
   .text-gradient {
-    @apply bg-gradient-to-r from-[#12E0A1] to-[#0FB88A] bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent;
   }
 
   .animation-delay-100 {
@@ -642,9 +880,9 @@
 }
 
 .landing-section-label {
-  @apply text-xs font-medium uppercase tracking-widest text-brand-300 mb-3;
+  @apply text-xs font-medium uppercase tracking-widest text-primary mb-3;
 }
 
 .landing-card {
-  @apply rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl transition-all duration-300 hover:border-white/20 hover:bg-white/[0.06];
+  @apply rounded-2xl border border-border bg-card/80 backdrop-blur-xl transition-all duration-300 hover:border-primary/30 hover:bg-card;
 }

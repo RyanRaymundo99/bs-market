@@ -392,25 +392,25 @@ const AdminKYCPage = () => {
     switch (status) {
       case "PENDING":
         return (
-          <Badge variant="secondary" className="bg-yellow-600 text-white">
+          <Badge variant="secondary" className="bg-yellow-600 text-foreground">
             Pendente
           </Badge>
         );
       case "APPROVED":
         return (
-          <Badge variant="secondary" className="bg-green-600 text-white">
+          <Badge variant="secondary" className="bg-primary/20 text-primary">
             Aprovado
           </Badge>
         );
       case "REJECTED":
         return (
-          <Badge variant="secondary" className="bg-red-600 text-white">
+          <Badge variant="secondary" className="bg-red-600 text-foreground">
             Rejeitado
           </Badge>
         );
       default:
         return (
-          <Badge variant="secondary" className="bg-gray-600 text-white">
+          <Badge variant="secondary" className="bg-muted text-foreground">
             Desconhecido
           </Badge>
         );
@@ -440,8 +440,8 @@ const AdminKYCPage = () => {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
-          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-white">Carregando usuários...</p>
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-foreground">Carregando usuários...</p>
         </div>
       </div>
     );
@@ -456,10 +456,10 @@ const AdminKYCPage = () => {
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">
+            <h1 className="text-3xl font-bold text-foreground mb-2">
               Verificação KYC
             </h1>
-            <p className="text-gray-300">
+            <p className="text-muted-foreground">
               Revise e verifique documentos de identidade dos usuários
             </p>
           </div>
@@ -469,7 +469,7 @@ const AdminKYCPage = () => {
               onClick={() => fetchUsers()}
               variant="outline"
               size="sm"
-              className="border-gray-700 hover:bg-gray-800"
+              className="border-border hover:bg-muted"
             >
               <RefreshCw className="w-4 h-4 mr-2" />
               Atualizar
@@ -479,22 +479,22 @@ const AdminKYCPage = () => {
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="bg-gray-900 border-gray-800">
+          <Card className="bg-card border-border">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-400">Total</p>
-                  <p className="text-2xl font-bold text-white">{stats.total}</p>
+                  <p className="text-xs text-muted-foreground">Total</p>
+                  <p className="text-2xl font-bold text-foreground">{stats.total}</p>
                 </div>
-                <FileText className="w-8 h-8 text-blue-400 opacity-50" />
+                <FileText className="w-8 h-8 text-primary opacity-50" />
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-gray-900 border-gray-800">
+          <Card className="bg-card border-border">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-400">Pendente</p>
+                  <p className="text-xs text-muted-foreground">Pendente</p>
                   <p className="text-2xl font-bold text-yellow-400">
                     {stats.pending}
                   </p>
@@ -503,11 +503,11 @@ const AdminKYCPage = () => {
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-gray-900 border-gray-800">
+          <Card className="bg-card border-border">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-400">Aprovado</p>
+                  <p className="text-xs text-muted-foreground">Aprovado</p>
                   <p className="text-2xl font-bold text-green-400">
                     {stats.approved}
                   </p>
@@ -516,11 +516,11 @@ const AdminKYCPage = () => {
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-gray-900 border-gray-800">
+          <Card className="bg-card border-border">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-400">Rejeitado</p>
+                  <p className="text-xs text-muted-foreground">Rejeitado</p>
                   <p className="text-2xl font-bold text-red-400">
                     {stats.rejected}
                   </p>
@@ -532,23 +532,23 @@ const AdminKYCPage = () => {
         </div>
 
         {/* Filters and Actions */}
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-card border-border">
           <CardContent className="p-4">
             <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
               <div className="flex-1 w-full">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                   <Input
                     placeholder="Buscar por nome, email ou CPF..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 bg-gray-800 border-gray-700 text-white placeholder:text-gray-400"
+                    className="pl-10 bg-muted border-border text-foreground placeholder:text-muted-foreground"
                   />
                 </div>
               </div>
               <div className="flex gap-2 flex-wrap">
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[180px] bg-gray-800 border-gray-700 text-white">
+                  <SelectTrigger className="w-[180px] bg-muted border-border text-foreground">
                     <Filter className="w-4 h-4 mr-2" />
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
@@ -559,12 +559,12 @@ const AdminKYCPage = () => {
                     <SelectItem value="REJECTED">Rejeitado</SelectItem>
                   </SelectContent>
                 </Select>
-                <div className="flex gap-1 border border-gray-700 rounded-md p-1">
+                <div className="flex gap-1 border border-border rounded-md p-1">
                   <Button
                     variant={viewMode === "table" ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setViewMode("table")}
-                    className={viewMode === "table" ? "bg-gray-700" : ""}
+                    className={viewMode === "table" ? "bg-muted" : ""}
                   >
                     <List className="w-4 h-4" />
                   </Button>
@@ -572,7 +572,7 @@ const AdminKYCPage = () => {
                     variant={viewMode === "grid" ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setViewMode("grid")}
-                    className={viewMode === "grid" ? "bg-gray-700" : ""}
+                    className={viewMode === "grid" ? "bg-muted" : ""}
                   >
                     <Grid3x3 className="w-4 h-4" />
                   </Button>
@@ -588,8 +588,8 @@ const AdminKYCPage = () => {
                 size="sm"
                 className={
                   statusFilter === "ALL"
-                    ? "bg-gray-600 hover:bg-gray-700"
-                    : "border-gray-700"
+                    ? "bg-muted"
+                    : "border-border"
                 }
               >
                 Todos ({stats.total})
@@ -601,7 +601,7 @@ const AdminKYCPage = () => {
                 className={
                   statusFilter === "PENDING"
                     ? "bg-yellow-600 hover:bg-yellow-700"
-                    : "border-gray-700"
+                    : "border-border"
                 }
               >
                 Pendente ({stats.pending})
@@ -612,8 +612,8 @@ const AdminKYCPage = () => {
                 size="sm"
                 className={
                   statusFilter === "APPROVED"
-                    ? "bg-green-600 hover:bg-green-700"
-                    : "border-gray-700"
+                    ? "bg-primary hover:bg-primary/90 text-primary-foreground"
+                    : "border-border"
                 }
               >
                 Aprovado ({stats.approved})
@@ -625,7 +625,7 @@ const AdminKYCPage = () => {
                 className={
                   statusFilter === "REJECTED"
                     ? "bg-red-600 hover:bg-red-700"
-                    : "border-gray-700"
+                    : "border-border"
                 }
               >
                 Rejeitado ({stats.rejected})
@@ -634,15 +634,15 @@ const AdminKYCPage = () => {
 
             {/* Batch Actions */}
             {selectedUsers.size > 0 && (
-              <div className="mt-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg flex items-center justify-between">
-                <span className="text-sm text-blue-300">
+              <div className="mt-4 p-3 bg-primary/20 border border-primary/30 rounded-lg flex items-center justify-between">
+                <span className="text-sm text-primary">
                   {selectedUsers.size} usuário(s) selecionado(s)
                 </span>
                 <div className="flex gap-2">
                   <Button
                     size="sm"
                     onClick={handleBatchApprove}
-                    className="bg-green-600 hover:bg-green-700"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
                   >
                     <CheckCircle className="w-4 h-4 mr-2" />
                     Aprovar Selecionados
@@ -651,7 +651,7 @@ const AdminKYCPage = () => {
                     size="sm"
                     variant="outline"
                     onClick={() => setSelectedUsers(new Set())}
-                    className="border-gray-600"
+                    className="border-border"
                   >
                     Limpar Seleção
                   </Button>
@@ -663,13 +663,13 @@ const AdminKYCPage = () => {
 
         {/* Users List/Table */}
         {filteredUsers.length === 0 ? (
-          <Card className="bg-gray-900 border-gray-800">
+          <Card className="bg-card border-border">
             <CardContent className="p-8 text-center">
-              <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-white mb-2">
+              <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">
                 Nenhum usuário encontrado
               </h3>
-              <p className="text-gray-300">
+              <p className="text-muted-foreground">
                 {searchTerm || statusFilter !== "ALL"
                   ? "Tente ajustar sua busca ou critérios de filtro"
                   : "Nenhum usuário enviou documentos KYC ainda"}
@@ -677,12 +677,12 @@ const AdminKYCPage = () => {
             </CardContent>
           </Card>
         ) : viewMode === "table" ? (
-          <Card className="bg-gray-900 border-gray-800">
+          <Card className="bg-card border-border">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-gray-700 hover:bg-gray-800">
+                    <TableRow className="border-border hover:bg-muted">
                       <TableHead className="w-12">
                         <Checkbox
                           checked={
@@ -690,18 +690,18 @@ const AdminKYCPage = () => {
                             paginatedUsers.length > 0
                           }
                           onCheckedChange={selectAllUsers}
-                          className="border-gray-600"
+                          className="border-border"
                         />
                       </TableHead>
-                      <TableHead className="text-gray-300">Usuário</TableHead>
-                      <TableHead className="text-gray-300">CPF</TableHead>
-                      <TableHead className="text-gray-300">
+                      <TableHead className="text-muted-foreground">Usuário</TableHead>
+                      <TableHead className="text-muted-foreground">CPF</TableHead>
+                      <TableHead className="text-muted-foreground">
                         Documentos
                       </TableHead>
-                      <TableHead className="text-gray-300">Status</TableHead>
-                      <TableHead className="text-gray-300">Enviado</TableHead>
-                      <TableHead className="text-gray-300">Revisado</TableHead>
-                      <TableHead className="text-gray-300 text-right">
+                      <TableHead className="text-muted-foreground">Status</TableHead>
+                      <TableHead className="text-muted-foreground">Enviado</TableHead>
+                      <TableHead className="text-muted-foreground">Revisado</TableHead>
+                      <TableHead className="text-muted-foreground text-right">
                         Ações
                       </TableHead>
                     </TableRow>
@@ -712,53 +712,53 @@ const AdminKYCPage = () => {
                       const isSelected = selectedUsers.has(user.id);
                       return (
                         <React.Fragment key={user.id}>
-                          <TableRow className="border-gray-700 hover:bg-gray-800/50">
+                          <TableRow className="border-border hover:bg-muted/50">
                             <TableCell>
                               <Checkbox
                                 checked={isSelected}
                                 onCheckedChange={() =>
                                   toggleUserSelection(user.id)
                                 }
-                                className="border-gray-600"
+                                className="border-border"
                               />
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                                  <User className="w-4 h-4 text-white" />
+                                <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+                                  <User className="w-4 h-4 text-foreground" />
                                 </div>
                                 <div className="min-w-0">
-                                  <p className="font-medium text-white truncate">
+                                  <p className="font-medium text-foreground truncate">
                                     {user.name}
                                   </p>
-                                  <p className="text-xs text-gray-400 truncate">
+                                  <p className="text-xs text-muted-foreground truncate">
                                     {user.email}
                                   </p>
                                 </div>
                               </div>
                             </TableCell>
-                            <TableCell className="text-gray-300 text-sm">
+                            <TableCell className="text-muted-foreground text-sm">
                               {user.cpf}
                             </TableCell>
                             <TableCell>
                               <div className="flex gap-1">
                                 {user.documentFront && (
-                                  <div className="w-8 h-8 bg-gray-700 rounded border border-gray-600 flex items-center justify-center">
+                                  <div className="w-8 h-8 bg-muted rounded border border-border flex items-center justify-center">
                                     <FileText className="w-3 h-3 text-green-400" />
                                   </div>
                                 )}
                                 {user.documentBack && (
-                                  <div className="w-8 h-8 bg-gray-700 rounded border border-gray-600 flex items-center justify-center">
+                                  <div className="w-8 h-8 bg-muted rounded border border-border flex items-center justify-center">
                                     <FileText className="w-3 h-3 text-green-400" />
                                   </div>
                                 )}
                                 {user.documentSelfie && (
-                                  <div className="w-8 h-8 bg-gray-700 rounded border border-gray-600 flex items-center justify-center">
-                                    <User className="w-3 h-3 text-blue-400" />
+                                  <div className="w-8 h-8 bg-muted rounded border border-border flex items-center justify-center">
+                                    <User className="w-3 h-3 text-primary" />
                                   </div>
                                 )}
                                 {!hasDocuments(user) && (
-                                  <span className="text-xs text-gray-500">
+                                  <span className="text-xs text-muted-foreground">
                                     N/A
                                   </span>
                                 )}
@@ -767,10 +767,10 @@ const AdminKYCPage = () => {
                             <TableCell>
                               {getStatusBadge(user.kycStatus)}
                             </TableCell>
-                            <TableCell className="text-gray-400 text-xs">
+                            <TableCell className="text-muted-foreground text-xs">
                               {formatDate(user.kycSubmittedAt)}
                             </TableCell>
-                            <TableCell className="text-gray-400 text-xs">
+                            <TableCell className="text-muted-foreground text-xs">
                               {formatDate(user.kycReviewedAt)}
                             </TableCell>
                             <TableCell className="text-right">
@@ -781,7 +781,7 @@ const AdminKYCPage = () => {
                                       size="sm"
                                       onClick={() => handleApprove(user.id)}
                                       disabled={actionLoading === user.id}
-                                      className="bg-green-600 hover:bg-green-700 h-7 px-2"
+                                      className="bg-primary hover:bg-primary/90 text-primary-foreground h-7 px-2"
                                       title="Aprovar"
                                     >
                                       <CheckCircle className="w-3 h-3" />
@@ -809,7 +809,7 @@ const AdminKYCPage = () => {
                                         handleResetToPending(user.id)
                                       }
                                       disabled={actionLoading === user.id}
-                                      className="bg-orange-600 hover:bg-orange-700 h-7 px-2"
+                                      className="bg-primary hover:bg-primary/90 text-primary-foreground h-7 px-2"
                                       title="Resetar"
                                     >
                                       <Clock className="w-3 h-3" />
@@ -818,7 +818,7 @@ const AdminKYCPage = () => {
                                       size="sm"
                                       onClick={() => handleApprove(user.id)}
                                       disabled={actionLoading === user.id}
-                                      className="bg-green-600 hover:bg-green-700 h-7 px-2"
+                                      className="bg-primary hover:bg-primary/90 text-primary-foreground h-7 px-2"
                                       title="Reaprovar"
                                     >
                                       <CheckCircle className="w-3 h-3" />
@@ -832,7 +832,7 @@ const AdminKYCPage = () => {
                                     setSelectedUser(user);
                                     toggleRowExpansion(user.id);
                                   }}
-                                  className="border-gray-600 text-white hover:bg-gray-700 h-7 px-2"
+                                  className="border-border text-foreground hover:bg-muted h-7 px-2"
                                   title="Ver Detalhes"
                                 >
                                   <Eye className="w-3 h-3" />
@@ -841,7 +841,7 @@ const AdminKYCPage = () => {
                             </TableCell>
                           </TableRow>
                           {isExpanded && (
-                            <TableRow className="border-gray-700 bg-gray-800/30">
+                            <TableRow className="border-border bg-muted/30">
                               <TableCell colSpan={8} className="p-3">
                                 <div className="flex items-center justify-between">
                                   {/* Rejection Reason or Additional Info */}
@@ -857,7 +857,7 @@ const AdminKYCPage = () => {
                                         </p>
                                       </div>
                                     ) : (
-                                      <div className="text-xs text-gray-400">
+                                      <div className="text-xs text-muted-foreground">
                                         <p>
                                           Tipo: {user.documentType || "N/A"} |
                                           Número: {user.documentNumber || "N/A"}
@@ -876,7 +876,7 @@ const AdminKYCPage = () => {
                                   <Button
                                     size="sm"
                                     onClick={() => setSelectedUser(user)}
-                                    className="bg-blue-600 hover:bg-blue-700 ml-4"
+                                    className="bg-primary hover:bg-primary/90 text-primary-foreground ml-4"
                                   >
                                     <Eye className="w-4 h-4 mr-2" />
                                     Ver Documentos Completos
@@ -898,19 +898,19 @@ const AdminKYCPage = () => {
             {paginatedUsers.map((user) => (
               <Card
                 key={user.id}
-                className="hover:shadow-md transition-shadow bg-gray-900 border-gray-800"
+                className="hover:shadow-md transition-shadow bg-card border-border"
               >
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                        <User className="w-5 h-5 text-white" />
+                      <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+                        <User className="w-5 h-5 text-foreground" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h3 className="font-medium text-white truncate">
+                        <h3 className="font-medium text-foreground truncate">
                           {user.name}
                         </h3>
-                        <p className="text-xs text-gray-400 truncate">
+                        <p className="text-xs text-muted-foreground truncate">
                           {user.email}
                         </p>
                       </div>
@@ -918,17 +918,17 @@ const AdminKYCPage = () => {
                     <Checkbox
                       checked={selectedUsers.has(user.id)}
                       onCheckedChange={() => toggleUserSelection(user.id)}
-                      className="border-gray-600"
+                      className="border-border"
                     />
                   </div>
 
                   <div className="space-y-2 mb-3">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-gray-400">CPF:</span>
-                      <span className="text-gray-300">{user.cpf}</span>
+                      <span className="text-muted-foreground">CPF:</span>
+                      <span className="text-muted-foreground">{user.cpf}</span>
                     </div>
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-gray-400">Status:</span>
+                      <span className="text-muted-foreground">Status:</span>
                       {getStatusBadge(user.kycStatus)}
                     </div>
                     {user.kycStatus === "REJECTED" &&
@@ -1004,7 +1004,7 @@ const AdminKYCPage = () => {
                           size="sm"
                           onClick={() => handleApprove(user.id)}
                           disabled={actionLoading === user.id}
-                          className="bg-green-600 hover:bg-green-700 flex-1 text-xs"
+                          className="bg-primary hover:bg-primary/90 text-primary-foreground flex-1 text-xs"
                         >
                           <CheckCircle className="w-3 h-3 mr-1" />
                           Aprovar
@@ -1028,7 +1028,7 @@ const AdminKYCPage = () => {
                           size="sm"
                           onClick={() => handleResetToPending(user.id)}
                           disabled={actionLoading === user.id}
-                          className="bg-orange-600 hover:bg-orange-700 flex-1 text-xs"
+                          className="bg-primary hover:bg-primary/90 text-primary-foreground flex-1 text-xs"
                         >
                           <Clock className="w-3 h-3 mr-1" />
                           Resetar
@@ -1037,7 +1037,7 @@ const AdminKYCPage = () => {
                           size="sm"
                           onClick={() => handleApprove(user.id)}
                           disabled={actionLoading === user.id}
-                          className="bg-green-600 hover:bg-green-700 flex-1 text-xs"
+                          className="bg-primary hover:bg-primary/90 text-primary-foreground flex-1 text-xs"
                         >
                           <CheckCircle className="w-3 h-3 mr-1" />
                           Reaprovar
@@ -1048,7 +1048,7 @@ const AdminKYCPage = () => {
                       size="sm"
                       variant="outline"
                       onClick={() => setSelectedUser(user)}
-                      className="border-gray-600 text-white hover:bg-gray-700 flex-1 text-xs"
+                      className="border-border text-foreground hover:bg-muted flex-1 text-xs"
                     >
                       <Eye className="w-3 h-3 mr-1" />
                       Detalhes
@@ -1062,8 +1062,8 @@ const AdminKYCPage = () => {
 
         {/* Pagination */}
         {filteredUsers.length > itemsPerPage && (
-          <div className="flex items-center justify-between px-4 py-3 bg-gray-900 border border-gray-800 rounded-lg">
-            <div className="text-sm text-gray-400">
+          <div className="flex items-center justify-between px-4 py-3 bg-card border border-border rounded-lg">
+            <div className="text-sm text-muted-foreground">
               Mostrando {startIndex + 1} a{" "}
               {Math.min(endIndex, filteredUsers.length)} de{" "}
               {filteredUsers.length} usuários
@@ -1074,7 +1074,7 @@ const AdminKYCPage = () => {
                 size="sm"
                 onClick={() => setCurrentPage(1)}
                 disabled={currentPage === 1}
-                className="border-gray-700 text-white hover:bg-gray-800 disabled:opacity-50"
+                className="border-border text-foreground hover:bg-muted disabled:opacity-50"
               >
                 Primeiro
               </Button>
@@ -1083,11 +1083,11 @@ const AdminKYCPage = () => {
                 size="sm"
                 onClick={() => setCurrentPage(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="border-gray-700 text-white hover:bg-gray-800 disabled:opacity-50"
+                className="border-border text-foreground hover:bg-muted disabled:opacity-50"
               >
                 <ChevronLeft className="w-4 h-4" />
               </Button>
-              <span className="text-white px-3">
+              <span className="text-foreground px-3">
                 Página {currentPage} de {totalPages}
               </span>
               <Button
@@ -1095,7 +1095,7 @@ const AdminKYCPage = () => {
                 size="sm"
                 onClick={() => setCurrentPage(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="border-gray-700 text-white hover:bg-gray-800 disabled:opacity-50"
+                className="border-border text-foreground hover:bg-muted disabled:opacity-50"
               >
                 <ChevronRight className="w-4 h-4" />
               </Button>
@@ -1104,7 +1104,7 @@ const AdminKYCPage = () => {
                 size="sm"
                 onClick={() => setCurrentPage(totalPages)}
                 disabled={currentPage === totalPages}
-                className="border-gray-700 text-white hover:bg-gray-800 disabled:opacity-50"
+                className="border-border text-foreground hover:bg-muted disabled:opacity-50"
               >
                 Último
               </Button>
@@ -1119,55 +1119,85 @@ const AdminKYCPage = () => {
           open={!!selectedUser}
           onOpenChange={() => setSelectedUser(null)}
         >
-          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto bg-gray-900 border-gray-800">
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto bg-card border-border">
             <DialogHeader>
-              <DialogTitle className="text-white">
+              <DialogTitle className="text-foreground">
                 Revisão de Documentos KYC - {selectedUser.name}
               </DialogTitle>
-              <DialogDescription className="text-gray-400">
+              <DialogDescription className="text-muted-foreground">
                 Revise todos os documentos e informações do usuário
               </DialogDescription>
             </DialogHeader>
 
+            {/* Sticky action bar: Approve / Reject individual KYC */}
+            {selectedUser.kycStatus === "PENDING" && (
+              <div className="sticky top-0 z-10 flex flex-wrap items-center gap-3 rounded-lg border border-border bg-muted/80 px-4 py-3 backdrop-blur-sm">
+                <span className="text-sm font-medium text-foreground mr-2">
+                  Decisão:
+                </span>
+                <Button
+                  onClick={() => handleApprove(selectedUser.id)}
+                  disabled={actionLoading === selectedUser.id}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Aprovar
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => setShowRejectDialog(selectedUser.id)}
+                  disabled={actionLoading === selectedUser.id}
+                >
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Rejeitar
+                </Button>
+                {actionLoading === selectedUser.id && (
+                  <span className="text-sm text-muted-foreground">
+                    Processando...
+                  </span>
+                )}
+              </div>
+            )}
+
             <div className="space-y-6">
               {/* User Info */}
-              <div className="grid grid-cols-2 gap-4 p-4 bg-gray-800 rounded-lg">
+              <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
                 <div>
-                  <label className="text-sm font-medium text-gray-300">
+                  <label className="text-sm font-medium text-muted-foreground">
                     Nome
                   </label>
-                  <p className="text-sm text-white">{selectedUser.name}</p>
+                  <p className="text-sm text-foreground">{selectedUser.name}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-300">
+                  <label className="text-sm font-medium text-muted-foreground">
                     Email
                   </label>
-                  <p className="text-sm text-white">{selectedUser.email}</p>
+                  <p className="text-sm text-foreground">{selectedUser.email}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-300">
+                  <label className="text-sm font-medium text-muted-foreground">
                     CPF
                   </label>
-                  <p className="text-sm text-white">{selectedUser.cpf}</p>
+                  <p className="text-sm text-foreground">{selectedUser.cpf}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-300">
+                  <label className="text-sm font-medium text-muted-foreground">
                     Tipo de Documento
                   </label>
-                  <p className="text-sm text-white">
+                  <p className="text-sm text-foreground">
                     {selectedUser.documentType || "N/A"}
                   </p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-300">
+                  <label className="text-sm font-medium text-muted-foreground">
                     Número do Documento
                   </label>
-                  <p className="text-sm text-white">
+                  <p className="text-sm text-foreground">
                     {selectedUser.documentNumber || "N/A"}
                   </p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-300">
+                  <label className="text-sm font-medium text-muted-foreground">
                     Status
                   </label>
                   <div className="mt-1">
@@ -1178,10 +1208,10 @@ const AdminKYCPage = () => {
 
               {/* Documents */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <h4 className="font-medium text-white mb-2 flex items-center gap-2">
+                <div className="flex flex-col">
+                  <h4 className="font-medium text-foreground mb-2 flex items-center gap-2">
                     Frente do Documento
-                    <ZoomIn className="w-4 h-4 text-gray-400" />
+                    <ZoomIn className="w-4 h-4 text-muted-foreground" />
                   </h4>
                   <KYCImage
                     src={getKycImageSrc(selectedUser.documentFront)}
@@ -1198,11 +1228,26 @@ const AdminKYCPage = () => {
                         : undefined
                     }
                   />
+                  {selectedUser.kycStatus === "PENDING" && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="mt-2 w-full"
+                      onClick={() => {
+                        setRejectionReason("Problema com: Frente do Documento. ");
+                        setShowRejectDialog(selectedUser.id);
+                      }}
+                      disabled={actionLoading === selectedUser.id}
+                    >
+                      <XCircle className="w-3.5 h-3.5 mr-1.5" />
+                      Rejeitar
+                    </Button>
+                  )}
                 </div>
-                <div>
-                  <h4 className="font-medium text-white mb-2 flex items-center gap-2">
+                <div className="flex flex-col">
+                  <h4 className="font-medium text-foreground mb-2 flex items-center gap-2">
                     Verso do Documento
-                    <ZoomIn className="w-4 h-4 text-gray-400" />
+                    <ZoomIn className="w-4 h-4 text-muted-foreground" />
                   </h4>
                   <KYCImage
                     src={getKycImageSrc(selectedUser.documentBack)}
@@ -1219,11 +1264,26 @@ const AdminKYCPage = () => {
                         : undefined
                     }
                   />
+                  {selectedUser.kycStatus === "PENDING" && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="mt-2 w-full"
+                      onClick={() => {
+                        setRejectionReason("Problema com: Verso do Documento. ");
+                        setShowRejectDialog(selectedUser.id);
+                      }}
+                      disabled={actionLoading === selectedUser.id}
+                    >
+                      <XCircle className="w-3.5 h-3.5 mr-1.5" />
+                      Rejeitar
+                    </Button>
+                  )}
                 </div>
-                <div>
-                  <h4 className="font-medium text-white mb-2 flex items-center gap-2">
+                <div className="flex flex-col">
+                  <h4 className="font-medium text-foreground mb-2 flex items-center gap-2">
                     Selfie com Documento
-                    <ZoomIn className="w-4 h-4 text-gray-400" />
+                    <ZoomIn className="w-4 h-4 text-muted-foreground" />
                   </h4>
                   <KYCImage
                     src={getKycImageSrc(selectedUser.documentSelfie)}
@@ -1240,6 +1300,21 @@ const AdminKYCPage = () => {
                         : undefined
                     }
                   />
+                  {selectedUser.kycStatus === "PENDING" && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="mt-2 w-full"
+                      onClick={() => {
+                        setRejectionReason("Problema com: Selfie com Documento. ");
+                        setShowRejectDialog(selectedUser.id);
+                      }}
+                      disabled={actionLoading === selectedUser.id}
+                    >
+                      <XCircle className="w-3.5 h-3.5 mr-1.5" />
+                      Rejeitar
+                    </Button>
+                  )}
                 </div>
               </div>
 
@@ -1248,7 +1323,7 @@ const AdminKYCPage = () => {
                 selectedUser.documentBack &&
                 selectedUser.documentSelfie && (
                   <div className="mt-6">
-                    <h4 className="font-medium text-white mb-4 flex items-center gap-2">
+                    <h4 className="font-medium text-foreground mb-4 flex items-center gap-2">
                       <Shield className="w-5 h-5" />
                       Análise de Detecção de Fraude
                     </h4>
@@ -1264,13 +1339,13 @@ const AdminKYCPage = () => {
                 )}
 
               {/* Actions */}
-              <div className="flex flex-wrap gap-4 pt-4 border-t border-gray-700">
+              <div className="flex flex-wrap gap-4 pt-4 border-t border-border">
                 {selectedUser.kycStatus === "PENDING" && (
                   <>
                     <Button
                       onClick={() => handleApprove(selectedUser.id)}
                       disabled={actionLoading === selectedUser.id}
-                      className="bg-green-600 hover:bg-green-700"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       <CheckCircle className="w-4 h-4 mr-2" />
                       Aprovar
@@ -1296,7 +1371,7 @@ const AdminKYCPage = () => {
                         setDocumentsToUpdate({ front: true, back: true, selfie: true });
                       }}
                       disabled={actionLoading === selectedUser.id}
-                      className="bg-orange-600 hover:bg-orange-700"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       <Clock className="w-4 h-4 mr-2" />
                       Redefinir para Pendente
@@ -1305,60 +1380,60 @@ const AdminKYCPage = () => {
                       open={showResetDialog === selectedUser.id}
                       onOpenChange={(open) => !open && setShowResetDialog(null)}
                     >
-                      <DialogContent className="bg-gray-900 border-gray-800">
+                      <DialogContent className="bg-card border-border">
                         <DialogHeader>
-                          <DialogTitle className="text-white">
+                          <DialogTitle className="text-foreground">
                             Redefinir KYC para Pendente
                           </DialogTitle>
-                          <DialogDescription className="text-gray-400">
+                          <DialogDescription className="text-muted-foreground">
                             O usuário será notificado para reenviar os documentos. Opcionalmente informe o motivo e marque quais imagens devem ser atualizadas.
                           </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4">
                           <div>
-                            <Label className="text-sm font-medium text-gray-300">
+                            <Label className="text-sm font-medium text-muted-foreground">
                               Motivo (opcional)
                             </Label>
                             <Textarea
                               value={resetReason}
                               onChange={(e) => setResetReason(e.target.value)}
                               placeholder="Ex.: imagem da frente ilegível..."
-                              className="w-full mt-1 p-3 border border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 bg-gray-800 text-white placeholder:text-gray-400"
+                              className="w-full mt-1 p-3 border border-border rounded-md focus:ring-2 focus:ring-primary bg-muted text-foreground placeholder:text-muted-foreground"
                               rows={2}
                             />
                           </div>
                           <div>
-                            <Label className="text-sm font-medium text-gray-300 block mb-2">
+                            <Label className="text-sm font-medium text-muted-foreground block mb-2">
                               Documentos a atualizar
                             </Label>
                             <div className="flex flex-col gap-2">
-                              <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                              <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
                                 <Checkbox
                                   checked={documentsToUpdate.front}
                                   onCheckedChange={(c) =>
                                     setDocumentsToUpdate((p) => ({ ...p, front: !!c }))
                                   }
-                                  className="border-gray-500 data-[state=checked]:bg-orange-600"
+                                  className="border-border data-[state=checked]:bg-primary"
                                 />
                                 Frente do Documento
                               </label>
-                              <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                              <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
                                 <Checkbox
                                   checked={documentsToUpdate.back}
                                   onCheckedChange={(c) =>
                                     setDocumentsToUpdate((p) => ({ ...p, back: !!c }))
                                   }
-                                  className="border-gray-500 data-[state=checked]:bg-orange-600"
+                                  className="border-border data-[state=checked]:bg-primary"
                                 />
                                 Verso do Documento
                               </label>
-                              <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                              <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
                                 <Checkbox
                                   checked={documentsToUpdate.selfie}
                                   onCheckedChange={(c) =>
                                     setDocumentsToUpdate((p) => ({ ...p, selfie: !!c }))
                                   }
-                                  className="border-gray-500 data-[state=checked]:bg-orange-600"
+                                  className="border-border data-[state=checked]:bg-primary"
                                 />
                                 Selfie com Documento
                               </label>
@@ -1368,14 +1443,14 @@ const AdminKYCPage = () => {
                             <Button
                               variant="outline"
                               onClick={() => setShowResetDialog(null)}
-                              className="border-gray-600 text-white hover:bg-gray-800"
+                              className="border-border text-foreground hover:bg-muted"
                             >
                               Cancelar
                             </Button>
                             <Button
                               onClick={() => handleResetToPending(selectedUser.id)}
                               disabled={actionLoading === selectedUser.id}
-                              className="bg-orange-600 hover:bg-orange-700"
+                              className="bg-primary hover:bg-primary/90 text-primary-foreground"
                             >
                               Redefinir para Pendente
                             </Button>
@@ -1386,7 +1461,7 @@ const AdminKYCPage = () => {
                     <Button
                       onClick={() => handleApprove(selectedUser.id)}
                       disabled={actionLoading === selectedUser.id}
-                      className="bg-green-600 hover:bg-green-700"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       <CheckCircle className="w-4 h-4 mr-2" />
                       Reaprovar
@@ -1425,26 +1500,26 @@ const AdminKYCPage = () => {
           open={!!showRejectDialog}
           onOpenChange={() => setShowRejectDialog(null)}
         >
-          <DialogContent className="bg-gray-900 border-gray-800">
+          <DialogContent className="bg-card border-border">
             <DialogHeader>
-              <DialogTitle className="text-white">
+              <DialogTitle className="text-foreground">
                 Rejeitar Verificação KYC
               </DialogTitle>
-              <DialogDescription className="text-gray-400">
+              <DialogDescription className="text-muted-foreground">
                 Forneça um motivo para a rejeição. O usuário receberá este
                 motivo por email.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label className="text-sm font-medium text-gray-300">
+                <Label className="text-sm font-medium text-muted-foreground">
                   Motivo da Rejeição <span className="text-red-400">*</span>
                 </Label>
                 <Textarea
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
                   placeholder="Por favor, forneça um motivo detalhado para a rejeição..."
-                  className="w-full mt-1 p-3 border border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-800 text-white placeholder:text-gray-400"
+                  className="w-full mt-1 p-3 border border-border rounded-md focus:ring-2 focus:ring-primary focus:border-primary bg-muted text-foreground placeholder:text-muted-foreground"
                   rows={4}
                 />
               </div>
@@ -1456,7 +1531,7 @@ const AdminKYCPage = () => {
                   setShowRejectDialog(null);
                   setRejectionReason("");
                 }}
-                className="border-gray-600 text-white hover:bg-gray-800"
+                className="border-border text-foreground hover:bg-muted"
               >
                 Cancelar
               </Button>

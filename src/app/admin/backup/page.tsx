@@ -122,20 +122,20 @@ export default function BackupPage() {
 
   return (
     <div className="container mx-auto p-6 max-w-3xl">
-      <h1 className="text-3xl font-bold text-white mb-2">Backup e Restore</h1>
-      <p className="text-gray-400 mb-8">
+      <h1 className="text-3xl font-bold text-foreground mb-2">Backup e Restore</h1>
+      <p className="text-muted-foreground mb-8">
         Exporte um snapshot dos usuários e dados principais para um arquivo JSON. Use o restore para
         repor dados a partir de um backup (por id: cria ou atualiza registros).
       </p>
 
       <div className="space-y-6">
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-card border-border">
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-foreground flex items-center gap-2">
               <Download className="h-5 w-5" />
               Exportar backup
             </CardTitle>
-            <CardDescription className="text-gray-400">
+            <CardDescription className="text-muted-foreground">
               Baixa um arquivo JSON com: usuários, contas, saldos, transações, depósitos, saques,
               pedidos, notificações, notas, emails enviados, suporte, ofertas P2P e configurações de
               alerta. Faça isso antes de mudanças grandes no banco.
@@ -146,7 +146,7 @@ export default function BackupPage() {
               onClick={handleExport}
               disabled={exporting}
               variant="outline"
-              className="gap-2 border-gray-600 text-gray-300 hover:bg-gray-800"
+              className="gap-2 border-border text-muted-foreground hover:bg-muted"
             >
               <RefreshCw className={`h-4 w-4 ${exporting ? "animate-spin" : ""}`} />
               {exporting ? "Exportando…" : "Baixar backup agora"}
@@ -154,13 +154,13 @@ export default function BackupPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gray-900 border-gray-800">
+        <Card className="bg-card border-border">
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-foreground flex items-center gap-2">
               <Upload className="h-5 w-5" />
               Restaurar de backup
             </CardTitle>
-            <CardDescription className="text-gray-400">
+            <CardDescription className="text-muted-foreground">
               Envie um arquivo .json de backup. Use &quot;Prévia&quot; para ver quantos registros
               serão aplicados sem alterar nada. &quot;Restaurar&quot; faz upsert por id (cria ou
               atualiza).
@@ -172,7 +172,7 @@ export default function BackupPage() {
               type="file"
               accept=".json"
               onChange={handleFileSelect}
-              className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-gray-700 file:text-white"
+              className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-muted file:text-foreground"
             />
             {confirmRestore && (
               <div className="flex flex-wrap gap-2">
@@ -181,7 +181,7 @@ export default function BackupPage() {
                   disabled={restoring}
                   variant="outline"
                   size="sm"
-                  className="gap-2 border-gray-600 text-gray-300"
+                  className="gap-2 border-border text-muted-foreground"
                 >
                   {restoring ? "…" : "Prévia (dry run)"}
                 </Button>
@@ -189,16 +189,16 @@ export default function BackupPage() {
                   onClick={() => setConfirmRestore(null)}
                   variant="ghost"
                   size="sm"
-                  className="text-gray-400"
+                  className="text-muted-foreground"
                 >
                   Limpar
                 </Button>
               </div>
             )}
             {dryRunResult && (
-              <div className="rounded-lg bg-gray-800 p-4 text-sm">
-                <p className="text-gray-300 font-medium mb-2">Registros no backup:</p>
-                <ul className="text-gray-400 space-y-1">
+              <div className="rounded-lg bg-muted p-4 text-sm">
+                <p className="text-muted-foreground font-medium mb-2">Registros no backup:</p>
+                <ul className="text-muted-foreground space-y-1">
                   {Object.entries(dryRunResult.counts).map(([key, count]) => (
                     <li key={key}>
                       {key}: {count}
@@ -219,13 +219,13 @@ export default function BackupPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gray-900 border-gray-800 border-amber-900/50">
+        <Card className="bg-card border-border border-amber-900/50">
           <CardHeader>
             <CardTitle className="text-amber-400 flex items-center gap-2 text-base">
               <AlertTriangle className="h-4 w-4" />
               Dica: backups do provedor do banco
             </CardTitle>
-            <CardDescription className="text-gray-400">
+            <CardDescription className="text-muted-foreground">
               Se você usa Neon, Vercel Postgres, Supabase ou outro provedor, ative os backups
               automáticos e o point-in-time recovery (PITR) no painel deles. Assim você pode voltar
               o banco a um momento anterior sem depender só deste export/restore.

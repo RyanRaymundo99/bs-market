@@ -1035,11 +1035,11 @@ export default function AdminUsersPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black text-white p-8">
+      <div className="min-h-screen p-8">
         <div className="max-w-[1920px] mx-auto">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto"></div>
-            <p className="mt-2 text-gray-400">Carregando usuários...</p>
+            <p className="mt-2 text-muted-foreground">Carregando usuários...</p>
           </div>
         </div>
       </div>
@@ -1047,7 +1047,7 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white p-4 lg:p-8">
+    <div className="min-h-screen p-4 lg:p-8">
       <div className="max-w-[1920px] mx-auto space-y-6">
         {/* Back to Dashboard Button */}
         <BackToDashboardButton />
@@ -1056,14 +1056,14 @@ export default function AdminUsersPage() {
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold">User Management</h1>
-            <p className="text-gray-400 mt-1">
+            <p className="text-muted-foreground mt-1">
               Gerenciar usuários e verificar documentos
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <Button
               onClick={() => setEmailDialogOpen(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               <Mail className="w-4 h-4 mr-2" />
               Enviar Email
@@ -1072,7 +1072,7 @@ export default function AdminUsersPage() {
             <Button
               onClick={() => fetchUsers()}
               variant="outline"
-              className="border-gray-700 hover:bg-gray-800"
+              className="border-border hover:bg-muted"
             >
               <RefreshCw className="w-4 h-4 mr-2" />
               Atualizar
@@ -1082,22 +1082,22 @@ export default function AdminUsersPage() {
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          <Card className="bg-gray-900 border-gray-800">
+          <Card className="bg-card border-border">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-400">Total Users</p>
+                  <p className="text-xs text-muted-foreground">Total Users</p>
                   <p className="text-2xl font-bold">{stats.total}</p>
                 </div>
-                <User className="w-8 h-8 text-blue-400 opacity-50" />
+                <User className="w-8 h-8 text-primary opacity-50" />
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-gray-900 border-gray-800">
+          <Card className="bg-card border-border">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-400">Pending</p>
+                  <p className="text-xs text-muted-foreground">Pending</p>
                   <p className="text-2xl font-bold text-yellow-400">
                     {stats.pending}
                   </p>
@@ -1106,11 +1106,11 @@ export default function AdminUsersPage() {
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-gray-900 border-gray-800">
+          <Card className="bg-card border-border">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-400">Approved</p>
+                  <p className="text-xs text-muted-foreground">Approved</p>
                   <p className="text-2xl font-bold text-green-400">
                     {stats.approved}
                   </p>
@@ -1119,11 +1119,11 @@ export default function AdminUsersPage() {
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-gray-900 border-gray-800">
+          <Card className="bg-card border-border">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-400">Rejected</p>
+                  <p className="text-xs text-muted-foreground">Rejected</p>
                   <p className="text-2xl font-bold text-red-400">
                     {stats.rejected}
                   </p>
@@ -1132,11 +1132,11 @@ export default function AdminUsersPage() {
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-gray-900 border-gray-800">
+          <Card className="bg-card border-border">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-400">KYC Pending</p>
+                  <p className="text-xs text-muted-foreground">KYC Pending</p>
                   <p className="text-2xl font-bold text-yellow-400">
                     {stats.kycPending}
                   </p>
@@ -1145,11 +1145,11 @@ export default function AdminUsersPage() {
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-gray-900 border-gray-800">
+          <Card className="bg-card border-border">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-gray-400">KYC Approved</p>
+                  <p className="text-xs text-muted-foreground">KYC Approved</p>
                   <p className="text-2xl font-bold text-green-400">
                     {stats.kycApproved}
                   </p>
@@ -1163,12 +1163,12 @@ export default function AdminUsersPage() {
         {/* Search and Filters */}
         <div className="flex flex-col lg:flex-row gap-4">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder="Buscar por nome, email, CPF ou telefone..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-gray-900 border-gray-700 text-white placeholder-gray-400"
+              className="pl-10 bg-muted border-border text-foreground placeholder-muted-foreground"
             />
             {searchQuery && (
               <Button
@@ -1186,7 +1186,7 @@ export default function AdminUsersPage() {
               variant={viewMode === "grid" ? "default" : "outline"}
               onClick={() => setViewMode("grid")}
               size="sm"
-              className={viewMode === "grid" ? "" : "border-gray-700"}
+              className={viewMode === "grid" ? "" : "border-border"}
             >
               Grid
             </Button>
@@ -1194,7 +1194,7 @@ export default function AdminUsersPage() {
               variant={viewMode === "list" ? "default" : "outline"}
               onClick={() => setViewMode("list")}
               size="sm"
-              className={viewMode === "list" ? "" : "border-gray-700"}
+              className={viewMode === "list" ? "" : "border-border"}
             >
               List
             </Button>
@@ -1207,7 +1207,7 @@ export default function AdminUsersPage() {
             variant={statusFilter === "ALL" ? "default" : "outline"}
             onClick={() => setStatusFilter("ALL")}
             size="sm"
-            className={statusFilter === "ALL" ? "" : "border-gray-700"}
+            className={statusFilter === "ALL" ? "" : "border-border"}
           >
             All Users ({stats.total})
           </Button>
@@ -1217,8 +1217,8 @@ export default function AdminUsersPage() {
             size="sm"
             className={
               statusFilter === "PENDING"
-                ? "bg-yellow-600 hover:bg-yellow-700"
-                : "border-gray-700"
+                ? "bg-primary text-primary-foreground"
+                : "border-border"
             }
           >
             Pending ({stats.pending})
@@ -1229,8 +1229,8 @@ export default function AdminUsersPage() {
             size="sm"
             className={
               statusFilter === "APPROVED"
-                ? "bg-green-600 hover:bg-green-700"
-                : "border-gray-700"
+                ? "bg-primary text-primary-foreground"
+                : "border-border"
             }
           >
             Approved ({stats.approved})
@@ -1242,7 +1242,7 @@ export default function AdminUsersPage() {
             className={
               statusFilter === "REJECTED"
                 ? "bg-red-600 hover:bg-red-700"
-                : "border-gray-700"
+                : "border-border"
             }
           >
             Rejected ({stats.rejected})
@@ -1251,17 +1251,17 @@ export default function AdminUsersPage() {
 
         {/* Users Grid/List */}
         {filteredUsers.length === 0 ? (
-          <Card className="bg-gray-900 border-gray-800">
+          <Card className="bg-card border-border">
             <CardContent className="p-8 text-center">
-              <User className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2 text-white">
+              <User className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2 text-foreground">
                 {searchQuery
                   ? "Nenhum usuário encontrado"
                   : statusFilter === "ALL"
                   ? "Nenhum usuário encontrado"
                   : `Nenhum usuário ${statusFilter.toLowerCase()} encontrado`}
               </h3>
-              <p className="text-gray-400">
+              <p className="text-muted-foreground">
                 {searchQuery
                   ? "Tente ajustar sua busca"
                   : statusFilter === "ALL"
@@ -1280,7 +1280,7 @@ export default function AdminUsersPage() {
               return (
                 <Card
                   key={user.id}
-                  className="hover:shadow-lg transition-all bg-gray-900 border-gray-800 flex flex-col"
+                  className="hover:shadow-lg transition-all bg-card border-border flex flex-col"
                 >
                   <CardContent className="p-5 flex-1 flex flex-col">
                     {/* Header */}
@@ -1305,25 +1305,25 @@ export default function AdminUsersPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-8 w-8 p-0 hover:bg-gray-800 flex-shrink-0"
+                            className="h-8 w-8 p-0 hover:bg-muted flex-shrink-0"
                           >
-                            <MoreVertical className="h-4 w-4 text-gray-400" />
+                            <MoreVertical className="h-4 w-4 text-muted-foreground" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent
                           align="end"
-                          className="bg-gray-900 border-gray-800"
+                          className="bg-card border-border"
                         >
                           <DropdownMenuItem
                             onClick={() => handleEditUser(user)}
-                            className="text-white hover:bg-gray-800 focus:bg-gray-800"
+                            className="text-foreground hover:bg-muted focus:bg-muted"
                           >
-                            <Edit className="mr-2 h-4 w-4 text-blue-400" />
+                            <Edit className="mr-2 h-4 w-4 text-primary" />
                             Editar Usuário
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => handleViewProfile(user.id)}
-                            className="text-white hover:bg-gray-800 focus:bg-gray-800"
+                            className="text-foreground hover:bg-muted focus:bg-muted"
                           >
                             <ExternalLink className="mr-2 h-4 w-4 text-green-400" />
                             Ver Perfil Completo
@@ -1336,27 +1336,27 @@ export default function AdminUsersPage() {
                             user.documentSelfie) && (
                             <DropdownMenuItem
                               onClick={() => handleViewKYC(user)}
-                              className="text-white hover:bg-gray-800 focus:bg-gray-800"
+                              className="text-foreground hover:bg-muted focus:bg-muted"
                             >
                               <Shield className="mr-2 h-4 w-4 text-yellow-400" />
                               Verificar KYC
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuSeparator className="bg-gray-700" />
+                          <DropdownMenuSeparator className="bg-muted" />
                           <DropdownMenuItem
                             onClick={() => handleOpenEmailForUser(user)}
-                            className="text-white hover:bg-gray-800 focus:bg-gray-800"
+                            className="text-foreground hover:bg-muted focus:bg-muted"
                           >
-                            <Mail className="mr-2 h-4 w-4 text-blue-400" />
+                            <Mail className="mr-2 h-4 w-4 text-primary" />
                             Enviar Email
                           </DropdownMenuItem>
                           {user.phone && (
                             <>
                               <DropdownMenuItem
                                 onClick={() => handleContactPhone(user.phone!)}
-                                className="text-white hover:bg-gray-800 focus:bg-gray-800"
+                                className="text-foreground hover:bg-muted focus:bg-muted"
                               >
-                                <Phone className="mr-2 h-4 w-4 text-blue-400" />
+                                <Phone className="mr-2 h-4 w-4 text-primary" />
                                 Ligar
                               </DropdownMenuItem>
                               {hasWhatsApp(user.phone) && (
@@ -1364,7 +1364,7 @@ export default function AdminUsersPage() {
                                   onClick={() =>
                                     handleContactWhatsApp(user.phone)
                                   }
-                                  className="text-white hover:bg-gray-800 focus:bg-gray-800"
+                                  className="text-foreground hover:bg-muted focus:bg-muted"
                                 >
                                   <MessageSquare className="mr-2 h-4 w-4 text-green-500" />
                                   Abrir WhatsApp
@@ -1372,7 +1372,7 @@ export default function AdminUsersPage() {
                               )}
                             </>
                           )}
-                          <DropdownMenuSeparator className="bg-gray-700" />
+                          <DropdownMenuSeparator className="bg-muted" />
                           <DropdownMenuItem
                             className="text-red-400 hover:bg-red-900/20 focus:bg-red-900/20"
                             onClick={() => openDeleteDialog(user)}
@@ -1386,7 +1386,7 @@ export default function AdminUsersPage() {
 
                     {/* User Info */}
                     <div className="space-y-2 mb-4 text-sm">
-                      <div className="flex items-center justify-between gap-2 text-gray-400 group">
+                      <div className="flex items-center justify-between gap-2 text-muted-foreground group">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
                           <Mail className="w-4 h-4 flex-shrink-0" />
                           <span className="truncate">{user.email}</span>
@@ -1395,14 +1395,14 @@ export default function AdminUsersPage() {
                           size="sm"
                           variant="ghost"
                           onClick={() => handleOpenEmailForUser(user)}
-                          className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-gray-800"
+                          className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted"
                           title="Enviar Email"
                         >
-                          <Mail className="w-3 h-3 text-blue-400" />
+                          <Mail className="w-3 h-3 text-primary" />
                         </Button>
                       </div>
                       {user.phone && (
-                        <div className="flex items-center justify-between gap-2 text-gray-400 group">
+                        <div className="flex items-center justify-between gap-2 text-muted-foreground group">
                           <div className="flex items-center gap-2 flex-1 min-w-0">
                             <Phone className="w-4 h-4 flex-shrink-0" />
                             <span className="truncate">{user.phone}</span>
@@ -1417,10 +1417,10 @@ export default function AdminUsersPage() {
                               size="sm"
                               variant="ghost"
                               onClick={() => handleContactPhone(user.phone!)}
-                              className="h-6 w-6 p-0 hover:bg-gray-800"
+                              className="h-6 w-6 p-0 hover:bg-muted"
                               title="Ligar"
                             >
-                              <Phone className="w-3 h-3 text-blue-400" />
+                              <Phone className="w-3 h-3 text-primary" />
                             </Button>
                             {hasWhatsApp(user.phone) && (
                               <Button
@@ -1429,7 +1429,7 @@ export default function AdminUsersPage() {
                                 onClick={() =>
                                   handleContactWhatsApp(user.phone)
                                 }
-                                className="h-6 w-6 p-0 hover:bg-gray-800"
+                                className="h-6 w-6 p-0 hover:bg-muted"
                                 title="Abrir WhatsApp"
                               >
                                 <MessageSquare className="w-3 h-3 text-green-500" />
@@ -1439,12 +1439,12 @@ export default function AdminUsersPage() {
                         </div>
                       )}
                       {user.cpf && (
-                        <div className="flex items-center gap-2 text-gray-400">
+                        <div className="flex items-center gap-2 text-muted-foreground">
                           <CreditCard className="w-4 h-4" />
                           <span>{user.cpf}</span>
                         </div>
                       )}
-                      <div className="flex items-center gap-2 text-gray-400">
+                      <div className="flex items-center gap-2 text-muted-foreground">
                         <Calendar className="w-4 h-4" />
                         <span>{formatDate(user.createdAt)}</span>
                       </div>
@@ -1452,15 +1452,15 @@ export default function AdminUsersPage() {
 
                     {/* Quick Stats */}
                     <div className="grid grid-cols-2 gap-2 mb-4">
-                      <div className="bg-gray-800/50 rounded-lg p-2">
-                        <p className="text-xs text-gray-400">Saldo</p>
-                        <p className="text-sm font-semibold text-white">
+                      <div className="bg-muted/50 rounded-lg p-2">
+                        <p className="text-xs text-muted-foreground">Saldo</p>
+                        <p className="text-sm font-semibold text-foreground">
                           {userBalance > 0 ? formatUSDT(userBalance) : "0 USDT"}
                         </p>
                       </div>
-                      <div className="bg-gray-800/50 rounded-lg p-2">
-                        <p className="text-xs text-gray-400">Transações</p>
-                        <p className="text-sm font-semibold text-white">
+                      <div className="bg-muted/50 rounded-lg p-2">
+                        <p className="text-xs text-muted-foreground">Transações</p>
+                        <p className="text-sm font-semibold text-foreground">
                           {user.transactionCount || 0}
                         </p>
                       </div>
@@ -1470,8 +1470,8 @@ export default function AdminUsersPage() {
                     <div className="mb-4">
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
-                          <Shield className="w-4 h-4 text-gray-400" />
-                          <span className="text-xs text-gray-400">KYC:</span>
+                          <Shield className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">KYC:</span>
                           {getStatusBadge(user.kycStatus)}
                         </div>
                         {(user.kycStatus === "PENDING" ||
@@ -1484,7 +1484,7 @@ export default function AdminUsersPage() {
                             size="sm"
                             variant="outline"
                             onClick={() => handleViewKYC(user)}
-                            className="h-7 text-xs border-gray-600 text-gray-300 hover:bg-gray-700"
+                            className="h-7 text-xs border-border text-muted-foreground hover:bg-muted"
                           >
                             <Eye className="w-3 h-3 mr-1" />
                             Verificar KYC
@@ -1498,7 +1498,7 @@ export default function AdminUsersPage() {
                       variant="ghost"
                       size="sm"
                       onClick={() => toggleUserExpansion(user.id)}
-                      className="w-full border border-gray-700 hover:bg-gray-800"
+                      className="w-full border border-border hover:bg-muted"
                     >
                       {isExpanded ? (
                         <>
@@ -1515,11 +1515,11 @@ export default function AdminUsersPage() {
 
                     {/* Expanded Details */}
                     {isExpanded && (
-                      <div className="mt-4 pt-4 border-t border-gray-800 space-y-4">
+                      <div className="mt-4 pt-4 border-t border-border space-y-4">
                         {isLoadingDetails ? (
                           <div className="text-center py-4">
                             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mx-auto"></div>
-                            <p className="text-xs text-gray-400 mt-2">
+                            <p className="text-xs text-muted-foreground mt-2">
                               Carregando...
                             </p>
                           </div>
@@ -1528,7 +1528,7 @@ export default function AdminUsersPage() {
                             {/* Balance Details */}
                             {user.balance && user.balance.length > 0 && (
                               <div>
-                                <h4 className="text-xs font-semibold text-gray-400 mb-2 flex items-center gap-2">
+                                <h4 className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-2">
                                   <Wallet className="w-4 h-4" />
                                   Saldos
                                 </h4>
@@ -1536,12 +1536,12 @@ export default function AdminUsersPage() {
                                   {user.balance.map((bal) => (
                                     <div
                                       key={bal.currency}
-                                      className="flex items-center justify-between text-sm bg-gray-800/50 rounded p-2"
+                                      className="flex items-center justify-between text-sm bg-muted/50 rounded p-2"
                                     >
-                                      <span className="text-gray-400">
+                                      <span className="text-muted-foreground">
                                         {bal.currency}
                                       </span>
-                                      <span className="text-white font-medium">
+                                      <span className="text-foreground font-medium">
                                         {bal.currency === "BRL"
                                           ? formatBRL(Number(bal.amount))
                                           : formatUSDT(Number(bal.amount))}
@@ -1555,16 +1555,16 @@ export default function AdminUsersPage() {
                             {/* Transaction Summary */}
                             {user.transactionCount !== undefined && (
                               <div>
-                                <h4 className="text-xs font-semibold text-gray-400 mb-2 flex items-center gap-2">
+                                <h4 className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-2">
                                   <Activity className="w-4 h-4" />
                                   Resumo
                                 </h4>
-                                <div className="text-sm text-gray-300">
+                                <div className="text-sm text-muted-foreground">
                                   <p>
                                     Total de transações: {user.transactionCount}
                                   </p>
                                   {user.lastTransactionDate && (
-                                    <p className="text-xs text-gray-400 mt-1">
+                                    <p className="text-xs text-muted-foreground mt-1">
                                       Última:{" "}
                                       {formatDate(user.lastTransactionDate)}
                                     </p>
@@ -1575,7 +1575,7 @@ export default function AdminUsersPage() {
                                     size="sm"
                                     variant="outline"
                                     onClick={() => handleViewTransactions(user)}
-                                    className="mt-3 w-full border-gray-600 text-gray-300 hover:bg-gray-700"
+                                    className="mt-3 w-full border-border text-muted-foreground hover:bg-muted"
                                   >
                                     <Activity className="w-4 h-4 mr-2" />
                                     Ver Transações
@@ -1590,7 +1590,7 @@ export default function AdminUsersPage() {
                               <Button
                                 size="sm"
                                 onClick={() => handleOpenEmailForUser(user)}
-                                className="bg-blue-600 hover:bg-blue-700 text-white w-full"
+                                className="bg-primary hover:bg-primary/90 text-primary-foreground w-full"
                               >
                                 <Mail className="w-4 h-4 mr-2" />
                                 Enviar Email para {user.name.split(" ")[0]}
@@ -1606,7 +1606,7 @@ export default function AdminUsersPage() {
                                 <Button
                                   size="sm"
                                   onClick={() => handleViewKYC(user)}
-                                  className="bg-yellow-600 hover:bg-yellow-700 text-white w-full"
+                                  className="bg-yellow-600 hover:bg-yellow-700 text-foreground w-full"
                                 >
                                   <Shield className="w-4 h-4 mr-2" />
                                   Verificar KYC
@@ -1621,7 +1621,7 @@ export default function AdminUsersPage() {
                                       handleApproval(user.id, "approve")
                                     }
                                     disabled={processingUser === user.id}
-                                    className="bg-green-600 hover:bg-green-700 text-white w-full"
+                                    className="bg-primary hover:bg-primary/90 text-primary-foreground w-full"
                                   >
                                     {processingUser === user.id ? (
                                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -1662,7 +1662,7 @@ export default function AdminUsersPage() {
                                       handleResetToPending(user.id)
                                     }
                                     disabled={processingUser === user.id}
-                                    className="bg-orange-600 hover:bg-orange-700 text-white flex-1"
+                                    className="bg-primary hover:bg-primary/90 text-primary-foreground flex-1"
                                   >
                                     {processingUser === user.id ? (
                                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -1679,7 +1679,7 @@ export default function AdminUsersPage() {
                                       handleApproval(user.id, "approve")
                                     }
                                     disabled={processingUser === user.id}
-                                    className="bg-green-600 hover:bg-green-700 text-white flex-1"
+                                    className="bg-primary hover:bg-primary/90 text-primary-foreground flex-1"
                                   >
                                     {processingUser === user.id ? (
                                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -1709,7 +1709,7 @@ export default function AdminUsersPage() {
               return (
                 <Card
                   key={user.id}
-                  className="hover:shadow-md transition-shadow bg-gray-900 border-gray-800"
+                  className="hover:shadow-md transition-shadow bg-card border-border"
                 >
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
@@ -1727,12 +1727,12 @@ export default function AdminUsersPage() {
                               </h3>
                               {getStatusBadge(user.approvalStatus)}
                             </div>
-                            <div className="flex items-center space-x-1 text-sm text-gray-400">
+                            <div className="flex items-center space-x-1 text-sm text-muted-foreground">
                               <Mail className="w-4 h-4" />
                               <span className="truncate">{user.email}</span>
                             </div>
                           </div>
-                          <div className="text-sm text-gray-400">
+                          <div className="text-sm text-muted-foreground">
                             {user.phone && (
                               <div className="flex items-center space-x-1 mb-1">
                                 <Phone className="w-4 h-4" />
@@ -1746,25 +1746,25 @@ export default function AdminUsersPage() {
                               </div>
                             )}
                           </div>
-                          <div className="text-sm text-gray-400">
+                          <div className="text-sm text-muted-foreground">
                             <div className="mb-1">
-                              <span className="text-gray-500">Saldo: </span>
-                              <span className="text-white font-medium">
+                              <span className="text-muted-foreground">Saldo: </span>
+                              <span className="text-foreground font-medium">
                                 {userBalance > 0
                                   ? formatUSDT(userBalance)
                                   : "0 USDT"}
                               </span>
                             </div>
                             <div>
-                              <span className="text-gray-500">
+                              <span className="text-muted-foreground">
                                 Transações:{" "}
                               </span>
-                              <span className="text-white font-medium">
+                              <span className="text-foreground font-medium">
                                 {user.transactionCount || 0}
                               </span>
                             </div>
                           </div>
-                          <div className="text-sm text-gray-400">
+                          <div className="text-sm text-muted-foreground">
                             <div className="mb-1">
                               <span>
                                 Criado em {formatDate(user.createdAt)}
@@ -1785,7 +1785,7 @@ export default function AdminUsersPage() {
                                   size="sm"
                                   variant="outline"
                                   onClick={() => handleViewKYC(user)}
-                                  className="h-7 text-xs border-gray-600 text-gray-300 hover:bg-gray-700"
+                                  className="h-7 text-xs border-border text-muted-foreground hover:bg-muted"
                                 >
                                   <Eye className="w-3 h-3 mr-1" />
                                   Verificar KYC
@@ -1802,7 +1802,7 @@ export default function AdminUsersPage() {
                         <Button
                           size="sm"
                           onClick={() => handleOpenEmailForUser(user)}
-                          className="bg-blue-600 hover:bg-blue-700 text-white"
+                          className="bg-primary hover:bg-primary/90 text-primary-foreground"
                         >
                           <Mail className="w-4 h-4 mr-1" />
                           Email
@@ -1814,7 +1814,7 @@ export default function AdminUsersPage() {
                               size="sm"
                               onClick={() => handleApproval(user.id, "approve")}
                               disabled={processingUser === user.id}
-                              className="bg-green-600 hover:bg-green-700 text-white"
+                              className="bg-primary hover:bg-primary/90 text-primary-foreground"
                             >
                               {processingUser === user.id ? (
                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -1851,7 +1851,7 @@ export default function AdminUsersPage() {
                               size="sm"
                               onClick={() => handleResetToPending(user.id)}
                               disabled={processingUser === user.id}
-                              className="bg-orange-600 hover:bg-orange-700 text-white"
+                              className="bg-primary hover:bg-primary/90 text-primary-foreground"
                             >
                               {processingUser === user.id ? (
                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -1866,7 +1866,7 @@ export default function AdminUsersPage() {
                               size="sm"
                               onClick={() => handleApproval(user.id, "approve")}
                               disabled={processingUser === user.id}
-                              className="bg-green-600 hover:bg-green-700 text-white"
+                              className="bg-primary hover:bg-primary/90 text-primary-foreground"
                             >
                               {processingUser === user.id ? (
                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -1885,25 +1885,25 @@ export default function AdminUsersPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 w-8 p-0 hover:bg-gray-800"
+                              className="h-8 w-8 p-0 hover:bg-muted"
                             >
-                              <MoreVertical className="h-4 w-4 text-gray-400" />
+                              <MoreVertical className="h-4 w-4 text-muted-foreground" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent
                             align="end"
-                            className="bg-gray-900 border-gray-800"
+                            className="bg-card border-border"
                           >
                             <DropdownMenuItem
                               onClick={() => handleEditUser(user)}
-                              className="text-white hover:bg-gray-800 focus:bg-gray-800"
+                              className="text-foreground hover:bg-muted focus:bg-muted"
                             >
-                              <Edit className="mr-2 h-4 w-4 text-blue-400" />
+                              <Edit className="mr-2 h-4 w-4 text-primary" />
                               Editar Usuário
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => handleViewProfile(user.id)}
-                              className="text-white hover:bg-gray-800 focus:bg-gray-800"
+                              className="text-foreground hover:bg-muted focus:bg-muted"
                             >
                               <ExternalLink className="mr-2 h-4 w-4 text-green-400" />
                               Ver Perfil Completo
@@ -1916,13 +1916,13 @@ export default function AdminUsersPage() {
                               user.documentSelfie) && (
                               <DropdownMenuItem
                                 onClick={() => handleViewKYC(user)}
-                                className="text-white hover:bg-gray-800 focus:bg-gray-800"
+                                className="text-foreground hover:bg-muted focus:bg-muted"
                               >
                                 <Shield className="mr-2 h-4 w-4 text-yellow-400" />
                                 Verificar KYC
                               </DropdownMenuItem>
                             )}
-                            <DropdownMenuSeparator className="bg-gray-700" />
+                            <DropdownMenuSeparator className="bg-muted" />
                             <DropdownMenuItem
                               className="text-red-400 hover:bg-red-900/20 focus:bg-red-900/20"
                               onClick={() => openDeleteDialog(user)}
@@ -1944,12 +1944,12 @@ export default function AdminUsersPage() {
 
       {/* Edit User Modal */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-2xl bg-gray-900 border-gray-800">
+        <DialogContent className="max-w-2xl bg-card border-border">
           <DialogHeader>
-            <DialogTitle className="text-white">
+            <DialogTitle className="text-foreground">
               Edit User: {editingUser?.name}
             </DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogDescription className="text-muted-foreground">
               Update user information and status. Changes will be applied
               immediately.
             </DialogDescription>
@@ -1958,7 +1958,7 @@ export default function AdminUsersPage() {
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-name" className="text-gray-300">
+                <Label htmlFor="edit-name" className="text-muted-foreground">
                   Full Name
                 </Label>
                 <Input
@@ -1967,11 +1967,11 @@ export default function AdminUsersPage() {
                   onChange={(e) =>
                     setEditFormData({ ...editFormData, name: e.target.value })
                   }
-                  className="bg-gray-800 border-gray-700 text-white"
+                  className="bg-muted border-border text-foreground"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-email" className="text-gray-300">
+                <Label htmlFor="edit-email" className="text-muted-foreground">
                   Email
                 </Label>
                 <Input
@@ -1981,14 +1981,14 @@ export default function AdminUsersPage() {
                   onChange={(e) =>
                     setEditFormData({ ...editFormData, email: e.target.value })
                   }
-                  className="bg-gray-800 border-gray-700 text-white"
+                  className="bg-muted border-border text-foreground"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-phone" className="text-gray-300">
+                <Label htmlFor="edit-phone" className="text-muted-foreground">
                   Phone
                 </Label>
                 <Input
@@ -1997,11 +1997,11 @@ export default function AdminUsersPage() {
                   onChange={(e) =>
                     setEditFormData({ ...editFormData, phone: e.target.value })
                   }
-                  className="bg-gray-800 border-gray-700 text-white"
+                  className="bg-muted border-border text-foreground"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-cpf" className="text-gray-300">
+                <Label htmlFor="edit-cpf" className="text-muted-foreground">
                   CPF
                 </Label>
                 <Input
@@ -2010,14 +2010,14 @@ export default function AdminUsersPage() {
                   onChange={(e) =>
                     setEditFormData({ ...editFormData, cpf: e.target.value })
                   }
-                  className="bg-gray-800 border-gray-700 text-white"
+                  className="bg-muted border-border text-foreground"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-approval-status" className="text-gray-300">
+                <Label htmlFor="edit-approval-status" className="text-muted-foreground">
                   Approval Status
                 </Label>
                 <Select
@@ -2026,10 +2026,10 @@ export default function AdminUsersPage() {
                     setEditFormData({ ...editFormData, approvalStatus: value })
                   }
                 >
-                  <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                  <SelectTrigger className="bg-muted border-border text-foreground">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-gray-900 border-gray-800">
+                  <SelectContent className="bg-card border-border">
                     <SelectItem value="PENDING">Pending</SelectItem>
                     <SelectItem value="APPROVED">Approved</SelectItem>
                     <SelectItem value="REJECTED">Rejected</SelectItem>
@@ -2037,7 +2037,7 @@ export default function AdminUsersPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-kyc-status" className="text-gray-300">
+                <Label htmlFor="edit-kyc-status" className="text-muted-foreground">
                   KYC Status
                 </Label>
                 <Select
@@ -2046,10 +2046,10 @@ export default function AdminUsersPage() {
                     setEditFormData({ ...editFormData, kycStatus: value })
                   }
                 >
-                  <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                  <SelectTrigger className="bg-muted border-border text-foreground">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-gray-900 border-gray-800">
+                  <SelectContent className="bg-card border-border">
                     <SelectItem value="PENDING">Pending</SelectItem>
                     <SelectItem value="APPROVED">Approved</SelectItem>
                     <SelectItem value="REJECTED">Rejected</SelectItem>
@@ -2064,14 +2064,14 @@ export default function AdminUsersPage() {
               variant="outline"
               onClick={() => setEditDialogOpen(false)}
               disabled={saving}
-              className="border-gray-700 text-gray-300 hover:bg-gray-800"
+              className="border-border text-muted-foreground hover:bg-muted"
             >
               Cancel
             </Button>
             <Button
               onClick={handleSaveUserClick}
               disabled={saving}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               {saving ? (
                 <>
@@ -2096,16 +2096,16 @@ export default function AdminUsersPage() {
           }
         }}
       >
-        <DialogContent className="bg-gray-900 border-gray-800">
+        <DialogContent className="bg-card border-border">
           <DialogHeader>
-            <DialogTitle className="text-white">
+            <DialogTitle className="text-foreground">
               {editConfirmStep === 1 ? "Confirmar Edição" : "Confirmação Final"}
             </DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogDescription className="text-muted-foreground">
               {editConfirmStep === 1 ? (
                 <>
                   Você está prestes a editar as informações do usuário{" "}
-                  <strong className="text-white">{editingUser?.name}</strong>.
+                  <strong className="text-foreground">{editingUser?.name}</strong>.
                   <br />
                   <br />
                   Esta ação alterará os dados do usuário. Deseja continuar?
@@ -2117,7 +2117,7 @@ export default function AdminUsersPage() {
                   <br />
                   <br />
                   Você confirma que deseja editar as informações do usuário{" "}
-                  <strong className="text-white">{editingUser?.name}</strong>?
+                  <strong className="text-foreground">{editingUser?.name}</strong>?
                   <br />
                   <br />
                   Clique em &quot;Confirmar&quot; novamente para prosseguir.
@@ -2132,7 +2132,7 @@ export default function AdminUsersPage() {
                 setShowEditConfirmDialog(false);
                 setEditConfirmStep(1);
               }}
-              className="border-gray-700 text-gray-300 hover:bg-gray-800"
+              className="border-border text-muted-foreground hover:bg-muted"
             >
               Cancelar
             </Button>
@@ -2140,7 +2140,7 @@ export default function AdminUsersPage() {
               onClick={handleEditConfirm}
               className={
                 editConfirmStep === 1
-                  ? "bg-yellow-600 hover:bg-yellow-700"
+                  ? "bg-primary text-primary-foreground"
                   : "bg-red-600 hover:bg-red-700"
               }
             >
@@ -2152,13 +2152,13 @@ export default function AdminUsersPage() {
 
       {/* Quick Email Dialog */}
       <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
-        <DialogContent className="max-w-2xl bg-gray-900 border-gray-800 max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl bg-card border-border max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-white flex items-center gap-2">
-              <Mail className="w-5 h-5 text-blue-400" />
+            <DialogTitle className="text-foreground flex items-center gap-2">
+              <Mail className="w-5 h-5 text-primary" />
               Enviar Email Rápido
             </DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogDescription className="text-muted-foreground">
               Envie um email para os usuários selecionados. O email também
               criará uma notificação na plataforma.
             </DialogDescription>
@@ -2167,7 +2167,7 @@ export default function AdminUsersPage() {
           <div className="grid gap-4 py-4">
             {/* Recipient Selection */}
             <div className="space-y-2">
-              <Label htmlFor="email-recipients" className="text-gray-300">
+              <Label htmlFor="email-recipients" className="text-muted-foreground">
                 Destinatários
               </Label>
               <Select
@@ -2176,10 +2176,10 @@ export default function AdminUsersPage() {
                   value: "all" | "filtered" | "selected" | "individual"
                 ) => setEmailRecipients(value)}
               >
-                <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                <SelectTrigger className="bg-muted border-border text-foreground">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-gray-900 border-gray-800">
+                <SelectContent className="bg-card border-border">
                   <SelectItem value="filtered">
                     Usuários Filtrados ({filteredUsers.length})
                   </SelectItem>
@@ -2194,7 +2194,7 @@ export default function AdminUsersPage() {
                   </SelectItem>
                 </SelectContent>
               </Select>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-muted-foreground">
                 {emailRecipients === "all" &&
                   `Enviando para todos os ${usersWithDetails.length} usuários`}
                 {emailRecipients === "filtered" &&
@@ -2215,9 +2215,9 @@ export default function AdminUsersPage() {
 
               {/* Individual User Selection */}
               {emailRecipients === "individual" && (
-                <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700 max-h-64 overflow-y-auto">
+                <div className="bg-muted/50 rounded-lg p-3 border border-border max-h-64 overflow-y-auto">
                   <div className="flex items-center justify-between mb-3">
-                    <Label className="text-gray-300 text-sm font-semibold">
+                    <Label className="text-muted-foreground text-sm font-semibold">
                       Selecionar Usuários
                     </Label>
                     <Button
@@ -2225,7 +2225,7 @@ export default function AdminUsersPage() {
                       variant="ghost"
                       size="sm"
                       onClick={handleSelectAllUsers}
-                      className="text-xs text-blue-400 hover:text-blue-300"
+                      className="text-xs text-primary hover:text-primary/80"
                     >
                       {selectedUsers.size === filteredUsers.length
                         ? "Desmarcar Todos"
@@ -2236,7 +2236,7 @@ export default function AdminUsersPage() {
                     {filteredUsers.map((user) => (
                       <div
                         key={user.id}
-                        className="flex items-center gap-3 p-2 hover:bg-gray-700/50 rounded cursor-pointer"
+                        className="flex items-center gap-3 p-2 hover:bg-muted/50 rounded cursor-pointer"
                         onClick={() => handleToggleUserSelection(user.id)}
                       >
                         <Checkbox
@@ -2244,20 +2244,20 @@ export default function AdminUsersPage() {
                           onCheckedChange={() =>
                             handleToggleUserSelection(user.id)
                           }
-                          className="border-gray-600"
+                          className="border-border"
                         />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm text-white truncate">
+                          <p className="text-sm text-foreground truncate">
                             {user.name}
                           </p>
-                          <p className="text-xs text-gray-400 truncate">
+                          <p className="text-xs text-muted-foreground truncate">
                             {user.email}
                           </p>
                         </div>
                       </div>
                     ))}
                     {filteredUsers.length === 0 && (
-                      <p className="text-sm text-gray-400 text-center py-4">
+                      <p className="text-sm text-muted-foreground text-center py-4">
                         Nenhum usuário disponível para seleção
                       </p>
                     )}
@@ -2268,7 +2268,7 @@ export default function AdminUsersPage() {
 
             {/* Subject */}
             <div className="space-y-2">
-              <Label htmlFor="email-subject" className="text-gray-300">
+              <Label htmlFor="email-subject" className="text-muted-foreground">
                 Assunto <span className="text-red-400">*</span>
               </Label>
               <Input
@@ -2276,13 +2276,13 @@ export default function AdminUsersPage() {
                 placeholder="Ex: Atualização importante da conta"
                 value={emailSubject}
                 onChange={(e) => setEmailSubject(e.target.value)}
-                className="bg-gray-800 border-gray-700 text-white placeholder-gray-500"
+                className="bg-muted border-border text-foreground placeholder-muted-foreground"
               />
             </div>
 
             {/* Message */}
             <div className="space-y-2">
-              <Label htmlFor="email-message" className="text-gray-300">
+              <Label htmlFor="email-message" className="text-muted-foreground">
                 Mensagem <span className="text-red-400">*</span>
               </Label>
               <Textarea
@@ -2290,10 +2290,10 @@ export default function AdminUsersPage() {
                 placeholder="Digite sua mensagem aqui..."
                 value={emailMessage}
                 onChange={(e) => setEmailMessage(e.target.value)}
-                className="bg-gray-800 border-gray-700 text-white placeholder-gray-500 min-h-[200px]"
+                className="bg-muted border-border text-foreground placeholder-muted-foreground min-h-[200px]"
                 rows={8}
               />
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-muted-foreground">
                 A mensagem será enviada por email e também aparecerá como
                 notificação na plataforma.
               </p>
@@ -2301,8 +2301,8 @@ export default function AdminUsersPage() {
 
             {/* Preview Recipients */}
             {getRecipientCount() > 0 && (
-              <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700">
-                <p className="text-sm font-semibold text-gray-300 mb-2">
+              <div className="bg-muted/50 rounded-lg p-3 border border-border">
+                <p className="text-sm font-semibold text-muted-foreground mb-2">
                   Preview de Destinatários:
                 </p>
                 <div className="max-h-32 overflow-y-auto space-y-1">
@@ -2318,14 +2318,14 @@ export default function AdminUsersPage() {
                     .map((user) => (
                       <div
                         key={user.id}
-                        className="text-xs text-gray-400 flex items-center gap-2"
+                        className="text-xs text-muted-foreground flex items-center gap-2"
                       >
                         <Mail className="w-3 h-3" />
                         <span className="truncate">{user.email}</span>
                       </div>
                     ))}
                   {getRecipientCount() > 10 && (
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       ... e mais {getRecipientCount() - 10} destinatário(s)
                     </p>
                   )}
@@ -2343,7 +2343,7 @@ export default function AdminUsersPage() {
                 setEmailMessage("");
               }}
               disabled={sendingEmails}
-              className="border-gray-700 text-gray-300 hover:bg-gray-800"
+              className="border-border text-muted-foreground hover:bg-muted"
             >
               Cancelar
             </Button>
@@ -2356,7 +2356,7 @@ export default function AdminUsersPage() {
                 getRecipientCount() === 0 ||
                 (emailRecipients === "individual" && selectedUsers.size === 0)
               }
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               {sendingEmails ? (
                 <>
@@ -2379,13 +2379,13 @@ export default function AdminUsersPage() {
         open={showTransactionsDialog}
         onOpenChange={setShowTransactionsDialog}
       >
-        <DialogContent className="max-w-4xl bg-gray-900 border-gray-800 max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-4xl bg-card border-border max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle className="text-white flex items-center gap-2">
-              <Activity className="w-5 h-5 text-blue-400" />
+            <DialogTitle className="text-foreground flex items-center gap-2">
+              <Activity className="w-5 h-5 text-primary" />
               Transações de {viewingUserTransactions?.name}
             </DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogDescription className="text-muted-foreground">
               Histórico completo de transações do usuário
             </DialogDescription>
           </DialogHeader>
@@ -2393,8 +2393,8 @@ export default function AdminUsersPage() {
           <div className="flex-1 overflow-y-auto py-4">
             {loadingTransactions ? (
               <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                <p className="ml-3 text-gray-400">Carregando transações...</p>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <p className="ml-3 text-muted-foreground">Carregando transações...</p>
               </div>
             ) : viewingUserTransactions?.transactions &&
               viewingUserTransactions.transactions.length > 0 ? (
@@ -2402,7 +2402,7 @@ export default function AdminUsersPage() {
                 {viewingUserTransactions.transactions.map((tx) => (
                   <div
                     key={tx.id}
-                    className="bg-gray-800 rounded-lg p-4 border border-gray-700 hover:border-gray-600 transition-colors"
+                    className="bg-muted rounded-lg p-4 border border-border hover:border-border transition-colors"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 flex-1">
@@ -2423,7 +2423,7 @@ export default function AdminUsersPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="text-white font-medium">
+                            <span className="text-foreground font-medium">
                               {getTransactionTypeLabel(tx.type)}
                             </span>
                             <span
@@ -2434,7 +2434,7 @@ export default function AdminUsersPage() {
                               {getStatusLabel(tx.status)}
                             </span>
                           </div>
-                          <div className="text-sm text-gray-400">
+                          <div className="text-sm text-muted-foreground">
                             {formatDate(tx.createdAt)}
                             {tx.externalId && (
                               <span className="ml-2 text-xs">
@@ -2463,7 +2463,7 @@ export default function AdminUsersPage() {
                                   ""
                                 )}
                           </span>
-                          <p className="text-xs text-gray-400 mt-1">
+                          <p className="text-xs text-muted-foreground mt-1">
                             {tx.currency}
                           </p>
                         </div>
@@ -2474,8 +2474,8 @@ export default function AdminUsersPage() {
               </div>
             ) : (
               <div className="text-center py-8">
-                <Activity className="w-12 h-12 text-gray-400 mx-auto mb-4 opacity-50" />
-                <p className="text-gray-400">Nenhuma transação encontrada</p>
+                <Activity className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                <p className="text-muted-foreground">Nenhuma transação encontrada</p>
               </div>
             )}
           </div>
@@ -2487,7 +2487,7 @@ export default function AdminUsersPage() {
                 setShowTransactionsDialog(false);
                 setViewingUserTransactions(null);
               }}
-              className="border-gray-700 text-gray-300 hover:bg-gray-800"
+              className="border-border text-muted-foreground hover:bg-muted"
             >
               Fechar
             </Button>
@@ -2497,7 +2497,7 @@ export default function AdminUsersPage() {
                   setShowTransactionsDialog(false);
                   handleViewProfile(viewingUserTransactions.id);
                 }}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
               >
                 <ExternalLink className="w-4 h-4 mr-2" />
                 Ver Perfil Completo
@@ -2509,64 +2509,64 @@ export default function AdminUsersPage() {
 
       {/* KYC Review Dialog */}
       <Dialog open={showKYCDialog} onOpenChange={setShowKYCDialog}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto bg-gray-900 border-gray-800">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto bg-card border-border">
           <DialogHeader>
-            <DialogTitle className="text-white flex items-center gap-2">
-              <Shield className="w-5 h-5 text-blue-400" />
+            <DialogTitle className="text-foreground flex items-center gap-2">
+              <Shield className="w-5 h-5 text-primary" />
               Revisão de Documentos KYC - {viewingKYCUser?.name}
             </DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogDescription className="text-muted-foreground">
               Revise os documentos de identidade e verifique o KYC do usuário
             </DialogDescription>
           </DialogHeader>
 
           {loadingKYCDocuments ? (
             <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-              <p className="ml-3 text-gray-400">Carregando documentos...</p>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <p className="ml-3 text-muted-foreground">Carregando documentos...</p>
             </div>
           ) : viewingKYCUser ? (
             <div className="space-y-6">
               {/* User Info */}
-              <div className="grid grid-cols-2 gap-4 p-4 bg-gray-800 rounded-lg">
+              <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
                 <div>
-                  <label className="text-sm font-medium text-gray-300">
+                  <label className="text-sm font-medium text-muted-foreground">
                     Nome
                   </label>
-                  <p className="text-sm text-white">{viewingKYCUser.name}</p>
+                  <p className="text-sm text-foreground">{viewingKYCUser.name}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-300">
+                  <label className="text-sm font-medium text-muted-foreground">
                     Email
                   </label>
-                  <p className="text-sm text-white">{viewingKYCUser.email}</p>
+                  <p className="text-sm text-foreground">{viewingKYCUser.email}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-300">
+                  <label className="text-sm font-medium text-muted-foreground">
                     CPF
                   </label>
-                  <p className="text-sm text-white">
+                  <p className="text-sm text-foreground">
                     {viewingKYCUser.cpf || "N/A"}
                   </p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-300">
+                  <label className="text-sm font-medium text-muted-foreground">
                     Tipo de Documento
                   </label>
-                  <p className="text-sm text-white">
+                  <p className="text-sm text-foreground">
                     {viewingKYCUser.documentType || "N/A"}
                   </p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-300">
+                  <label className="text-sm font-medium text-muted-foreground">
                     Número do Documento
                   </label>
-                  <p className="text-sm text-white">
+                  <p className="text-sm text-foreground">
                     {viewingKYCUser.documentNumber || "N/A"}
                   </p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-300">
+                  <label className="text-sm font-medium text-muted-foreground">
                     Status KYC
                   </label>
                   <div className="mt-1">
@@ -2575,20 +2575,20 @@ export default function AdminUsersPage() {
                 </div>
                 {viewingKYCUser.kycSubmittedAt && (
                   <div>
-                    <label className="text-sm font-medium text-gray-300">
+                    <label className="text-sm font-medium text-muted-foreground">
                       Enviado em
                     </label>
-                    <p className="text-sm text-white">
+                    <p className="text-sm text-foreground">
                       {formatDate(viewingKYCUser.kycSubmittedAt)}
                     </p>
                   </div>
                 )}
                 {viewingKYCUser.kycReviewedAt && (
                   <div>
-                    <label className="text-sm font-medium text-gray-300">
+                    <label className="text-sm font-medium text-muted-foreground">
                       Revisado em
                     </label>
-                    <p className="text-sm text-white">
+                    <p className="text-sm text-foreground">
                       {formatDate(viewingKYCUser.kycReviewedAt)}
                     </p>
                   </div>
@@ -2598,9 +2598,9 @@ export default function AdminUsersPage() {
               {/* Documents */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <h4 className="font-medium text-white mb-2 flex items-center gap-2">
+                  <h4 className="font-medium text-foreground mb-2 flex items-center gap-2">
                     Frente do Documento
-                    <ZoomIn className="w-4 h-4 text-gray-400" />
+                    <ZoomIn className="w-4 h-4 text-muted-foreground" />
                   </h4>
                   <KYCImage
                     src={getKycImageSrc(viewingKYCUser.documentFront)}
@@ -2619,9 +2619,9 @@ export default function AdminUsersPage() {
                   />
                 </div>
                 <div>
-                  <h4 className="font-medium text-white mb-2 flex items-center gap-2">
+                  <h4 className="font-medium text-foreground mb-2 flex items-center gap-2">
                     Verso do Documento
-                    <ZoomIn className="w-4 h-4 text-gray-400" />
+                    <ZoomIn className="w-4 h-4 text-muted-foreground" />
                   </h4>
                   <KYCImage
                     src={getKycImageSrc(viewingKYCUser.documentBack)}
@@ -2640,9 +2640,9 @@ export default function AdminUsersPage() {
                   />
                 </div>
                 <div>
-                  <h4 className="font-medium text-white mb-2 flex items-center gap-2">
+                  <h4 className="font-medium text-foreground mb-2 flex items-center gap-2">
                     Selfie com Documento
-                    <ZoomIn className="w-4 h-4 text-gray-400" />
+                    <ZoomIn className="w-4 h-4 text-muted-foreground" />
                   </h4>
                   <KYCImage
                     src={getKycImageSrc(viewingKYCUser.documentSelfie)}
@@ -2667,7 +2667,7 @@ export default function AdminUsersPage() {
                 viewingKYCUser.documentBack &&
                 viewingKYCUser.documentSelfie && (
                   <div className="mt-6">
-                    <h4 className="font-medium text-white mb-4 flex items-center gap-2">
+                    <h4 className="font-medium text-foreground mb-4 flex items-center gap-2">
                       <Shield className="w-5 h-5" />
                       Análise de Detecção de Fraude
                     </h4>
@@ -2696,13 +2696,13 @@ export default function AdminUsersPage() {
                 )}
 
               {/* Actions */}
-              <div className="flex flex-wrap gap-4 pt-4 border-t border-gray-700">
+              <div className="flex flex-wrap gap-4 pt-4 border-t border-border">
                 {viewingKYCUser.kycStatus === "PENDING" && (
                   <>
                     <Button
                       onClick={() => handleKYCApprove(viewingKYCUser.id)}
                       disabled={kycActionLoading === viewingKYCUser.id}
-                      className="bg-green-600 hover:bg-green-700"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       <CheckCircle className="w-4 h-4 mr-2" />
                       Aprovar KYC
@@ -2714,15 +2714,15 @@ export default function AdminUsersPage() {
                           Rejeitar KYC
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="bg-gray-800 border-gray-700">
+                      <DialogContent className="bg-muted border-border">
                         <DialogHeader>
-                          <DialogTitle className="text-white">
+                          <DialogTitle className="text-foreground">
                             Rejeitar Verificação KYC
                           </DialogTitle>
                         </DialogHeader>
                         <div className="space-y-4">
                           <div>
-                            <Label className="text-sm font-medium text-gray-300">
+                            <Label className="text-sm font-medium text-muted-foreground">
                               Motivo da Rejeição{" "}
                               <span className="text-red-400">*</span>
                             </Label>
@@ -2732,7 +2732,7 @@ export default function AdminUsersPage() {
                                 setKycRejectionReason(e.target.value)
                               }
                               placeholder="Por favor, forneça um motivo para a rejeição..."
-                              className="w-full mt-1 p-3 border border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-700 text-white placeholder:text-gray-400"
+                              className="w-full mt-1 p-3 border border-border rounded-md focus:ring-2 focus:ring-primary focus:border-primary bg-muted text-foreground placeholder:text-muted-foreground"
                               rows={4}
                             />
                           </div>
@@ -2740,7 +2740,7 @@ export default function AdminUsersPage() {
                             <Button
                               variant="outline"
                               onClick={() => setKycRejectionReason("")}
-                              className="border-gray-600 text-white hover:bg-gray-700"
+                              className="border-border text-foreground hover:bg-muted"
                             >
                               Cancelar
                             </Button>
@@ -2772,7 +2772,7 @@ export default function AdminUsersPage() {
                         setKycDocumentsToUpdate({ front: true, back: true, selfie: true });
                       }}
                       disabled={kycActionLoading === viewingKYCUser.id}
-                      className="bg-orange-600 hover:bg-orange-700"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       <Clock className="w-4 h-4 mr-2" />
                       Redefinir para Pendente
@@ -2781,60 +2781,60 @@ export default function AdminUsersPage() {
                       open={showKYCResetDialog === viewingKYCUser.id}
                       onOpenChange={(open) => !open && setShowKYCResetDialog(null)}
                     >
-                      <DialogContent className="bg-gray-800 border-gray-700">
+                      <DialogContent className="bg-muted border-border">
                         <DialogHeader>
-                          <DialogTitle className="text-white">
+                          <DialogTitle className="text-foreground">
                             Redefinir KYC para Pendente
                           </DialogTitle>
-                          <DialogDescription className="text-gray-400">
+                          <DialogDescription className="text-muted-foreground">
                             O usuário será notificado para reenviar os documentos. Opcionalmente informe o motivo e marque quais imagens devem ser atualizadas.
                           </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4">
                           <div>
-                            <Label className="text-sm font-medium text-gray-300">
+                            <Label className="text-sm font-medium text-muted-foreground">
                               Motivo (opcional)
                             </Label>
                             <Textarea
                               value={kycResetReason}
                               onChange={(e) => setKycResetReason(e.target.value)}
                               placeholder="Ex.: imagem da frente ilegível..."
-                              className="w-full mt-1 p-3 border border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 bg-gray-700 text-white placeholder:text-gray-400"
+                              className="w-full mt-1 p-3 border border-border rounded-md focus:ring-2 focus:ring-primary bg-muted text-foreground placeholder:text-muted-foreground"
                               rows={2}
                             />
                           </div>
                           <div>
-                            <Label className="text-sm font-medium text-gray-300 block mb-2">
+                            <Label className="text-sm font-medium text-muted-foreground block mb-2">
                               Documentos a atualizar
                             </Label>
                             <div className="flex flex-col gap-2">
-                              <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                              <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
                                 <Checkbox
                                   checked={kycDocumentsToUpdate.front}
                                   onCheckedChange={(c) =>
                                     setKycDocumentsToUpdate((p) => ({ ...p, front: !!c }))
                                   }
-                                  className="border-gray-500 data-[state=checked]:bg-orange-600"
+                                  className="border-border data-[state=checked]:bg-primary"
                                 />
                                 Frente do Documento
                               </label>
-                              <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                              <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
                                 <Checkbox
                                   checked={kycDocumentsToUpdate.back}
                                   onCheckedChange={(c) =>
                                     setKycDocumentsToUpdate((p) => ({ ...p, back: !!c }))
                                   }
-                                  className="border-gray-500 data-[state=checked]:bg-orange-600"
+                                  className="border-border data-[state=checked]:bg-primary"
                                 />
                                 Verso do Documento
                               </label>
-                              <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                              <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
                                 <Checkbox
                                   checked={kycDocumentsToUpdate.selfie}
                                   onCheckedChange={(c) =>
                                     setKycDocumentsToUpdate((p) => ({ ...p, selfie: !!c }))
                                   }
-                                  className="border-gray-500 data-[state=checked]:bg-orange-600"
+                                  className="border-border data-[state=checked]:bg-primary"
                                 />
                                 Selfie com Documento
                               </label>
@@ -2844,14 +2844,14 @@ export default function AdminUsersPage() {
                             <Button
                               variant="outline"
                               onClick={() => setShowKYCResetDialog(null)}
-                              className="border-gray-600 text-white hover:bg-gray-700"
+                              className="border-border text-foreground hover:bg-muted"
                             >
                               Cancelar
                             </Button>
                             <Button
                               onClick={() => handleKYCReset(viewingKYCUser.id)}
                               disabled={kycActionLoading === viewingKYCUser.id}
-                              className="bg-orange-600 hover:bg-orange-700"
+                              className="bg-primary hover:bg-primary/90 text-primary-foreground"
                             >
                               Redefinir para Pendente
                             </Button>
@@ -2862,7 +2862,7 @@ export default function AdminUsersPage() {
                     <Button
                       onClick={() => handleKYCApprove(viewingKYCUser.id)}
                       disabled={kycActionLoading === viewingKYCUser.id}
-                      className="bg-green-600 hover:bg-green-700"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       <CheckCircle className="w-4 h-4 mr-2" />
                       Reaprovar
@@ -2874,15 +2874,15 @@ export default function AdminUsersPage() {
                           Rejeitar
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="bg-gray-800 border-gray-700">
+                      <DialogContent className="bg-muted border-border">
                         <DialogHeader>
-                          <DialogTitle className="text-white">
+                          <DialogTitle className="text-foreground">
                             Rejeitar Verificação KYC
                           </DialogTitle>
                         </DialogHeader>
                         <div className="space-y-4">
                           <div>
-                            <Label className="text-sm font-medium text-gray-300">
+                            <Label className="text-sm font-medium text-muted-foreground">
                               Motivo da Rejeição{" "}
                               <span className="text-red-400">*</span>
                             </Label>
@@ -2892,7 +2892,7 @@ export default function AdminUsersPage() {
                                 setKycRejectionReason(e.target.value)
                               }
                               placeholder="Por favor, forneça um motivo para a rejeição..."
-                              className="w-full mt-1 p-3 border border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-700 text-white placeholder:text-gray-400"
+                              className="w-full mt-1 p-3 border border-border rounded-md focus:ring-2 focus:ring-primary focus:border-primary bg-muted text-foreground placeholder:text-muted-foreground"
                               rows={4}
                             />
                           </div>
@@ -2900,7 +2900,7 @@ export default function AdminUsersPage() {
                             <Button
                               variant="outline"
                               onClick={() => setKycRejectionReason("")}
-                              className="border-gray-600 text-white hover:bg-gray-700"
+                              className="border-border text-foreground hover:bg-muted"
                             >
                               Cancelar
                             </Button>
@@ -2924,7 +2924,7 @@ export default function AdminUsersPage() {
             </div>
           ) : (
             <div className="text-center py-8">
-              <p className="text-gray-400">Nenhum usuário selecionado</p>
+              <p className="text-muted-foreground">Nenhum usuário selecionado</p>
             </div>
           )}
         </DialogContent>
