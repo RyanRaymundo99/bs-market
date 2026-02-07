@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { validateAdminSession } from "@/lib/admin-session";
 
+type UserTagDelegate = {
+  findMany: (args: { where: { userId: string }; select: { id?: boolean; tag?: boolean } }) => Promise<{ tag: string }[]>;
+  upsert: (args: { where: { userId_tag: { userId: string; tag: string } }; create: { userId: string; tag: string }; update: object }) => Promise<unknown>;
+  deleteMany: (args: { where: { userId: string; tag: string } }) => Promise<unknown>;
+};
+type PrismaWithUserTag = typeof prisma & { userTag: UserTagDelegate };
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -10,11 +17,12 @@ export async function GET(
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id: userId } = await params;
-  const tags = await (prisma as any).userTag.findMany({
+  const prismaWithTag = prisma as PrismaWithUserTag;
+  const tags = await prismaWithTag.userTag.findMany({
     where: { userId },
-    select: { id: true, tag: true },
+    select: { tag: true },
   });
-  return NextResponse.json({ success: true, tags: tags.map((t: { tag: string }) => t.tag) });
+  return NextResponse.json({ success: true, tags: tags.map((t) => t.tag) });
 }
 
 export async function POST(
@@ -31,7 +39,8 @@ export async function POST(
     return NextResponse.json({ error: "Invalid tag" }, { status: 400 });
   }
 
-  await (prisma as any).userTag.upsert({
+  const prismaWithTag = prisma as PrismaWithUserTag;
+  await prismaWithTag.userTag.upsert({
     where: { userId_tag: { userId, tag } },
     create: { userId, tag },
     update: {},
@@ -51,6 +60,7 @@ export async function DELETE(
   const tag = searchParams.get("tag")?.trim().toUpperCase();
   if (!tag) return NextResponse.json({ error: "Missing tag" }, { status: 400 });
 
-  await (prisma as any).userTag.deleteMany({ where: { userId, tag } });
+  const prismaWithTag = prisma as PrismaWithUserTag;
+  await prismaWithTag.userTag.deleteMany({ where: { userId, tag } });
   return NextResponse.json({ success: true });
 }

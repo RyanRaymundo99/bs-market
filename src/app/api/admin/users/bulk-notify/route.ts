@@ -98,12 +98,12 @@ export async function POST(request: NextRequest) {
               metadata: {},
             });
           }
-        } catch (emailErr) {
+        } catch {
           // notification already created; count as sent
         }
       }
       results.sent++;
-    } catch (e) {
+    } catch {
       results.failed++;
       results.errors.push(userId);
     }

@@ -222,6 +222,10 @@ export async function getMoneyControls(): Promise<MoneyControls> {
       return {
         ...r,
         maxDepositUsdt: 1000000,
+        blockLoginDuringMaintenance: r.blockLoginDuringMaintenance ?? false,
+        blockTradeDuringMaintenance: r.blockTradeDuringMaintenance ?? false,
+        newSignupsDisabled: r.newSignupsDisabled ?? false,
+        tradeDisabled: r.tradeDisabled ?? false,
       };
     } catch (error) {
       console.error("Failed to auto-update maxDepositUsdt:", error);

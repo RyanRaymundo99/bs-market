@@ -11,7 +11,6 @@ import {
   User,
   Mail,
   CreditCard,
-  FileText,
   RefreshCw,
   MoreVertical,
   Trash2,
@@ -34,7 +33,6 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import NotificationBell from "@/components/admin/NotificationBell";
 import BackToDashboardButton from "@/components/admin/BackToDashboardButton";
 import {
@@ -683,7 +681,7 @@ export default function AdminUsersPage() {
       } else {
         toast({ variant: "destructive", title: "Error", description: data.error || "Bulk approve failed" });
       }
-    } catch (e) {
+    } catch {
       toast({ variant: "destructive", title: "Error", description: "Bulk approve failed" });
     } finally {
       setBulkActionLoading(false);
@@ -710,7 +708,7 @@ export default function AdminUsersPage() {
       } else {
         toast({ variant: "destructive", title: "Error", description: data.error || "Bulk reject failed" });
       }
-    } catch (e) {
+    } catch {
       toast({ variant: "destructive", title: "Error", description: "Bulk reject failed" });
     } finally {
       setBulkActionLoading(false);

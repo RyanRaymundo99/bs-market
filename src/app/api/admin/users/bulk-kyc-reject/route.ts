@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
         // ignore
       }
       results.rejected++;
-    } catch (e) {
+    } catch {
       results.errors.push(userId);
     }
   }

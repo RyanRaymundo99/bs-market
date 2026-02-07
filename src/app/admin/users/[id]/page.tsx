@@ -25,7 +25,6 @@ import {
   ArrowLeft,
   Wallet,
   TrendingUp,
-  TrendingDown,
   Edit,
   Save,
   X,
@@ -243,7 +242,7 @@ export default function AdminUserDetailsPage({
       } else {
         throw new Error("Failed to update profile");
       }
-    } catch (error) {
+    } catch {
       toast({
         variant: "destructive",
         title: "Error",
