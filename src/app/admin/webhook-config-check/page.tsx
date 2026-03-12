@@ -46,7 +46,7 @@ export default function WebhookConfigCheckPage() {
       // Check webhook endpoint accessibility
       const webhookUrl = `${
         process.env.NEXT_PUBLIC_APP_URL || window.location.origin
-      }/api/webhooks/nutzpay`;
+      }/api/webhooks/nubank`;
       const webhookResponse = await fetch(webhookUrl, { method: "GET" });
       const webhookData = await webhookResponse.json();
 
@@ -126,7 +126,7 @@ export default function WebhookConfigCheckPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground mb-1">
-                  URL Esperada (para configurar no NutzPay):
+                  URL Esperada (para configurar no provedor de pagamento):
                 </p>
                 <code className="bg-muted p-2 rounded text-sm text-foreground block">
                   {config.expectedUrl}
@@ -248,10 +248,10 @@ export default function WebhookConfigCheckPage() {
             <CardContent className="space-y-4">
               <div>
                 <p className="text-sm font-medium text-foreground mb-2">
-                  1. Configure o Webhook no Dashboard do NutzPay:
+                  1. Configure o Webhook no Dashboard do Provedor de Pagamento:
                 </p>
                 <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground ml-4">
-                  <li>Acesse o dashboard do NutzPay</li>
+                  <li>Acesse o dashboard do Provedor de Pagamento</li>
                   <li>Vá para Configurações → Webhooks</li>
                   <li>Adicione a URL do webhook:</li>
                 </ol>
@@ -282,7 +282,7 @@ export default function WebhookConfigCheckPage() {
                   O webhook secret deve estar configurado na variável de
                   ambiente{" "}
                   <code className="bg-muted px-1 rounded">
-                    NUTZPAY_WEBHOOK_SECRET
+                    PAYMENT_WEBHOOK_SECRET
                   </code>
                 </p>
               </div>

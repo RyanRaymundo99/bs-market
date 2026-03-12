@@ -2,11 +2,11 @@ import { NextResponse } from "next/server";
 
 /**
  * Returns the outbound (egress) IP of this server.
- * Use this to see which IP to whitelist in NutzPay (Configurações → IPs Autorizados).
+ * Use this to see which IP to whitelist in your payment provider (e.g. Nubank PJ).
  *
  * - On Vercel without Static IPs: the IP can change per invocation (dynamic).
  * - With Vercel Static IPs (Pro): you get fixed IP(s); call this after enabling to confirm the value.
- * - On a VPS/own server: you get your server’s public IP.
+ * - On a VPS/own server: you get your server's public IP.
  */
 export async function GET() {
   try {
@@ -17,7 +17,7 @@ export async function GET() {
     const data = (await res.json()) as { ip: string };
     return NextResponse.json({
       ip: data.ip,
-      note: "Use this IP in NutzPay → Configurações → IPs Autorizados. On Vercel free/hobby the IP may change unless you use Static IPs (Pro).",
+      note: "Use this IP to whitelist in your payment provider settings. On Vercel free/hobby the IP may change unless you use Static IPs (Pro).",
     });
   } catch (e) {
     console.error("egress-ip error:", e);

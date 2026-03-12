@@ -139,7 +139,7 @@ export default function WebhookLogsPage() {
         <div>
           <h1 className="text-3xl font-bold text-foreground mb-2">Webhook Logs</h1>
           <p className="text-muted-foreground">
-            Monitoramento de webhooks recebidos do NutzPay
+            Monitoramento de webhooks recebidos do provedor de pagamento
           </p>
         </div>
         <Button

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { nutzPayService } from "@/lib/nutzpay";
+import { paymentService } from "@/lib/payment";
 import { ledgerService } from "@/lib/ledger";
 import { Decimal } from "@prisma/client/runtime/library";
 
@@ -31,11 +31,11 @@ export async function GET(
 
     const { transactionId } = await params;
 
-    // Find order by externalOrderId (transactionId from NutzPay) or by order ID
+    // Find order by externalOrderId or by order ID
     const order = await prisma.order.findFirst({
       where: {
         OR: [{ externalOrderId: transactionId }, { id: transactionId }],
-        userId: session.user.id, // Ensure user owns this order
+        userId: session.user.id,
       },
     });
 
@@ -43,7 +43,7 @@ export async function GET(
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
-    // If order is still pending, check status from NutzPay API
+    // If order is still pending, check status from payment provider API
     if (order.status === "PENDING" && order.externalOrderId) {
       try {
         const deposit = await prisma.deposit.findFirst({
@@ -59,24 +59,23 @@ export async function GET(
 
         const externalId = deposit?.externalId;
 
-        let nutzPayStatus;
+        let providerStatus = null;
 
         try {
-          nutzPayStatus = await nutzPayService.getTransactionStatus(
+          providerStatus = await paymentService.getTransactionStatus(
             order.externalOrderId
           );
         } catch (apiError) {
           console.error(
             "❌ Error fetching with transaction_id, trying external_id..."
           );
-          // If transaction_id fails and we have external_id, try that
           if (
             externalId &&
             apiError instanceof Error &&
             apiError.message.includes("not found")
           ) {
             try {
-              nutzPayStatus = await nutzPayService.getTransactionStatus(
+              providerStatus = await paymentService.getTransactionStatus(
                 externalId
               );
             } catch (fallbackError) {
@@ -84,39 +83,19 @@ export async function GET(
                 "❌ Error fetching with external_id too:",
                 fallbackError
               );
-              nutzPayStatus = null;
+              providerStatus = null;
             }
           } else {
-            console.error("❌ Error fetching from NutzPay API:", apiError);
-            if (apiError instanceof Error) {
-              console.error("Error message:", apiError.message);
-            }
-            nutzPayStatus = null;
+            console.error("❌ Error fetching from payment provider API:", apiError);
+            providerStatus = null;
           }
         }
 
-        // Handle case where NutzPay API returns null (server errors)
-        if (nutzPayStatus === null) {
-        } else if (nutzPayStatus) {
-          // Try multiple possible status field names
-          const nutzPayStatusValue =
-            nutzPayStatus.status ||
-            nutzPayStatus.Status ||
-            nutzPayStatus.payment_status ||
-            nutzPayStatus.PaymentStatus ||
-            nutzPayStatus.transaction_status ||
-            nutzPayStatus.TransactionStatus ||
-            "pending";
-
-          const statusLower = nutzPayStatusValue.toLowerCase();
-          const isCompleted =
-            statusLower === "completed" ||
-            statusLower === "confirmed" ||
-            statusLower === "paid" ||
-            statusLower === "success" ||
-            statusLower === "successful";
-
-          if (isCompleted && order.status === "PENDING") {
+        // Handle case where provider API returns null (server errors)
+        if (providerStatus === null) {
+          // Do nothing — order stays PENDING
+        } else if (providerStatus) {
+          if (providerStatus.isCompleted && order.status === "PENDING") {
             // Update order status
             await prisma.order.update({
               where: { id: order.id },
@@ -185,7 +164,7 @@ export async function GET(
                   amountBRL: Number(order.total),
                   amountUSDT: Number(order.amount),
                   exchangeRate: Number(order.total) / Number(order.amount),
-                  source: "nutzpay_api_poll",
+                  source: `${paymentService.name}_api_poll`,
                 },
               });
 
@@ -206,8 +185,8 @@ export async function GET(
               order.status = updatedOrder.status;
               order.executedAt = updatedOrder.executedAt;
             }
-          } else if (nutzPayStatusValue.toLowerCase() === "failed") {
-            // Update to failed if NutzPay says so
+          } else if (providerStatus.isFailed) {
+            // Update to failed if provider says so
             await prisma.order.update({
               where: { id: order.id },
               data: {
@@ -218,7 +197,7 @@ export async function GET(
           }
         }
       } catch (apiError) {
-        console.error("Error checking NutzPay API status:", apiError);
+        console.error("Error checking payment provider API status:", apiError);
         // Don't fail the request, just log the error and return current order status
       }
     }
@@ -265,7 +244,7 @@ export async function GET(
       return NextResponse.json({
         success: true,
         order: formattedOrder,
-        synced: wasSynced, // Indicates if status was updated during this call
+        synced: wasSynced,
       });
     } catch (formatError) {
       console.error("Error formatting order:", formatError);

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { nutzPayService } from "@/lib/nutzpay";
+import { paymentService } from "@/lib/payment";
 import { sendWithdrawalReceipt } from "@/lib/receipt-email";
 import { getMoneyControls } from "@/lib/money-controls";
 import {
@@ -146,9 +146,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user has sufficient balance
-    // The amount is what the user wants to withdraw. The network fee is handled by NutzPay
-    // and deducted from the amount (not added on top). So if user has 10 USDT and wants
-    // to withdraw 10 USDT, they'll receive (10 - fee) USDT, which is acceptable.
     if (Number(usdtBalance.amount) < amount) {
       return NextResponse.json(
         {
@@ -177,7 +174,7 @@ export async function POST(request: NextRequest) {
         .catch((err) => console.error("Admin withdrawal alert:", err));
     }
 
-    // Generate external ID for NutzPay
+    // Generate external ID for tracking
     const externalId = `withdrawal_${user.id}_${Date.now()}`;
 
     // Create withdrawal record first (before API call)
@@ -185,54 +182,46 @@ export async function POST(request: NextRequest) {
       data: {
         userId: user.id,
         type: "USDT",
-        amount: amount, // Store the amount the user requested
-        fee: null, // Will be updated from API response (informative only - network fee)
-        netAmount: null, // Will be updated from API response
+        amount: amount,
+        fee: null,
+        netAmount: null,
         status: "PENDING",
         paymentMethod: "USDT",
         walletAddress: walletAddress,
         network: network,
         hash: null,
-        externalId: externalId, // Store externalId for webhook matching
+        externalId: externalId,
         createdAt: new Date(),
       },
     });
 
     try {
-      // Call NutzPay API to create withdrawal
-      // Use NUTZPAY_WEBHOOK_URL if set (for testing with webhook.site), otherwise use default
+      // Build webhook callback URL
       const callbackUrl =
-        process.env.NUTZPAY_WEBHOOK_URL ||
+        process.env.PAYMENT_WEBHOOK_URL ||
         `${
           process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"
-        }/api/webhooks/nutzpay`;
+        }/api/webhooks/nubank`;
 
-      // Send the full amount to NutzPay - the fee is handled by NutzPay/network
-      // We only deduct the amount from user's balance, not amount + fee
-      const nutzPayResponse = await nutzPayService.createUSDTWithdrawal({
-        amount: amount, // Send the full amount the user requested
-        recipient_address: walletAddress,
-        recipient_network: network,
+      // Create USDT withdrawal via active payment provider
+      const withdrawalResponse = await paymentService.createUSDTWithdrawal({
+        amount: amount,
+        recipientAddress: walletAddress,
+        recipientNetwork: network,
         description: `USDT withdrawal - ${user.email || user.id}`,
-        external_id: externalId,
-        callback_url: callbackUrl,
+        externalId: externalId,
+        callbackUrl: callbackUrl,
       });
 
-      // Extract data from response (response structure: { success: true, data: {...} })
-      const responseData = nutzPayResponse.data || nutzPayResponse;
-      const transactionId = responseData.transaction_id;
-      const responseFee = responseData.fee || 0;
-      const responseAmount = responseData.amount || amount;
+      // Extract data from response
+      const transactionId = withdrawalResponse.transactionId;
+      const responseStatus = withdrawalResponse.status;
+      const responseFee = (withdrawalResponse.raw.fee as number) || 0;
+      const responseAmount = (withdrawalResponse.raw.amount as number) || amount;
       const totalDeducted =
-        responseData.total_deducted || responseAmount + responseFee;
-      const responseStatus = responseData.status || "pending";
+        (withdrawalResponse.raw.total_deducted as number) || responseAmount + responseFee;
 
-      // IMPORTANT: The network fee (1 USDT for TRC20, 5 USDT for ERC20) is ONLY informative
-      // We deduct ONLY the amount from user's balance, not amount + fee
-      // Example: User has 10 USDT, withdraws 10 USDT -> balance becomes 0 USDT (not -1 or -5)
-      // The fee is handled by NutzPay/network and is not our responsibility
-
-      // Update withdrawal with NutzPay response data
+      // Update withdrawal with provider response data
       await prisma.withdrawal.update({
         where: { id: withdrawal.id },
         data: {
@@ -251,31 +240,28 @@ export async function POST(request: NextRequest) {
       });
 
       // Update user balance (subtract only the amount, not amount + fee)
-      // The fee is handled by NutzPay/network and is not our responsibility
-      // If user has 10 USDT and withdraws 10 USDT, balance becomes 0 USDT
       await prisma.balance.update({
         where: {
           id: usdtBalance.id,
         },
         data: {
-          amount: Number(usdtBalance.amount) - amount, // Deduct only the amount, not totalDeducted
+          amount: Number(usdtBalance.amount) - amount,
           updatedAt: new Date(),
         },
       });
 
       // Create transaction record
-      // Record only the amount withdrawn, not amount + fee
       const withdrawalTransaction = await prisma.transaction.create({
         data: {
           userId: user.id,
           type: "WITHDRAWAL",
-          amount: amount, // Record only the amount, not totalDeducted
+          amount: amount,
           currency: "USDT",
-          balance: Number(usdtBalance.amount) - amount, // Balance after deducting only the amount
+          balance: Number(usdtBalance.amount) - amount,
           description: `USDT withdrawal to ${walletAddress} (${network}) - Taxa de rede: ${responseFee.toFixed(
             2
           )} USDT (informativa)`,
-          metadata: { withdrawalId: withdrawal.id },
+          metadata: { withdrawalId: withdrawal.id, provider: paymentService.name },
           createdAt: new Date(),
         },
       });
@@ -286,7 +272,7 @@ export async function POST(request: NextRequest) {
         data: { transactionId: withdrawalTransaction.id },
       });
 
-      // Send withdrawal receipt email (don't await to avoid blocking response)
+      // Send withdrawal receipt email (non-blocking)
       if (user.email && user.name) {
         sendWithdrawalReceipt({
           userName: user.name,
@@ -302,7 +288,6 @@ export async function POST(request: NextRequest) {
           status: responseStatus === "completed" ? "COMPLETED" : "PENDING",
         })
           .then(async (result) => {
-            // Track receipt in transaction metadata
             const metadata =
               (withdrawalTransaction.metadata as Record<string, unknown>) || {};
             const receiptHistory =
@@ -334,7 +319,6 @@ export async function POST(request: NextRequest) {
           })
           .catch((error) => {
             console.error("Failed to send withdrawal receipt email:", error);
-            // Don't fail the request if email fails
           });
       }
 
@@ -342,21 +326,22 @@ export async function POST(request: NextRequest) {
         success: true,
         data: {
           transaction_id: transactionId,
-          external_id: responseData.external_id || externalId,
+          external_id: (withdrawalResponse.raw.external_id as string) || externalId,
           status: responseStatus,
           amount: responseAmount,
           fee: responseFee,
           total_deducted: totalDeducted,
-          recipient_address: responseData.recipient_address || walletAddress,
-          recipient_network: responseData.recipient_network || network,
-          created_at: responseData.created_at || new Date().toISOString(),
+          recipient_address: (withdrawalResponse.raw.recipient_address as string) || walletAddress,
+          recipient_network: (withdrawalResponse.raw.recipient_network as string) || network,
+          created_at: (withdrawalResponse.raw.created_at as string) || new Date().toISOString(),
           message:
-            responseData.message ||
+            (withdrawalResponse.raw.message as string) ||
             "Withdrawal request submitted for processing. You will receive a webhook notification when completed",
+          provider: paymentService.name,
         },
       });
     } catch (error: unknown) {
-      // If NutzPay API call fails, update withdrawal status to failed
+      // If provider API call fails, update withdrawal status to failed
       await prisma.withdrawal.update({
         where: { id: withdrawal.id },
         data: {
@@ -364,10 +349,9 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      console.error("NutzPay withdrawal error:", error);
+      console.error("Payment provider withdrawal error:", error);
 
-      // Return user-friendly error message
-      let errorMessage = "Failed to process USDT withdrawal with NutzPay";
+      let errorMessage = "Failed to process USDT withdrawal";
       let errorDetails: unknown = undefined;
       let statusCode = 500;
 

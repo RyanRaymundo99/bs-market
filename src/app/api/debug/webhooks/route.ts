@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
           }
         }
 
-        // 2. Try Deposit by externalId (NutzPay transaction_id or external_id)
+        // 2. Try Deposit by externalId (provider transaction_id or external_id)
         const deposit = await prisma.deposit.findFirst({
           where: {
             externalId: { in: ids },

@@ -108,7 +108,7 @@ export default function WebhookDebugPage() {
         <CardContent className="space-y-4">
           <div>
             <label className="text-sm text-muted-foreground mb-2 block">
-              Transaction ID (do NutzPay)
+              Transaction ID (do provedor)
             </label>
             <Input
               value={transactionId}

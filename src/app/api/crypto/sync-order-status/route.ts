@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { nutzPayService } from "@/lib/nutzpay";
+import { paymentService } from "@/lib/payment";
 
 /**
  * Manual sync endpoint to force check and update order status
@@ -65,23 +65,21 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Try to get status from NutzPay API
-    let nutzPayStatus = null;
+    // Try to get status from payment provider API
+    let providerStatus = null;
     let apiError = null;
 
     if (order.externalOrderId) {
       try {
-        nutzPayStatus = await nutzPayService.getTransactionStatus(
+        providerStatus = await paymentService.getTransactionStatus(
           order.externalOrderId
         );
       } catch (error) {
         apiError = error;
-        console.error("Error fetching from NutzPay API:", error);
+        console.error("Error fetching from payment provider API:", error);
       }
     }
 
-    // If API check failed, we can still manually mark as completed if user confirms
-    // For now, return the current status and API response
     return NextResponse.json({
       success: true,
       order: {
@@ -89,15 +87,15 @@ export async function POST(request: NextRequest) {
         status: order.status,
         externalOrderId: order.externalOrderId,
       },
-      nutzPayStatus: nutzPayStatus,
+      providerStatus: providerStatus,
       apiError: apiError
         ? apiError instanceof Error
           ? apiError.message
           : "Unknown error"
         : null,
-      message: nutzPayStatus
-        ? "Status fetched from NutzPay API"
-        : "Could not fetch from NutzPay API (you may need to manually process the webhook)",
+      message: providerStatus
+        ? `Status fetched from ${paymentService.name} API`
+        : `Could not fetch from ${paymentService.name} API (you may need to manually process the webhook)`,
     });
   } catch (error) {
     console.error("Sync order status error:", error);

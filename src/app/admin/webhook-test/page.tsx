@@ -170,7 +170,7 @@ export default function WebhookTestPage() {
 
       // Send test webhook to our endpoint
       // Include test header to skip signature verification in development
-      const response = await fetch("/api/webhooks/nutzpay", {
+      const response = await fetch("/api/webhooks/nubank", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -447,7 +447,7 @@ export default function WebhookTestPage() {
             <CardTitle className="text-foreground">Webhook Payload</CardTitle>
             <p className="text-sm text-muted-foreground mt-2">
               Edit the payload below to test different webhook scenarios. The
-              payload will be sent to /api/webhooks/nutzpay
+              payload will be sent to /api/webhooks/nubank
             </p>
           </CardHeader>
           <CardContent>

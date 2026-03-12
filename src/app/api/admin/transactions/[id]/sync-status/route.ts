@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { validateAdminSession } from "@/lib/admin-session";
-import { nutzPayService } from "@/lib/nutzpay";
+import { paymentService } from "@/lib/payment";
 
 export async function POST(
   request: NextRequest,
@@ -41,51 +41,36 @@ export async function POST(
 
     const withdrawal = transaction.withdrawal;
 
-    // Try to get status from NutzPay using transaction_id (hash), externalId, or other methods
-    let nutzPayStatus = null;
+    // Try to get status from payment provider
+    let providerStatus = null;
     let statusUpdate = null;
 
     try {
-      // Method 1: Try with transaction_id (hash) - this is the transaction_id from API response
-      // Based on API docs: POST /api/v1/usdt/withdrawal returns transaction_id
+      // Try with hash (transaction_id from API response)
       if (withdrawal.hash) {
         try {
-          nutzPayStatus = await nutzPayService.getWithdrawalStatusByTransactionId(
+          providerStatus = await paymentService.getTransactionStatus(
             withdrawal.hash
           );
-          if (nutzPayStatus) {
-            console.log("✅ Found withdrawal status using transaction_id (hash)");
+          if (providerStatus) {
+            console.log("✅ Found withdrawal status using transaction hash");
           }
         } catch (error) {
-          console.error("Error fetching withdrawal status with transaction_id (hash):", error);
+          console.error("Error fetching withdrawal status with hash:", error);
         }
       }
 
-      // Method 2: Try with externalId
-      if (!nutzPayStatus && withdrawal.externalId) {
+      // Try with externalId
+      if (!providerStatus && withdrawal.externalId) {
         try {
-          nutzPayStatus = await nutzPayService.getWithdrawalStatus(
+          providerStatus = await paymentService.getTransactionStatus(
             withdrawal.externalId
           );
-          if (nutzPayStatus) {
+          if (providerStatus) {
             console.log("✅ Found withdrawal status using externalId");
           }
         } catch (error) {
           console.error("Error fetching withdrawal status with externalId:", error);
-        }
-      }
-
-      // Method 3: If hash exists but previous methods failed, try as transaction status
-      if (!nutzPayStatus && withdrawal.hash) {
-        try {
-          nutzPayStatus = await nutzPayService.getTransactionStatus(
-            withdrawal.hash
-          );
-          if (nutzPayStatus) {
-            console.log("✅ Found withdrawal status using transaction status endpoint");
-          }
-        } catch (error) {
-          console.error("Error fetching withdrawal status with transaction status:", error);
         }
       }
 
@@ -97,43 +82,20 @@ export async function POST(
         externalId: withdrawal.externalId,
         type: withdrawal.type,
         status: withdrawal.status,
+        provider: paymentService.name,
       });
 
-      // Determine new status from NutzPay response
-      if (nutzPayStatus) {
-        // Try multiple possible status fields in the response
-        const nutzPayStatusValue = (
-          nutzPayStatus.status ||
-          nutzPayStatus.data?.status ||
-          nutzPayStatus.transaction_status ||
-          nutzPayStatus.withdrawal_status ||
-          nutzPayStatus.state ||
-          ""
-        ).toUpperCase();
+      // Determine new status from provider response
+      if (providerStatus) {
+        console.log("Provider status response:", JSON.stringify(providerStatus, null, 2));
 
-        console.log("NutzPay status response:", JSON.stringify(nutzPayStatus, null, 2));
-        console.log("Extracted status value:", nutzPayStatusValue);
-
-        if (
-          nutzPayStatusValue === "COMPLETED" ||
-          nutzPayStatusValue === "SUCCESS" ||
-          nutzPayStatusValue === "SUCCESSFUL" ||
-          nutzPayStatusValue === "CONFIRMED" ||
-          nutzPayStatusValue === "DONE"
-        ) {
+        if (providerStatus.isCompleted) {
           statusUpdate = "COMPLETED";
-        } else if (
-          nutzPayStatusValue === "FAILED" ||
-          nutzPayStatusValue === "ERROR" ||
-          nutzPayStatusValue === "REJECTED"
-        ) {
+        } else if (providerStatus.isFailed) {
           statusUpdate = "FAILED";
-        } else if (
-          nutzPayStatusValue === "PROCESSING" ||
-          nutzPayStatusValue === "IN_PROGRESS"
-        ) {
+        } else if (providerStatus.status === "processing") {
           statusUpdate = "PROCESSING";
-        } else if (nutzPayStatusValue === "PENDING") {
+        } else if (providerStatus.status === "pending") {
           statusUpdate = "PENDING";
         }
       }
@@ -167,35 +129,34 @@ export async function POST(
         message: `Withdrawal status updated from ${withdrawal.status} to ${statusUpdate}`,
         oldStatus: withdrawal.status,
         newStatus: statusUpdate,
-        nutzPayStatus: nutzPayStatus,
+        providerStatus: providerStatus,
       });
     } else if (statusUpdate === withdrawal.status) {
       return NextResponse.json({
         success: true,
         message: `Withdrawal status is already ${withdrawal.status}`,
         status: withdrawal.status,
-        nutzPayStatus: nutzPayStatus,
+        providerStatus: providerStatus,
       });
     } else {
-      // Provide helpful error message based on what data is available
       const missingData = [];
       if (!withdrawal.hash && !withdrawal.externalId) {
         missingData.push("transaction_id (hash) or externalId");
       }
       
-      let errorMessage = "Could not determine status from NutzPay API";
+      let errorMessage = `Could not determine status from ${paymentService.name} API`;
       if (missingData.length > 0) {
         errorMessage += `. Missing required data: ${missingData.join(", ")}. `;
-        errorMessage += "The withdrawal may have been created before these fields were properly stored, or it may be a PIX withdrawal (which doesn't use NutzPay API).";
+        errorMessage += "The withdrawal may have been created before these fields were properly stored, or it may be a PIX withdrawal (which doesn't use the payment provider API).";
       } else {
-        errorMessage += ". The API may not have returned a valid status, or the withdrawal may not exist in NutzPay's system.";
+        errorMessage += `. The API may not have returned a valid status, or the withdrawal may not exist in ${paymentService.name}'s system.`;
       }
 
       return NextResponse.json({
         success: false,
         message: errorMessage,
         currentStatus: withdrawal.status,
-        nutzPayStatus: nutzPayStatus,
+        providerStatus: providerStatus,
         availableData: {
           hasHash: !!withdrawal.hash,
           hasExternalId: !!withdrawal.externalId,

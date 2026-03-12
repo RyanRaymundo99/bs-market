@@ -455,7 +455,7 @@ export default function WebhookIdsDebugPage() {
           <DialogHeader>
             <DialogTitle>Payload Completo do Webhook</DialogTitle>
             <DialogDescription>
-              Todos os dados enviados pelo NutzPay
+              Todos os dados enviados pelo provedor de pagamento
             </DialogDescription>
           </DialogHeader>
           <pre className="bg-card p-4 rounded text-xs overflow-x-auto">

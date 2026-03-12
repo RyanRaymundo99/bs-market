@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { nutzPayService } from "@/lib/nutzpay";
+import { paymentService } from "@/lib/payment";
 import { Decimal } from "@prisma/client/runtime/library";
 import { getMoneyControls } from "@/lib/money-controls";
 
@@ -72,22 +72,16 @@ export async function POST(request: NextRequest) {
     const externalId = `deposit_${user.id}_${network}_${Date.now()}`;
     
     // For crypto deposits, we need a wallet address for users to send to
-    // Since NutzPay API docs don't show a deposit address endpoint, we have two options:
-    // 1. Use a configured static address (set in environment variables)
-    // 2. Use NutzPay's main wallet address (if they provide one)
-    // 3. Track deposits via webhooks when crypto is received
-    
     // Try to get address from environment variable first
     let depositAddress = process.env[`DEPOSIT_ADDRESS_${network}`];
     
-    // If no address configured, try to get from NutzPay balance endpoint
-    // (some APIs return the deposit address with balance info)
+    // If no address configured, try to get from payment provider balance endpoint
     if (!depositAddress) {
       try {
-        const balanceInfo = await nutzPayService.getUSDTBalance();
-        // Some APIs include deposit address in balance response
-        if (balanceInfo.depositAddress || balanceInfo.address) {
-          depositAddress = balanceInfo.depositAddress || balanceInfo.address;
+        const balanceInfo = await paymentService.getUSDTBalance();
+        // Some providers return deposit address with balance info
+        if (balanceInfo.raw?.depositAddress || balanceInfo.raw?.address) {
+          depositAddress = (balanceInfo.raw.depositAddress || balanceInfo.raw.address) as string;
         }
       } catch {
         console.log("Could not get address from balance endpoint, using fallback");
@@ -97,23 +91,22 @@ export async function POST(request: NextRequest) {
     // Fallback: Use a configured main address
     if (!depositAddress) {
       depositAddress = process.env.DEPOSIT_ADDRESS_MAIN || 
-        process.env.NUTZPAY_DEPOSIT_ADDRESS ||
+        process.env.PAYMENT_DEPOSIT_ADDRESS ||
         `TMainDepositAddress_${network}`;
       
-      console.warn(`Using fallback deposit address for network ${network}. Configure DEPOSIT_ADDRESS_${network} or NUTZPAY_DEPOSIT_ADDRESS in environment variables.`);
+      console.warn(`Using fallback deposit address for network ${network}. Configure DEPOSIT_ADDRESS_${network} or PAYMENT_DEPOSIT_ADDRESS in environment variables.`);
     }
 
     // Create a pending deposit record to track this deposit request
-    // When crypto is received via webhook, we'll match it and update this record
     const deposit = await prisma.deposit.create({
       data: {
         userId: user.id,
-        amount: new Decimal(0), // Will be updated when deposit is received
+        amount: new Decimal(0),
         currency: "USDT",
         status: "PENDING",
         paymentMethod: "USDT",
         externalId: externalId,
-        paymentId: depositAddress, // Store address in paymentId for webhook matching
+        paymentId: depositAddress,
         createdAt: new Date(),
       },
     });

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { nutzPayService } from "@/lib/nutzpay";
+import { paymentService, calculateFeeBreakdown } from "@/lib/payment";
 import { ledgerService } from "@/lib/ledger";
 import { Decimal } from "@prisma/client/runtime/library";
 import { sendPurchaseReceipt } from "@/lib/receipt-email";
@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Round amounts to appropriate decimal places to avoid floating point precision issues
-    // BRL amount must have exactly 2 decimal places for Mercado Pago
+    // BRL amount must have exactly 2 decimal places
     amountNum = Math.round(amountNum * 100) / 100;
     // USDT amount can have up to 8 decimal places, but we'll round to 4 for API compatibility
     usdtAmountNum = Math.round(usdtAmountNum * 10000) / 10000;
@@ -178,6 +178,7 @@ export async function POST(request: NextRequest) {
       roundedUsdtAmount: usdtAmountNum,
       amountString: amountNum.toFixed(2),
       usdtAmountString: usdtAmountNum.toFixed(4),
+      provider: paymentService.name,
     });
 
     // Notify admin email on deposit attempts over 500 USDT (non-blocking)
@@ -216,13 +217,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate external ID for NutzPay
+    // Generate external ID for tracking
     const externalId = `purchase_${user.id}_${Date.now()}`;
 
     // Create order record first
-    // IMPORTANT: Set externalOrderId to externalId immediately to prevent race condition
-    // If webhook arrives before NutzPay response, it can still match by external_id
-    // We'll update it with the real transactionId after NutzPay responds
+    // Set externalOrderId to externalId immediately to prevent race condition
+    // If webhook arrives before provider response, it can still match by external_id
     let order;
     try {
       order = await prisma.order.create({
@@ -235,7 +235,7 @@ export async function POST(request: NextRequest) {
           price: new Decimal(amountNum / usdtAmountNum),
           total: new Decimal(amountNum),
           status: "PENDING",
-          externalOrderId: externalId, // Set immediately to prevent webhook race condition
+          externalOrderId: externalId,
         },
       });
     } catch (dbError) {
@@ -250,89 +250,47 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      // Call NutzPay API to create USDT purchase
-      // Use NUTZPAY_WEBHOOK_URL if set (for testing with webhook.site), otherwise use default
+      // Build webhook callback URL
       const callbackUrl =
-        process.env.NUTZPAY_WEBHOOK_URL ||
+        process.env.PAYMENT_WEBHOOK_URL ||
         `${
           process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"
-        }/api/webhooks/nutzpay`;
+        }/api/webhooks/nubank`;
 
-      const nutzPayResponse = await nutzPayService.createUSDTPurchase({
+      // Create USDT purchase via active payment provider
+      const paymentResponse = await paymentService.createUSDTPurchase({
         amount: amountNum,
-        usdt_amount: usdtAmountNum,
+        usdtAmount: usdtAmountNum,
         customer: {
           name: user.name,
           document: document,
           email: user.email,
         },
-        external_id: externalId,
-        callback_url: callbackUrl,
+        externalId: externalId,
+        callbackUrl: callbackUrl,
       });
 
-      // NutzPay can return API Playground style: { status: 200, data: { transactionId, qrCode, pixKey, ... } }
-      // or flat: { transactionId, qrCode, ... }. Use .data when present so we never expose provider/metadata to client.
-      const raw = nutzPayResponse.data || nutzPayResponse;
-      const responseData =
-        raw && typeof raw === "object" && "data" in raw && raw.data
-          ? (raw.data as Record<string, unknown>)
-          : (raw as Record<string, unknown>);
-
-      const transactionId =
-        (responseData.transaction_id as string) ||
-        (responseData.transactionId as string) ||
-        (responseData.pix_data as Record<string, unknown>)?.transaction_id ||
-        (responseData.providerTransactionId as string) ||
-        null;
-
-      const responseStatus = (responseData.status as string) || "pending";
+      const transactionId = paymentResponse.transactionId;
+      const responseStatus = paymentResponse.status;
       const isCompleted =
         responseStatus === "completed" || responseStatus === "COMPLETED";
-
-      const pixData = responseData.pix_data as
-        | Record<string, unknown>
-        | undefined;
-      const pixCode =
-        (pixData?.qr_code as string) ||
-        (pixData?.qrCode as string) ||
-        (pixData?.pix_key as string) ||
-        (pixData?.pixKey as string) ||
-        (responseData.qrCode as string) ||
-        (responseData.pixKey as string) ||
-        (responseData.qr_code as string) ||
-        (responseData.pix_key as string) ||
-        (responseData.code as string) ||
-        null;
-
-      const qrCodeUrl =
-        (responseData.qrCodeUrl as string) ||
-        (responseData.qr_code_url as string) ||
-        (responseData.qrCodeText as string) ||
-        null;
-
+      const pixCode = paymentResponse.pixCode;
+      const qrCodeUrl = paymentResponse.qrCodeUrl;
       const finalTransactionId = transactionId || externalId;
 
-      // Update order with NutzPay transaction ID (or externalId as fallback)
-      // Note: externalOrderId was already set to externalId when order was created
-      // If webhook arrived before this point, it may have already updated externalOrderId with transaction_id
-      // This update ensures we have the correct transaction_id from NutzPay response
+      // Update order with provider transaction ID
       await prisma.order.update({
         where: { id: order.id },
         data: {
-          externalOrderId: finalTransactionId, // Update with real transactionId from NutzPay (or keep externalId if not available)
+          externalOrderId: finalTransactionId,
           status: isCompleted ? "COMPLETED" : "PENDING",
           executedAt: isCompleted ? new Date() : null,
         },
       });
 
       // Create deposit record for tracking
-      // Store our original externalId in deposit.externalId for webhook matching
-      // Store transaction ID in order.externalOrderId for status checking
-      // Calculate commission: User pays 3% total, but our commission is 1.8% of the deposit amount
-      // amount is the total paid (base + 3% fee), so base = amount / 1.03
-      // Our commission is 1.8% of the base amount
-      const baseAmount = amountNum / 1.03; // Base amount before fee
-      const platformCommission = baseAmount * 0.018; // 1.8% commission for us
+      // Calculate fee breakdown using the canonical fee calculation
+      const feeBreakdown = calculateFeeBreakdown(amountNum);
 
       let deposit;
       try {
@@ -340,12 +298,12 @@ export async function POST(request: NextRequest) {
           data: {
             userId: user.id,
             amount: new Decimal(amountNum),
-            fee: new Decimal(platformCommission), // Store our 1.8% commission
+            fee: new Decimal(feeBreakdown.platformCommission),
             status: isCompleted ? "CONFIRMED" : "PENDING",
             paymentMethod: "PIX",
-            externalId: externalId, // Store our original externalId for webhook matching
+            externalId: externalId,
             pixQrCode: pixCode,
-            pixQrCodeBase64: (pixData?.qr_code_base64 as string) || null,
+            pixQrCodeBase64: paymentResponse.qrCodeBase64 || null,
           },
         });
       } catch (dbError) {
@@ -353,16 +311,12 @@ export async function POST(request: NextRequest) {
         if (dbError instanceof Error) {
           console.error("Database error details:", dbError.message);
         }
-        // Order was already created, so we need to handle this gracefully
-        // Mark order as failed since we couldn't create the deposit
         await prisma.order
           .update({
             where: { id: order.id },
             data: { status: "FAILED" },
           })
-          .catch(() => {
-            // Ignore errors when updating order status
-          });
+          .catch(() => {});
         return NextResponse.json(
           { error: "Failed to create deposit record. Please try again." },
           { status: 500 }
@@ -371,7 +325,6 @@ export async function POST(request: NextRequest) {
 
       // If payment is completed, update user balance immediately
       if (isCompleted) {
-        // Update USDT balance (add the USDT amount)
         try {
           await ledgerService.updateBalance(
             user.id,
@@ -381,10 +334,8 @@ export async function POST(request: NextRequest) {
           );
         } catch (balanceError) {
           console.error("Failed to update user balance:", balanceError);
-          // Continue anyway - transaction will be created but balance update failed
         }
 
-        // Create transaction record for USDT credit
         let transaction;
         try {
           transaction = await ledgerService.createTransaction({
@@ -400,6 +351,7 @@ export async function POST(request: NextRequest) {
               amountBRL: amountNum,
               amountUSDT: usdtAmountNum,
               exchangeRate: amountNum / usdtAmountNum,
+              provider: paymentService.name,
             },
           });
         } catch (transactionError) {
@@ -407,11 +359,9 @@ export async function POST(request: NextRequest) {
             "Failed to create transaction record:",
             transactionError
           );
-          // Continue anyway - order and deposit are created
           transaction = null;
         }
 
-        // Link transaction to order if transaction was created
         if (transaction) {
           try {
             await prisma.order.update({
@@ -422,7 +372,6 @@ export async function POST(request: NextRequest) {
             });
           } catch (updateError) {
             console.error("Failed to link transaction to order:", updateError);
-            // Non-critical error, continue
           }
         }
 
@@ -430,17 +379,15 @@ export async function POST(request: NextRequest) {
           `User ${user.id} balance credited with ${usdtAmountNum} USDT`
         );
 
-        // Send purchase receipt email (don't await to avoid blocking response)
+        // Send purchase receipt email (non-blocking)
         if (user.email && user.name && transaction) {
-          const fee = (amountNum * 0.03) / 1.03; // 3% fee calculation
-          const baseAmount = amountNum - fee;
           sendPurchaseReceipt({
             userName: user.name,
             userEmail: user.email,
-            amountBRL: baseAmount,
+            amountBRL: feeBreakdown.baseAmount,
             amountUSDT: usdtAmountNum,
             exchangeRate: amountNum / usdtAmountNum,
-            fee: fee,
+            fee: feeBreakdown.totalFee,
             totalPaid: amountNum,
             transactionId:
               typeof transactionId === "string" ? transactionId : externalId,
@@ -448,7 +395,6 @@ export async function POST(request: NextRequest) {
             paymentMethod: "PIX",
           })
             .then(async (result) => {
-              // Track receipt in transaction metadata
               if (transaction) {
                 const metadata =
                   (transaction.metadata as Record<string, unknown>) || {};
@@ -482,62 +428,60 @@ export async function POST(request: NextRequest) {
             })
             .catch((error) => {
               console.error("Failed to send purchase receipt email:", error);
-              // Don't fail the request if email fails
             });
         }
       }
 
-      // Return response matching NutzPay structure + our additional fields
+      // Return response in canonical format
       return NextResponse.json({
         success: true,
         message: "USDT purchase request created successfully",
         data: {
-          // NutzPay response fields (direct mapping)
           transaction_id: finalTransactionId,
-          transactionId: finalTransactionId, // Also include camelCase for compatibility
+          transactionId: finalTransactionId,
           external_id: externalId,
           status: responseStatus,
           amount_brl: amountNum,
           amount_usdt: usdtAmountNum,
           exchange_rate: amountNum / usdtAmountNum,
-          // PIX code fields - match NutzPay API structure
-          qrCode: pixCode, // Direct field from NutzPay
-          pixKey: pixCode, // Also include as pixKey (same value)
-          qrCodeUrl: qrCodeUrl, // QR code image URL
+          // PIX code fields
+          qrCode: pixCode,
+          pixKey: pixCode,
+          qrCodeUrl: qrCodeUrl,
           // Nested structure for backward compatibility
           pix_data: {
             qr_code: pixCode,
             qrCode: pixCode,
-            qr_code_base64: (pixData?.qr_code_base64 as string) || null,
+            qr_code_base64: paymentResponse.qrCodeBase64 || null,
             qr_code_url: qrCodeUrl,
             qrCodeUrl: qrCodeUrl,
-            transaction_id:
-              (pixData?.transaction_id as string) || finalTransactionId,
+            transaction_id: finalTransactionId,
           },
-          // Our internal fields
+          // Internal fields
           order_id: order.id,
           deposit_id: deposit.id,
+          provider: paymentService.name,
         },
       });
     } catch (error: unknown) {
-      console.error("NutzPay purchase error:", error);
+      console.error("Payment provider purchase error:", error);
 
-      // Only mark as FAILED if it's a real error (not just a network timeout or temporary issue)
-      // For temporary issues, keep it as PENDING so it can be retried
+      // Only mark as FAILED if it's a real error (not temporary)
       let shouldMarkAsFailed = true;
-      let errorMessage = "Failed to process USDT purchase with NutzPay";
+      let errorMessage = "Failed to process USDT purchase";
       let errorDetails: unknown = undefined;
       let statusCode = 500;
 
       if (error instanceof Error) {
         errorMessage = error.message;
 
-        // Don't mark as failed for network/timeout errors - keep as PENDING
+        // Don't mark as failed for network/timeout errors — keep as PENDING
         if (
           error.message.includes("timeout") ||
           error.message.includes("ECONNREFUSED") ||
           error.message.includes("ENOTFOUND") ||
-          error.message.includes("network")
+          error.message.includes("network") ||
+          error.message.includes("temporarily unavailable")
         ) {
           shouldMarkAsFailed = false;
         }
@@ -547,12 +491,10 @@ export async function POST(request: NextRequest) {
           code?: string;
         };
 
-        // Don't mark as failed for 5xx errors (server issues) - keep as PENDING
         if (axiosError.response?.status && axiosError.response.status >= 500) {
           shouldMarkAsFailed = false;
         }
 
-        // Don't mark as failed for network errors
         if (
           axiosError.code === "ECONNREFUSED" ||
           axiosError.code === "ENOTFOUND" ||
@@ -580,7 +522,6 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Only update status to FAILED if it's a real error (not temporary)
       if (shouldMarkAsFailed) {
         console.error("Marking order as FAILED due to error");
         await prisma.order.update({
@@ -589,8 +530,6 @@ export async function POST(request: NextRequest) {
             status: "FAILED",
           },
         });
-      } else {
-        // Order remains PENDING, can be retried later
       }
 
       return NextResponse.json(
@@ -606,7 +545,6 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("USDT purchase error:", error);
 
-    // Log detailed error information for debugging
     if (error instanceof Error) {
       console.error("Error name:", error.name);
       console.error("Error message:", error.message);
@@ -616,43 +554,33 @@ export async function POST(request: NextRequest) {
       console.error("Error value:", JSON.stringify(error, null, 2));
     }
 
-    // Check for common issues
     let errorMessage = "Failed to process USDT purchase";
     let statusCode = 500;
 
     if (error instanceof Error) {
-      // Check for database connection errors
       if (
         error.message.includes("PrismaClient") ||
         error.message.includes("database") ||
         error.message.includes("connection")
       ) {
         errorMessage = "Database connection error. Please try again later.";
-        console.error("Database error detected");
-      }
-      // Check for environment variable errors
-      else if (
-        error.message.includes("PUBLIC_KEY") ||
-        error.message.includes("SECRET_KEY") ||
-        error.message.includes("NUTZPAY_PUBLIC_KEY") ||
-        error.message.includes("NUTZPAY_SECRET_KEY") ||
-        error.message.includes("NutzPay credentials")
+      } else if (
+        error.message.includes("credentials") ||
+        error.message.includes("CLIENT_ID") ||
+        error.message.includes("CLIENT_SECRET") ||
+        error.message.includes("authentication failed")
       ) {
         errorMessage =
           "Payment service configuration error. Please contact support.";
-        console.error("NutzPay configuration error detected");
-      }
-      // Check for validation errors
-      else if (
+        console.error("Payment provider configuration error detected");
+      } else if (
         error.message.includes("Invalid") ||
         error.message.includes("required") ||
         error.message.includes("must be")
       ) {
         errorMessage = error.message;
         statusCode = 400;
-      }
-      // Use the error message if it's informative
-      else if (
+      } else if (
         error.message &&
         error.message !== "Failed to process USDT purchase"
       ) {
