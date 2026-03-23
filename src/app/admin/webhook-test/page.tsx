@@ -170,7 +170,7 @@ export default function WebhookTestPage() {
 
       // Send test webhook to our endpoint
       // Include test header to skip signature verification in development
-      const response = await fetch("/api/webhooks/nubank", {
+      const response = await fetch("/api/webhooks/mercadopago", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -234,7 +234,6 @@ export default function WebhookTestPage() {
           <h1 className="text-3xl font-bold">Webhook Testing Tool</h1>
           <Button
             onClick={fetchRecentOrders}
-            variant="outline"
             className="bg-card border-border"
           >
             <RefreshCw className="w-4 h-4 mr-2" />
@@ -373,7 +372,6 @@ export default function WebhookTestPage() {
                 onClick={() => quickTest("transaction.completed", "COMPLETED")}
                 disabled={recentOrders.length === 0}
                 className="bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed"
-                variant="outline"
               >
                 <CheckCircle className="w-4 h-4 mr-2" />
                 Transaction Completed
@@ -382,7 +380,6 @@ export default function WebhookTestPage() {
                 onClick={() => quickTest("transaction.created", "PENDING")}
                 disabled={recentOrders.length === 0}
                 className="bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed"
-                variant="outline"
               >
                 Transaction Created
               </Button>
@@ -390,7 +387,6 @@ export default function WebhookTestPage() {
                 onClick={() => quickTest("transaction.failed", "FAILED")}
                 disabled={recentOrders.length === 0}
                 className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                variant="outline"
               >
                 <XCircle className="w-4 h-4 mr-2" />
                 Transaction Failed
@@ -399,7 +395,6 @@ export default function WebhookTestPage() {
                 onClick={() => quickTest("transaction.refunded", "REFUNDED")}
                 disabled={recentOrders.length === 0}
                 className="bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed"
-                variant="outline"
               >
                 Transaction Refunded
               </Button>
@@ -407,7 +402,6 @@ export default function WebhookTestPage() {
                 onClick={() => quickTest("payment.completed", "COMPLETED")}
                 disabled={recentOrders.length === 0}
                 className="bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed"
-                variant="outline"
               >
                 <CheckCircle className="w-4 h-4 mr-2" />
                 Payment Completed
@@ -416,7 +410,6 @@ export default function WebhookTestPage() {
                 onClick={() => quickTest("payment.created", "PENDING")}
                 disabled={recentOrders.length === 0}
                 className="bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed"
-                variant="outline"
               >
                 Payment Created
               </Button>
@@ -424,7 +417,6 @@ export default function WebhookTestPage() {
                 onClick={() => quickTest("payment.failed", "FAILED")}
                 disabled={recentOrders.length === 0}
                 className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                variant="outline"
               >
                 <XCircle className="w-4 h-4 mr-2" />
                 Payment Failed
@@ -433,7 +425,6 @@ export default function WebhookTestPage() {
                 onClick={() => quickTest("payment.refunded", "REFUNDED")}
                 disabled={recentOrders.length === 0}
                 className="bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed"
-                variant="outline"
               >
                 Payment Refunded
               </Button>
@@ -447,7 +438,7 @@ export default function WebhookTestPage() {
             <CardTitle className="text-foreground">Webhook Payload</CardTitle>
             <p className="text-sm text-muted-foreground mt-2">
               Edit the payload below to test different webhook scenarios. The
-              payload will be sent to /api/webhooks/nubank
+              payload will be sent to /api/webhooks/mercadopago
             </p>
           </CardHeader>
           <CardContent>
@@ -483,7 +474,6 @@ export default function WebhookTestPage() {
                       generateWebhookPayload(order, "transaction.completed", "COMPLETED");
                     }
                   }}
-                  variant="outline"
                   className="bg-muted border-border"
                 >
                   Regenerate Payload

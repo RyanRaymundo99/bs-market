@@ -143,7 +143,7 @@ export async function GET(
       },
     });
 
-    // Fallback: find by webhook/external id (deposit.externalId or order.externalOrderId = NutzPay transaction_id)
+    // Fallback: find by webhook/external id (deposit.externalId or order.externalOrderId = Mercado Pago transaction_id)
     if (!transaction) {
       const depositByExternal = await prisma.deposit.findFirst({
         where: { externalId: id },

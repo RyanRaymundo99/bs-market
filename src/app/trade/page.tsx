@@ -659,7 +659,8 @@ const TradePage = () => {
 
       if (data.success && data.data) {
         // Extract PIX code from various possible structures
-        // NutzPay API returns: qrCode, pixKey, or pix_data.qr_code
+        // Mercado Pago API returns: qrCode, pixKey, or pix_data.qr_code
+        // (Note: Mercado Pago implementation in lib/payment/mercadopago.ts returns this structure)
         let pixCode =
           data.data.pix_data?.qr_code ||
           data.data.pix_data?.qrCode ||
@@ -774,7 +775,7 @@ const TradePage = () => {
         setShowPixModal(true);
         setBuyUSDT(""); // Clear the field
 
-        // Payment confirmation will be handled by NutzPay webhook
+        // Payment confirmation will be handled by Mercado Pago webhook
         // The webhook will update the order status in the database
         // User will see confirmation when they refresh or return to the page
 
@@ -1037,7 +1038,6 @@ const TradePage = () => {
             {depositMethod === "PIX" && (
               <div className="flex justify-center mb-4">
                 <Badge
-                  variant="secondary"
                   className="bg-primary/20 text-primary border-primary/30 inline-flex items-center gap-2"
                 >
                   {priceLoading ? (

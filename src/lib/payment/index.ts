@@ -13,24 +13,24 @@ export * from "./types";
 
 import type { PaymentProvider } from "./types";
 import { getActiveProviderName } from "./types";
-import { nupayService } from "./nubank";
+import { mercadoPagoService } from "./mercadopago";
 
 /**
  * Get the active payment provider instance.
- * Currently only supports "nupay".
+ * Currently only supports "mercadopago".
  * Add new providers here as they are implemented.
  */
 function getPaymentProvider(): PaymentProvider {
   const providerName = getActiveProviderName();
 
   switch (providerName) {
-    case "nupay":
-      return nupayService;
+    case "mercadopago":
+      return mercadoPagoService;
     default:
       console.warn(
-        `Unknown payment provider "${providerName}", falling back to nupay`
+        `Unknown payment provider "${providerName}", falling back to mercadopago`
       );
-      return nupayService;
+      return mercadoPagoService;
   }
 }
 

@@ -46,7 +46,7 @@ export default function WebhookConfigCheckPage() {
       // Check webhook endpoint accessibility
       const webhookUrl = `${
         process.env.NEXT_PUBLIC_APP_URL || window.location.origin
-      }/api/webhooks/nubank`;
+      }/api/webhooks/mercadopago`;
       const webhookResponse = await fetch(webhookUrl, { method: "GET" });
       const webhookData = await webhookResponse.json();
 
@@ -63,7 +63,7 @@ export default function WebhookConfigCheckPage() {
         reception: receptionData,
         expectedUrl: `${
           process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"
-        }/api/webhooks/nutzpay`,
+        }/api/webhooks/mercadopago`,
       });
     } catch (error) {
       console.error("Config check error:", error);
@@ -204,7 +204,7 @@ export default function WebhookConfigCheckPage() {
                         </div>
                         <div>
                           <span className="text-muted-foreground">Status:</span>{" "}
-                          <Badge variant="outline">
+                          <Badge>
                             {
                               config.reception.webhookReception.latestWebhook
                                 .status
@@ -215,9 +215,9 @@ export default function WebhookConfigCheckPage() {
                           <span className="text-muted-foreground">Processado:</span>{" "}
                           {config.reception.webhookReception.latestWebhook
                             .processed ? (
-                            <Badge className="bg-green-600">Sim</Badge>
+                            <Badge className="bg-green-600 font-bold">Sim</Badge>
                           ) : (
-                            <Badge variant="destructive">Não</Badge>
+                            <Badge className="bg-red-600 font-bold">Não</Badge>
                           )}
                         </div>
                         <div>
@@ -319,13 +319,11 @@ export default function WebhookConfigCheckPage() {
                               {order.id.slice(-12)}
                             </span>
                           </div>
-                          <Badge
-                            variant={
-                              order.status === "COMPLETED"
-                                ? "default"
-                                : "secondary"
-                            }
-                          >
+                          <Badge className={
+                            order.status === "COMPLETED"
+                              ? "bg-green-600"
+                              : "bg-yellow-600"
+                          }>
                             {order.status}
                           </Badge>
                         </div>

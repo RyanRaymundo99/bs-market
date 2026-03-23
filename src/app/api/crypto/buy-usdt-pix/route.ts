@@ -255,7 +255,7 @@ export async function POST(request: NextRequest) {
         process.env.PAYMENT_WEBHOOK_URL ||
         `${
           process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"
-        }/api/webhooks/nubank`;
+        }/api/webhooks/mercadopago`;
 
       // Create USDT purchase via active payment provider
       const paymentResponse = await paymentService.createUSDTPurchase({

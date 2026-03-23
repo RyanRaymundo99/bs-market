@@ -2,7 +2,7 @@
  * Payment Provider Abstraction Layer
  *
  * This module defines the canonical interfaces for payment providers.
- * Any provider (NutzPay, Nubank PJ, etc.) must implement the PaymentProvider interface.
+ * Any provider (Mercado Pago, etc.) must implement the PaymentProvider interface.
  */
 
 // ─── Canonical Request/Response Types ────────────────────────────────────────
@@ -146,7 +146,7 @@ export function calculateFeeBreakdown(
 // ─── Payment Provider Interface ──────────────────────────────────────────────
 
 export interface PaymentProvider {
-  /** Provider name (e.g. "nupay", "stripe") */
+  /** Provider name (e.g. "mercadopago", "stripe") */
   readonly name: string;
 
   /**
@@ -193,14 +193,14 @@ export interface PaymentProvider {
 // ─── Provider Registry ───────────────────────────────────────────────────────
 
 /** The currently active payment provider name */
-export type ProviderName = "nupay"; // Future: | "stripe" etc.
+export type ProviderName = "mercadopago"; // Future: | "stripe" etc.
 
 /**
  * Get the current active provider name from env.
- * Defaults to "nubank_pj".
+ * Defaults to "mercadopago".
  */
 export function getActiveProviderName(): ProviderName {
   return (
-    (process.env.PAYMENT_PROVIDER as ProviderName) || "nubank_pj"
+    (process.env.PAYMENT_PROVIDER as ProviderName) || "mercadopago"
   );
 }

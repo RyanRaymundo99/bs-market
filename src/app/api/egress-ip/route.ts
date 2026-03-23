@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 /**
  * Returns the outbound (egress) IP of this server.
- * Use this to see which IP to whitelist in your payment provider (e.g. Nubank PJ).
+ * Use this to see which IP to whitelist in your payment provider (e.g. Mercado Pago).
  *
  * - On Vercel without Static IPs: the IP can change per invocation (dynamic).
  * - With Vercel Static IPs (Pro): you get fixed IP(s); call this after enabling to confirm the value.
