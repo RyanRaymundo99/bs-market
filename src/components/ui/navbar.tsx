@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 import {
   LogOut,
   Timer,
@@ -85,12 +86,13 @@ export default function Navbar({ isLoggingOut, handleLogout }: NavbarProps) {
             className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
             onClick={() => handleNavigation("/dashboard")}
           >
-            <img
+            <Image
               src="/shortname-logo.svg"
               alt="Build Strategy"
               width={100}
               height={50}
               className="h-auto"
+              priority
             />
           </div>
           {/* Desktop Navigation */}
@@ -113,7 +115,6 @@ export default function Navbar({ isLoggingOut, handleLogout }: NavbarProps) {
         {/* Header Actions */}
         <div className="flex items-center gap-4">
           <Button
-            variant="ghost"
             size="sm"
             onClick={handleLogout}
             disabled={isLoggingOut}
@@ -123,7 +124,6 @@ export default function Navbar({ isLoggingOut, handleLogout }: NavbarProps) {
             {isLoggingOut ? "Saindo..." : "Sair"}
           </Button>
           <Button
-            variant="ghost"
             size="sm"
             onClick={handleCalculatorOpen}
             title="Calculadora de Conversão"
@@ -137,7 +137,6 @@ export default function Navbar({ isLoggingOut, handleLogout }: NavbarProps) {
       {/* Mobile Sticky Hamburger Menu */}
       <div className="fixed top-4 right-4 z-50 md:hidden">
         <Button
-          variant="ghost"
           size="sm"
           onClick={toggleMobileMenu}
           className="bg-black/60 backdrop-blur-[20px] border border-white/10 text-white hover:text-blue-300 hover:bg-black/80 p-3 rounded-lg shadow-lg"
@@ -166,7 +165,7 @@ export default function Navbar({ isLoggingOut, handleLogout }: NavbarProps) {
         {/* Mobile Menu Header */}
         <div className="flex items-center justify-between p-6 border-b border-white/10">
           <div className="flex items-center gap-2">
-            <img
+            <Image
               src="/shortname-logo.svg"
               alt="Build Strategy"
               width={32}
@@ -176,7 +175,6 @@ export default function Navbar({ isLoggingOut, handleLogout }: NavbarProps) {
             <span className="text-lg font-bold text-white">Menu</span>
           </div>
           <Button
-            variant="ghost"
             size="sm"
             onClick={toggleMobileMenu}
             className="text-white hover:text-blue-300 hover:bg-white/10 p-2"

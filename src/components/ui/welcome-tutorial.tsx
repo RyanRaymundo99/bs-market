@@ -124,6 +124,7 @@ export function WelcomeTutorial({
                 }`}
                 aria-label={`Ir para o passo ${i + 1}`}
                 aria-selected={i === currentStep}
+                role="tab"
               />
             ))}
           </div>

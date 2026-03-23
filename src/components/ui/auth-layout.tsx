@@ -7,6 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
@@ -47,12 +48,13 @@ const AuthLayout = ({
               <div className="text-center">
                 <Link href="/" className="inline-block">
                   <div className="h-24 ml-8 overflow-hidden flex items-center">
-                    <img
+                    <Image
                       src="/shortname-logo.svg"
                       alt="Build Strategy"
                       width={200}
                       height={200}
                       className="h-auto"
+                      priority
                     />
                   </div>
                 </Link>

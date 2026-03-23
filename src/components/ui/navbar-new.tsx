@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 import {
   LogOut,
   Menu,
@@ -107,12 +108,13 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
             className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
             onClick={() => handleNavigation("/dashboard")}
           >
-            <img
+            <Image
               src="/shortname-logo.svg"
               alt="Build Strategy"
               width={100}
               height={50}
               className="h-auto"
+              priority
             />
           </div>
           {/* Desktop Navigation */}
@@ -206,12 +208,13 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
           className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
           onClick={() => handleNavigation("/dashboard")}
         >
-          <img
+          <Image
             src="/shortname-logo.svg"
             alt="Build Strategy"
             width={120}
             height={60}
             className="h-12 w-auto"
+            priority
           />
         </div>
         <div className="flex items-center gap-2">

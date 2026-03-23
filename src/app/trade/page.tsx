@@ -4,6 +4,7 @@ import React, { useState, useCallback, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import NavbarNew from "@/components/ui/navbar-new";
 import { GlobalKYCBanner } from "@/components/GlobalKYCBanner";
+import Image from "next/image";
 import {
   Dialog,
   DialogContent,
@@ -678,23 +679,24 @@ const TradePage = () => {
         // If PIX code is missing but QR code image is available, try to decode it
         if (!pixCode && qrCodeBase64) {
           try {
-            // Dynamically import jsQR for client-side QR code decoding
+            // @ts-ignore
             const jsQRModule = await import("jsqr");
+            // @ts-ignore
             const jsQR = jsQRModule.default || jsQRModule;
 
             // Create an image element to decode the QR code
-            const img = new Image();
-            img.crossOrigin = "anonymous";
+            const domImg = new globalThis.Image();
+            domImg.crossOrigin = "anonymous";
 
             const decodedCode = await new Promise<string | null>((resolve) => {
-              img.onload = () => {
+                domImg.onload = () => {
                 try {
                   const canvas = document.createElement("canvas");
-                  canvas.width = img.width;
-                  canvas.height = img.height;
+                  canvas.width = domImg.width;
+                  canvas.height = domImg.height;
                   const ctx = canvas.getContext("2d");
                   if (ctx) {
-                    ctx.drawImage(img, 0, 0);
+                    ctx.drawImage(domImg, 0, 0);
                     const imageData = ctx.getImageData(
                       0,
                       0,
@@ -715,7 +717,7 @@ const TradePage = () => {
                   resolve(null);
                 }
               };
-              img.onerror = () => {
+              domImg.onerror = () => {
                 console.error("Error loading QR code image");
                 resolve(null);
               };
@@ -724,7 +726,7 @@ const TradePage = () => {
               const base64Data = qrCodeBase64.includes(",")
                 ? qrCodeBase64
                 : `data:image/png;base64,${qrCodeBase64}`;
-              img.src = base64Data;
+              domImg.src = base64Data;
             });
 
             if (decodedCode) {
@@ -1407,10 +1409,13 @@ const TradePage = () => {
               {/* QR Code and Amount - Centered */}
               <div className="flex flex-col items-center space-y-3">
                 {pixData.qrCodeBase64 ? (
-                  <img
+                  <Image
                     src={`data:image/png;base64,${pixData.qrCodeBase64}`}
                     alt="QR Code PIX"
+                    width={224}
+                    height={224}
                     className="w-48 h-48 sm:w-56 sm:h-56 border-2 border-border rounded-xl"
+                    unoptimized
                   />
                 ) : (
                   <div className="w-48 h-48 sm:w-56 sm:h-56 bg-muted border-2 border-border rounded-xl flex items-center justify-center">
