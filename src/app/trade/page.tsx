@@ -25,7 +25,6 @@ import {
   Wallet,
   Coins,
   Home,
-  TrendingDown,
   Plus,
   Minus,
   MessageCircle,
@@ -424,18 +423,11 @@ const TradePage = () => {
     checkUserStatus();
   }, [language]);
 
-  // Fetch USDT rate and transaction history on mount - PARALLEL
-  useEffect(() => {
-    const loadData = async () => {
-      await Promise.all([fetchUSDTRate(), fetchTransactionHistory()]);
-    };
-    loadData();
-  }, []);
 
-  const fetchUSDTRate = async () => {
+  const fetchUSDTRate = useCallback(async () => {
     try {
       setPriceLoading(true);
-      const response = await fetch("/api/crypto/usdt-rate");
+      const response = await fetch("/api/crypto/usdt-rate", { cache: "no-store" });
 
       if (!response.ok) {
         console.warn("Failed to fetch USDT rate, using fallback");
@@ -454,12 +446,12 @@ const TradePage = () => {
     } finally {
       setPriceLoading(false);
     }
-  };
+  }, []);
 
-  const fetchTransactionHistory = async () => {
+  const fetchTransactionHistory = useCallback(async (isSilent = false) => {
     try {
       // Fetch orders from API
-      const response = await fetch("/api/crypto/orders");
+      const response = await fetch("/api/crypto/orders", { cache: "no-store" });
       if (response.ok) {
         const data = await response.json();
         if (data.orders) {
@@ -511,23 +503,35 @@ const TradePage = () => {
           setLoadingTransactions((prev) => {
             const newSet = new Set(prev);
             buyOrders.forEach((order) => {
-              if (order.isRecent && order.status !== "COMPLETED") {
-                newSet.add(order.id);
-                // Auto-remove from loading after 10 seconds
-                setTimeout(() => {
-                  setLoadingTransactions((current) => {
-                    const updated = new Set(current);
-                    updated.delete(order.id);
-                    return updated;
-                  });
-                }, 10000);
-              } else if (order.status === "COMPLETED") {
-                // Remove from loading if completed
+              if (order.status !== "COMPLETED" && order.status !== "FAILED" && order.status !== "CANCELLED") {
+                // If it's real recent or already in loading set
+                if (order.isRecent || prev.has(order.id)) {
+                  newSet.add(order.id);
+                }
+              } else {
+                // Remove from loading if terminal status reached
                 newSet.delete(order.id);
               }
             });
             return newSet;
           });
+          
+          // Show toast if a transaction just completed
+          const previouslyPending = transactionHistory.some(t => t.status === "PENDING");
+          const nowCompleted = buyOrders.some(t => t.status === "COMPLETED" && 
+            transactionHistory.find(prev => prev.id === t.id)?.status === "PENDING"
+          );
+          
+          if (nowCompleted && previouslyPending && !isSilent) {
+            toast({
+              title: language === "pt" ? "Pagamento Confirmado!" : "Payment Confirmed!",
+              description: language === "pt" 
+                ? "Seu saldo já foi atualizado." 
+                : "Your balance has been updated.",
+            });
+            // Trigger balance refresh in sidebar/navbar
+            window.dispatchEvent(new CustomEvent("refresh-balance"));
+          }
 
           // Clean up PIX data for completed transactions
           setStoredPixData((prev) => {
@@ -561,7 +565,33 @@ const TradePage = () => {
     } catch (error) {
       console.error("Error fetching transaction history:", error);
     }
-  };
+  }, [transactionHistory, language, toast]);
+
+  // Fetch USDT rate and transaction history on mount - PARALLEL
+  useEffect(() => {
+    fetchUSDTRate();
+    fetchTransactionHistory();
+
+    // Set up polling for history
+    // Poll more frequently if there are pending transactions
+    const hasPending = transactionHistory.some(
+      (t) => t.status === "PENDING" || t.status === "EXECUTING"
+    );
+    const intervalTime = hasPending ? 10000 : 30000;
+    
+    const interval = setInterval(() => {
+      fetchTransactionHistory(true);
+    }, intervalTime);
+
+    // Listen for balance updates (which often mean a transaction completed)
+    const handleBalanceUpdate = () => fetchTransactionHistory(true);
+    window.addEventListener("balance-updated", handleBalanceUpdate);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("balance-updated", handleBalanceUpdate);
+    };
+  }, [fetchUSDTRate, fetchTransactionHistory, transactionHistory]);
 
   const handleBuyConfirm = async () => {
     if (moneyDisabled) {

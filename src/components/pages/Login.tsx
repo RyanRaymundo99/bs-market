@@ -197,7 +197,7 @@ const Login = () => {
             });
           }
         }
-      } catch (error) {
+      } catch {
         toast({
           variant: "destructive",
           title: "Erro de conexão",
@@ -209,7 +209,7 @@ const Login = () => {
         setPending(false);
       }
     },
-    [router, toast]
+    [toast]
   );
 
   return (

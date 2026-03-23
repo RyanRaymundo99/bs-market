@@ -37,8 +37,6 @@ import {
   XCircle,
   ExternalLink,
   Home,
-  TrendingUp,
-  TrendingDown,
   Plus,
   Minus,
 } from "lucide-react";

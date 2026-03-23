@@ -6,8 +6,6 @@ import type { SiteAppearance } from "@/app/api/site-appearance/route";
 
 export function SiteThemeProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [appearance, setAppearance] = useState<SiteAppearance | null>(null);
-
   const isAdmin = pathname?.startsWith("/admin");
 
   useEffect(() => {
@@ -22,7 +20,6 @@ export function SiteThemeProvider({ children }: { children: React.ReactNode }) {
       .then((res) => res.json())
       .then((data) => {
         if (data.success && data.appearance) {
-          setAppearance(data.appearance);
           const a = data.appearance as SiteAppearance;
           document.documentElement.setAttribute("data-site-theme", a.theme);
           document.documentElement.setAttribute("data-site-primary", a.primaryColor);

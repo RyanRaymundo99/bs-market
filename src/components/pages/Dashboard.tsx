@@ -9,7 +9,6 @@ import {
   ArrowUpRight,
   Eye,
   EyeOff,
-  RefreshCw,
   RotateCcw,
   Globe,
   Clock,
@@ -237,40 +236,7 @@ export default function Dashboard() {
     }).format(value);
   };
 
-  // Format percentage
-  const formatPercentage = (value: number) => {
-    return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
-  };
 
-  // Get crypto logo
-  const getCryptoLogo = (symbol: string) => {
-    switch (symbol) {
-      case "BTC":
-        return <Bitcoin className="w-8 h-8 text-orange-500" />;
-      case "ETH":
-        return <Globe className="w-8 h-8 text-primary" />;
-      case "BNB":
-        return (
-          <div className="w-8 h-8 bg-warning rounded-full flex items-center justify-center text-warning-foreground font-bold text-xs">
-            BNB
-          </div>
-        );
-      case "ADA":
-        return (
-          <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-bold text-xs">
-            ADA
-          </div>
-        );
-      case "SOL":
-        return (
-          <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center text-white font-bold text-xs">
-            SOL
-          </div>
-        );
-      default:
-        return <Bitcoin className="w-8 h-8 text-orange-500" />;
-    }
-  };
 
   // Check if user is rejected and logout if so
   useEffect(() => {

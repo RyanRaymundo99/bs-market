@@ -25,7 +25,6 @@ const ResetPassword = () => {
     email ? "verify" : "reset"
   );
   const [code, setCode] = useState("");
-  const [verified, setVerified] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const form = useForm<ResetPasswordFormValues>({
@@ -82,7 +81,6 @@ const ResetPassword = () => {
       }
 
       if (result.success) {
-        setVerified(true);
         setStep("reset");
         toast({
           title: "Código verificado",
@@ -95,8 +93,8 @@ const ResetPassword = () => {
           description: result.error || "Código de verificação inválido",
         });
       }
-    } catch (error) {
-      console.error("Code verification exception:", error);
+    } catch (_error) {
+      console.error("Code verification exception:", _error);
       toast({
         variant: "destructive",
         title: "Erro",
@@ -202,8 +200,8 @@ const ResetPassword = () => {
           variant: "destructive",
         });
       }
-    } catch (error) {
-      console.error("Password reset exception:", error);
+    } catch (_error) {
+      console.error("Password reset exception:", _error);
       toast({
         title: "Erro",
         description: "Falha ao redefinir senha. Por favor, tente novamente.",

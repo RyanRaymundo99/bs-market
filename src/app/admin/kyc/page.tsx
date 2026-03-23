@@ -45,13 +45,6 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -168,12 +161,12 @@ const AdminKYCPage = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, [fetchUsers]);
+  }, [fetchUsers]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     filterUsers();
     setCurrentPage(1); // Reset to first page when filters change
-  }, [filterUsers]);
+  }, [filterUsers]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Statistics
   const stats = useMemo(() => {

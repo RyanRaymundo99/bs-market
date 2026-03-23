@@ -48,27 +48,44 @@ export function UserNotificationBell() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
 
-  const fetchSummary = useCallback(async () => {
-    setLoading(true);
+  const fetchSummary = useCallback(async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
     setError(false);
     try {
-      const res = await fetch("/api/user/activity-summary");
+      const res = await fetch("/api/user/activity-summary", { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
         setSummary(data);
       } else {
-        setError(true);
+        if (!isSilent) setError(true);
       }
     } catch {
-      setError(true);
+      if (!isSilent) setError(true);
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
+    // Initial fetch if open
     if (open) fetchSummary();
   }, [open, fetchSummary]);
+
+  useEffect(() => {
+    // Background polling every 30 seconds
+    const interval = setInterval(() => {
+      fetchSummary(true);
+    }, 30000);
+
+    // Refresh when balance changes
+    const handleBalanceUpdate = () => fetchSummary(true);
+    window.addEventListener("balance-updated", handleBalanceUpdate);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("balance-updated", handleBalanceUpdate);
+    };
+  }, [fetchSummary]);
 
   const totalBadge =
     (summary?.pendingTransactionsCount ?? 0) +

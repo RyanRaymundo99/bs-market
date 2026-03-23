@@ -65,7 +65,7 @@ const ForgotPassword = () => {
           variant: "destructive",
     });
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Erro",
         description: "Falha ao enviar código de redefinição",
