@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import {
@@ -286,221 +286,238 @@ export default function Dashboard() {
   }, [userStatus, language]);
 
   // Fetch user data - OPTIMIZED: parallel API calls
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch all data in parallel for faster loading
-        const [userStatusResponse, balanceResponse, transactionResponse] =
-          await Promise.all([
-            fetch("/api/user/status"),
-            fetch("/api/balance"),
-            fetch("/api/transactions?limit=50"),
-          ]);
+  const fetchData = useCallback(async (isSilent = false) => {
+    try {
+      if (!isSilent) setIsLoading(true);
+      // Fetch all data in parallel for faster loading
+      const [userStatusResponse, balanceResponse, transactionResponse] =
+        await Promise.all([
+          fetch("/api/user/status", { cache: "no-store" }),
+          fetch("/api/balance", { cache: "no-store" }),
+          fetch("/api/transactions?limit=50", { cache: "no-store" }),
+        ]);
 
-        // Process user status
-        let currentUserStatus = null;
-        if (userStatusResponse.ok) {
-          const userStatusData = await userStatusResponse.json();
-          currentUserStatus = userStatusData.user;
-          setUserStatus(currentUserStatus);
-        }
+      // Process user status
+      let currentUserStatus = null;
+      if (userStatusResponse.ok) {
+        const userStatusData = await userStatusResponse.json();
+        currentUserStatus = userStatusData.user;
+        setUserStatus(currentUserStatus);
+      }
 
-        // Process balances
-        let currentUsdtBalance = 0;
-        if (balanceResponse.ok) {
-          const balanceData = await balanceResponse.json();
-          setBalances(balanceData.balances || []);
+      // Process balances
+      let currentUsdtBalance = 0;
+      if (balanceResponse.ok) {
+        const balanceData = await balanceResponse.json();
+        setBalances(balanceData.balances || []);
 
-          const total =
-            balanceData.balances?.reduce((sum: number, balance: Balance) => {
-              if (balance.currency === "BRL") {
-                return sum + balance.amount;
-              }
-              return sum;
-            }, 0) || 0;
-          setTotalBalance(total);
-
-          currentUsdtBalance =
-            balanceData.balances?.find((b: Balance) => b.currency === "USDT")
-              ?.amount || 0;
-        }
-
-        // Process transactions
-        let allTransactions: Transaction[] = [];
-        if (transactionResponse.ok) {
-          const transactionData = await transactionResponse.json();
-          allTransactions = transactionData.transactions || [];
-          setTransactions(allTransactions);
-
-          // Find latest deposit (BUY_CRYPTO or DEPOSIT)
-          const deposits = allTransactions.filter(
-            (t: Transaction) => t.type === "DEPOSIT" || t.type === "BUY_CRYPTO"
-          );
-          if (deposits.length > 0) {
-            setLatestDeposit(deposits[0]);
-          }
-
-          // Find latest withdrawal
-          const withdrawals = allTransactions.filter(
-            (t: Transaction) => t.type === "WITHDRAWAL" || t.type === "WITHDRAW"
-          );
-          if (withdrawals.length > 0) {
-            setLatestWithdrawal(withdrawals[0]);
-          }
-        }
-
-        // Generate chart data from previous balance to current balance
-        const today = new Date();
-        today.setHours(23, 59, 59, 999);
-        const sixDaysAgo = new Date(today);
-        sixDaysAgo.setDate(sixDaysAgo.getDate() - 6);
-        sixDaysAgo.setHours(0, 0, 0, 0);
-
-        // Helper function to format date as DD/MM
-        const formatDate = (date: Date): string => {
-          const day = String(date.getDate()).padStart(2, "0");
-          const month = String(date.getMonth() + 1).padStart(2, "0");
-          return `${day}/${month}`;
-        };
-
-        // Filter transactions from last 7 days
-        const relevantTransactions = allTransactions.filter(
-          (t: Transaction) => {
-            const transactionDate = new Date(t.createdAt);
-            return transactionDate >= sixDaysAgo && transactionDate <= today;
-          }
-        );
-
-        // Calculate previous balance (6 days ago) by reversing all transactions
-        let previousUsdtBalance = currentUsdtBalance;
-        relevantTransactions.forEach((t: Transaction) => {
-          if (t.currency === "USDT" || !t.currency) {
-            // Reverse the transaction to get the balance before it
-            if (t.type === "DEPOSIT" || t.type === "BUY_CRYPTO") {
-              previousUsdtBalance -= Number(t.amount);
-            } else if (
-              t.type === "WITHDRAWAL" ||
-              t.type === "WITHDRAW" ||
-              t.type === "SELL"
-            ) {
-              previousUsdtBalance += Number(t.amount);
+        const total =
+          balanceData.balances?.reduce((sum: number, balance: Balance) => {
+            if (balance.currency === "BRL") {
+              return sum + balance.amount;
             }
-          }
-        });
-        previousUsdtBalance = Math.max(0, previousUsdtBalance);
+            return sum;
+          }, 0) || 0;
+        setTotalBalance(total);
 
-        // Group transactions by day
-        const transactionsByDay: { [key: string]: Transaction[] } = {};
-        relevantTransactions.forEach((t: Transaction) => {
+        currentUsdtBalance =
+          balanceData.balances?.find((b: Balance) => b.currency === "USDT")
+            ?.amount || 0;
+      }
+
+      // Process transactions
+      let allTransactions: Transaction[] = [];
+      if (transactionResponse.ok) {
+        const transactionData = await transactionResponse.json();
+        allTransactions = transactionData.transactions || [];
+        setTransactions(allTransactions);
+
+        // Find latest deposit (BUY_CRYPTO or DEPOSIT)
+        const deposits = allTransactions.filter(
+          (t: Transaction) => t.type === "DEPOSIT" || t.type === "BUY_CRYPTO"
+        );
+        if (deposits.length > 0) {
+          setLatestDeposit(deposits[0]);
+        }
+
+        // Find latest withdrawal
+        const withdrawals = allTransactions.filter(
+          (t: Transaction) => t.type === "WITHDRAWAL" || t.type === "WITHDRAW"
+        );
+        if (withdrawals.length > 0) {
+          setLatestWithdrawal(withdrawals[0]);
+        }
+      }
+
+      // Generate chart data from previous balance to current balance
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      const sixDaysAgo = new Date(today);
+      sixDaysAgo.setDate(sixDaysAgo.getDate() - 6);
+      sixDaysAgo.setHours(0, 0, 0, 0);
+
+      // Helper function to format date as DD/MM
+      const formatDate = (date: Date): string => {
+        const day = String(date.getDate()).padStart(2, "0");
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        return `${day}/${month}`;
+      };
+
+      // Filter transactions from last 7 days
+      const relevantTransactions = allTransactions.filter(
+        (t: Transaction) => {
           const transactionDate = new Date(t.createdAt);
-          const dayKey = formatDate(transactionDate);
-          if (!transactionsByDay[dayKey]) {
-            transactionsByDay[dayKey] = [];
+          return transactionDate >= sixDaysAgo && transactionDate <= today;
+        }
+      );
+
+      // Calculate previous balance (6 days ago) by reversing all transactions
+      let previousUsdtBalance = currentUsdtBalance;
+      relevantTransactions.forEach((t: Transaction) => {
+        if (t.currency === "USDT" || !t.currency) {
+          // Reverse the transaction to get the balance before it
+          if (t.type === "DEPOSIT" || t.type === "BUY_CRYPTO") {
+            previousUsdtBalance -= Number(t.amount);
+          } else if (
+            t.type === "WITHDRAWAL" ||
+            t.type === "WITHDRAW" ||
+            t.type === "SELL"
+          ) {
+            previousUsdtBalance += Number(t.amount);
           }
-          transactionsByDay[dayKey].push(t);
-        });
+        }
+      });
+      previousUsdtBalance = Math.max(0, previousUsdtBalance);
 
-        // Build chart data from previous balance to current balance
-        const chartDataArray = [];
-        let runningBalance = previousUsdtBalance;
+      // Group transactions by day
+      const transactionsByDay: { [key: string]: Transaction[] } = {};
+      relevantTransactions.forEach((t: Transaction) => {
+        const transactionDate = new Date(t.createdAt);
+        const dayKey = formatDate(transactionDate);
+        if (!transactionsByDay[dayKey]) {
+          transactionsByDay[dayKey] = [];
+        }
+        transactionsByDay[dayKey].push(t);
+      });
 
-        for (let i = 6; i >= 0; i--) {
-          const date = new Date(today);
-          date.setDate(date.getDate() - i);
-          const dateStr = formatDate(date);
+      // Build chart data from previous balance to current balance
+      const chartDataArray = [];
+      let runningBalance = previousUsdtBalance;
 
-          // Apply transactions for this day
-          if (transactionsByDay[dateStr]) {
-            transactionsByDay[dateStr].forEach((t: Transaction) => {
-              if (t.currency === "USDT" || !t.currency) {
-                if (t.type === "DEPOSIT" || t.type === "BUY_CRYPTO") {
-                  runningBalance += Number(t.amount);
-                } else if (
-                  t.type === "WITHDRAWAL" ||
-                  t.type === "WITHDRAW" ||
-                  t.type === "SELL"
-                ) {
-                  runningBalance -= Number(t.amount);
-                }
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        const dateStr = formatDate(date);
+
+        // Apply transactions for this day
+        if (transactionsByDay[dateStr]) {
+          transactionsByDay[dateStr].forEach((t: Transaction) => {
+            if (t.currency === "USDT" || !t.currency) {
+              if (t.type === "DEPOSIT" || t.type === "BUY_CRYPTO") {
+                runningBalance += Number(t.amount);
+              } else if (
+                t.type === "WITHDRAWAL" ||
+                t.type === "WITHDRAW" ||
+                t.type === "SELL"
+              ) {
+                runningBalance -= Number(t.amount);
               }
-            });
-          }
-
-          // For the last day (today), ensure we use the actual current balance
-          if (i === 0) {
-            runningBalance = currentUsdtBalance;
-          }
-
-          const balanceValue = Math.max(0, runningBalance);
-
-          chartDataArray.push({
-            date: dateStr,
-            BRL: 0,
-            USDT: balanceValue,
+            }
           });
         }
 
-        setChartData(chartDataArray);
+        // For the last day (today), ensure we use the actual current balance
+        if (i === 0) {
+          runningBalance = currentUsdtBalance;
+        }
 
-        // Mock crypto prices (price API removed)
-        const mockCryptoData: CryptoPrice[] = [
-          {
-            symbol: "BTC",
-            price: 350000,
-            change24h: 2500,
-            changePercent: 0.72,
-            volume: 1250000000,
-            marketCap: 6800000000000,
-          },
-          {
-            symbol: "ETH",
-            price: 18500,
-            change24h: -150,
-            changePercent: -0.8,
-            volume: 850000000,
-            marketCap: 2200000000000,
-          },
-          {
-            symbol: "BNB",
-            price: 3200,
-            change24h: 45,
-            changePercent: 1.43,
-            volume: 320000000,
-            marketCap: 480000000000,
-          },
-          {
-            symbol: "ADA",
-            price: 2.85,
-            change24h: -0.12,
-            changePercent: -4.04,
-            volume: 85000000,
-            marketCap: 100000000000,
-          },
-          {
-            symbol: "SOL",
-            price: 450,
-            change24h: 12.5,
-            changePercent: 2.86,
-            volume: 180000000,
-            marketCap: 180000000000,
-          },
-        ];
+        const balanceValue = Math.max(0, runningBalance);
 
-        setCryptoPrices(mockCryptoData);
-      } catch (error) {
-        console.error("Failed to fetch data:", error);
+        chartDataArray.push({
+          date: dateStr,
+          BRL: 0,
+          USDT: balanceValue,
+        });
+      }
+
+      setChartData(chartDataArray);
+
+      // Mock crypto prices (price API removed)
+      const mockCryptoData: CryptoPrice[] = [
+        {
+          symbol: "BTC",
+          price: 350000,
+          change24h: 2500,
+          changePercent: 0.72,
+          volume: 1250000000,
+          marketCap: 6800000000000,
+        },
+        {
+          symbol: "ETH",
+          price: 18500,
+          change24h: -150,
+          changePercent: -0.8,
+          volume: 850000000,
+          marketCap: 2200000000000,
+        },
+        {
+          symbol: "BNB",
+          price: 3200,
+          change24h: 45,
+          changePercent: 1.43,
+          volume: 320000000,
+          marketCap: 480000000000,
+        },
+        {
+          symbol: "ADA",
+          price: 2.85,
+          change24h: -0.12,
+          changePercent: -4.04,
+          volume: 85000000,
+          marketCap: 100000000000,
+        },
+        {
+          symbol: "SOL",
+          price: 450,
+          change24h: 12.5,
+          changePercent: 2.86,
+          volume: 180000000,
+          marketCap: 180000000000,
+        },
+      ];
+
+      setCryptoPrices(mockCryptoData);
+    } catch (error) {
+      console.error("Failed to fetch data:", error);
+      if (!isSilent) {
         toast({
           title: "Erro ao carregar dados",
           description: "Não foi possível carregar os dados do dashboard.",
           variant: "destructive",
         });
-      } finally {
-        setIsLoading(false);
       }
-    };
-
-    fetchData();
+    } finally {
+      if (!isSilent) setIsLoading(false);
+    }
   }, [toast]);
+
+  useEffect(() => {
+    fetchData();
+
+    // Constant background polling for data freshness
+    const interval = setInterval(() => {
+      fetchData(true);
+    }, 20000);
+
+    // Listen for manual balance updates (e.g. from payments)
+    const handleBalanceUpdate = () => fetchData(true);
+    window.addEventListener("balance-updated", handleBalanceUpdate);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("balance-updated", handleBalanceUpdate);
+    };
+  }, [fetchData]);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);

@@ -306,10 +306,10 @@ export default function WithdrawPage() {
     }
   }, [toast]);
 
-  // Fetch withdrawal history
-  const fetchWithdrawalHistory = async () => {
+  // Fetch withdrawal history - CALLBACK
+  const fetchWithdrawalHistory = useCallback(async () => {
     try {
-      const response = await fetch("/api/withdrawals");
+      const response = await fetch("/api/withdrawals", { cache: "no-store" });
       if (response.ok) {
         const data = await response.json();
         setWithdrawalHistory(data.data || []);
@@ -317,7 +317,7 @@ export default function WithdrawPage() {
     } catch (error) {
       console.error("Error fetching withdrawal history:", error);
     }
-  };
+  }, []);
 
   // Handle USDT withdrawal
   const handleUSDTWithdrawal = async () => {
@@ -580,7 +580,25 @@ export default function WithdrawPage() {
       setLoading(false);
     };
     loadData();
-  }, [fetchWalletData]);
+
+    // Set up polling for balance and history
+    const interval = setInterval(() => {
+      fetchWalletData();
+      fetchWithdrawalHistory();
+    }, 20000);
+
+    // Listen for balance updates from payments
+    const handleBalanceUpdate = () => {
+      fetchWalletData();
+      fetchWithdrawalHistory();
+    };
+    window.addEventListener("balance-updated", handleBalanceUpdate);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("balance-updated", handleBalanceUpdate);
+    };
+  }, [fetchWalletData, fetchWithdrawalHistory]);
 
   if (loading) {
     return (

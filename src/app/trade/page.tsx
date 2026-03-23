@@ -421,7 +421,7 @@ const TradePage = () => {
       }
     };
     checkUserStatus();
-  }, [language]);
+  }, [language, toast, router, pathname]);
 
 
   const fetchUSDTRate = useCallback(async () => {
@@ -709,9 +709,7 @@ const TradePage = () => {
         // If PIX code is missing but QR code image is available, try to decode it
         if (!pixCode && qrCodeBase64) {
           try {
-            // @ts-ignore
             const jsQRModule = await import("jsqr");
-            // @ts-ignore
             const jsQR = jsQRModule.default || jsQRModule;
 
             // Create an image element to decode the QR code

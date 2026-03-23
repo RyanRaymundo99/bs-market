@@ -60,13 +60,13 @@ export default function AdminNotificationsPage() {
 
   useEffect(() => {
     fetchNotifications();
-  }, []);
+  }, [fetchNotifications]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     fetchAlertSettings();
-  }, []);
+  }, [fetchAlertSettings]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fetchAlertSettings = async () => {
+  async function fetchAlertSettings() {
     try {
       setLoadingAlertSettings(true);
       const response = await fetch("/api/admin/notifications/alert-settings");
@@ -90,9 +90,9 @@ export default function AdminNotificationsPage() {
     } finally {
       setLoadingAlertSettings(false);
     }
-  };
+  }
 
-  const saveAlertSettings = async () => {
+  async function saveAlertSettings() {
     try {
       setSavingAlertSettings(true);
       const emailsToSave = alertSettings.emails.map((e) => e.trim()).filter(Boolean);
@@ -124,9 +124,9 @@ export default function AdminNotificationsPage() {
     } finally {
       setSavingAlertSettings(false);
     }
-  };
+  }
 
-  const fetchNotifications = async () => {
+  async function fetchNotifications() {
     try {
       setLoading(true);
       const response = await fetch("/api/admin/notifications");
@@ -150,7 +150,7 @@ export default function AdminNotificationsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   const markAllAsRead = async () => {
     try {
