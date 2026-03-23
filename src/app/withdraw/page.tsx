@@ -598,7 +598,8 @@ export default function WithdrawPage() {
       clearInterval(interval);
       window.removeEventListener("balance-updated", handleBalanceUpdate);
     };
-  }, [fetchWalletData, fetchWithdrawalHistory]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (loading) {
     return (

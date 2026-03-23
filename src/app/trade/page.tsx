@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import NavbarNew from "@/components/ui/navbar-new";
 import { GlobalKYCBanner } from "@/components/GlobalKYCBanner";
@@ -178,6 +178,9 @@ const TradePage = () => {
       setIsLoggingOut(false);
     }
   }, []);
+  
+  // Track previous history to detect completed payments
+  const prevHistoryRef = useRef<any[]>([]);
 
   // Deposit method toggle (PIX or Crypto)
   const [depositMethod, setDepositMethod] = useState<"PIX" | "CRYPTO">("PIX");
@@ -515,24 +518,6 @@ const TradePage = () => {
             });
             return newSet;
           });
-          
-          // Show toast if a transaction just completed
-          const previouslyPending = transactionHistory.some(t => t.status === "PENDING");
-          const nowCompleted = buyOrders.some(t => t.status === "COMPLETED" && 
-            transactionHistory.find(prev => prev.id === t.id)?.status === "PENDING"
-          );
-          
-          if (nowCompleted && previouslyPending && !isSilent) {
-            toast({
-              title: language === "pt" ? "Pagamento Confirmado!" : "Payment Confirmed!",
-              description: language === "pt" 
-                ? "Seu saldo já foi atualizado." 
-                : "Your balance has been updated.",
-            });
-            // Trigger balance refresh in sidebar/navbar
-            window.dispatchEvent(new CustomEvent("refresh-balance"));
-          }
-
           // Clean up PIX data for completed transactions
           setStoredPixData((prev) => {
             const newMap = new Map(prev);
@@ -565,18 +550,43 @@ const TradePage = () => {
     } catch (error) {
       console.error("Error fetching transaction history:", error);
     }
+  }, [language, toast]);
+
+  // Effect to show toast when a payment completes
+  useEffect(() => {
+    if (prevHistoryRef.current.length > 0) {
+      const previouslyPending = prevHistoryRef.current.some(t => t.status === "PENDING");
+      const nowCompleted = transactionHistory.some(t => t.status === "COMPLETED" && 
+        prevHistoryRef.current.find(prev => prev.id === t.id)?.status === "PENDING"
+      );
+      
+      if (nowCompleted && previouslyPending) {
+        toast({
+          title: language === "pt" ? "Pagamento Confirmado!" : "Payment Confirmed!",
+          description: language === "pt" 
+            ? "Seu saldo já foi atualizado." 
+            : "Your balance has been updated.",
+        });
+        // Trigger balance refresh in sidebar/navbar
+        window.dispatchEvent(new CustomEvent("refresh-balance"));
+      }
+    }
+    prevHistoryRef.current = transactionHistory;
   }, [transactionHistory, language, toast]);
 
-  // Fetch USDT rate and transaction history on mount - PARALLEL
+  // Fetch USDT rate and transaction history on mount - STABLE MOUNT
   useEffect(() => {
     fetchUSDTRate();
     fetchTransactionHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-    // Set up polling for history
-    // Poll more frequently if there are pending transactions
-    const hasPending = transactionHistory.some(
-      (t) => t.status === "PENDING" || t.status === "EXECUTING"
-    );
+  const hasPending = transactionHistory.some(
+    (t) => t.status === "PENDING" || t.status === "EXECUTING"
+  );
+
+  // Polling effect - separate from mount to avoid frequent recreation
+  useEffect(() => {
     const intervalTime = hasPending ? 10000 : 30000;
     
     const interval = setInterval(() => {
@@ -591,7 +601,7 @@ const TradePage = () => {
       clearInterval(interval);
       window.removeEventListener("balance-updated", handleBalanceUpdate);
     };
-  }, [fetchUSDTRate, fetchTransactionHistory, transactionHistory]);
+  }, [fetchTransactionHistory, hasPending]);
 
   const handleBuyConfirm = async () => {
     if (moneyDisabled) {

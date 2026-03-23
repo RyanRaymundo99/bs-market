@@ -501,6 +501,7 @@ export default function Dashboard() {
     }
   }, [toast]);
 
+  // Initial load and background polling setup
   useEffect(() => {
     fetchData();
 
@@ -517,7 +518,8 @@ export default function Dashboard() {
       clearInterval(interval);
       window.removeEventListener("balance-updated", handleBalanceUpdate);
     };
-  }, [fetchData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
