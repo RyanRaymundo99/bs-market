@@ -180,7 +180,7 @@ const TradePage = () => {
   }, []);
   
   // Track previous history to detect completed payments
-  const prevHistoryRef = useRef<any[]>([]);
+  const prevHistoryRef = useRef<Array<{ id: string; status: string }>>([]);
 
   // Deposit method toggle (PIX or Crypto)
   const [depositMethod, setDepositMethod] = useState<"PIX" | "CRYPTO">("PIX");
