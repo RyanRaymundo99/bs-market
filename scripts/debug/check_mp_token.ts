@@ -1,4 +1,4 @@
-import { mercadoPagoService } from "./src/lib/payment/mercadopago";
+import { mercadoPagoService } from "../../src/lib/payment/mercadopago";
 
 async function main() {
   console.log("CHECKING MERCADO PAGO ACCESS TOKEN...");
@@ -7,3 +7,4 @@ async function main() {
 }
 
 main().catch(console.error);
+

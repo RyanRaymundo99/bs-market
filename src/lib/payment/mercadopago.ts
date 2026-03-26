@@ -162,7 +162,7 @@ export class MercadoPagoService implements PaymentProvider {
   }
 
   async createUSDTWithdrawal(
-    _: WithdrawalRequest
+    _request: WithdrawalRequest
   ): Promise<WithdrawalResponse> {
     // Mercado Pago doesn't support crypto withdrawals directly
     console.warn("⚠️ Mercado Pago does not support crypto withdrawals directly.");
@@ -213,7 +213,7 @@ export class MercadoPagoService implements PaymentProvider {
   }
 
   async getWithdrawalStatus(
-    _: string
+    _transactionId: string
   ): Promise<PaymentStatusResponse | null> {
     throw new Error("Mercado Pago withdrawals not implemented.");
   }

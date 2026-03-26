@@ -1,4 +1,4 @@
-import { mercadoPagoService } from "./src/lib/payment/mercadopago";
+import { mercadoPagoService } from "../../src/lib/payment/mercadopago";
 
 async function main() {
   const mpId = "0478537131"; // From the latest pending order
@@ -7,3 +7,4 @@ async function main() {
 }
 
 main().catch(console.error);
+

@@ -275,7 +275,7 @@ export default function WithdrawPage() {
       }
     };
     checkUserStatus();
-  }, [language]);
+  }, [language, toast]);
 
   // Fetch wallet data and exchange rate
   const fetchWalletData = useCallback(async () => {

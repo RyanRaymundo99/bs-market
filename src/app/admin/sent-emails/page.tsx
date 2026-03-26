@@ -58,8 +58,8 @@ export default function SentEmailsPage() {
           variant: "destructive",
         });
       }
-    } catch (e: unknown) {
-      console.error(e);
+    } catch (error) {
+      console.error(error);
       toast({
         title: "Erro de conexão",
         description: "Não foi possível conectar ao servidor",
@@ -101,7 +101,7 @@ export default function SentEmailsPage() {
           variant: "destructive",
         });
       }
-    } catch (e: unknown) {
+    } catch {
       toast({
         title: "Erro",
         description: "Falha ao remover",
