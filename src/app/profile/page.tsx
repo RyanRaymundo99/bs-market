@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +13,15 @@ import { GlobalKYCBanner } from "@/components/GlobalKYCBanner";
 import Breadcrumb from "@/components/ui/breadcrumb";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getKycImageSrc } from "@/lib/kyc-image-src";
+import { formatUSDT } from "@/lib/format-currency";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   User,
   Mail,
@@ -26,7 +36,13 @@ import {
   Edit,
   Save,
   X,
-  MessageCircle,
+  TrendingDown,
+  ArrowUpRight,
+  ArrowDownRight,
+  ChevronRight,
+  Download,
+  AlertTriangle,
+  Trash2,
 } from "lucide-react";
 
 interface UserProfile {
@@ -43,12 +59,24 @@ interface UserProfile {
   kycReviewedAt: string | null;
   kycRejectionReason: string | null;
   kycData?: { documentsToUpdate?: ("front" | "back" | "selfie")[] } | null;
+  dailyDepositLimit?: number;
 }
 
 interface KYCDocuments {
   documentFront: string | null;
   documentBack: string | null;
   documentSelfie: string | null;
+}
+
+interface Transaction {
+  id: string;
+  type: string;
+  amount: number;
+  currency: string;
+  status: string;
+  createdAt: string;
+  received?: number;
+  date?: Date;
 }
 
 export default function ProfilePage() {
@@ -74,6 +102,20 @@ export default function ProfilePage() {
     back?: string;
     selfie?: string;
   }>({});
+
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [receiptData, setReceiptData] = useState<{
+    transactionId: string;
+    amount: number;
+    usdtAmount: number;
+    date: Date;
+  } | null>(null);
+
+  const [deleteStep1, setDeleteStep1] = useState(false);
+  const [deleteStep2, setDeleteStep2] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const { toast } = useToast();
   const { t, language } = useLanguage();
@@ -107,15 +149,7 @@ export default function ProfilePage() {
     }
   }, []);
 
-  // Fetch all data in parallel for faster loading
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      await Promise.all([fetchUserProfile(), fetchKycDocuments()]);
-      setLoading(false);
-    };
-    loadData();
-  }, []);
+
 
   // Auto-enable editing mode when user is PENDING
   useEffect(() => {
@@ -123,12 +157,7 @@ export default function ProfilePage() {
       const isPendingUser =
         userProfile.approvalStatus === "PENDING" ||
         userProfile.kycStatus === "PENDING";
-      console.log("Profile Status Check:", {
-        approvalStatus: userProfile.approvalStatus,
-        kycStatus: userProfile.kycStatus,
-        isPendingUser,
-        currentEditing: editing,
-      });
+      
       if (isPendingUser) {
         setEditing(true);
       } else if (
@@ -139,7 +168,7 @@ export default function ProfilePage() {
         setEditing(false);
       }
     }
-  }, [userProfile, editing]);
+  }, [userProfile]);
 
   const pendingPreviewsRef = useRef(pendingPreviews);
   useEffect(() => {
@@ -153,7 +182,7 @@ export default function ProfilePage() {
     };
   }, []);
 
-  const fetchUserProfile = async () => {
+  const fetchUserProfile = useCallback(async () => {
     try {
       const response = await fetch("/api/user/status");
       if (response.ok) {
@@ -181,9 +210,9 @@ export default function ProfilePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [t, toast]);
 
-  const fetchKycDocuments = async () => {
+  const fetchKycDocuments = useCallback(async () => {
     try {
       const response = await fetch("/api/user/kyc-documents");
       if (response.ok) {
@@ -193,7 +222,79 @@ export default function ProfilePage() {
     } catch (error) {
       console.error("Error fetching KYC documents:", error);
     }
+  }, []);
+
+  const fetchTransactions = useCallback(async () => {
+    try {
+      const response = await fetch("/api/transactions?limit=20");
+      if (response.ok) {
+        const data = await response.json();
+        setTransactions(data.transactions || []);
+      }
+    } catch (error) {
+      console.error("Error fetching transactions:", error);
+    }
+  }, []);
+
+  const formatBRL = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value);
   };
+
+  const handleDeleteAccount = async () => {
+    if (!deleteStep1 || !deleteStep2) return;
+    
+    setIsDeleting(true);
+    try {
+      const response = await fetch("/api/user/delete-account", {
+        method: "DELETE",
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        toast({
+          title: "Conta excluída",
+          description: "Sua conta foi permanentemente excluída. Redirecionando...",
+        });
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 2000);
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Erro ao excluir conta",
+          description: data.details || data.error || "Ocorreu um erro inesperado.",
+        });
+      }
+    } catch (error) {
+      console.error("Delete account error:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro de conexão",
+        description: "Não foi possível conectar ao servidor para excluir sua conta.",
+      });
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
+    }
+  };
+
+  // Fetch all data in parallel for faster loading
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      await Promise.all([
+        fetchUserProfile(),
+        fetchKycDocuments(),
+        fetchTransactions(),
+      ]);
+      setLoading(false);
+    };
+    loadData();
+  }, [fetchUserProfile, fetchKycDocuments, fetchTransactions]);
 
   const handleEdit = () => {
     setEditing(true);
@@ -708,8 +809,24 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">{t("kycStatus")}</span>
+                  <span className="text-sm font-medium">{t("kycStatus") || "Status KYC"}</span>
                   {getStatusBadge(userProfile?.kycStatus || "PENDING")}
+                </div>
+
+                <div className="pt-2 border-t border-border mt-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium">
+                      {language === "pt" ? "Limite Diário de Depósito" : "Daily Deposit Limit"}
+                    </span>
+                    <Badge variant="outline" className="text-sm font-bold bg-muted/50">
+                      ${(userProfile?.dailyDepositLimit ?? 5000).toLocaleString()} USDT
+                    </Badge>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground italic">
+                    {language === "pt" 
+                      ? "* O limite diário é ajustado manualmente pelos administradores baseando em suas atividades."
+                      : "* Your daily limit is manually adjusted by administrators based on your activity."}
+                  </p>
                 </div>
 
                 {userProfile?.kycRejectionReason && (
@@ -787,10 +904,13 @@ export default function ProfilePage() {
                 <div className="relative border-2 border-dashed border-border rounded-xl p-4 text-center min-h-[140px] flex flex-col justify-center">
                   {pendingFiles.front ? (
                     <div className="space-y-2">
-                      <img
-                        src={pendingPreviews.front}
-                        alt={t("documentFront")}
+                      <Image
+                        src={pendingPreviews.front || ""}
+                        alt={t("documentFront") ?? "Document Front"}
+                        width={400}
+                        height={200}
                         className="w-full h-28 object-cover rounded-lg"
+                        unoptimized={true}
                       />
                       <p className="text-xs text-muted-foreground truncate">
                         {pendingFiles.front.name}
@@ -836,10 +956,13 @@ export default function ProfilePage() {
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        <img
+                        <Image
                           src={getKycImageSrc(kycDocuments.documentFront)}
-                          alt={t("documentFront")}
+                          alt={t("documentFront") ?? "Document Front"}
+                          width={400}
+                          height={200}
                           className="w-full h-28 object-cover rounded-lg"
+                          unoptimized={true}
                         />
                         <p className="text-xs text-muted-foreground">
                           {t("uploaded")}
@@ -918,10 +1041,13 @@ export default function ProfilePage() {
                 <div className="relative border-2 border-dashed border-border rounded-xl p-4 text-center min-h-[140px] flex flex-col justify-center">
                   {pendingFiles.back ? (
                     <div className="space-y-2">
-                      <img
-                        src={pendingPreviews.back}
-                        alt={t("documentBack")}
+                      <Image
+                        src={pendingPreviews.back || ""}
+                        alt={t("documentBack") ?? "Document Back"}
+                        width={400}
+                        height={200}
                         className="w-full h-28 object-cover rounded-lg"
+                        unoptimized={true}
                       />
                       <p className="text-xs text-muted-foreground truncate">
                         {pendingFiles.back.name}
@@ -967,10 +1093,13 @@ export default function ProfilePage() {
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        <img
+                        <Image
                           src={getKycImageSrc(kycDocuments.documentBack)}
-                          alt={t("documentBack")}
+                          alt={t("documentBack") ?? "Document Back"}
+                          width={400}
+                          height={200}
                           className="w-full h-28 object-cover rounded-lg"
+                          unoptimized={true}
                         />
                         <p className="text-xs text-muted-foreground">
                           {t("uploaded")}
@@ -1049,10 +1178,13 @@ export default function ProfilePage() {
                 <div className="relative border-2 border-dashed border-border rounded-xl p-4 text-center min-h-[140px] flex flex-col justify-center">
                   {pendingFiles.selfie ? (
                     <div className="space-y-2">
-                      <img
-                        src={pendingPreviews.selfie}
-                        alt={t("selfieWithDocument")}
+                      <Image
+                        src={pendingPreviews.selfie || ""}
+                        alt={t("selfieWithDocument") ?? "Selfie with Document"}
+                        width={400}
+                        height={200}
                         className="w-full h-28 object-cover rounded-lg"
+                        unoptimized={true}
                       />
                       <p className="text-xs text-muted-foreground truncate">
                         {pendingFiles.selfie.name}
@@ -1098,10 +1230,13 @@ export default function ProfilePage() {
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        <img
+                        <Image
                           src={getKycImageSrc(kycDocuments.documentSelfie)}
-                          alt={t("selfieWithDocument")}
+                          alt={t("selfieWithDocument") ?? "Selfie with Document"}
+                          width={400}
+                          height={200}
                           className="w-full h-28 object-cover rounded-lg"
+                          unoptimized={true}
                         />
                         <p className="text-xs text-muted-foreground">
                           {t("uploaded")}
@@ -1217,46 +1352,333 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
-        {/* Contact Support */}
-        <Card id="support" className="mt-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MessageCircle className="w-5 h-5" />
-              {t("contactSupport")}
-            </CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              {t("contactSupportDescription")}
-            </p>
+        {/* Transition History */}
+        <Card className="mt-8 rounded-xl sm:rounded-2xl border-border bg-card shadow-sm">
+          <CardHeader className="pb-3 sm:pb-4 px-4 sm:px-6 pt-4 sm:pt-6">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base sm:text-lg text-foreground flex items-center gap-2">
+                <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                {t("purchaseHistory") || "Histórico de Transações"}
+              </CardTitle>
+            </div>
           </CardHeader>
-          <CardContent className="flex flex-wrap gap-4">
-            <a
-              href={`https://wa.me/${
-                process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "5511984284867"
-              }`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-3 rounded-lg bg-[#25D366]/20 text-[#25D366] hover:bg-[#25D366]/30 border border-[#25D366]/40 transition-colors"
-            >
-              <MessageCircle className="w-5 h-5" />
-              <span className="font-medium">{t("contactViaWhatsApp")}</span>
-              <span className="text-sm opacity-90">+55 11 98428-4867</span>
-            </a>
-            <a
-              href={`mailto:${
-                process.env.NEXT_PUBLIC_SUPPORT_EMAIL ||
-                "suporte@bsmarket.com.br"
-              }`}
-              className="inline-flex items-center gap-2 px-4 py-3 rounded-lg bg-white/10 text-white hover:bg-white/20 border border-white/20 transition-colors"
-            >
-              <Mail className="w-5 h-5" />
-              <span className="font-medium">{t("contactViaEmail")}</span>
-              <span className="text-sm opacity-90 truncate max-w-[200px]">
-                {process.env.NEXT_PUBLIC_SUPPORT_EMAIL ||
-                  "suporte@bsmarket.com.br"}
-              </span>
-            </a>
+          <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
+            {transactions.length > 0 ? (
+              <div className="space-y-2">
+                {transactions.map((transaction, index) => {
+                  const date = new Date(transaction.createdAt);
+                  const time = date.toLocaleTimeString(
+                    language === "pt" ? "pt-BR" : "en-US",
+                    {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    }
+                  );
+                  const dateStr = date.toLocaleDateString(
+                    language === "pt" ? "pt-BR" : "en-US",
+                    {
+                      day: "2-digit",
+                      month: "2-digit",
+                    }
+                  );
+
+                  let icon = <ArrowUpRight className="w-4 h-4" />;
+                  let bgColor = "bg-primary/10";
+                  let iconColor = "text-primary";
+                  let title = "";
+                  let amountColor = "text-primary";
+                  let prefix = "+";
+
+                  const formattedAmount =
+                    transaction.currency === "BRL"
+                      ? formatBRL(transaction.amount)
+                      : formatUSDT(transaction.amount).replace(
+                          " USDT",
+                          ` ${transaction.currency || "USDT"}`
+                        );
+
+                  if (
+                    transaction.type === "DEPOSIT" ||
+                    transaction.type === "BUY_CRYPTO"
+                  ) {
+                    icon = <ArrowUpRight className="w-4 h-4" />;
+                    bgColor = "bg-primary/10";
+                    iconColor = "text-primary";
+                    amountColor = "text-primary";
+                    title =
+                      transaction.type === "BUY_CRYPTO"
+                        ? "Compra de USDT"
+                        : "Depósito";
+                    prefix = "+";
+                  } else if (
+                    transaction.type === "WITHDRAWAL" ||
+                    transaction.type === "WITHDRAW"
+                  ) {
+                    icon = <ArrowDownRight className="w-4 h-4" />;
+                    bgColor = "bg-destructive/10";
+                    iconColor = "text-destructive";
+                    amountColor = "text-destructive";
+                    title = "Saque";
+                    prefix = "-";
+                  } else if (transaction.type === "SELL") {
+                    icon = <TrendingDown className="w-4 h-4" />;
+                    bgColor = "bg-orange-500/10";
+                    iconColor = "text-orange-400";
+                    amountColor = "text-orange-400";
+                    title = "Venda";
+                    prefix = "-";
+                  } else {
+                    title = transaction.type;
+                  }
+
+                  const isCompleted = 
+                    transaction.status === "COMPLETED" || 
+                    transaction.status === "APPROVED" || 
+                    transaction.status === "CONFIRMED";
+
+                  return (
+                    <div
+                      key={transaction.id || index}
+                      onClick={() => {
+                        if (isCompleted) {
+                          setReceiptData({
+                            transactionId: transaction.id,
+                            amount: Number(transaction.amount),
+                            usdtAmount: Number(transaction.received || transaction.amount),
+                            date: new Date(transaction.createdAt),
+                          });
+                          setShowReceipt(true);
+                        }
+                      }}
+                      className={`flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors active:bg-muted/60 ${isCompleted ? 'cursor-pointer' : ''}`}
+                    >
+                      <div
+                        className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl ${bgColor} flex items-center justify-center flex-shrink-0`}
+                      >
+                        <div className={iconColor}>{icon}</div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 sm:gap-2 mb-0.5">
+                          <h4 className="font-medium text-foreground text-xs sm:text-sm truncate">
+                            {title}
+                          </h4>
+                          <p
+                            className={`font-semibold text-xs sm:text-sm ${amountColor} whitespace-nowrap`}
+                          >
+                            {prefix}
+                            {formattedAmount}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-[10px] sm:text-xs text-muted-foreground">
+                            {dateStr} {language === "pt" ? "às" : "at"} {time}
+                          </p>
+                          {transaction.status && (
+                            <span
+                              className={`text-[10px] sm:text-xs px-1.5 py-0.5 rounded ${
+                                isCompleted
+                                  ? "bg-primary/20 text-primary"
+                                  : transaction.status === "PENDING" ||
+                                    transaction.status === "Pendente"
+                                  ? "bg-warning/20 text-warning"
+                                  : transaction.status === "FAILED" ||
+                                    transaction.status === "REJECTED"
+                                  ? "bg-destructive/20 text-destructive"
+                                  : "bg-muted text-muted-foreground"
+                              }`}
+                            >
+                              {transaction.status}
+                            </span>
+                          )}
+                          {isCompleted && (
+                            <span className="text-[10px] text-primary flex items-center gap-1 ml-auto">
+                              <FileText className="w-3 h-3" />
+                              {language === "pt" ? "Ver Comprovante" : "View Receipt"}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {isCompleted && (
+                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <FileText className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+                <p className="text-muted-foreground">Nenhuma transação encontrada.</p>
+              </div>
+            )}
           </CardContent>
         </Card>
+
+        {/* Delete Account Section */}
+        <Card className="mt-12 border-destructive/30 bg-destructive/5 overflow-hidden">
+          <CardHeader className="bg-destructive/10">
+            <CardTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="w-5 h-5" />
+              Excluir Conta Permanentemente
+            </CardTitle>
+            <p className="text-sm text-destructive/80 mt-1">
+              Esta ação é irreversível. Todos os seus dados, saldo e histórico serão perdidos para sempre.
+            </p>
+          </CardHeader>
+          <CardContent className="pt-6 space-y-6">
+            <div className="p-4 bg-background/50 rounded-lg border border-destructive/20 space-y-4">
+              <div className="flex items-start space-x-3">
+                <Checkbox 
+                  id="delete-step-1" 
+                  checked={deleteStep1}
+                  onCheckedChange={(checked) => setDeleteStep1(!!checked)}
+                  className="mt-1 border-destructive/50 data-[state=checked]:bg-destructive data-[state=checked]:border-destructive"
+                />
+                <div className="grid gap-1.5 leading-none cursor-pointer" onClick={() => setDeleteStep1(!deleteStep1)}>
+                  <label
+                    htmlFor="delete-step-1"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  >
+                    Eu entendo que esta ação é permanente e irreversível.
+                  </label>
+                </div>
+              </div>
+              
+              <div className="flex items-start space-x-3">
+                <Checkbox 
+                  id="delete-step-2" 
+                  checked={deleteStep2}
+                  onCheckedChange={(checked) => setDeleteStep2(!!checked)}
+                  className="mt-1 border-destructive/50 data-[state=checked]:bg-destructive data-[state=checked]:border-destructive"
+                />
+                <div className="grid gap-1.5 leading-none cursor-pointer" onClick={() => setDeleteStep2(!deleteStep2)}>
+                  <label
+                    htmlFor="delete-step-2"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  >
+                    Eu não tenho saldo pendente e confirmo que desejo apagar meus dados.
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <Button
+              variant="destructive"
+              className="w-full sm:w-auto h-12 px-8 font-bold disabled:opacity-30"
+              disabled={!deleteStep1 || !deleteStep2 || isDeleting}
+              onClick={() => setShowDeleteDialog(true)}
+            >
+              {isDeleting ? "Excluindo..." : "EXCLUIR MINHA CONTA AGORA"}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Receipt Modal */}
+        <Dialog open={showReceipt} onOpenChange={setShowReceipt}>
+          <DialogContent className="bg-card border-border text-foreground max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-foreground flex items-center gap-2">
+                <CheckCircle className="w-6 h-6 text-primary" />
+                Comprovante de Pagamento
+              </DialogTitle>
+              <DialogDescription className="text-muted-foreground">
+                Detalhes da sua transação processada
+              </DialogDescription>
+            </DialogHeader>
+            {receiptData && (
+              <div className="space-y-4">
+                <div className="bg-muted/50 rounded-lg p-6 space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Valor pago:</span>
+                    <span className="text-xl font-bold text-foreground">
+                      {formatBRL(receiptData.amount)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">USDT recebido:</span>
+                    <span className="text-xl font-bold text-primary">
+                      {formatUSDT(receiptData.usdtAmount)} USDT
+                    </span>
+                  </div>
+                  <div className="border-t border-border pt-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm text-muted-foreground">
+                        ID da transação:
+                      </span>
+                      <span className="text-xs font-mono text-foreground">
+                        {receiptData.transactionId.substring(0, 20)}...
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Data:</span>
+                      <span className="text-sm text-foreground">
+                        {receiptData.date.toLocaleString("pt-BR")}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      window.print();
+                    }}
+                    className="flex-1 py-3 flex items-center justify-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    PDF
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setShowReceipt(false);
+                      setReceiptData(null);
+                    }}
+                    className="flex-[2] py-3"
+                  >
+                    Fechar
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Confirmation Dialog for Deletion */}
+        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <DialogContent className="bg-card border-destructive/50 text-foreground max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-destructive flex items-center gap-2">
+                <AlertTriangle className="w-6 h-6" />
+                Confirmação Final
+              </DialogTitle>
+              <DialogDescription className="text-foreground/80 pt-2 font-semibold">
+                Você tem certeza absoluta? Esta ação não pode ser desfeita.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col gap-4 py-4">
+              <p className="text-sm text-muted-foreground">
+                Sua conta será permanentemente removida de nossos servidores, incluindo todo o histórico de transações e saldos.
+              </p>
+              <div className="flex gap-3 mt-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setShowDeleteDialog(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="flex-1"
+                  onClick={handleDeleteAccount}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? "Excluindo..." : "Confirmar Exclusão"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

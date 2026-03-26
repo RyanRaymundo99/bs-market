@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -51,7 +51,7 @@ export default function WebhookLogsPage() {
   );
   const [showPayload, setShowPayload] = useState(false);
 
-  const fetchWebhooks = async () => {
+  const fetchWebhooks = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch("/api/debug/webhooks?limit=100");
@@ -76,14 +76,14 @@ export default function WebhookLogsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchWebhooks();
     // Refresh every 10 seconds
     const interval = setInterval(fetchWebhooks, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchWebhooks]);
 
   const getStatusBadge = (webhook: WebhookEvent) => {
     if (webhook.error) {

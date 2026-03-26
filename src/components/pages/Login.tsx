@@ -6,7 +6,6 @@ import { Form } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
-import { useRouter } from "next/navigation";
 import { InputField, CheckboxField } from "@/components/Auth/FormFields";
 import { EmailField } from "@/components/Auth/EmailField";
 import { AuthLayout } from "@/components/ui/auth-layout";
@@ -44,7 +43,7 @@ const Login = () => {
   const [loginBlocked, setLoginBlocked] = useState(false);
   const [loginBlockMessage, setLoginBlockMessage] = useState("");
   const { toast } = useToast();
-  const router = useRouter();
+
   const emailInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {

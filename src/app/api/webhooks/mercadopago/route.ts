@@ -186,13 +186,7 @@ export async function POST(request: NextRequest) {
     const status = mpStatus.toLowerCase();
     const eventType = mapMPStatusToEventType(mpStatus);
     const amount = paymentData.transaction_amount as number;
-    const currency = (paymentData.currency_id as string) || "BRL";
 
-    const ipAddress =
-      request.headers.get("x-forwarded-for") ||
-      request.headers.get("x-real-ip") ||
-      "unknown";
-    const userAgent = request.headers.get("user-agent") || "unknown";
 
     // Update webhook event with full payment data
     if (webhookEventId) {

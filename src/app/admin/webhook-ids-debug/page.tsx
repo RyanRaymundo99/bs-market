@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Table,
@@ -82,7 +82,7 @@ export default function WebhookIdsDebugPage() {
   const [showPayload, setShowPayload] = useState(false);
   const [filter, setFilter] = useState<"all" | "unmatched" | "matched">("all");
 
-  const fetchAnalysis = async () => {
+  const fetchAnalysis = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch("/api/debug/webhook-analysis");
@@ -109,14 +109,14 @@ export default function WebhookIdsDebugPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchAnalysis();
     // Refresh every 15 seconds
     const interval = setInterval(fetchAnalysis, 15000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchAnalysis]);
 
   const filteredWebhooks = webhookAnalysis.filter((w) => {
     if (filter === "unmatched") return !w.matchingOrder;

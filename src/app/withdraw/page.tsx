@@ -408,8 +408,6 @@ export default function WithdrawPage() {
     return isNaN(netAmount) || netAmount < 0 ? 0 : netAmount;
   };
 
-  // No fee on PIX withdrawals
-  const calculatePixFee = () => 0;
 
   const calculatePixNetAmount = () => {
     if (!pixAmount || parseFloat(pixAmount) <= 0) return 0;
@@ -598,8 +596,7 @@ export default function WithdrawPage() {
       clearInterval(interval);
       window.removeEventListener("balance-updated", handleBalanceUpdate);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchWalletData, fetchWithdrawalHistory]);
 
   if (loading) {
     return (

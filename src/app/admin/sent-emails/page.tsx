@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Table,
@@ -43,7 +43,7 @@ export default function SentEmailsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<SentEmailLog | null>(null);
 
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch("/api/admin/communication-log?limit=200");
@@ -58,7 +58,7 @@ export default function SentEmailsPage() {
           variant: "destructive",
         });
       }
-    } catch (e) {
+    } catch (e: unknown) {
       console.error(e);
       toast({
         title: "Erro de conexão",
@@ -68,11 +68,11 @@ export default function SentEmailsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchLogs();
-  }, []);
+  }, [fetchLogs]);
 
   const handleDelete = async (log: SentEmailLog) => {
     setConfirmDelete(log);
@@ -101,7 +101,7 @@ export default function SentEmailsPage() {
           variant: "destructive",
         });
       }
-    } catch (e) {
+    } catch (e: unknown) {
       toast({
         title: "Erro",
         description: "Falha ao remover",

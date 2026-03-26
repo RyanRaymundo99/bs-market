@@ -12,6 +12,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,12 +35,14 @@ import {
   Plus,
   Minus,
   MessageCircle,
+  FileText,
+  Download,
 } from "lucide-react";
 import { ButtonLoader, Spinner } from "@/components/ui/loading";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-import { handleLogout as performLogout } from "@/lib/auth-utils";
-import { formatUSDTInput, parseUSDTInput } from "@/lib/trade-utils";
+import { handleLogout as performLogout } from "../../lib/auth-utils";
+import { formatUSDTInput, parseUSDTInput } from "../../lib/trade-utils";
 const WHATSAPP_SUPPORT_URL = `https://wa.me/${
   process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "5511984284867"
 }`;
@@ -72,6 +81,7 @@ const TradePage = () => {
   const [moneyDisabled, setMoneyDisabled] = useState(false);
   const [moneyDisabledMessage, setMoneyDisabledMessage] = useState<string>("");
   const [maxDepositUsdt, setMaxDepositUsdt] = useState(1000000);
+  const [userDailyLimit, setUserDailyLimit] = useState(5000);
   const [inMaintenance, setInMaintenance] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState<string>("");
 
@@ -169,11 +179,6 @@ const TradePage = () => {
   const [loading, setLoading] = useState(false);
   const [showPixModal, setShowPixModal] = useState(false);
 
-  // Crypto deposit states
-  const [selectedNetwork, setSelectedNetwork] = useState("TRC20");
-  const [depositAddress, setDepositAddress] = useState<string | null>(null);
-  const [loadingAddress, setLoadingAddress] = useState(false);
-  const [addressCopied, setAddressCopied] = useState(false);
   const [pixData, setPixData] = useState<{
     qrCode: string;
     qrCodeBase64: string | null;
@@ -268,17 +273,17 @@ const TradePage = () => {
     const formatted = formatUSDTInput(inputValue);
     const parsed = parseUSDTInput(formatted);
 
-    // Prevent typing more than 2000 USDT - show warning and WhatsApp button
-    if (parsed > ONLINE_MAX_USDT) {
+    // Prevent typing more than user limit - show warning and WhatsApp button
+    if (parsed > userDailyLimit) {
       // Show toast warning
       toast({
-        title: language === "pt" ? "Limite online" : "Online limit",
+        title: language === "pt" ? "Limite de depósito" : "Deposit limit",
         description:
           language === "pt"
-            ? `O limite máximo para compras online é ${ONLINE_MAX_USDT.toLocaleString(
+            ? `O seu limite máximo para depósitos online é ${userDailyLimit.toLocaleString(
                 "pt-BR"
               )} USDT. Para valores maiores, use o botão WhatsApp abaixo.`
-            : `Maximum online purchase limit is ${ONLINE_MAX_USDT.toLocaleString()} USDT. For larger amounts, use the WhatsApp button below.`,
+            : `Your maximum online deposit limit is ${userDailyLimit.toLocaleString()} USDT. For larger amounts, use the WhatsApp button below.`,
         variant: "default",
       });
       // Allow user to see the value they typed, but they'll see the WhatsApp button instead of purchase button
@@ -304,6 +309,7 @@ const TradePage = () => {
         if (response.ok) {
           const { success, user } = await response.json();
           if (success && user) {
+            setUserDailyLimit(Number((user as { dailyDepositLimit?: number }).dailyDepositLimit) || 5000);
             if (user.approvalStatus === "REJECTED") {
               const message = language === "pt" ? "Sua conta foi rejeitada. Entre em contato com o suporte." : "Your account has been rejected. Please contact support.";
               sessionStorage.setItem("rejectionMessage", message);
@@ -357,7 +363,7 @@ const TradePage = () => {
     }
   }, []);
 
-  const fetchTransactionHistory = useCallback(async (isSilent = false) => {
+  const fetchTransactionHistory = useCallback(async () => {
     try {
       // Fetch orders from API
       const response = await fetch("/api/crypto/orders", { cache: "no-store" });
@@ -453,10 +459,10 @@ const TradePage = () => {
           });
         }
       }
-    } catch (error) {
-      console.error("Error fetching transaction history:", error);
+    } catch {
     }
-  }, [language, toast]);
+  }, []);
+
 
   // Effect to show toast when a payment completes
   useEffect(() => {
@@ -478,15 +484,74 @@ const TradePage = () => {
         setShowPixModal(false);
         // Clear buy input
         setBuyUSDT("");
+
+        // Show receipt for the newly completed transaction
+        const completedTx = transactionHistory.find(t => t.status === "COMPLETED" && 
+          prevHistoryRef.current.find(prev => prev.id === t.id)?.status === "PENDING"
+        );
+        
+        if (completedTx) {
+          setReceiptData({
+            transactionId: completedTx.id,
+            amount: completedTx.amount,
+            usdtAmount: completedTx.received,
+            date: completedTx.date,
+          });
+          setShowReceipt(true);
+        }
         
         // Trigger balance refresh in sidebar/navbar
         window.dispatchEvent(new CustomEvent("refresh-balance"));
       }
     }
+
     prevHistoryRef.current = transactionHistory.map(t => ({ id: t.id, status: t.status }));
   }, [transactionHistory, language, toast]);
+  
+  const exportHistory = (days: number) => {
+    const now = new Date();
+    const filtered = transactionHistory.filter(t => {
+      if (days === 365) return true; // Treat 365 as "All"
+      const diffTime = Math.abs(now.getTime() - t.date.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays <= days;
+    });
 
+    if (filtered.length === 0) {
+      toast({
+        title: language === "pt" ? "Nenhuma transação" : "No transactions",
+        description: language === "pt" 
+          ? "Não há transações para exportar neste período." 
+          : "There are no transactions to export in this period.",
+        variant: "destructive"
+      });
+      return;
+    }
 
+    // Simple CSV export
+    const headers = ["ID", "Data", "Valor Pago", "USDT Recebido", "Taxa", "Status"];
+    const csvContent = [
+      headers.join(","),
+      ...filtered.map(t => [
+        t.id,
+        t.date.toLocaleString(),
+        t.amount.toFixed(2),
+        t.received.toFixed(4),
+        t.fee.toFixed(2),
+        t.status
+      ].join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `bsmarket_history_${days}_days.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
   // Fetch USDT rate and transaction history on mount - STABLE MOUNT
   useEffect(() => {
     fetchUSDTRate();
@@ -503,11 +568,12 @@ const TradePage = () => {
     const intervalTime = hasPending ? 10000 : 30000;
     
     const interval = setInterval(() => {
-      fetchTransactionHistory(true);
+      fetchTransactionHistory();
     }, intervalTime);
 
     // Listen for balance updates (which often mean a transaction completed)
-    const handleBalanceUpdate = () => fetchTransactionHistory(true);
+    const handleBalanceUpdate = () => fetchTransactionHistory();
+
     window.addEventListener("balance-updated", handleBalanceUpdate);
 
     return () => {
@@ -537,16 +603,16 @@ const TradePage = () => {
       });
       return;
     }
-    // Hard limit: 2000 USDT for online purchases
-    if (buyUSDTAmount > ONLINE_MAX_USDT) {
+    // Check against user's daily limit
+    if (buyUSDTAmount > userDailyLimit) {
       const msg =
         language === "pt"
-          ? `O limite máximo para compras online é ${ONLINE_MAX_USDT.toLocaleString(
+          ? `O seu limite diário é ${userDailyLimit.toLocaleString(
               "pt-BR"
             )} USDT. Para valores maiores, entre em contato conosco via WhatsApp.`
-          : `Maximum online purchase limit is ${ONLINE_MAX_USDT.toLocaleString()} USDT. For larger amounts, please contact us via WhatsApp.`;
+          : `Your daily limit is ${userDailyLimit.toLocaleString()} USDT. For larger amounts, please contact us via WhatsApp.`;
       toast({
-        title: language === "pt" ? "Limite online" : "Online limit",
+        title: language === "pt" ? "Limite atingido" : "Limit reached",
         description: msg,
         variant: "destructive",
       });
@@ -813,87 +879,8 @@ const TradePage = () => {
     }
   };
 
-  // Fetch crypto deposit address
-  const fetchCryptoDepositAddress = async () => {
-    if (moneyDisabled) {
-      toast({
-        title: language === "pt" ? "Indisponível" : "Unavailable",
-        description:
-          moneyDisabledMessage ||
-          (language === "pt"
-            ? "Depósitos temporariamente desativados."
-            : "Deposits are temporarily disabled."),
-        variant: "destructive",
-      });
-      return;
-    }
-    setLoadingAddress(true);
-    try {
-      const response = await fetch("/api/deposit/crypto/address", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          network: selectedNetwork,
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.address) {
-          setDepositAddress(data.address);
-        } else {
-          throw new Error(data.error || "Failed to get deposit address");
-        }
-      } else {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to get deposit address");
-      }
-    } catch (error) {
-      console.error("Error fetching deposit address:", error);
-      toast({
-        title: language === "pt" ? "Erro" : "Error",
-        description:
-          error instanceof Error
-            ? error.message
-            : language === "pt"
-            ? "Falha ao obter endereço de depósito"
-            : "Failed to get deposit address",
-        variant: "destructive",
-      });
-    } finally {
-      setLoadingAddress(false);
-    }
-  };
-
-  // Copy crypto deposit address
-  const copyCryptoAddress = async () => {
-    if (depositAddress) {
-      try {
-        await navigator.clipboard.writeText(depositAddress);
-        setAddressCopied(true);
-        toast({
-          title: language === "pt" ? "Copiado!" : "Copied!",
-          description:
-            language === "pt"
-              ? "Endereço copiado para a área de transferência"
-              : "Address copied to clipboard",
-        });
-        setTimeout(() => setAddressCopied(false), 2000);
-      } catch (error) {
-        console.error("Failed to copy:", error);
-      }
-    }
-  };
-
-  // Prevent switching to CRYPTO mode (disabled for now)
-  useEffect(() => {
-    if (depositMethod === "CRYPTO") {
-      setDepositMethod("PIX");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [depositMethod]);
-
   return (
+
     <div
       className="min-h-screen bg-background text-foreground"
       onTouchStart={onTouchStart}
@@ -989,7 +976,7 @@ const TradePage = () => {
 
             {/* Price badge for PIX method */}
             {depositMethod === "PIX" && (
-              <div className="flex justify-center mb-4">
+              <div className="flex flex-col items-center gap-3 mb-4">
                 <Badge
                   className="bg-primary/20 text-primary border-primary/30 inline-flex items-center gap-2"
                 >
@@ -1002,6 +989,15 @@ const TradePage = () => {
                     `1 USDT = ${formatBRL(usdtPrice)}`
                   )}
                 </Badge>
+                
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted border border-border">
+                  <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+                    {language === "pt" ? "Limite Diário:" : "Daily Limit:"}
+                  </span>
+                  <span className="text-xs font-bold text-foreground">
+                    ${userDailyLimit.toLocaleString()} USDT
+                  </span>
+                </div>
               </div>
             )}
           </CardHeader>
@@ -1022,59 +1018,55 @@ const TradePage = () => {
                   />
                   <p className="mt-1.5 text-xs text-muted-foreground">
                     {language === "pt"
-                      ? `Máximo ${ONLINE_MAX_USDT.toLocaleString(
+                      ? `Seu limite diário é ${userDailyLimit.toLocaleString(
                           "pt-BR"
-                        )} USDT para compras online. Valores maiores: entre em contato via WhatsApp.`
-                      : `Maximum ${ONLINE_MAX_USDT.toLocaleString()} USDT for online purchases. For larger amounts: contact us via WhatsApp.`}
+                        )} USDT. Valores maiores: entre em contato via WhatsApp.`
+                      : `Your daily limit is ${userDailyLimit.toLocaleString()} USDT. For larger amounts: contact us via WhatsApp.`}
                   </p>
                 </div>
 
-                {/* Total BRL to pay with PIX icon */}
-                {buyUSDTAmount > 0 && (
-                  <div className="bg-primary/10 rounded-xl p-4 sm:p-6 border border-primary/30">
-                    <div className="flex items-center gap-2 mb-2">
-                      <QrCode className="w-5 h-5 text-primary" />
-                      <div className="text-sm text-muted-foreground">
-                        {language === "pt"
-                          ? "Total a pagar via PIX:"
-                          : "Total to pay via PIX:"}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Total BRL to pay with PIX icon */}
+                  <div className="bg-primary/10 rounded-xl p-4 border border-primary/30 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <QrCode className="w-4 h-4 text-primary" />
+                        <div className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
+                          {language === "pt"
+                            ? "Total a pagar via PIX:"
+                            : "Total to pay via PIX:"}
+                        </div>
+                      </div>
+                      <div className="text-xl sm:text-2xl font-bold text-primary flex items-baseline gap-1.5">
+                        {formatBRL(buyTotalBRL)}
+                        <span className="text-[10px] font-bold text-muted-foreground">
+                          BRL
+                        </span>
                       </div>
                     </div>
-                    <div className="text-2xl sm:text-3xl font-bold text-primary flex items-center gap-2">
-                      {formatBRL(buyTotalBRL)}
-                      <span className="text-sm font-normal text-muted-foreground">
-                        BRL
-                      </span>
-                    </div>
-                    <div className="mt-3 pt-3 border-t border-border space-y-1.5">
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>
-                          {language === "pt" ? "Valor base:" : "Base amount:"}
-                        </span>
-                        <span className="text-foreground">
-                          {formatBRL(buyBaseBRL)}
-                        </span>
+                    
+                    <div className="mt-4 pt-3 border-t border-border/50 space-y-1">
+                      <div className="flex justify-between text-[11px] text-muted-foreground">
+                        <span>{language === "pt" ? "Base:" : "Base:"}</span>
+                        <span className="text-foreground font-medium">{formatBRL(buyBaseBRL)}</span>
                       </div>
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>
-                          {language === "pt" ? "Taxa (3%):" : "Fee (3%):"}
-                        </span>
-                        <span className="text-destructive">
-                          {formatBRL(buyFeeBRL)}
-                        </span>
+                      <div className="flex justify-between text-[11px] text-muted-foreground">
+                        <span>{language === "pt" ? "Taxa (3%):" : "Fee (3%):"}</span>
+                        <span className="text-destructive font-medium">{formatBRL(buyFeeBRL)}</span>
                       </div>
                     </div>
                   </div>
-                )}
 
-                <div className="bg-primary/10 rounded-xl p-4 sm:p-6 border border-primary/30">
-                  <div className="text-sm text-muted-foreground mb-2">
-                    {language === "pt" ? "Você receberá:" : "You will receive:"}
-                  </div>
-                  <div className="text-2xl sm:text-3xl font-bold text-primary">
-                    {formatUSDT(buyUSDTAmount)} USDT
+                  <div className="bg-primary/10 rounded-xl p-4 border border-primary/30 flex flex-col justify-center">
+                    <div className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2">
+                      {language === "pt" ? "Você receberá:" : "You will receive:"}
+                    </div>
+                    <div className="text-2xl sm:text-3xl font-bold text-primary">
+                      {formatUSDT(buyUSDTAmount)} <span className="text-sm">USDT</span>
+                    </div>
                   </div>
                 </div>
+
 
                 {buyUSDTAmount > ONLINE_MAX_USDT ? (
                   <div className="space-y-3">
@@ -1178,10 +1170,49 @@ const TradePage = () => {
         {/* Transaction History */}
         <Card className="rounded-xl sm:rounded-2xl border-border bg-card shadow-sm">
           <CardHeader>
-            <CardTitle className="text-lg sm:text-xl text-foreground flex items-center gap-2">
-              <Clock className="w-5 h-5 text-primary" />
-              {t("purchaseHistory")}
+            <CardTitle className="text-lg sm:text-xl text-foreground flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Clock className="w-5 h-5 text-primary" />
+                {t("purchaseHistory")}
+              </div>
+              <div className="flex items-center gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-8 gap-2">
+                      <Download className="w-4 h-4" />
+                      {language === "pt" ? "Exportar" : "Export"}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-card border-border">
+                    <DropdownMenuItem 
+                      onClick={() => exportHistory(7)}
+                      className="text-foreground hover:bg-primary/10 transition-colors"
+                    >
+                      {language === "pt" ? "Últimos 7 dias" : "Last 7 days"}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => exportHistory(15)}
+                      className="text-foreground hover:bg-primary/10 transition-colors"
+                    >
+                      {language === "pt" ? "Últimos 15 dias" : "Last 15 days"}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => exportHistory(30)}
+                      className="text-foreground hover:bg-primary/10 transition-colors"
+                    >
+                      {language === "pt" ? "Últimos 30 dias" : "Last 30 days"}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => exportHistory(365)}
+                      className="text-foreground hover:bg-primary/10 transition-colors"
+                    >
+                      {language === "pt" ? "Tudo" : "All"}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </CardTitle>
+
           </CardHeader>
           <CardContent>
             {transactionHistory.length === 0 ? (
@@ -1197,24 +1228,33 @@ const TradePage = () => {
                 {transactionHistory.map((transaction) => {
                   const hasPixData = storedPixData.has(transaction.id);
                   const isPending = transaction.status === "PENDING";
-                  const isClickable = isPending && hasPixData;
+                  const isCompleted = transaction.status === "COMPLETED";
+                  const isClickable = (isPending && hasPixData) || isCompleted;
                   const isLoading = loadingTransactions.has(transaction.id);
 
                   return (
                     <div
                       key={transaction.id}
                       onClick={() => {
-                        if (isClickable) {
+                        if (isPending && hasPixData) {
                           const pixData = storedPixData.get(transaction.id);
                           if (pixData) {
                             setPixData(pixData);
                             setShowPixModal(true);
                           }
+                        } else if (isCompleted) {
+                          setReceiptData({
+                            transactionId: transaction.id,
+                            amount: transaction.amount,
+                            usdtAmount: transaction.received,
+                            date: transaction.date,
+                          });
+                          setShowReceipt(true);
                         }
                       }}
                       className={`p-4 rounded-xl bg-muted/30 border border-border transition-colors ${
                         isClickable
-                          ? "hover:bg-muted/50 cursor-pointer hover:border-warning/50"
+                          ? "hover:bg-muted/50 cursor-pointer hover:border-primary/30"
                           : "hover:bg-muted/40"
                       }`}
                     >
@@ -1264,7 +1304,14 @@ const TradePage = () => {
                                 {t("clickToSeeQRCode")}
                               </span>
                             )}
+                            {isCompleted && (
+                              <span className="text-xs text-primary/80 flex items-center gap-1">
+                                <FileText className="w-3 h-3" />
+                                {language === "pt" ? "Ver Comprovante" : "View Receipt"}
+                              </span>
+                            )}
                           </div>
+
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
                             <div>
                               <p className="text-gray-400 text-xs">
@@ -1475,19 +1522,33 @@ const TradePage = () => {
                   </div>
                 </div>
               </div>
-              <Button
-                onClick={() => {
-                  setShowReceipt(false);
-                  setReceiptData(null);
-                }}
-                className="w-full py-3"
-              >
-                Fechar
-              </Button>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    // Simple print implementation
+                    window.print();
+                  }}
+                  className="flex-1 py-3 flex items-center justify-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  PDF
+                </Button>
+                <Button
+                  onClick={() => {
+                    setShowReceipt(false);
+                    setReceiptData(null);
+                  }}
+                  className="flex-[2] py-3"
+                >
+                  Fechar
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
+
 
       {/* Mobile Page Indicator - Bottom Navigation */}
       {isMobile && (

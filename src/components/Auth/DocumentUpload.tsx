@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -339,10 +340,13 @@ const DocumentUpload = ({
                 <span className="font-medium">File uploaded successfully</span>
               </div>
               <div className="relative">
-                <img
+                <Image
                   src={file.preview}
                   alt={title}
+                  width={400}
+                  height={200}
                   className="w-full h-32 object-cover rounded-lg"
+                  unoptimized={true}
                 />
                 <Button
                   type="button"

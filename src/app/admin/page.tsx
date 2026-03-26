@@ -46,11 +46,7 @@ import {
   CheckCircle2,
   Zap,
   UserPlus,
-  TrendingDown,
-  Eye,
-  Filter,
   Download,
-  Settings,
   Database,
   Server,
 } from "lucide-react";
@@ -75,10 +71,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAdminSettings } from "@/contexts/AdminSettingsContext";
 import type { DashboardSectionId } from "@/contexts/AdminSettingsContext";
-import NotificationBell from "@/components/admin/NotificationBell";
 import {
-  LineChart,
-  Line,
   BarChart,
   Bar,
   AreaChart,
@@ -1720,7 +1713,7 @@ function AdminDashboardContent() {
         ...prev,
         api: "healthy",
       }));
-    } catch (error) {
+    } catch {
       setSystemHealth({
         database: "unhealthy",
         api: "unhealthy",

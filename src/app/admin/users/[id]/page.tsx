@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,8 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import BackToDashboardButton from "@/components/admin/BackToDashboardButton";
-import { formatUSDT, formatBRL } from "@/lib/format-currency";
-import { getKycImageSrc } from "@/lib/kyc-image-src";
+import { formatUSDT, formatBRL } from "../../../../lib/format-currency";
+import { getKycImageSrc } from "../../../../lib/kyc-image-src";
 import {
   User,
   Mail,
@@ -1493,17 +1494,13 @@ export default function AdminUserDetailsPage({
                         )
                       }
                     >
-                      <img
+                      <Image
                         src={getKycImageSrc(user.documentFront)}
                         alt="Document Front"
+                        width={400}
+                        height={200}
                         className="w-full h-48 object-cover rounded-lg border border-border group-hover:border-primary transition-colors"
-                        onError={(e) => {
-                          console.error(
-                            "Failed to load document front image:",
-                            user.documentFront
-                          );
-                          e.currentTarget.src = "/placeholder-document.png"; // Fallback
-                        }}
+                        unoptimized={true}
                       />
                       <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-lg flex items-center justify-center">
                         <ZoomIn className="w-8 h-8 text-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -1528,17 +1525,13 @@ export default function AdminUserDetailsPage({
                         )
                       }
                     >
-                      <img
+                      <Image
                         src={getKycImageSrc(user.documentBack)}
                         alt="Document Back"
+                        width={400}
+                        height={200}
                         className="w-full h-48 object-cover rounded-lg border border-border group-hover:border-primary transition-colors"
-                        onError={(e) => {
-                          console.error(
-                            "Failed to load document back image:",
-                            user.documentBack
-                          );
-                          e.currentTarget.src = "/placeholder-document.png"; // Fallback
-                        }}
+                        unoptimized={true}
                       />
                       <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-lg flex items-center justify-center">
                         <ZoomIn className="w-8 h-8 text-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -1563,17 +1556,13 @@ export default function AdminUserDetailsPage({
                         )
                       }
                     >
-                      <img
+                      <Image
                         src={getKycImageSrc(user.documentSelfie)}
                         alt="Document Selfie"
+                        width={400}
+                        height={200}
                         className="w-full h-48 object-cover rounded-lg border border-border group-hover:border-primary transition-colors"
-                        onError={(e) => {
-                          console.error(
-                            "Failed to load document selfie image:",
-                            user.documentSelfie
-                          );
-                          e.currentTarget.src = "/placeholder-document.png"; // Fallback
-                        }}
+                        unoptimized={true}
                       />
                       <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-lg flex items-center justify-center">
                         <ZoomIn className="w-8 h-8 text-foreground opacity-0 group-hover:opacity-100 transition-opacity" />

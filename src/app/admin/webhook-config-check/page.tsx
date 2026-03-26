@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,7 +40,7 @@ export default function WebhookConfigCheckPage() {
   const [loading, setLoading] = useState(true);
   const [config, setConfig] = useState<WebhookConfig | null>(null);
 
-  const checkConfig = async () => {
+  const checkConfig = useCallback(async () => {
     setLoading(true);
     try {
       // Check webhook endpoint accessibility
@@ -75,11 +75,11 @@ export default function WebhookConfigCheckPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     checkConfig();
-  }, []);
+  }, [checkConfig]);
 
   return (
     <div className="container mx-auto p-6 space-y-6">

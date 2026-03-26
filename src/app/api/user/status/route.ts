@@ -43,6 +43,7 @@ export async function GET(request: NextRequest) {
         kycReviewedAt: session.user.kycReviewedAt,
         kycRejectionReason: session.user.kycRejectionReason,
         kycData: session.user.kycData,
+        dailyDepositLimit: Number(session.user.dailyDepositLimit) || 5000,
       },
     });
   } catch (error) {

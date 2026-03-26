@@ -2,22 +2,18 @@
 
 import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import {
   TrendingDown,
-  Bitcoin,
   ArrowUpRight,
   Eye,
   EyeOff,
   RotateCcw,
-  Globe,
   Clock,
   Wallet,
-  TrendingUp,
   ArrowDownRight,
   ArrowRight,
   Home,
-  Coins,
   Plus,
   Minus,
 } from "lucide-react";
@@ -30,8 +26,8 @@ import { GlobalKYCBanner } from "@/components/GlobalKYCBanner";
 import { WelcomeTutorial } from "@/components/ui/welcome-tutorial";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePrimaryColor } from "@/hooks/use-primary-color";
-import { formatUSDT } from "@/lib/format-currency";
-import { handleLogout as performLogout } from "@/lib/auth-utils";
+import { formatUSDT } from "../../lib/format-currency";
+import { handleLogout as performLogout } from "../../lib/auth-utils";
 
 const DashboardChart = dynamic(
   () =>
@@ -44,14 +40,7 @@ const DashboardChart = dynamic(
   }
 );
 
-interface CryptoPrice {
-  symbol: string;
-  price: number;
-  change24h: number;
-  changePercent: number;
-  volume: number;
-  marketCap: number;
-}
+
 
 interface Balance {
   currency: string;
@@ -81,40 +70,19 @@ interface UserStatus {
   kycRejectionReason: string | null;
 }
 
-interface Deposit {
-  id: string;
-  amount: number;
-  currency: string;
-  status: string;
-  createdAt: string;
-}
 
-interface Withdrawal {
-  id: string;
-  amount: number;
-  currency: string;
-  status: string;
-  createdAt: string;
-}
 
 export default function Dashboard() {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const { toast } = useToast();
   const { t, language } = useLanguage();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [balances, setBalances] = useState<Balance[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [cryptoPrices, setCryptoPrices] = useState<CryptoPrice[]>([]);
   const [showBalances, setShowBalances] = useState(true);
-  const [totalBalance, setTotalBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [userStatus, setUserStatus] = useState<UserStatus | null>(null);
-  const [latestDeposit, setLatestDeposit] = useState<Deposit | null>(null);
-  const [latestWithdrawal, setLatestWithdrawal] = useState<Withdrawal | null>(
-    null
-  );
   const [chartData, setChartData] = useState<
     Array<{ date: string; BRL: number; USDT: number }>
   >([]);
@@ -206,8 +174,7 @@ export default function Dashboard() {
       return;
     }
 
-    // Prevent back navigation to login page
-    const handlePopState = (event: PopStateEvent) => {
+    const handlePopState = () => {
       // If user tries to go back, redirect to home instead
       if (window.location.pathname === "/login") {
         window.history.pushState(null, "", "/");
@@ -226,18 +193,6 @@ export default function Dashboard() {
       currency: "BRL",
     }).format(value);
   };
-
-  // Format crypto price
-  const formatCryptoPrice = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 8,
-    }).format(value);
-  };
-
-
 
   // Check if user is rejected and logout if so
   useEffect(() => {
@@ -286,6 +241,7 @@ export default function Dashboard() {
     checkAndLogoutIfRejected();
   }, [userStatus, language]);
 
+
   // Fetch user data - OPTIMIZED: parallel API calls
   const fetchData = useCallback(async (isSilent = false) => {
     try {
@@ -312,14 +268,7 @@ export default function Dashboard() {
         const balanceData = await balanceResponse.json();
         setBalances(balanceData.balances || []);
 
-        const total =
-          balanceData.balances?.reduce((sum: number, balance: Balance) => {
-            if (balance.currency === "BRL") {
-              return sum + balance.amount;
-            }
-            return sum;
-          }, 0) || 0;
-        setTotalBalance(total);
+
 
         currentUsdtBalance =
           balanceData.balances?.find((b: Balance) => b.currency === "USDT")
@@ -332,23 +281,8 @@ export default function Dashboard() {
         const transactionData = await transactionResponse.json();
         allTransactions = transactionData.transactions || [];
         setTransactions(allTransactions);
-
-        // Find latest deposit (BUY_CRYPTO or DEPOSIT)
-        const deposits = allTransactions.filter(
-          (t: Transaction) => t.type === "DEPOSIT" || t.type === "BUY_CRYPTO"
-        );
-        if (deposits.length > 0) {
-          setLatestDeposit(deposits[0]);
-        }
-
-        // Find latest withdrawal
-        const withdrawals = allTransactions.filter(
-          (t: Transaction) => t.type === "WITHDRAWAL" || t.type === "WITHDRAW"
-        );
-        if (withdrawals.length > 0) {
-          setLatestWithdrawal(withdrawals[0]);
-        }
       }
+
 
       // Generate chart data from previous balance to current balance
       const today = new Date();
@@ -443,51 +377,7 @@ export default function Dashboard() {
 
       setChartData(chartDataArray);
 
-      // Mock crypto prices (price API removed)
-      const mockCryptoData: CryptoPrice[] = [
-        {
-          symbol: "BTC",
-          price: 350000,
-          change24h: 2500,
-          changePercent: 0.72,
-          volume: 1250000000,
-          marketCap: 6800000000000,
-        },
-        {
-          symbol: "ETH",
-          price: 18500,
-          change24h: -150,
-          changePercent: -0.8,
-          volume: 850000000,
-          marketCap: 2200000000000,
-        },
-        {
-          symbol: "BNB",
-          price: 3200,
-          change24h: 45,
-          changePercent: 1.43,
-          volume: 320000000,
-          marketCap: 480000000000,
-        },
-        {
-          symbol: "ADA",
-          price: 2.85,
-          change24h: -0.12,
-          changePercent: -4.04,
-          volume: 85000000,
-          marketCap: 100000000000,
-        },
-        {
-          symbol: "SOL",
-          price: 450,
-          change24h: 12.5,
-          changePercent: 2.86,
-          volume: 180000000,
-          marketCap: 180000000000,
-        },
-      ];
 
-      setCryptoPrices(mockCryptoData);
     } catch (error) {
       console.error("Failed to fetch data:", error);
       if (!isSilent) {

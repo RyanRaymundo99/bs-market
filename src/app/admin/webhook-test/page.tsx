@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -40,13 +40,35 @@ export default function WebhookTestPage() {
   const [recentOrders, setRecentOrders] = useState<OrderInfo[]>([]);
   const [selectedOrderId, setSelectedOrderId] = useState<string>("");
   const [webhookPayload, setWebhookPayload] = useState<string>("");
-
-  // Load recent orders on mount
-  useEffect(() => {
-    fetchRecentOrders();
+  const generateWebhookPayload = useCallback((
+    order: OrderInfo,
+    eventType: string = "transaction.completed",
+    status: string = "COMPLETED"
+  ) => {
+    // Generate a test webhook payload based on the order
+    const now = new Date().toISOString();
+    const payload = {
+      event: eventType,
+      data: {
+        transaction_id: order.externalOrderId || `txn_test_${Date.now()}`,
+        external_id: order.deposit?.externalId || `purchase_test_${Date.now()}`,
+        status: status,
+        amount: order.total,
+        currency: "BRL",
+        type: "PIX",
+        usdt_amount: order.amount,
+        created_at: order.createdAt,
+        completed_at: status === "COMPLETED" ? now : null,
+        failed_at: status === "FAILED" ? now : null,
+        refunded_at: status === "REFUNDED" ? now : null,
+      },
+      timestamp: now,
+    };
+    setWebhookPayload(JSON.stringify(payload, null, 2));
   }, []);
 
-  const fetchRecentOrders = async () => {
+
+  const fetchRecentOrders = useCallback(async () => {
     try {
       const response = await fetch("/api/debug/webhook-status");
       if (response.ok) {
@@ -76,34 +98,13 @@ export default function WebhookTestPage() {
         variant: "destructive",
       });
     }
-  };
+  }, [selectedOrderId, generateWebhookPayload, toast]);
 
-  const generateWebhookPayload = (
-    order: OrderInfo,
-    eventType: string = "transaction.completed",
-    status: string = "COMPLETED"
-  ) => {
-    // Generate a test webhook payload based on the order
-    const now = new Date().toISOString();
-    const payload = {
-      event: eventType,
-      data: {
-        transaction_id: order.externalOrderId || `txn_test_${Date.now()}`,
-        external_id: order.deposit?.externalId || `purchase_test_${Date.now()}`,
-        status: status,
-        amount: order.total,
-        currency: "BRL",
-        type: "PIX",
-        usdt_amount: order.amount,
-        created_at: order.createdAt,
-        completed_at: status === "COMPLETED" ? now : null,
-        failed_at: status === "FAILED" ? now : null,
-        refunded_at: status === "REFUNDED" ? now : null,
-      },
-      timestamp: now,
-    };
-    setWebhookPayload(JSON.stringify(payload, null, 2));
-  };
+  // Load recent orders on mount
+  useEffect(() => {
+    fetchRecentOrders();
+  }, [fetchRecentOrders]);
+
 
   const quickTest = (eventType: string, status: string) => {
     if (recentOrders.length === 0) {
