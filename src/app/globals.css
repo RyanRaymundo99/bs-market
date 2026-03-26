@@ -182,7 +182,7 @@
   .admin-theme.admin-button-outline a[class*="bg-primary"] {
     background-color: transparent !important;
     border: 1px solid hsl(var(--primary)) !important;
-    color: hsl(var(--primary)) !important;
+    color: white !important;
     box-shadow: none;
   }
   .admin-theme.admin-button-outline button[class*="bg-primary"]:hover:not(:disabled),
@@ -193,7 +193,7 @@
   .admin-theme.admin-button-soft a[class*="bg-primary"] {
     background-color: hsl(var(--primary) / 0.2) !important;
     border: 1px solid transparent !important;
-    color: hsl(var(--primary)) !important;
+    color: white !important;
     box-shadow: none;
   }
   .admin-theme.admin-button-soft button[class*="bg-primary"]:hover:not(:disabled),
@@ -246,7 +246,7 @@
 [data-site-button-style="outline"] a[class*="bg-primary"] {
   background-color: transparent !important;
   border: 1px solid hsl(var(--primary)) !important;
-  color: hsl(var(--primary)) !important;
+  color: white !important;
   box-shadow: none;
 }
 [data-site-button-style="outline"] button[class*="bg-primary"]:hover:not(:disabled),
@@ -257,7 +257,7 @@
 [data-site-button-style="soft"] a[class*="bg-primary"] {
   background-color: hsl(var(--primary) / 0.2) !important;
   border: 1px solid transparent !important;
-  color: hsl(var(--primary)) !important;
+  color: white !important;
   box-shadow: none;
 }
 [data-site-button-style="soft"] button[class*="bg-primary"]:hover:not(:disabled),

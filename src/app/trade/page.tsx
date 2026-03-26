@@ -32,6 +32,8 @@ import {
 import { ButtonLoader, Spinner } from "@/components/ui/loading";
 import { useLanguage } from "@/contexts/LanguageContext";
 
+import { handleLogout as performLogout } from "@/lib/auth-utils";
+import { formatUSDTInput, parseUSDTInput } from "@/lib/trade-utils";
 const WHATSAPP_SUPPORT_URL = `https://wa.me/${
   process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "5511984284867"
 }`;
@@ -152,31 +154,8 @@ const TradePage = () => {
 
   const handleLogout = useCallback(async () => {
     setIsLoggingOut(true);
-    try {
-      // Call logout API to clear session
-      await fetch("/api/auth/logout", {
-        method: "POST",
-        credentials: "include",
-      });
-
-      // Clear local storage
-      localStorage.removeItem("auth-session");
-      localStorage.removeItem("user");
-      sessionStorage.clear();
-
-      // Force redirect to home page using window.location for reliability
-      window.location.href = "/";
-    } catch (error) {
-      console.error("Logout error:", error);
-      // Even if API fails, clear local storage and redirect
-      localStorage.removeItem("auth-session");
-      localStorage.removeItem("user");
-      sessionStorage.clear();
-      // Force redirect using window.location
-      window.location.href = "/";
-    } finally {
-      setIsLoggingOut(false);
-    }
+    await performLogout();
+    // The page will redirect, so no need to setIsLoggingOut(false)
   }, []);
   
   // Track previous history to detect completed payments
@@ -283,45 +262,6 @@ const TradePage = () => {
     }).format(value);
   };
 
-  // Format USDT input value (for display in input field)
-  // Brazilian format: dot = thousands separator, comma = decimal separator (e.g. 10.000,50)
-  const formatUSDTInput = (value: string): string => {
-    // Keep only digits, comma, and dot
-    const cleaned = value.replace(/[^\d,.]/g, "");
-
-    if (!cleaned) return "";
-
-    // Split by comma so we don't confuse thousand dots with decimal point
-    const [intPartStr, ...decParts] = cleaned.split(",");
-    const decimalPart = (decParts.join("") || "")
-      .replace(/\D/g, "")
-      .slice(0, 4); // max 4 decimals
-
-    // Integer part: strip all non-digits (removes thousand dots), then add thousand separators
-    const integerDigits = (intPartStr || "").replace(/\D/g, "");
-    const formattedInteger = integerDigits.replace(
-      /\B(?=(\d{3})+(?!\d))/g,
-      "."
-    );
-
-    if (decimalPart) {
-      return `${formattedInteger},${decimalPart}`;
-    }
-    if (cleaned.includes(",")) {
-      return `${formattedInteger},`;
-    }
-    return formattedInteger;
-  };
-
-  // Parse USDT input value (convert formatted string to number)
-  const parseUSDTInput = (value: string): number => {
-    if (!value) return 0;
-    // Replace Brazilian format (dots as thousand separators, comma as decimal)
-    const normalized = value.replace(/\./g, "").replace(",", ".");
-    const parsed = parseFloat(normalized);
-    return isNaN(parsed) ? 0 : parsed;
-  };
-
   // Handle USDT input change
   const handleUSDTInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
@@ -362,50 +302,16 @@ const TradePage = () => {
       try {
         const response = await fetch("/api/user/status");
         if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.user) {
-            // If user is rejected, logout and redirect to home
-            if (data.user.approvalStatus === "REJECTED") {
-              try {
-                // Call logout API
-                await fetch("/api/auth/logout", {
-                  method: "POST",
-                  credentials: "include",
-                });
-
-                // Clear local storage
-                localStorage.removeItem("auth-session");
-                localStorage.removeItem("user");
-                sessionStorage.clear();
-
-                // Store rejection message
-                const message =
-                  language === "pt"
-                    ? "Sua conta foi rejeitada. Entre em contato com o suporte."
-                    : "Your account has been rejected. Please contact support.";
-                sessionStorage.setItem("rejectionMessage", message);
-
-                // Redirect to home page
-                window.location.href = "/";
-              } catch (error) {
-                console.error("Error during logout:", error);
-                // Even if logout fails, clear storage and redirect
-                localStorage.removeItem("auth-session");
-                localStorage.removeItem("user");
-                sessionStorage.clear();
-                sessionStorage.setItem(
-                  "rejectionMessage",
-                  language === "pt"
-                    ? "Sua conta foi rejeitada. Entre em contato com o suporte."
-                    : "Your account has been rejected. Please contact support."
-                );
-                window.location.href = "/";
-              }
+          const { success, user } = await response.json();
+          if (success && user) {
+            if (user.approvalStatus === "REJECTED") {
+              const message = language === "pt" ? "Sua conta foi rejeitada. Entre em contato com o suporte." : "Your account has been rejected. Please contact support.";
+              sessionStorage.setItem("rejectionMessage", message);
+              await performLogout();
               return;
             }
 
-            // If user is pending, redirect to profile page
-            if (data.user.approvalStatus === "PENDING") {
+            if (user.approvalStatus === "PENDING") {
               toast({
                 title: language === "pt" ? "Conta Pendente" : "Account Pending",
                 description:
@@ -424,7 +330,7 @@ const TradePage = () => {
       }
     };
     checkUserStatus();
-  }, [language, toast, router, pathname]);
+  }, [language, toast, router]);
 
 
   const fetchUSDTRate = useCallback(async () => {

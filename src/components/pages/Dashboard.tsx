@@ -31,6 +31,7 @@ import { WelcomeTutorial } from "@/components/ui/welcome-tutorial";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePrimaryColor } from "@/hooks/use-primary-color";
 import { formatUSDT } from "@/lib/format-currency";
+import { handleLogout as performLogout } from "@/lib/auth-utils";
 
 const DashboardChart = dynamic(
   () =>
@@ -523,31 +524,8 @@ export default function Dashboard() {
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
-    try {
-      // Call logout API to clear session
-      await fetch("/api/auth/logout", {
-        method: "POST",
-        credentials: "include",
-      });
-
-      // Clear local storage
-      localStorage.removeItem("auth-session");
-      localStorage.removeItem("user");
-      sessionStorage.clear();
-
-      // Force redirect to home page using window.location for reliability
-      window.location.href = "/";
-    } catch (error) {
-      console.error("Logout error:", error);
-      // Even if API fails, clear local storage and redirect
-      localStorage.removeItem("auth-session");
-      localStorage.removeItem("user");
-      sessionStorage.clear();
-      // Force redirect using window.location
-      window.location.href = "/";
-    } finally {
-      setIsLoggingOut(false);
-    }
+    await performLogout();
+    // The page will redirect, so no need to setIsLoggingOut(false)
   };
 
   if (isLoading) {

@@ -83,13 +83,13 @@ const Home = () => {
                 </p>
                 <div className="mt-10 md:mt-12 flex flex-col sm:flex-row sm:items-center gap-4">
                   <Link href="/signup">
-                    <Button size="lg" className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 font-semibold rounded-xl h-12 px-6 lg:h-14 lg:px-8">
+                    <Button size="lg" className="w-full sm:w-auto bg-primary !text-white hover:bg-primary/90 font-semibold rounded-xl h-12 px-6 lg:h-14 lg:px-8">
                       Criar conta grátis
                       <ArrowRight className="ml-2 w-4 h-4" />
                     </Button>
                   </Link>
                   <Link href="/login">
-                    <Button size="lg" variant="outline" className="w-full sm:w-auto bg-transparent border-2 border-primary text-foreground hover:bg-primary/10 font-semibold rounded-xl h-12 px-6 lg:h-14 lg:px-8">
+                    <Button size="lg" variant="outline" className="w-full sm:w-auto bg-transparent border-2 border-primary !text-white hover:bg-primary/10 font-semibold rounded-xl h-12 px-6 lg:h-14 lg:px-8">
                       Entrar
                     </Button>
                   </Link>
@@ -405,13 +405,13 @@ const Home = () => {
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <Link href="/signup">
-                    <Button size="lg" className="w-full sm:w-auto bg-primary text-primary-foreground hover:bg-primary/90 font-semibold rounded-xl h-12 px-6">
+                    <Button size="lg" className="w-full sm:w-auto bg-primary !text-white hover:bg-primary/90 font-semibold rounded-xl h-12 px-6">
                       Criar conta grátis
                       <ArrowRight className="ml-2 w-4 h-4" />
                     </Button>
                   </Link>
                   <Link href="/login">
-                    <Button size="lg" variant="outline" className="w-full sm:w-auto border-border text-foreground hover:bg-muted rounded-xl h-12">
+                    <Button size="lg" variant="outline" className="w-full sm:w-auto border-border !text-white hover:bg-muted rounded-xl h-12">
                       Entrar
                     </Button>
                   </Link>

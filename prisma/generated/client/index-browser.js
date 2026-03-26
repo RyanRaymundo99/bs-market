@@ -149,7 +149,8 @@ exports.Prisma.UserScalarFieldEnum = {
   twoFactorSecret: 'twoFactorSecret',
   twoFactorBackupCodes: 'twoFactorBackupCodes',
   createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
+  updatedAt: 'updatedAt',
+  dailyDepositLimit: 'dailyDepositLimit'
 };
 
 exports.Prisma.SessionScalarFieldEnum = {

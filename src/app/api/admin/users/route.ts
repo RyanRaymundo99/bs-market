@@ -94,11 +94,30 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    type UserWithTags = typeof usersRaw[0] & { tags: string[]; riskFlags?: string[] };
+    type UserWithTags = typeof usersRaw[0] & { tags: string[]; riskFlags?: string[]; dailyDepositLimit?: number };
     const users: UserWithTags[] = usersRaw.map((u) => ({
       ...u,
       tags: tagsByUser[u.id] ?? [],
     }));
+
+    // Fetch daily deposit limits for this batch of users via raw SQL
+    if (userIds.length > 0) {
+      try {
+        const rawLimits = await prisma.$queryRawUnsafe<Array<{ _id: string, dailyDepositLimit: any }>>(`
+          SELECT "_id", "dailyDepositLimit" FROM "user" WHERE "_id" IN (${userIds.map(id => `'${id}'`).join(',')})
+        `);
+        const limitMap = new Map(rawLimits.map(l => [l._id, Number(l.dailyDepositLimit)]));
+        users.forEach(u => {
+          u.dailyDepositLimit = limitMap.get(u.id) ?? 5000;
+        });
+      } catch (err) {
+        console.error("Failed to fetch dailyDepositLimit batch via raw SQL:", err);
+        // Fallback to default
+        users.forEach(u => {
+          u.dailyDepositLimit = 5000;
+        });
+      }
+    }
 
     // Optional risk flags (new account, first withdrawal, large amount)
     if (includeRiskFlags && users.length > 0) {

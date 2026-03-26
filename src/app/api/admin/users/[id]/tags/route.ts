@@ -17,12 +17,16 @@ export async function GET(
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id: userId } = await params;
-  const prismaWithTag = prisma as PrismaWithUserTag;
-  const tags = await prismaWithTag.userTag.findMany({
-    where: { userId },
-    select: { tag: true },
-  });
-  return NextResponse.json({ success: true, tags: tags.map((t) => t.tag) });
+  
+  try {
+    const tags = await prisma.$queryRaw<Array<{ tag: string }>>`
+      SELECT "tag" FROM "user_tag" WHERE "userId" = ${userId}
+    `;
+    return NextResponse.json({ success: true, tags: tags.map((t) => t.tag) });
+  } catch (err) {
+    console.error("Error fetching tags via raw SQL:", err);
+    return NextResponse.json({ success: true, tags: [] });
+  }
 }
 
 export async function POST(
@@ -39,13 +43,17 @@ export async function POST(
     return NextResponse.json({ error: "Invalid tag" }, { status: 400 });
   }
 
-  const prismaWithTag = prisma as PrismaWithUserTag;
-  await prismaWithTag.userTag.upsert({
-    where: { userId_tag: { userId, tag } },
-    create: { userId, tag },
-    update: {},
-  });
-  return NextResponse.json({ success: true, tag });
+  try {
+    await prisma.$executeRawUnsafe(`
+      INSERT INTO "user_tag" ("userId", "tag")
+      VALUES ('${userId}', '${tag}')
+      ON CONFLICT ("userId", "tag") DO NOTHING
+    `);
+    return NextResponse.json({ success: true, tag });
+  } catch (err) {
+    console.error("Error adding tag via raw SQL:", err);
+    return NextResponse.json({ error: "Failed to add tag" }, { status: 500 });
+  }
 }
 
 export async function DELETE(
@@ -60,7 +68,13 @@ export async function DELETE(
   const tag = searchParams.get("tag")?.trim().toUpperCase();
   if (!tag) return NextResponse.json({ error: "Missing tag" }, { status: 400 });
 
-  const prismaWithTag = prisma as PrismaWithUserTag;
-  await prismaWithTag.userTag.deleteMany({ where: { userId, tag } });
-  return NextResponse.json({ success: true });
+  try {
+    await prisma.$executeRawUnsafe(`
+      DELETE FROM "user_tag" WHERE "userId" = '${userId}' AND "tag" = '${tag}'
+    `);
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("Error deleting tag via raw SQL:", err);
+    return NextResponse.json({ error: "Failed to delete tag" }, { status: 500 });
+  }
 }

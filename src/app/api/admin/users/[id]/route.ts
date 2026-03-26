@@ -135,6 +135,23 @@ export async function GET(
       },
     });
 
+    // Manually add dailyDepositLimit from raw query to avoid Prisma client type mismatch
+    if (user) {
+      try {
+        const rawLimit = await prisma.$queryRaw<Array<{ dailyDepositLimit: any }>>`
+          SELECT "dailyDepositLimit" FROM "user" WHERE "_id" = ${id}
+        `;
+        if (rawLimit.length > 0) {
+          (user as any).dailyDepositLimit = Number(rawLimit[0].dailyDepositLimit);
+        } else {
+          (user as any).dailyDepositLimit = 5000;
+        }
+      } catch (err) {
+        console.error("Failed to fetch dailyDepositLimit via raw SQL:", err);
+        (user as any).dailyDepositLimit = 5000;
+      }
+    }
+
     // If documents are null but kycSubmittedAt exists, try raw query as fallback
     if (
       user &&

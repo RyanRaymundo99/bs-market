@@ -3047,8 +3047,18 @@ export namespace Prisma {
 
   export type AggregateUser = {
     _count: UserCountAggregateOutputType | null
+    _avg: UserAvgAggregateOutputType | null
+    _sum: UserSumAggregateOutputType | null
     _min: UserMinAggregateOutputType | null
     _max: UserMaxAggregateOutputType | null
+  }
+
+  export type UserAvgAggregateOutputType = {
+    dailyDepositLimit: Decimal | null
+  }
+
+  export type UserSumAggregateOutputType = {
+    dailyDepositLimit: Decimal | null
   }
 
   export type UserMinAggregateOutputType = {
@@ -3079,6 +3089,7 @@ export namespace Prisma {
     twoFactorSecret: string | null
     createdAt: Date | null
     updatedAt: Date | null
+    dailyDepositLimit: Decimal | null
   }
 
   export type UserMaxAggregateOutputType = {
@@ -3109,6 +3120,7 @@ export namespace Prisma {
     twoFactorSecret: string | null
     createdAt: Date | null
     updatedAt: Date | null
+    dailyDepositLimit: Decimal | null
   }
 
   export type UserCountAggregateOutputType = {
@@ -3141,9 +3153,18 @@ export namespace Prisma {
     twoFactorBackupCodes: number
     createdAt: number
     updatedAt: number
+    dailyDepositLimit: number
     _all: number
   }
 
+
+  export type UserAvgAggregateInputType = {
+    dailyDepositLimit?: true
+  }
+
+  export type UserSumAggregateInputType = {
+    dailyDepositLimit?: true
+  }
 
   export type UserMinAggregateInputType = {
     id?: true
@@ -3173,6 +3194,7 @@ export namespace Prisma {
     twoFactorSecret?: true
     createdAt?: true
     updatedAt?: true
+    dailyDepositLimit?: true
   }
 
   export type UserMaxAggregateInputType = {
@@ -3203,6 +3225,7 @@ export namespace Prisma {
     twoFactorSecret?: true
     createdAt?: true
     updatedAt?: true
+    dailyDepositLimit?: true
   }
 
   export type UserCountAggregateInputType = {
@@ -3235,6 +3258,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: true
     createdAt?: true
     updatedAt?: true
+    dailyDepositLimit?: true
     _all?: true
   }
 
@@ -3276,6 +3300,18 @@ export namespace Prisma {
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
      * 
+     * Select which fields to average
+    **/
+    _avg?: UserAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: UserSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
      * Select which fields to find the minimum value
     **/
     _min?: UserMinAggregateInputType
@@ -3306,6 +3342,8 @@ export namespace Prisma {
     take?: number
     skip?: number
     _count?: UserCountAggregateInputType | true
+    _avg?: UserAvgAggregateInputType
+    _sum?: UserSumAggregateInputType
     _min?: UserMinAggregateInputType
     _max?: UserMaxAggregateInputType
   }
@@ -3340,7 +3378,10 @@ export namespace Prisma {
     twoFactorBackupCodes: string[]
     createdAt: Date
     updatedAt: Date
+    dailyDepositLimit: Decimal
     _count: UserCountAggregateOutputType | null
+    _avg: UserAvgAggregateOutputType | null
+    _sum: UserSumAggregateOutputType | null
     _min: UserMinAggregateOutputType | null
     _max: UserMaxAggregateOutputType | null
   }
@@ -3389,6 +3430,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: boolean
     createdAt?: boolean
     updatedAt?: boolean
+    dailyDepositLimit?: boolean
     accounts?: boolean | User$accountsArgs<ExtArgs>
     balances?: boolean | User$balancesArgs<ExtArgs>
     deposits?: boolean | User$depositsArgs<ExtArgs>
@@ -3436,6 +3478,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: boolean
     createdAt?: boolean
     updatedAt?: boolean
+    dailyDepositLimit?: boolean
   }, ExtArgs["result"]["user"]>
 
   export type UserSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -3468,6 +3511,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: boolean
     createdAt?: boolean
     updatedAt?: boolean
+    dailyDepositLimit?: boolean
   }, ExtArgs["result"]["user"]>
 
   export type UserSelectScalar = {
@@ -3500,9 +3544,10 @@ export namespace Prisma {
     twoFactorBackupCodes?: boolean
     createdAt?: boolean
     updatedAt?: boolean
+    dailyDepositLimit?: boolean
   }
 
-  export type UserOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "email" | "cpf" | "phone" | "password" | "emailVerified" | "phoneVerified" | "approvalStatus" | "image" | "kycStatus" | "kycData" | "documentType" | "documentNumber" | "documentFront" | "documentBack" | "documentSelfie" | "contratoSocial" | "cartaoCNPJ" | "cnhSocioControlado" | "kycSubmittedAt" | "kycReviewedAt" | "kycRejectionReason" | "adminNotificationLastSeenAt" | "twoFactorEnabled" | "twoFactorSecret" | "twoFactorBackupCodes" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
+  export type UserOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "email" | "cpf" | "phone" | "password" | "emailVerified" | "phoneVerified" | "approvalStatus" | "image" | "kycStatus" | "kycData" | "documentType" | "documentNumber" | "documentFront" | "documentBack" | "documentSelfie" | "contratoSocial" | "cartaoCNPJ" | "cnhSocioControlado" | "kycSubmittedAt" | "kycReviewedAt" | "kycRejectionReason" | "adminNotificationLastSeenAt" | "twoFactorEnabled" | "twoFactorSecret" | "twoFactorBackupCodes" | "createdAt" | "updatedAt" | "dailyDepositLimit", ExtArgs["result"]["user"]>
   export type UserInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     accounts?: boolean | User$accountsArgs<ExtArgs>
     balances?: boolean | User$balancesArgs<ExtArgs>
@@ -3571,6 +3616,7 @@ export namespace Prisma {
       twoFactorBackupCodes: string[]
       createdAt: Date
       updatedAt: Date
+      dailyDepositLimit: Prisma.Decimal
     }, ExtArgs["result"]["user"]>
     composites: {}
   }
@@ -4037,6 +4083,7 @@ export namespace Prisma {
     readonly twoFactorBackupCodes: FieldRef<"User", 'String[]'>
     readonly createdAt: FieldRef<"User", 'DateTime'>
     readonly updatedAt: FieldRef<"User", 'DateTime'>
+    readonly dailyDepositLimit: FieldRef<"User", 'Decimal'>
   }
     
 
@@ -27477,7 +27524,8 @@ export namespace Prisma {
     twoFactorSecret: 'twoFactorSecret',
     twoFactorBackupCodes: 'twoFactorBackupCodes',
     createdAt: 'createdAt',
-    updatedAt: 'updatedAt'
+    updatedAt: 'updatedAt',
+    dailyDepositLimit: 'dailyDepositLimit'
   };
 
   export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
@@ -27952,6 +28000,20 @@ export namespace Prisma {
 
 
   /**
+   * Reference to a field of type 'Decimal'
+   */
+  export type DecimalFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Decimal'>
+    
+
+
+  /**
+   * Reference to a field of type 'Decimal[]'
+   */
+  export type ListDecimalFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Decimal[]'>
+    
+
+
+  /**
    * Reference to a field of type 'VerificationType'
    */
   export type EnumVerificationTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'VerificationType'>
@@ -27976,20 +28038,6 @@ export namespace Prisma {
    * Reference to a field of type 'Int[]'
    */
   export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
-    
-
-
-  /**
-   * Reference to a field of type 'Decimal'
-   */
-  export type DecimalFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Decimal'>
-    
-
-
-  /**
-   * Reference to a field of type 'Decimal[]'
-   */
-  export type ListDecimalFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Decimal[]'>
     
 
 
@@ -28155,6 +28203,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: StringNullableListFilter<"User">
     createdAt?: DateTimeFilter<"User"> | Date | string
     updatedAt?: DateTimeFilter<"User"> | Date | string
+    dailyDepositLimit?: DecimalFilter<"User"> | Decimal | DecimalJsLike | number | string
     accounts?: AccountListRelationFilter
     balances?: BalanceListRelationFilter
     deposits?: DepositListRelationFilter
@@ -28201,6 +28250,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+    dailyDepositLimit?: SortOrder
     accounts?: AccountOrderByRelationAggregateInput
     balances?: BalanceOrderByRelationAggregateInput
     deposits?: DepositOrderByRelationAggregateInput
@@ -28250,6 +28300,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: StringNullableListFilter<"User">
     createdAt?: DateTimeFilter<"User"> | Date | string
     updatedAt?: DateTimeFilter<"User"> | Date | string
+    dailyDepositLimit?: DecimalFilter<"User"> | Decimal | DecimalJsLike | number | string
     accounts?: AccountListRelationFilter
     balances?: BalanceListRelationFilter
     deposits?: DepositListRelationFilter
@@ -28296,9 +28347,12 @@ export namespace Prisma {
     twoFactorBackupCodes?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+    dailyDepositLimit?: SortOrder
     _count?: UserCountOrderByAggregateInput
+    _avg?: UserAvgOrderByAggregateInput
     _max?: UserMaxOrderByAggregateInput
     _min?: UserMinOrderByAggregateInput
+    _sum?: UserSumOrderByAggregateInput
   }
 
   export type UserScalarWhereWithAggregatesInput = {
@@ -28334,6 +28388,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: StringNullableListFilter<"User">
     createdAt?: DateTimeWithAggregatesFilter<"User"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"User"> | Date | string
+    dailyDepositLimit?: DecimalWithAggregatesFilter<"User"> | Decimal | DecimalJsLike | number | string
   }
 
   export type SessionWhereInput = {
@@ -30022,6 +30077,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserCreatetwoFactorBackupCodesInput | string[]
     createdAt: Date | string
     updatedAt: Date | string
+    dailyDepositLimit?: Decimal | DecimalJsLike | number | string
     accounts?: AccountCreateNestedManyWithoutUserInput
     balances?: BalanceCreateNestedManyWithoutUserInput
     deposits?: DepositCreateNestedManyWithoutUserInput
@@ -30068,6 +30124,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserCreatetwoFactorBackupCodesInput | string[]
     createdAt: Date | string
     updatedAt: Date | string
+    dailyDepositLimit?: Decimal | DecimalJsLike | number | string
     accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
     balances?: BalanceUncheckedCreateNestedManyWithoutUserInput
     deposits?: DepositUncheckedCreateNestedManyWithoutUserInput
@@ -30114,6 +30171,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserUpdatetwoFactorBackupCodesInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    dailyDepositLimit?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     accounts?: AccountUpdateManyWithoutUserNestedInput
     balances?: BalanceUpdateManyWithoutUserNestedInput
     deposits?: DepositUpdateManyWithoutUserNestedInput
@@ -30160,6 +30218,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserUpdatetwoFactorBackupCodesInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    dailyDepositLimit?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
     balances?: BalanceUncheckedUpdateManyWithoutUserNestedInput
     deposits?: DepositUncheckedUpdateManyWithoutUserNestedInput
@@ -30206,6 +30265,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserCreatetwoFactorBackupCodesInput | string[]
     createdAt: Date | string
     updatedAt: Date | string
+    dailyDepositLimit?: Decimal | DecimalJsLike | number | string
   }
 
   export type UserUpdateManyMutationInput = {
@@ -30238,6 +30298,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserUpdatetwoFactorBackupCodesInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    dailyDepositLimit?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
   }
 
   export type UserUncheckedUpdateManyInput = {
@@ -30270,6 +30331,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserUpdatetwoFactorBackupCodesInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    dailyDepositLimit?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
   }
 
   export type SessionCreateInput = {
@@ -32233,6 +32295,17 @@ export namespace Prisma {
     not?: NestedDateTimeFilter<$PrismaModel> | Date | string
   }
 
+  export type DecimalFilter<$PrismaModel = never> = {
+    equals?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    in?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel>
+    notIn?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel>
+    lt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    lte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    not?: NestedDecimalFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string
+  }
+
   export type AccountListRelationFilter = {
     every?: AccountWhereInput
     some?: AccountWhereInput
@@ -32398,6 +32471,11 @@ export namespace Prisma {
     twoFactorBackupCodes?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+    dailyDepositLimit?: SortOrder
+  }
+
+  export type UserAvgOrderByAggregateInput = {
+    dailyDepositLimit?: SortOrder
   }
 
   export type UserMaxOrderByAggregateInput = {
@@ -32428,6 +32506,7 @@ export namespace Prisma {
     twoFactorSecret?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+    dailyDepositLimit?: SortOrder
   }
 
   export type UserMinOrderByAggregateInput = {
@@ -32458,6 +32537,11 @@ export namespace Prisma {
     twoFactorSecret?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+    dailyDepositLimit?: SortOrder
+  }
+
+  export type UserSumOrderByAggregateInput = {
+    dailyDepositLimit?: SortOrder
   }
 
   export type StringWithAggregatesFilter<$PrismaModel = never> = {
@@ -32586,6 +32670,22 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedDateTimeFilter<$PrismaModel>
     _max?: NestedDateTimeFilter<$PrismaModel>
+  }
+
+  export type DecimalWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    in?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel>
+    notIn?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel>
+    lt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    lte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    not?: NestedDecimalWithAggregatesFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string
+    _count?: NestedIntFilter<$PrismaModel>
+    _avg?: NestedDecimalFilter<$PrismaModel>
+    _sum?: NestedDecimalFilter<$PrismaModel>
+    _min?: NestedDecimalFilter<$PrismaModel>
+    _max?: NestedDecimalFilter<$PrismaModel>
   }
 
   export type UserScalarRelationFilter = {
@@ -32767,17 +32867,6 @@ export namespace Prisma {
     _max?: NestedIntFilter<$PrismaModel>
   }
 
-  export type DecimalFilter<$PrismaModel = never> = {
-    equals?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    in?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel>
-    notIn?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel>
-    lt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    lte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    gt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    gte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    not?: NestedDecimalFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string
-  }
-
   export type BalanceUserIdCurrencyCompoundUniqueInput = {
     userId: string
     currency: string
@@ -32821,22 +32910,6 @@ export namespace Prisma {
   export type BalanceSumOrderByAggregateInput = {
     amount?: SortOrder
     locked?: SortOrder
-  }
-
-  export type DecimalWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    in?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel>
-    notIn?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel>
-    lt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    lte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    gt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    gte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    not?: NestedDecimalWithAggregatesFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string
-    _count?: NestedIntFilter<$PrismaModel>
-    _avg?: NestedDecimalFilter<$PrismaModel>
-    _sum?: NestedDecimalFilter<$PrismaModel>
-    _min?: NestedDecimalFilter<$PrismaModel>
-    _max?: NestedDecimalFilter<$PrismaModel>
   }
 
   export type EnumDepositStatusFilter<$PrismaModel = never> = {
@@ -34030,6 +34103,14 @@ export namespace Prisma {
     set?: Date | string
   }
 
+  export type DecimalFieldUpdateOperationsInput = {
+    set?: Decimal | DecimalJsLike | number | string
+    increment?: Decimal | DecimalJsLike | number | string
+    decrement?: Decimal | DecimalJsLike | number | string
+    multiply?: Decimal | DecimalJsLike | number | string
+    divide?: Decimal | DecimalJsLike | number | string
+  }
+
   export type AccountUpdateManyWithoutUserNestedInput = {
     create?: XOR<AccountCreateWithoutUserInput, AccountUncheckedCreateWithoutUserInput> | AccountCreateWithoutUserInput[] | AccountUncheckedCreateWithoutUserInput[]
     connectOrCreate?: AccountCreateOrConnectWithoutUserInput | AccountCreateOrConnectWithoutUserInput[]
@@ -34466,14 +34547,6 @@ export namespace Prisma {
     create?: XOR<UserCreateWithoutBalancesInput, UserUncheckedCreateWithoutBalancesInput>
     connectOrCreate?: UserCreateOrConnectWithoutBalancesInput
     connect?: UserWhereUniqueInput
-  }
-
-  export type DecimalFieldUpdateOperationsInput = {
-    set?: Decimal | DecimalJsLike | number | string
-    increment?: Decimal | DecimalJsLike | number | string
-    decrement?: Decimal | DecimalJsLike | number | string
-    multiply?: Decimal | DecimalJsLike | number | string
-    divide?: Decimal | DecimalJsLike | number | string
   }
 
   export type UserUpdateOneRequiredWithoutBalancesNestedInput = {
@@ -35054,6 +35127,17 @@ export namespace Prisma {
     not?: NestedDateTimeFilter<$PrismaModel> | Date | string
   }
 
+  export type NestedDecimalFilter<$PrismaModel = never> = {
+    equals?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    in?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel>
+    notIn?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel>
+    lt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    lte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    not?: NestedDecimalFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string
+  }
+
   export type NestedStringWithAggregatesFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel>
     in?: string[] | ListStringFieldRefInput<$PrismaModel>
@@ -35199,6 +35283,22 @@ export namespace Prisma {
     _max?: NestedDateTimeFilter<$PrismaModel>
   }
 
+  export type NestedDecimalWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    in?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel>
+    notIn?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel>
+    lt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    lte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    gte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
+    not?: NestedDecimalWithAggregatesFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string
+    _count?: NestedIntFilter<$PrismaModel>
+    _avg?: NestedDecimalFilter<$PrismaModel>
+    _sum?: NestedDecimalFilter<$PrismaModel>
+    _min?: NestedDecimalFilter<$PrismaModel>
+    _max?: NestedDecimalFilter<$PrismaModel>
+  }
+
   export type NestedEnumVerificationTypeFilter<$PrismaModel = never> = {
     equals?: $Enums.VerificationType | EnumVerificationTypeFieldRefInput<$PrismaModel>
     in?: $Enums.VerificationType[] | ListEnumVerificationTypeFieldRefInput<$PrismaModel>
@@ -35241,33 +35341,6 @@ export namespace Prisma {
     gt?: number | FloatFieldRefInput<$PrismaModel>
     gte?: number | FloatFieldRefInput<$PrismaModel>
     not?: NestedFloatFilter<$PrismaModel> | number
-  }
-
-  export type NestedDecimalFilter<$PrismaModel = never> = {
-    equals?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    in?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel>
-    notIn?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel>
-    lt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    lte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    gt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    gte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    not?: NestedDecimalFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string
-  }
-
-  export type NestedDecimalWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    in?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel>
-    notIn?: Decimal[] | DecimalJsLike[] | number[] | string[] | ListDecimalFieldRefInput<$PrismaModel>
-    lt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    lte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    gt?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    gte?: Decimal | DecimalJsLike | number | string | DecimalFieldRefInput<$PrismaModel>
-    not?: NestedDecimalWithAggregatesFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string
-    _count?: NestedIntFilter<$PrismaModel>
-    _avg?: NestedDecimalFilter<$PrismaModel>
-    _sum?: NestedDecimalFilter<$PrismaModel>
-    _min?: NestedDecimalFilter<$PrismaModel>
-    _max?: NestedDecimalFilter<$PrismaModel>
   }
 
   export type NestedEnumDepositStatusFilter<$PrismaModel = never> = {
@@ -36470,6 +36543,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserCreatetwoFactorBackupCodesInput | string[]
     createdAt: Date | string
     updatedAt: Date | string
+    dailyDepositLimit?: Decimal | DecimalJsLike | number | string
     accounts?: AccountCreateNestedManyWithoutUserInput
     balances?: BalanceCreateNestedManyWithoutUserInput
     deposits?: DepositCreateNestedManyWithoutUserInput
@@ -36515,6 +36589,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserCreatetwoFactorBackupCodesInput | string[]
     createdAt: Date | string
     updatedAt: Date | string
+    dailyDepositLimit?: Decimal | DecimalJsLike | number | string
     accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
     balances?: BalanceUncheckedCreateNestedManyWithoutUserInput
     deposits?: DepositUncheckedCreateNestedManyWithoutUserInput
@@ -36576,6 +36651,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserUpdatetwoFactorBackupCodesInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    dailyDepositLimit?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     accounts?: AccountUpdateManyWithoutUserNestedInput
     balances?: BalanceUpdateManyWithoutUserNestedInput
     deposits?: DepositUpdateManyWithoutUserNestedInput
@@ -36621,6 +36697,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserUpdatetwoFactorBackupCodesInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    dailyDepositLimit?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
     balances?: BalanceUncheckedUpdateManyWithoutUserNestedInput
     deposits?: DepositUncheckedUpdateManyWithoutUserNestedInput
@@ -36666,6 +36743,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserCreatetwoFactorBackupCodesInput | string[]
     createdAt: Date | string
     updatedAt: Date | string
+    dailyDepositLimit?: Decimal | DecimalJsLike | number | string
     balances?: BalanceCreateNestedManyWithoutUserInput
     deposits?: DepositCreateNestedManyWithoutUserInput
     orders?: OrderCreateNestedManyWithoutUserInput
@@ -36711,6 +36789,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserCreatetwoFactorBackupCodesInput | string[]
     createdAt: Date | string
     updatedAt: Date | string
+    dailyDepositLimit?: Decimal | DecimalJsLike | number | string
     balances?: BalanceUncheckedCreateNestedManyWithoutUserInput
     deposits?: DepositUncheckedCreateNestedManyWithoutUserInput
     orders?: OrderUncheckedCreateNestedManyWithoutUserInput
@@ -36772,6 +36851,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserUpdatetwoFactorBackupCodesInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    dailyDepositLimit?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     balances?: BalanceUpdateManyWithoutUserNestedInput
     deposits?: DepositUpdateManyWithoutUserNestedInput
     orders?: OrderUpdateManyWithoutUserNestedInput
@@ -36817,6 +36897,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserUpdatetwoFactorBackupCodesInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    dailyDepositLimit?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     balances?: BalanceUncheckedUpdateManyWithoutUserNestedInput
     deposits?: DepositUncheckedUpdateManyWithoutUserNestedInput
     orders?: OrderUncheckedUpdateManyWithoutUserNestedInput
@@ -36862,6 +36943,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserCreatetwoFactorBackupCodesInput | string[]
     createdAt: Date | string
     updatedAt: Date | string
+    dailyDepositLimit?: Decimal | DecimalJsLike | number | string
     accounts?: AccountCreateNestedManyWithoutUserInput
     deposits?: DepositCreateNestedManyWithoutUserInput
     orders?: OrderCreateNestedManyWithoutUserInput
@@ -36907,6 +36989,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserCreatetwoFactorBackupCodesInput | string[]
     createdAt: Date | string
     updatedAt: Date | string
+    dailyDepositLimit?: Decimal | DecimalJsLike | number | string
     accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
     deposits?: DepositUncheckedCreateNestedManyWithoutUserInput
     orders?: OrderUncheckedCreateNestedManyWithoutUserInput
@@ -36968,6 +37051,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserUpdatetwoFactorBackupCodesInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    dailyDepositLimit?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     accounts?: AccountUpdateManyWithoutUserNestedInput
     deposits?: DepositUpdateManyWithoutUserNestedInput
     orders?: OrderUpdateManyWithoutUserNestedInput
@@ -37013,6 +37097,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserUpdatetwoFactorBackupCodesInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    dailyDepositLimit?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
     deposits?: DepositUncheckedUpdateManyWithoutUserNestedInput
     orders?: OrderUncheckedUpdateManyWithoutUserNestedInput
@@ -37095,6 +37180,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserCreatetwoFactorBackupCodesInput | string[]
     createdAt: Date | string
     updatedAt: Date | string
+    dailyDepositLimit?: Decimal | DecimalJsLike | number | string
     accounts?: AccountCreateNestedManyWithoutUserInput
     balances?: BalanceCreateNestedManyWithoutUserInput
     orders?: OrderCreateNestedManyWithoutUserInput
@@ -37140,6 +37226,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserCreatetwoFactorBackupCodesInput | string[]
     createdAt: Date | string
     updatedAt: Date | string
+    dailyDepositLimit?: Decimal | DecimalJsLike | number | string
     accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
     balances?: BalanceUncheckedCreateNestedManyWithoutUserInput
     orders?: OrderUncheckedCreateNestedManyWithoutUserInput
@@ -37244,6 +37331,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserUpdatetwoFactorBackupCodesInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    dailyDepositLimit?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     accounts?: AccountUpdateManyWithoutUserNestedInput
     balances?: BalanceUpdateManyWithoutUserNestedInput
     orders?: OrderUpdateManyWithoutUserNestedInput
@@ -37289,6 +37377,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserUpdatetwoFactorBackupCodesInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    dailyDepositLimit?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
     balances?: BalanceUncheckedUpdateManyWithoutUserNestedInput
     orders?: OrderUncheckedUpdateManyWithoutUserNestedInput
@@ -37371,6 +37460,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserCreatetwoFactorBackupCodesInput | string[]
     createdAt: Date | string
     updatedAt: Date | string
+    dailyDepositLimit?: Decimal | DecimalJsLike | number | string
     accounts?: AccountCreateNestedManyWithoutUserInput
     balances?: BalanceCreateNestedManyWithoutUserInput
     deposits?: DepositCreateNestedManyWithoutUserInput
@@ -37416,6 +37506,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserCreatetwoFactorBackupCodesInput | string[]
     createdAt: Date | string
     updatedAt: Date | string
+    dailyDepositLimit?: Decimal | DecimalJsLike | number | string
     accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
     balances?: BalanceUncheckedCreateNestedManyWithoutUserInput
     deposits?: DepositUncheckedCreateNestedManyWithoutUserInput
@@ -37520,6 +37611,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserUpdatetwoFactorBackupCodesInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    dailyDepositLimit?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     accounts?: AccountUpdateManyWithoutUserNestedInput
     balances?: BalanceUpdateManyWithoutUserNestedInput
     deposits?: DepositUpdateManyWithoutUserNestedInput
@@ -37565,6 +37657,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserUpdatetwoFactorBackupCodesInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    dailyDepositLimit?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
     balances?: BalanceUncheckedUpdateManyWithoutUserNestedInput
     deposits?: DepositUncheckedUpdateManyWithoutUserNestedInput
@@ -37647,6 +37740,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserCreatetwoFactorBackupCodesInput | string[]
     createdAt: Date | string
     updatedAt: Date | string
+    dailyDepositLimit?: Decimal | DecimalJsLike | number | string
     accounts?: AccountCreateNestedManyWithoutUserInput
     balances?: BalanceCreateNestedManyWithoutUserInput
     deposits?: DepositCreateNestedManyWithoutUserInput
@@ -37692,6 +37786,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserCreatetwoFactorBackupCodesInput | string[]
     createdAt: Date | string
     updatedAt: Date | string
+    dailyDepositLimit?: Decimal | DecimalJsLike | number | string
     accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
     balances?: BalanceUncheckedCreateNestedManyWithoutUserInput
     deposits?: DepositUncheckedCreateNestedManyWithoutUserInput
@@ -37796,6 +37891,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserUpdatetwoFactorBackupCodesInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    dailyDepositLimit?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     accounts?: AccountUpdateManyWithoutUserNestedInput
     balances?: BalanceUpdateManyWithoutUserNestedInput
     deposits?: DepositUpdateManyWithoutUserNestedInput
@@ -37841,6 +37937,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserUpdatetwoFactorBackupCodesInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    dailyDepositLimit?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
     balances?: BalanceUncheckedUpdateManyWithoutUserNestedInput
     deposits?: DepositUncheckedUpdateManyWithoutUserNestedInput
@@ -37886,6 +37983,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserCreatetwoFactorBackupCodesInput | string[]
     createdAt: Date | string
     updatedAt: Date | string
+    dailyDepositLimit?: Decimal | DecimalJsLike | number | string
     accounts?: AccountCreateNestedManyWithoutUserInput
     balances?: BalanceCreateNestedManyWithoutUserInput
     deposits?: DepositCreateNestedManyWithoutUserInput
@@ -37931,6 +38029,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserCreatetwoFactorBackupCodesInput | string[]
     createdAt: Date | string
     updatedAt: Date | string
+    dailyDepositLimit?: Decimal | DecimalJsLike | number | string
     accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
     balances?: BalanceUncheckedCreateNestedManyWithoutUserInput
     deposits?: DepositUncheckedCreateNestedManyWithoutUserInput
@@ -38038,6 +38137,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserUpdatetwoFactorBackupCodesInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    dailyDepositLimit?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     accounts?: AccountUpdateManyWithoutUserNestedInput
     balances?: BalanceUpdateManyWithoutUserNestedInput
     deposits?: DepositUpdateManyWithoutUserNestedInput
@@ -38083,6 +38183,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserUpdatetwoFactorBackupCodesInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    dailyDepositLimit?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
     balances?: BalanceUncheckedUpdateManyWithoutUserNestedInput
     deposits?: DepositUncheckedUpdateManyWithoutUserNestedInput
@@ -38144,6 +38245,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserCreatetwoFactorBackupCodesInput | string[]
     createdAt: Date | string
     updatedAt: Date | string
+    dailyDepositLimit?: Decimal | DecimalJsLike | number | string
     accounts?: AccountCreateNestedManyWithoutUserInput
     balances?: BalanceCreateNestedManyWithoutUserInput
     deposits?: DepositCreateNestedManyWithoutUserInput
@@ -38189,6 +38291,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserCreatetwoFactorBackupCodesInput | string[]
     createdAt: Date | string
     updatedAt: Date | string
+    dailyDepositLimit?: Decimal | DecimalJsLike | number | string
     accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
     balances?: BalanceUncheckedCreateNestedManyWithoutUserInput
     deposits?: DepositUncheckedCreateNestedManyWithoutUserInput
@@ -38317,6 +38420,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserCreatetwoFactorBackupCodesInput | string[]
     createdAt: Date | string
     updatedAt: Date | string
+    dailyDepositLimit?: Decimal | DecimalJsLike | number | string
     accounts?: AccountCreateNestedManyWithoutUserInput
     balances?: BalanceCreateNestedManyWithoutUserInput
     deposits?: DepositCreateNestedManyWithoutUserInput
@@ -38362,6 +38466,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserCreatetwoFactorBackupCodesInput | string[]
     createdAt: Date | string
     updatedAt: Date | string
+    dailyDepositLimit?: Decimal | DecimalJsLike | number | string
     accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
     balances?: BalanceUncheckedCreateNestedManyWithoutUserInput
     deposits?: DepositUncheckedCreateNestedManyWithoutUserInput
@@ -38460,6 +38565,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserUpdatetwoFactorBackupCodesInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    dailyDepositLimit?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     accounts?: AccountUpdateManyWithoutUserNestedInput
     balances?: BalanceUpdateManyWithoutUserNestedInput
     deposits?: DepositUpdateManyWithoutUserNestedInput
@@ -38505,6 +38611,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserUpdatetwoFactorBackupCodesInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    dailyDepositLimit?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
     balances?: BalanceUncheckedUpdateManyWithoutUserNestedInput
     deposits?: DepositUncheckedUpdateManyWithoutUserNestedInput
@@ -38651,6 +38758,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserUpdatetwoFactorBackupCodesInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    dailyDepositLimit?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     accounts?: AccountUpdateManyWithoutUserNestedInput
     balances?: BalanceUpdateManyWithoutUserNestedInput
     deposits?: DepositUpdateManyWithoutUserNestedInput
@@ -38696,6 +38804,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserUpdatetwoFactorBackupCodesInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    dailyDepositLimit?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
     balances?: BalanceUncheckedUpdateManyWithoutUserNestedInput
     deposits?: DepositUncheckedUpdateManyWithoutUserNestedInput
@@ -38948,6 +39057,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserCreatetwoFactorBackupCodesInput | string[]
     createdAt: Date | string
     updatedAt: Date | string
+    dailyDepositLimit?: Decimal | DecimalJsLike | number | string
     accounts?: AccountCreateNestedManyWithoutUserInput
     balances?: BalanceCreateNestedManyWithoutUserInput
     deposits?: DepositCreateNestedManyWithoutUserInput
@@ -38993,6 +39103,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserCreatetwoFactorBackupCodesInput | string[]
     createdAt: Date | string
     updatedAt: Date | string
+    dailyDepositLimit?: Decimal | DecimalJsLike | number | string
     accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
     balances?: BalanceUncheckedCreateNestedManyWithoutUserInput
     deposits?: DepositUncheckedCreateNestedManyWithoutUserInput
@@ -39291,6 +39402,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserUpdatetwoFactorBackupCodesInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    dailyDepositLimit?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     accounts?: AccountUpdateManyWithoutUserNestedInput
     balances?: BalanceUpdateManyWithoutUserNestedInput
     deposits?: DepositUpdateManyWithoutUserNestedInput
@@ -39336,6 +39448,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserUpdatetwoFactorBackupCodesInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    dailyDepositLimit?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
     balances?: BalanceUncheckedUpdateManyWithoutUserNestedInput
     deposits?: DepositUncheckedUpdateManyWithoutUserNestedInput
@@ -39436,6 +39549,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserCreatetwoFactorBackupCodesInput | string[]
     createdAt: Date | string
     updatedAt: Date | string
+    dailyDepositLimit?: Decimal | DecimalJsLike | number | string
     accounts?: AccountCreateNestedManyWithoutUserInput
     balances?: BalanceCreateNestedManyWithoutUserInput
     deposits?: DepositCreateNestedManyWithoutUserInput
@@ -39481,6 +39595,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserCreatetwoFactorBackupCodesInput | string[]
     createdAt: Date | string
     updatedAt: Date | string
+    dailyDepositLimit?: Decimal | DecimalJsLike | number | string
     accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
     balances?: BalanceUncheckedCreateNestedManyWithoutUserInput
     deposits?: DepositUncheckedCreateNestedManyWithoutUserInput
@@ -39542,6 +39657,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserUpdatetwoFactorBackupCodesInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    dailyDepositLimit?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     accounts?: AccountUpdateManyWithoutUserNestedInput
     balances?: BalanceUpdateManyWithoutUserNestedInput
     deposits?: DepositUpdateManyWithoutUserNestedInput
@@ -39587,6 +39703,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserUpdatetwoFactorBackupCodesInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    dailyDepositLimit?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
     balances?: BalanceUncheckedUpdateManyWithoutUserNestedInput
     deposits?: DepositUncheckedUpdateManyWithoutUserNestedInput
@@ -39632,6 +39749,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserCreatetwoFactorBackupCodesInput | string[]
     createdAt: Date | string
     updatedAt: Date | string
+    dailyDepositLimit?: Decimal | DecimalJsLike | number | string
     accounts?: AccountCreateNestedManyWithoutUserInput
     balances?: BalanceCreateNestedManyWithoutUserInput
     deposits?: DepositCreateNestedManyWithoutUserInput
@@ -39677,6 +39795,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserCreatetwoFactorBackupCodesInput | string[]
     createdAt: Date | string
     updatedAt: Date | string
+    dailyDepositLimit?: Decimal | DecimalJsLike | number | string
     accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
     balances?: BalanceUncheckedCreateNestedManyWithoutUserInput
     deposits?: DepositUncheckedCreateNestedManyWithoutUserInput
@@ -39738,6 +39857,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserUpdatetwoFactorBackupCodesInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    dailyDepositLimit?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     accounts?: AccountUpdateManyWithoutUserNestedInput
     balances?: BalanceUpdateManyWithoutUserNestedInput
     deposits?: DepositUpdateManyWithoutUserNestedInput
@@ -39783,6 +39903,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserUpdatetwoFactorBackupCodesInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    dailyDepositLimit?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
     balances?: BalanceUncheckedUpdateManyWithoutUserNestedInput
     deposits?: DepositUncheckedUpdateManyWithoutUserNestedInput
@@ -39828,6 +39949,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserCreatetwoFactorBackupCodesInput | string[]
     createdAt: Date | string
     updatedAt: Date | string
+    dailyDepositLimit?: Decimal | DecimalJsLike | number | string
     accounts?: AccountCreateNestedManyWithoutUserInput
     balances?: BalanceCreateNestedManyWithoutUserInput
     deposits?: DepositCreateNestedManyWithoutUserInput
@@ -39873,6 +39995,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserCreatetwoFactorBackupCodesInput | string[]
     createdAt: Date | string
     updatedAt: Date | string
+    dailyDepositLimit?: Decimal | DecimalJsLike | number | string
     accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
     balances?: BalanceUncheckedCreateNestedManyWithoutUserInput
     deposits?: DepositUncheckedCreateNestedManyWithoutUserInput
@@ -39934,6 +40057,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserUpdatetwoFactorBackupCodesInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    dailyDepositLimit?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     accounts?: AccountUpdateManyWithoutUserNestedInput
     balances?: BalanceUpdateManyWithoutUserNestedInput
     deposits?: DepositUpdateManyWithoutUserNestedInput
@@ -39979,6 +40103,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserUpdatetwoFactorBackupCodesInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    dailyDepositLimit?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
     balances?: BalanceUncheckedUpdateManyWithoutUserNestedInput
     deposits?: DepositUncheckedUpdateManyWithoutUserNestedInput
@@ -40024,6 +40149,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserCreatetwoFactorBackupCodesInput | string[]
     createdAt: Date | string
     updatedAt: Date | string
+    dailyDepositLimit?: Decimal | DecimalJsLike | number | string
     accounts?: AccountCreateNestedManyWithoutUserInput
     balances?: BalanceCreateNestedManyWithoutUserInput
     deposits?: DepositCreateNestedManyWithoutUserInput
@@ -40069,6 +40195,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserCreatetwoFactorBackupCodesInput | string[]
     createdAt: Date | string
     updatedAt: Date | string
+    dailyDepositLimit?: Decimal | DecimalJsLike | number | string
     accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
     balances?: BalanceUncheckedCreateNestedManyWithoutUserInput
     deposits?: DepositUncheckedCreateNestedManyWithoutUserInput
@@ -40130,6 +40257,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserUpdatetwoFactorBackupCodesInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    dailyDepositLimit?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     accounts?: AccountUpdateManyWithoutUserNestedInput
     balances?: BalanceUpdateManyWithoutUserNestedInput
     deposits?: DepositUpdateManyWithoutUserNestedInput
@@ -40175,6 +40303,7 @@ export namespace Prisma {
     twoFactorBackupCodes?: UserUpdatetwoFactorBackupCodesInput | string[]
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    dailyDepositLimit?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
     balances?: BalanceUncheckedUpdateManyWithoutUserNestedInput
     deposits?: DepositUncheckedUpdateManyWithoutUserNestedInput

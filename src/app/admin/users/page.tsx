@@ -80,6 +80,7 @@ interface User {
   createdAt: string;
   tags?: string[];
   riskFlags?: string[];
+  dailyDepositLimit?: number;
 }
 
 interface UserWithDetails extends User {
@@ -173,8 +174,48 @@ export default function AdminUsersPage() {
     alt: string;
     title: string;
   } | null>(null);
+  const [updatingLimitId, setUpdatingLimitId] = useState<string | null>(null);
   const { toast } = useToast();
   const router = useRouter();
+
+  const handleQuickUpdateLimit = async (userId: string, newLimit: number) => {
+    setUpdatingLimitId(userId);
+    try {
+      const response = await fetch(`/api/admin/users/${userId}/limits`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dailyDepositLimit: newLimit }),
+      });
+
+      if (response.ok) {
+        setUsers((prev) =>
+          prev.map((u) =>
+            u.id === userId ? { ...u, dailyDepositLimit: newLimit } : u
+          )
+        );
+        toast({
+          title: "Limite Atualizado",
+          description: `Novo limite: ${formatUSDT(newLimit)}`,
+        });
+      } else {
+        const data = await response.json();
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: data.error || "Falha ao atualizar limite",
+        });
+      }
+    } catch (error) {
+      console.error("Error updating limit:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Erro de conexão",
+      });
+    } finally {
+      setUpdatingLimitId(null);
+    }
+  };
 
   // Statistics
   const stats = useMemo(() => {
@@ -1652,7 +1693,7 @@ export default function AdminUsersPage() {
                       </div>
                     </div>
 
-                    {/* Quick Stats */}
+                    {/* Quick Stats & Level */}
                     <div className="grid grid-cols-2 gap-2 mb-4">
                       <div className="bg-muted/50 rounded-lg p-2">
                         <p className="text-xs text-muted-foreground">Saldo</p>
@@ -1661,10 +1702,49 @@ export default function AdminUsersPage() {
                         </p>
                       </div>
                       <div className="bg-muted/50 rounded-lg p-2">
+                        <p className="text-xs text-muted-foreground">User Level</p>
+                        {(user.dailyDepositLimit ?? 5000) >= 10000 ? (
+                           <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-[10px] h-5 px-1.5 mt-0.5">
+                             💎 VIP
+                           </Badge>
+                        ) : (
+                           <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-[10px] h-5 px-1.5 mt-0.5">
+                             ✨ Padrão
+                           </Badge>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 mb-4">
+                      <div className="bg-muted/50 rounded-lg p-2">
                         <p className="text-xs text-muted-foreground">Transações</p>
                         <p className="text-sm font-semibold text-foreground">
                           {user.transactionCount || 0}
                         </p>
+                      </div>
+                      <div className="bg-muted/50 rounded-lg p-2 flex flex-col justify-center">
+                        <p className="text-xs text-muted-foreground">Limite Diário</p>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <Select
+                            disabled={updatingLimitId === user.id}
+                            value={String(user.dailyDepositLimit ?? 5000)}
+                            onValueChange={(val) => handleQuickUpdateLimit(user.id, Number(val))}
+                          >
+                            <SelectTrigger className="h-6 text-[11px] bg-transparent border-none p-0 focus:ring-0">
+                              <SelectValue placeholder="Limit" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-card border-border">
+                              <SelectItem value="5000">5k</SelectItem>
+                              <SelectItem value="10000">10k</SelectItem>
+                              <SelectItem value="20000">20k</SelectItem>
+                              <SelectItem value="50000">50k</SelectItem>
+                              <SelectItem value="100000">100k</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {updatingLimitId === user.id && (
+                            <RefreshCw className="w-3 h-3 animate-spin text-primary" />
+                          )}
+                        </div>
                       </div>
                     </div>
 

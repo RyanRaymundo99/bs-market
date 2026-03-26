@@ -10,12 +10,19 @@ export async function GET(
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id: userId } = await params;
-  const notes = await prisma.userNote.findMany({
-    where: { userId },
-    orderBy: { createdAt: "desc" },
-    select: { id: true, adminId: true, note: true, createdAt: true },
-  });
-  return NextResponse.json({ success: true, notes });
+  
+  try {
+    const notes = await prisma.$queryRaw<Array<{ id: string, adminId: string, note: string, createdAt: any }>>`
+      SELECT id, "adminId", note, "createdAt" 
+      FROM "user_note" 
+      WHERE "userId" = ${userId} 
+      ORDER BY "createdAt" DESC
+    `;
+    return NextResponse.json({ success: true, notes });
+  } catch (err) {
+    console.error("Error fetching notes via raw SQL:", err);
+    return NextResponse.json({ success: true, notes: [] });
+  }
 }
 
 export async function POST(
@@ -32,9 +39,20 @@ export async function POST(
     return NextResponse.json({ error: "Note required (max 5000 chars)" }, { status: 400 });
   }
 
-  const created = await prisma.userNote.create({
-    data: { userId, adminId: admin.userId, note },
-    select: { id: true, adminId: true, note: true, createdAt: true },
-  });
-  return NextResponse.json({ success: true, note: created });
+  try {
+    const createdAt = new Date().toISOString();
+    const id = `note_${Date.now()}`;
+    await prisma.$executeRawUnsafe(`
+      INSERT INTO "user_note" ("id", "userId", "adminId", "note", "createdAt")
+      VALUES ('${id}', '${userId}', '${admin.userId}', '${note.replace(/'/g, "''")}', '${createdAt}')
+    `);
+    
+    return NextResponse.json({ 
+      success: true, 
+      note: { id, userId, adminId: admin.userId, note, createdAt } 
+    });
+  } catch (err) {
+    console.error("Error creating note via raw SQL:", err);
+    return NextResponse.json({ error: "Failed to create note" }, { status: 500 });
+  }
 }

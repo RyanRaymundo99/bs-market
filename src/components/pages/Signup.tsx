@@ -243,7 +243,7 @@ const Signup = () => {
 
           <Button
             type="submit"
-            className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-12 text-base font-medium"
+            className="w-full bg-primary !text-white hover:bg-primary/90 h-12 text-base font-medium"
             disabled={pending || signupsDisabled}
           >
             {pending ? (

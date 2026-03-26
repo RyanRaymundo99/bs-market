@@ -312,7 +312,7 @@ const Login = () => {
 
             <Button
               type="submit"
-              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-12 text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-primary !text-white hover:bg-primary/90 h-12 text-base font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={pending || isSuccess || loginBlocked}
               aria-busy={pending}
               aria-label={pending ? "Processando login" : "Fazer login"}

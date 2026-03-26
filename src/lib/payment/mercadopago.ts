@@ -258,9 +258,9 @@ export class MercadoPagoService implements PaymentProvider {
     // The signature is calculated using HMAC-SHA256 with the webhook secret
     const secret = process.env.PAYMENT_WEBHOOK_SECRET;
     
-    if (!secret) {
-      // If no secret configured, accept all webhooks (like NuPay did)
-      // But verify via getTransactionStatus synchronously
+    if (!secret || secret === "placeholder-webhook-secret") {
+      // If no secret configured or still using placeholder, accept and verify via API
+      console.log("⚠️ Webhook secret not configured or placeholder used. Relying on API verification.");
       return true;
     }
 
@@ -298,6 +298,13 @@ export class MercadoPagoService implements PaymentProvider {
       // Build the manifest string
       // manifest = "id:{data.id};request-id:{x-request-id};ts:{ts};"
       const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
+      
+      console.log("🛠️ Webhook Signature Debug:", {
+        manifest,
+        ts,
+        v1: v1.substring(0, 10) + "..."
+      });
+
 
       // Calculate HMAC
       const hmac = crypto

@@ -63,6 +63,7 @@ interface UserDetails {
   kycSubmittedAt: string | null;
   kycReviewedAt: string | null;
   kycRejectionReason: string | null;
+  dailyDepositLimit: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -121,6 +122,8 @@ export default function AdminUserDetailsPage({
   const [newNote, setNewNote] = useState("");
   const [addingTag, setAddingTag] = useState(false);
   const [addingNote, setAddingNote] = useState(false);
+  const [updatingLimit, setUpdatingLimit] = useState(false);
+  const [customLimit, setCustomLimit] = useState("");
   const { toast } = useToast();
   const router = useRouter();
 
@@ -548,6 +551,42 @@ export default function AdminUserDetailsPage({
     }
   };
 
+  const handleUpdateLimit = async (limit: number) => {
+    if (!userId) return;
+    setUpdatingLimit(true);
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/limits`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dailyDepositLimit: limit }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUser((prev) => (prev ? { ...prev, dailyDepositLimit: limit } : null));
+        toast({
+          title: "Limite Atualizado",
+          description: `Novo limite diário: ${limit} USDT`,
+        });
+        setCustomLimit("");
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: data.error || "Falha ao atualizar limite",
+        });
+      }
+    } catch (err) {
+      console.error("Error updating limit:", err);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Erro ao conectar com o servidor",
+      });
+    } finally {
+      setUpdatingLimit(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen p-6">
@@ -819,6 +858,92 @@ export default function AdminUserDetailsPage({
             </CardContent>
           </Card>
         </div>
+
+        {/* Rewards & Limits Section */}
+        <Card className="bg-card border-border mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-foreground">
+              <TrendingUp className="w-5 h-5 text-primary" />
+              Rewards & Análise de Limite
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground block mb-1">
+                    Status de Recompensas
+                  </label>
+                  <div className="flex items-center gap-2">
+                    {user.dailyDepositLimit >= 10000 ? (
+                      <Badge className="bg-purple-100 text-purple-800 border-purple-200 py-1 px-3">
+                        💎 Cliente VIP / Premium
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-blue-100 text-blue-800 border-blue-200 py-1 px-3">
+                        ✨ Cliente Padrão
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground block mb-1">
+                    Limite Diário de Depósito (USDT)
+                  </label>
+                  <div className="text-3xl font-bold text-foreground">
+                    {formatUSDT(user.dailyDepositLimit || 5000)}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Este limite regula quanto o cliente pode depositar via PIX por dia.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <label className="text-sm font-medium text-muted-foreground block">
+                  Ajuste Rápido de Limite
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {[5000, 10000, 20000, 50000].map((limit) => (
+                    <Button
+                      key={limit}
+                      size="sm"
+                      variant={user.dailyDepositLimit === limit ? "default" : "outline"}
+                      onClick={() => handleUpdateLimit(limit)}
+                      disabled={updatingLimit}
+                      className="min-w-[80px]"
+                    >
+                      {limit >= 1000 ? `${limit / 1000}k` : limit}
+                    </Button>
+                  ))}
+                </div>
+
+                <div className="pt-2">
+                  <label className="text-sm font-medium text-muted-foreground block mb-1">
+                    Valor Personalizado
+                  </label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      placeholder="Ex: 15000"
+                      value={customLimit}
+                      onChange={(e) => setCustomLimit(e.target.value)}
+                      className="bg-muted border-border text-foreground"
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => handleUpdateLimit(Number(customLimit))}
+                      disabled={updatingLimit || !customLimit}
+                    >
+                      Definir
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Tags & Notes */}
         <div className="grid gap-6 lg:grid-cols-2 mt-6">

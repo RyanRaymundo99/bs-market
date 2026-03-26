@@ -149,14 +149,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Also check against admin-configured maxDepositUsdt (for lower limits)
-    if (usdtAmountNum > maxDepositUsdt) {
+    // Check against individual user daily limit
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const userLimit = Number((user as any).dailyDepositLimit || 5000);
+
+    // Sum up today's BUY orders in USDT that are COMPLETED or PENDING
+    const todayOrders = await prisma.order.findMany({
+      where: {
+        userId: user.id,
+        type: "BUY",
+        status: { in: ["COMPLETED", "PENDING"] },
+        createdAt: { gte: startOfDay },
+      },
+      select: {
+        amount: true,
+      },
+    });
+
+    const todayTotalUSDT = todayOrders.reduce(
+      (acc, order) => acc + Number(order.amount),
+      0
+    );
+    const remainingLimit = userLimit - todayTotalUSDT;
+
+    if (usdtAmountNum > remainingLimit) {
       const whatsappNumber =
         process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "5511984284867";
       return NextResponse.json(
         {
-          error: `O depósito máximo é ${maxDepositUsdt} USDT. Para valores maiores, entre em contato conosco via WhatsApp.`,
-          code: "DEPOSIT_LIMIT_EXCEEDED",
+          error: `Você atingiu seu limite diário para depósitos. Limite: ${userLimit} USDT. Já depositou ${todayTotalUSDT.toFixed(
+            2
+          )} USDT hoje. Entre em contato com o suporte para aumentar seu limite.`,
+          code: "DAILY_LIMIT_EXCEEDED",
+          remaining: Math.max(0, remainingLimit),
           whatsappUrl: `https://wa.me/${whatsappNumber}`,
         },
         { status: 400 }

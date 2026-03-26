@@ -53,18 +53,6 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable}`}
     >
       <head>
-        {/* Favicon - Prioritize SVG for better scaling */}
-        <link
-          rel="icon"
-          type="image/svg+xml"
-          href="/shortname-logo.svg"
-          sizes="any"
-        />
-        <link
-          rel="apple-touch-icon"
-          href="/shortname-logo.svg"
-          sizes="180x180"
-        />
         {/* Fallback for older browsers */}
         <link rel="alternate icon" type="image/x-icon" href="/favicon.ico" />
         {/* Preload critical resources */}

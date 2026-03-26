@@ -87,6 +87,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Store raw webhook event first for debugging (minimal data)
+    let initialWebhookEvent;
+    try {
+      initialWebhookEvent = await prisma.webhookEvent.create({
+        data: {
+          eventType: action || notificationType || "unknown",
+          source: "mercadopago",
+          payload: body,
+          transactionId: dataId?.toString(),
+          status: "RECEIVED",
+          ipAddress: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown",
+          userAgent: request.headers.get("user-agent") || "unknown",
+          processed: false,
+        },
+      });
+      webhookEventId = initialWebhookEvent.id;
+    } catch (e) {
+      console.error("Failed to store initial webhook event:", e);
+    }
+
     // Verify webhook signature
     const isValidSignature = await paymentService.verifyWebhookSignature(
       request,
@@ -98,12 +118,37 @@ export async function POST(request: NextRequest) {
       isDevelopment && request.headers.get("x-test-webhook") === "true";
 
     if (!isValidSignature && !isTestWebhook) {
-      console.error("Webhook signature verification failed");
+      const xSignature = request.headers.get("x-signature");
+      console.error("Webhook signature verification failed:", {
+        dataId,
+        xSignature,
+        isTestWebhook
+      });
+      
+      if (webhookEventId) {
+        await prisma.webhookEvent.update({
+          where: { id: webhookEventId },
+          data: { 
+            error: "Invalid signature",
+            signatureValid: false 
+          }
+        }).catch(() => {});
+      }
+      
       return NextResponse.json(
         { error: "Invalid webhook signature" },
         { status: 401 }
       );
     }
+
+    // Update signature validity if it passed
+    if (webhookEventId) {
+      await prisma.webhookEvent.update({
+        where: { id: webhookEventId },
+        data: { signatureValid: true }
+      }).catch(() => {});
+    }
+
 
     // Fetch the full payment details from Mercado Pago API
     const paymentStatus = await paymentService.getTransactionStatus(dataId.toString());
@@ -149,26 +194,23 @@ export async function POST(request: NextRequest) {
       "unknown";
     const userAgent = request.headers.get("user-agent") || "unknown";
 
-    // Store webhook event in database
-    try {
-      const webhookEvent = await prisma.webhookEvent.create({
-        data: {
-          eventType: eventType,
-          source: "mercadopago",
-          payload: JSON.parse(JSON.stringify({ ...body, fetchedPayment: paymentData })),
-          transactionId: transaction_id,
-          externalId: external_id,
-          status: status.toUpperCase(),
-          ipAddress: ipAddress,
-          userAgent: userAgent,
-          processed: false,
-          signatureValid: isValidSignature || isTestWebhook,
-        },
-      });
-      webhookEventId = webhookEvent.id;
-    } catch (dbError) {
-      // If WebhookEvent model doesn't exist yet, continue silently
+    // Update webhook event with full payment data
+    if (webhookEventId) {
+      try {
+        await prisma.webhookEvent.update({
+          where: { id: webhookEventId },
+          data: {
+            eventType: eventType,
+            payload: JSON.parse(JSON.stringify({ ...body, fetchedPayment: paymentData })),
+            externalId: external_id,
+            status: status.toUpperCase(),
+          },
+        });
+      } catch (dbError) {
+        console.error("Failed to update webhook event with details:", dbError);
+      }
     }
+
 
     if (!transaction_id && !external_id) {
       console.error("Webhook missing transaction_id and external_id");
