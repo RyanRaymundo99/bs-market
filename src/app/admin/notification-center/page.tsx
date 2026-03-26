@@ -35,21 +35,14 @@ import {
   RefreshCw,
   Grid3x3,
   List,
-  CheckSquare,
-  Square,
-  Filter,
-  AlertCircle,
-  Shield,
-  CheckCircle2,
-  XCircle,
-  Eye,
-  MoreVertical,
   Save,
   Plus,
   X,
+  Filter,
+  AlertCircle,
+  Shield,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import BackToDashboardButton from "@/components/admin/BackToDashboardButton";
 import {
   Table,
   TableBody,
@@ -58,13 +51,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 interface User {
   id: string;
@@ -368,7 +354,7 @@ export default function NotificationCenterPage() {
         } else {
           failCount++;
         }
-      } catch (error) {
+      } catch {
         failCount++;
       }
     }

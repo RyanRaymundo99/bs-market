@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
-    const userLimit = Number((user as any).dailyDepositLimit || 5000);
+    const userLimit = Number((user as unknown as { dailyDepositLimit?: number | string | bigint | Decimal | null }).dailyDepositLimit || 5000);
 
     // Sum up today's BUY orders in USDT that are COMPLETED or PENDING
     const todayOrders = await prisma.order.findMany({

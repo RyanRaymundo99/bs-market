@@ -405,7 +405,7 @@ function AdminDashboardContent() {
         });
       })
       .finally(() => setDetailsLoading(false));
-  }, [searchParams, router]);
+  }, [searchParams, router, toast]);
 
   useEffect(() => {
     const loadMoneyControls = async () => {
@@ -614,7 +614,7 @@ function AdminDashboardContent() {
         }
       }
     },
-    [typeFilter, dateFrom, dateTo, amountMin, amountMax]
+    []
   );
 
   const fetchFinanceData = useCallback(async () => {
@@ -1512,15 +1512,7 @@ function AdminDashboardContent() {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      document.cookie =
-        "better-auth.session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-      router.push("/admin/login");
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
-  };
+
 
   const handleResetFinance = async () => {
     try {

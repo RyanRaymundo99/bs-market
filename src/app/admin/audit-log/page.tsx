@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -45,7 +45,7 @@ export default function AuditLogPage() {
   const [resourceType, setResourceType] = useState<string>("all");
   const limit = 50;
 
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -76,11 +76,11 @@ export default function AuditLogPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [limit, offset, resourceType, toast]);
 
   useEffect(() => {
     fetchLogs();
-  }, [offset, resourceType]);
+  }, [fetchLogs]);
 
   const formatDate = (dateString: string) =>
     new Date(dateString).toLocaleString("pt-BR", {

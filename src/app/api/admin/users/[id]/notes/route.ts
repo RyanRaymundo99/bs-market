@@ -12,7 +12,7 @@ export async function GET(
   const { id: userId } = await params;
   
   try {
-    const notes = await prisma.$queryRaw<Array<{ id: string, adminId: string, note: string, createdAt: any }>>`
+    const notes = await prisma.$queryRaw<Array<{ id: string, adminId: string, note: string, createdAt: string | Date }>>`
       SELECT id, "adminId", note, "createdAt" 
       FROM "user_note" 
       WHERE "userId" = ${userId} 

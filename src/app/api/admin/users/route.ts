@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
     // Fetch daily deposit limits for this batch of users via raw SQL
     if (userIds.length > 0) {
       try {
-        const rawLimits = await prisma.$queryRawUnsafe<Array<{ _id: string, dailyDepositLimit: any }>>(`
+        const rawLimits = await prisma.$queryRawUnsafe<Array<{ _id: string, dailyDepositLimit: number | string | bigint | null }>>(`
           SELECT "_id", "dailyDepositLimit" FROM "user" WHERE "_id" IN (${userIds.map(id => `'${id}'`).join(',')})
         `);
         const limitMap = new Map(rawLimits.map(l => [l._id, Number(l.dailyDepositLimit)]));

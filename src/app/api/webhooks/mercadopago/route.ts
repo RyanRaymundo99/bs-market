@@ -522,7 +522,7 @@ export async function POST(request: NextRequest) {
       orderStatus = "EXECUTING";
     }
 
-    const updatedOrder = await prisma.order.update({
+    await prisma.order.update({
       where: { id: order.id },
       data: {
         status: orderStatus,

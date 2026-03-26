@@ -29,11 +29,7 @@ import {
   ChevronRight,
   Grid3x3,
   List,
-  CheckSquare,
-  Square,
   RefreshCw,
-  MoreVertical,
-  Download,
   FileText,
 } from "lucide-react";
 import {
@@ -41,7 +37,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
@@ -161,12 +156,12 @@ const AdminKYCPage = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, [fetchUsers]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [fetchUsers]);
 
   useEffect(() => {
     filterUsers();
     setCurrentPage(1); // Reset to first page when filters change
-  }, [filterUsers]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [filterUsers]);
 
   // Statistics
   const stats = useMemo(() => {
@@ -333,7 +328,7 @@ const AdminKYCPage = () => {
         } else {
           failCount++;
         }
-      } catch (error) {
+      } catch {
         failCount++;
       }
     }

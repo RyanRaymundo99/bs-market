@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -58,15 +58,11 @@ export default function AdminNotificationsPage() {
   const { toast } = useToast();
   const router = useRouter();
 
-  useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    fetchAlertSettings();
-  }, [fetchAlertSettings]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function fetchAlertSettings() {
+
+
+  const fetchAlertSettings = useCallback(async () => {
     try {
       setLoadingAlertSettings(true);
       const response = await fetch("/api/admin/notifications/alert-settings");
@@ -90,7 +86,7 @@ export default function AdminNotificationsPage() {
     } finally {
       setLoadingAlertSettings(false);
     }
-  }
+  }, []);
 
   async function saveAlertSettings() {
     try {
@@ -126,7 +122,7 @@ export default function AdminNotificationsPage() {
     }
   }
 
-  async function fetchNotifications() {
+  const fetchNotifications = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch("/api/admin/notifications");
@@ -150,7 +146,15 @@ export default function AdminNotificationsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [toast]);
+ 
+   useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  useEffect(() => {
+    fetchAlertSettings();
+  }, [fetchAlertSettings]);
 
   const markAllAsRead = async () => {
     try {
