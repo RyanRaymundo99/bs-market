@@ -149,6 +149,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (usdtAmountNum > maxDepositUsdt) {
+      return NextResponse.json(
+        {
+          error: `O depósito máximo é ${maxDepositUsdt} USDT. Para valores maiores, entre em contato conosco via WhatsApp.`,
+          code: "DEPOSIT_LIMIT_EXCEEDED",
+        },
+        { status: 400 }
+      );
+    }
+
     // Check against individual user daily limit
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);

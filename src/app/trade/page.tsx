@@ -473,12 +473,19 @@ const TradePage = () => {
             ? "Seu saldo já foi atualizado." 
             : "Your balance has been updated.",
         });
+        
+        // Auto-close PIX modal if open
+        setShowPixModal(false);
+        // Clear buy input
+        setBuyUSDT("");
+        
         // Trigger balance refresh in sidebar/navbar
         window.dispatchEvent(new CustomEvent("refresh-balance"));
       }
     }
-    prevHistoryRef.current = transactionHistory;
+    prevHistoryRef.current = transactionHistory.map(t => ({ id: t.id, status: t.status }));
   }, [transactionHistory, language, toast]);
+
 
   // Fetch USDT rate and transaction history on mount - STABLE MOUNT
   useEffect(() => {
