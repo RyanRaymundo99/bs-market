@@ -1225,15 +1225,15 @@ const TradePage = () => {
                       {language === "pt" ? "Selecione a Rede (Network):" : "Select Network:"}
                     </label>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {[
+                      {([
                         { id: "TRC20", label: "Tron" },
                         { id: "POLYGON", label: "Polygon" },
                         { id: "ERC20", label: "Ethereum" },
                         { id: "BSC", label: "BSC" },
-                      ].map((network) => (
+                      ] as const).map((network) => (
                         <button
                           key={network.id}
-                          onClick={() => setCryptoNetwork(network.id as any)}
+                          onClick={() => setCryptoNetwork(network.id)}
                           className={`px-3 py-2.5 rounded-xl border text-xs font-semibold transition-all ${
                             cryptoNetwork === network.id
                               ? "bg-primary/20 border-primary text-primary"
