@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate network
-    const validNetworks = ["TRC20", "ERC20"];
+    const validNetworks = ["TRC20", "ERC20", "POLYGON"];
     if (!validNetworks.includes(network)) {
       return NextResponse.json(
         { error: "Invalid network. Must be TRC20 or ERC20" },

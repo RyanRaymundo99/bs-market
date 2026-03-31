@@ -152,7 +152,8 @@ export default function WithdrawPage() {
   const [withdrawalType, setWithdrawalType] = useState<"USDT" | "PIX">("USDT");
   const [pixAmount, setPixAmount] = useState("");
   const [pixKey, setPixKey] = useState("");
-  const [pixPassword, setPixPassword] = useState("");
+  const [pixCPF, setPixCPF] = useState("");
+  const [isCPFValid, setIsCPFValid] = useState<boolean | null>(null);
   const [processingPix, setProcessingPix] = useState(false);
   const [usdtToBrlRate, setUsdtToBrlRate] = useState<number | null>(null);
 
@@ -393,6 +394,8 @@ export default function WithdrawPage() {
         return 1; // TRC20 typically has lower fees (~1 USDT)
       case "ERC20":
         return 5; // ERC20 typically has higher fees (~5 USDT)
+      case "POLYGON":
+        return 1; // Polygon has low fees
       default:
         return 1;
     }
@@ -413,6 +416,57 @@ export default function WithdrawPage() {
     if (!pixAmount || parseFloat(pixAmount) <= 0) return 0;
     const amount = parseFloat(pixAmount);
     return isNaN(amount) ? 0 : amount;
+  };
+
+  const validateCPF = (cpf: string) => {
+    const cleanCPF = cpf.replace(/\D/g, "");
+    if (cleanCPF.length !== 11) return false;
+    if (/^(\d)\1+$/.test(cleanCPF)) return false;
+    
+    let sum = 0;
+    let remainder;
+    
+    for (let i = 1; i <= 9; i++) {
+      sum = sum + parseInt(cleanCPF.substring(i - 1, i)) * (11 - i);
+    }
+    
+    remainder = (sum * 10) % 11;
+    if (remainder === 10 || remainder === 11) remainder = 0;
+    if (remainder !== parseInt(cleanCPF.substring(9, 10))) return false;
+    
+    sum = 0;
+    for (let i = 1; i <= 10; i++) {
+      sum = sum + parseInt(cleanCPF.substring(i - 1, i)) * (12 - i);
+    }
+    
+    remainder = (sum * 10) % 11;
+    if (remainder === 10 || remainder === 11) remainder = 0;
+    if (remainder !== parseInt(cleanCPF.substring(10, 11))) return false;
+    
+    return true;
+  };
+
+  const handleCPFChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(/\D/g, "");
+    if (value.length > 11) value = value.slice(0, 11);
+    
+    // Auto-masking
+    if (value.length > 9) {
+      value = value.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+    } else if (value.length > 6) {
+      value = value.replace(/(\d{3})(\d{3})(\d{3})/, "$1.$2.$3");
+    } else if (value.length > 3) {
+      value = value.replace(/(\d{3})(\d{3})/, "$1.$2");
+    }
+    
+    setPixCPF(value);
+    
+    const cleanValue = value.replace(/\D/g, "");
+    if (cleanValue.length === 11) {
+      setIsCPFValid(validateCPF(cleanValue));
+    } else {
+      setIsCPFValid(null);
+    }
   };
 
   // Handle PIX withdrawal
@@ -451,13 +505,25 @@ export default function WithdrawPage() {
       return;
     }
 
-    if (!pixPassword) {
+    if (!pixCPF) {
       toast({
-        title: language === "pt" ? "Senha obrigatória" : "Password required",
+        title: language === "pt" ? "CPF obrigatório" : "CPF required",
         description:
           language === "pt"
-            ? "Digite sua senha para confirmar"
-            : "Enter your password to confirm",
+            ? "Digite seu CPF para confirmar"
+            : "Enter your CPF to confirm",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (isCPFValid === false) {
+      toast({
+        title: language === "pt" ? "CPF Inválido" : "Invalid CPF",
+        description:
+          language === "pt"
+            ? "O CPF informado não é válido."
+            : "The provided CPF is not valid.",
         variant: "destructive",
       });
       return;
@@ -471,7 +537,7 @@ export default function WithdrawPage() {
         body: JSON.stringify({
           amount: parseFloat(pixAmount),
           pixKey: pixKey.trim(),
-          password: pixPassword,
+          cpf: pixCPF.replace(/\D/g, ""),
         }),
       });
 
@@ -489,7 +555,8 @@ export default function WithdrawPage() {
         setShowSuccessModal(true);
         setPixAmount("");
         setPixKey("");
-        setPixPassword("");
+        setPixCPF("");
+        setIsCPFValid(null);
         fetchWalletData();
         fetchWithdrawalHistory();
       } else {
@@ -786,6 +853,9 @@ export default function WithdrawPage() {
                             <SelectItem value="ERC20">
                               {t("erc20Option")}
                             </SelectItem>
+                            <SelectItem value="POLYGON">
+                              {t("polygonOption")}
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -887,23 +957,35 @@ export default function WithdrawPage() {
                       </div>
 
                       <div>
-                        <Label htmlFor="pix-password" className="text-foreground">
-                          {language === "pt"
-                            ? "Confirmar Senha"
-                            : "Confirm Password"}
-                        </Label>
+                        <div className="flex items-center justify-between mb-2">
+                          <Label htmlFor="pix-cpf" className="text-foreground">
+                            {language === "pt"
+                              ? "Confirmar CPF"
+                              : "Confirm CPF"}
+                          </Label>
+                          {isCPFValid !== null && (
+                            <span className={`text-[10px] font-bold uppercase tracking-wider ${isCPFValid ? "text-primary" : "text-destructive"}`}>
+                              {isCPFValid 
+                                ? (language === "pt" ? "Válido" : "Valid") 
+                                : (language === "pt" ? "Inválido" : "Invalid")}
+                            </span>
+                          )}
+                        </div>
                         <Input
-                          id="pix-password"
-                          type="password"
-                          placeholder={
-                            language === "pt"
-                              ? "Digite sua senha para confirmar"
-                              : "Enter your password to confirm"
-                          }
-                          value={pixPassword}
-                          onChange={(e) => setPixPassword(e.target.value)}
-                          className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground focus:ring-primary rounded-xl"
+                          id="pix-cpf"
+                          type="text"
+                          placeholder="000.000.000-00"
+                          value={pixCPF}
+                          onChange={handleCPFChange}
+                          className={`bg-muted/50 border-border text-foreground placeholder:text-muted-foreground focus:ring-primary rounded-xl ${
+                            isCPFValid === false ? "border-destructive focus:ring-destructive" : ""
+                          }`}
                         />
+                        <p className="mt-1 text-[10px] text-muted-foreground">
+                          {language === "pt" 
+                            ? "Confirme sua identidade informando seu CPF real." 
+                            : "Confirm your identity by entering your real CPF."}
+                        </p>
                       </div>
 
                       <div className="p-4 sm:p-6 bg-muted/30 rounded-xl border border-border">
@@ -926,7 +1008,8 @@ export default function WithdrawPage() {
                           processingPix ||
                           !pixAmount ||
                           !pixKey ||
-                          !pixPassword ||
+                          !pixCPF ||
+                          isCPFValid === false ||
                           parseFloat(pixAmount) <= 0 ||
                           parseFloat(pixAmount) > getBrlBalance()
                         }

@@ -111,6 +111,7 @@ const translations = {
     rejectedStatus: "Rejeitado",
     trc20Option: "TRC20 (Tron) - Taxa menor",
     erc20Option: "ERC20 (Ethereum) - Taxa maior",
+    polygonOption: "Polygon (MATIC) - Taxa menor",
     noWithdrawalHistory:
       "Nenhum histórico de saque encontrado. Realize seu primeiro saque para ver o histórico aqui.",
     withdrawalProcessed: "Saque Processado",
@@ -293,6 +294,7 @@ const translations = {
     rejectedStatus: "Rejected",
     trc20Option: "TRC20 (Tron) - Lower fee",
     erc20Option: "ERC20 (Ethereum) - Higher fee",
+    polygonOption: "Polygon (MATIC) - Lower fee",
     noWithdrawalHistory:
       "No withdrawal history found. Make your first withdrawal to see history here.",
     withdrawalProcessed: "Withdrawal Processed",

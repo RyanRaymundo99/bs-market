@@ -61,9 +61,9 @@ export async function POST(request: NextRequest) {
     // Parse request body
     const { network } = await request.json();
 
-    if (!network || !["TRC20", "ERC20", "BSC"].includes(network)) {
+    if (!network || !["TRC20", "ERC20", "BSC", "POLYGON"].includes(network)) {
       return NextResponse.json(
-        { error: "Invalid network. Must be TRC20, ERC20, or BSC" },
+        { error: "Invalid network. Must be TRC20, ERC20, BSC or POLYGON" },
         { status: 400 }
       );
     }
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     
     // For crypto deposits, we need a wallet address for users to send to
     // Try to get address from environment variable first
-    let depositAddress = process.env[`DEPOSIT_ADDRESS_${network}`];
+    let depositAddress = process.env[`DEPOSIT_ADDRESS_${network.toUpperCase()}`];
     
     // If no address configured, try to get from payment provider balance endpoint
     if (!depositAddress) {
@@ -88,9 +88,17 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    // Fallback: Use a configured main address
+    // Fallback: Use user-provided addresses as main defaults
+    const USER_CONFIGURED_ADDRESSES: Record<string, string> = {
+      TRC20: "THzBRcQGz2fY9Xcu2ZZtVhKsDDeE98iW2N",
+      POLYGON: "0x55853FfD5D8772306640B806F445Fc31C33e2FcF",
+      ERC20: "0x55853FfD5D8772306640B806F445Fc31C33e2FcF",
+      BSC: "0x55853FfD5D8772306640B806F445Fc31C33e2FcF", // Usually BSC is also EVM-compatible
+    };
+
     if (!depositAddress) {
-      depositAddress = process.env.DEPOSIT_ADDRESS_MAIN || 
+      depositAddress = USER_CONFIGURED_ADDRESSES[network] || 
+        process.env.DEPOSIT_ADDRESS_MAIN || 
         process.env.PAYMENT_DEPOSIT_ADDRESS ||
         `TMainDepositAddress_${network}`;
       

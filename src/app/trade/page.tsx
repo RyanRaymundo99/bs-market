@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 import { ButtonLoader, Spinner } from "@/components/ui/loading";
 import { useLanguage } from "@/contexts/LanguageContext";
+import QRCode from "qrcode";
 
 import { handleLogout as performLogout } from "../../lib/auth-utils";
 import { formatUSDTInput, parseUSDTInput } from "../../lib/trade-utils";
@@ -217,6 +218,11 @@ const TradePage = () => {
   const [loadingTransactions, setLoadingTransactions] = useState<Set<string>>(
     new Set()
   );
+
+  const [cryptoNetwork, setCryptoNetwork] = useState<"TRC20" | "ERC20" | "BSC" | "POLYGON">("TRC20");
+  const [cryptoAddress, setCryptoAddress] = useState<string>("");
+  const [cryptoAddressLoading, setCryptoAddressLoading] = useState(false);
+  const [cryptoQrCode, setCryptoQrCode] = useState<string>("");
 
   // Store PIX data by transaction ID so we can reopen the modal for pending payments
   // Load from localStorage on mount
@@ -879,6 +885,78 @@ const TradePage = () => {
     }
   };
 
+  const fetchCryptoAddress = useCallback(async (network: string) => {
+    try {
+      setCryptoAddressLoading(true);
+      const response = await fetch("/api/deposit/crypto/address", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ network }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch address");
+      }
+
+      const data = await response.json();
+      if (data.success && data.address) {
+        setCryptoAddress(data.address);
+        // Generate QR code locally
+        try {
+          const qrUrl = await QRCode.toDataURL(data.address, {
+            width: 300,
+            margin: 2,
+            color: {
+              dark: "#000000",
+              light: "#ffffff",
+            },
+          });
+          setCryptoQrCode(qrUrl);
+        } catch (err) {
+          console.error("Error generating QR code:", err);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching crypto address:", error);
+      toast({
+        title: "Erro",
+        description: language === "pt" ? "Não foi possível obter o endereço de depósito" : "Could not obtain deposit address",
+        variant: "destructive",
+      });
+    } finally {
+      setCryptoAddressLoading(false);
+    }
+  }, [language, toast]);
+
+  useEffect(() => {
+    if (depositMethod === "CRYPTO") {
+      fetchCryptoAddress(cryptoNetwork);
+    }
+  }, [depositMethod, cryptoNetwork, fetchCryptoAddress]);
+
+  const copyAddress = async (address: string) => {
+    try {
+      await navigator.clipboard.writeText(address);
+      toast({
+        title: "Copiado!",
+        description: language === "pt" ? "Endereço copiado com sucesso" : "Address copied successfully",
+      });
+    } catch {
+      toast({
+        title: "Erro",
+        description: "Não foi possível copiar",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const getTrustWalletLink = (network: string, address: string) => {
+    if (network === "TRC20") return `https://link.trustwallet.com/send?address=${address}&asset=c195_tTR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t`;
+    if (network === "POLYGON") return `https://link.trustwallet.com/send?asset=c966_t0xc2132D05D31c914a87C6611C10748AEb04B58e8F&address=${address}`;
+    if (network === "ERC20") return `https://link.trustwallet.com/send?asset=c60_t0xdAC17F958D2ee523a2206206994597C13D831ec7&address=${address}`;
+    return null;
+  };
+
   return (
 
     <div
@@ -962,9 +1040,11 @@ const TradePage = () => {
                 <div className="h-6 w-px bg-border mx-1" />
                 <button
                   onClick={() => setDepositMethod("CRYPTO")}
-                  disabled
-                  className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium opacity-50 cursor-not-allowed text-muted-foreground"
-                  title={language === "pt" ? "Em breve" : "Coming soon"}
+                  className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                    depositMethod === "CRYPTO"
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}
                 >
                   <div className="flex items-center justify-center gap-2">
                     <Coins className="h-4 w-4" />
@@ -1139,28 +1219,124 @@ const TradePage = () => {
               </>
             ) : (
               <>
-                {/* Crypto Deposit Form - Temporarily Unavailable */}
-                <div className="p-8 sm:p-12 bg-muted/30 rounded-xl border border-border text-center">
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="p-4 bg-muted rounded-full">
-                      <Coins className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-foreground mb-2">
-                        {language === "pt" ? "Em Breve" : "Coming Soon"}
-                      </h3>
-                      <p className="text-sm text-muted-foreground max-w-md">
-                        {language === "pt"
-                          ? "A funcionalidade de depósito via cripto está em desenvolvimento e estará disponível em breve."
-                          : "Crypto deposit functionality is under development and will be available soon."}
-                      </p>
-                    </div>
-                    <div className="mt-4">
-                      <Button onClick={() => setDepositMethod("PIX")}>
-                        {language === "pt" ? "Usar PIX" : "Use PIX"}
-                      </Button>
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-3">
+                      {language === "pt" ? "Selecione a Rede (Network):" : "Select Network:"}
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {[
+                        { id: "TRC20", label: "Tron" },
+                        { id: "POLYGON", label: "Polygon" },
+                        { id: "ERC20", label: "Ethereum" },
+                        { id: "BSC", label: "BSC" },
+                      ].map((network) => (
+                        <button
+                          key={network.id}
+                          onClick={() => setCryptoNetwork(network.id as any)}
+                          className={`px-3 py-2.5 rounded-xl border text-xs font-semibold transition-all ${
+                            cryptoNetwork === network.id
+                              ? "bg-primary/20 border-primary text-primary"
+                              : "bg-muted/50 border-border text-muted-foreground hover:border-primary/50"
+                          }`}
+                        >
+                          {network.label}
+                        </button>
+                      ))}
                     </div>
                   </div>
+
+                  {cryptoAddressLoading ? (
+                    <div className="py-12 flex flex-col items-center gap-3">
+                      <Spinner size="lg" className="text-primary" />
+                      <p className="text-sm text-muted-foreground animate-pulse">
+                        {language === "pt" ? "Gerando endereço..." : "Generating address..."}
+                      </p>
+                    </div>
+                  ) : cryptoAddress ? (
+                    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                      <div className="p-5 bg-primary/5 border border-primary/20 rounded-2xl relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                          <Wallet className="w-12 h-12 text-primary" />
+                        </div>
+                        
+                        <div className="flex flex-col sm:flex-row items-center gap-6">
+                          <div className="bg-white p-2 rounded-xl shadow-inner shrink-0 min-w-[120px] min-h-[120px] flex items-center justify-center">
+                            {cryptoQrCode ? (
+                              <img 
+                                src={cryptoQrCode} 
+                                alt="QR Code" 
+                                className="w-[120px] h-[120px] sm:w-[150px] sm:h-[150px] animate-in fade-in zoom-in-50 duration-500"
+                              />
+                            ) : (
+                              <div className="w-[120px] h-[120px] sm:w-[150px] sm:h-[150px] bg-muted animate-pulse rounded-lg" />
+                            )}
+                          </div>
+                          
+                          <div className="flex-1 space-y-3 w-full">
+                            <label className="block text-[10px] font-bold text-primary uppercase tracking-widest mb-1.5">
+                              {language === "pt" ? "Endereço USDT (" + cryptoNetwork + "):" : "USDT Address (" + cryptoNetwork + "):"}
+                            </label>
+                            
+                            <div className="flex items-center gap-2">
+                              <code className="flex-1 font-mono text-xs sm:text-sm break-all font-semibold text-foreground bg-black/20 p-3 rounded-lg border border-white/5">
+                                {cryptoAddress}
+                              </code>
+                              <Button 
+                                size="icon" 
+                                variant="ghost" 
+                                className="shrink-0 hover:bg-primary/20 text-primary h-10 w-10 rounded-xl"
+                                onClick={() => copyAddress(cryptoAddress)}
+                              >
+                                <Copy className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Trust Wallet Integration */}
+                      {getTrustWalletLink(cryptoNetwork, cryptoAddress) && (
+                        <Button
+                          asChild
+                          variant="outline"
+                          className="w-full h-12 border-primary/30 text-primary hover:bg-primary/10 rounded-xl gap-2 font-semibold shadow-sm"
+                        >
+                          <a
+                            href={getTrustWalletLink(cryptoNetwork, cryptoAddress)!}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <Wallet className="w-4 h-4" />
+                            {language === "pt" ? "Pagar via Trust Wallet" : "Pay via Trust Wallet"}
+                          </a>
+                        </Button>
+                      )}
+
+                      <div className="p-4 bg-muted/30 border border-border rounded-xl space-y-3">
+                        <div className="flex items-start gap-3">
+                          <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+                            <span className="text-[10px] font-bold text-primary">!</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            {language === "pt" 
+                              ? `Certifique-se de enviar apenas USDT via rede ${cryptoNetwork}. O envio de qualquer outra moeda resultará em perda permanente.` 
+                              : `Make sure to only send USDT via the ${cryptoNetwork} network. Sending any other currency will result in permanent loss.`}
+                          </p>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+                            <span className="text-[10px] font-bold text-primary">?</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            {language === "pt"
+                              ? "O crédito será automático após 3-6 confirmações na rede (geralmente 5-10 minutos)."
+                              : "Credit will be automatic after 3-6 network confirmations (usually 5-10 minutes)."}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               </>
             )}
