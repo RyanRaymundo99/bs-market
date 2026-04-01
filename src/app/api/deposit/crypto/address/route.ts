@@ -61,9 +61,9 @@ export async function POST(request: NextRequest) {
     // Parse request body
     const { network } = await request.json();
 
-    if (!network || !["TRC20", "ERC20", "BSC", "POLYGON"].includes(network)) {
+    if (!network || !["TRC20", "ERC20", "POLYGON"].includes(network)) {
       return NextResponse.json(
-        { error: "Invalid network. Must be TRC20, ERC20, BSC or POLYGON" },
+        { error: "Invalid network. Must be TRC20, ERC20, or POLYGON" },
         { status: 400 }
       );
     }
@@ -93,7 +93,6 @@ export async function POST(request: NextRequest) {
       TRC20: "THzBRcQGz2fY9Xcu2ZZtVhKsDDeE98iW2N",
       POLYGON: "0x55853FfD5D8772306640B806F445Fc31C33e2FcF",
       ERC20: "0x55853FfD5D8772306640B806F445Fc31C33e2FcF",
-      BSC: "0x55853FfD5D8772306640B806F445Fc31C33e2FcF", // Usually BSC is also EVM-compatible
     };
 
     if (!depositAddress) {

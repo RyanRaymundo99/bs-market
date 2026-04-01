@@ -70,6 +70,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAdminSettings } from "@/contexts/AdminSettingsContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import type { DashboardSectionId } from "@/contexts/AdminSettingsContext";
 import {
   BarChart,
@@ -273,6 +274,8 @@ function AdminDashboardContent() {
   const [resendingReceipt, setResendingReceipt] = useState(false);
   const [syncingStatus, setSyncingStatus] = useState(false);
   const [markingCompleted, setMarkingCompleted] = useState(false);
+  const [showConfirmPaymentDialog, setShowConfirmPaymentDialog] = useState(false);
+  const [paymentConfirmationHash, setPaymentConfirmationHash] = useState("");
   const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
   const lastUpdateTimeRef = useRef<Date>(lastUpdateTime);
   const hasRealtimeTransactionsRef = useRef(false);
@@ -361,6 +364,7 @@ function AdminDashboardContent() {
   const [adminActivityLog, setAdminActivityLog] = useState<AdminLogItem[]>([]);
 
   const { toast } = useToast();
+  const { language, t } = useLanguage();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { settings } = useAdminSettings();
@@ -1041,16 +1045,9 @@ function AdminDashboardContent() {
     }
   };
 
-  const handleMarkAsCompleted = async () => {
+  const handleMarkAsCompleted = async (hash?: string) => {
     if (!transactionDetails) return;
     if (transactionDetails.id.startsWith("order_")) return;
-
-    // Confirm action
-    if (
-      !confirm("Tem certeza que deseja marcar esta transação como concluída?")
-    ) {
-      return;
-    }
 
     setMarkingCompleted(true);
     try {
@@ -1058,6 +1055,8 @@ function AdminDashboardContent() {
         `/api/admin/transactions/${transactionDetails.id}/mark-completed`,
         {
           method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ hash }),
         }
       );
 
@@ -1066,9 +1065,13 @@ function AdminDashboardContent() {
       if (response.ok && data.success) {
         toast({
           title: "Sucesso",
-          description: "Transação marcada como concluída com sucesso!",
+          description: "Transação confirmada com sucesso!",
           variant: "default",
         });
+
+        // Close dialogs
+        setShowConfirmPaymentDialog(false);
+        setPaymentConfirmationHash("");
 
         // Refresh transaction details
         const detailsResponse = await fetch(
@@ -1095,7 +1098,7 @@ function AdminDashboardContent() {
         description:
           error instanceof Error
             ? error.message
-            : "Falha ao marcar transação como concluída",
+            : "Falha ao confirmar transação",
       });
     } finally {
       setMarkingCompleted(false);
@@ -3935,7 +3938,7 @@ function AdminDashboardContent() {
                         transactionDetails.status === "EXECUTING") &&
                         !transactionDetails.id.startsWith("order_") && (
                           <Button
-                            onClick={handleMarkAsCompleted}
+                            onClick={() => handleMarkAsCompleted()}
                             disabled={markingCompleted}
                             variant="outline"
                             size="sm"
@@ -4277,7 +4280,7 @@ function AdminDashboardContent() {
                       </h3>
                       {transactionDetails.deposit.status === "PENDING" && (
                         <Button
-                          onClick={handleMarkAsCompleted}
+                          onClick={() => handleMarkAsCompleted()}
                           disabled={markingCompleted}
                           variant="outline"
                           size="sm"
@@ -4366,25 +4369,28 @@ function AdminDashboardContent() {
                                 </>
                               )}
                             </Button>
-                            <Button
-                              onClick={handleMarkAsCompleted}
-                              disabled={markingCompleted}
-                              variant="outline"
-                              size="sm"
-                              className="border-primary text-primary hover:bg-primary/15 hover:text-primary"
-                            >
-                              {markingCompleted ? (
-                                <>
-                                  <Clock className="w-4 h-4 mr-2 animate-spin" />
-                                  Marcando...
-                                </>
-                              ) : (
-                                <>
-                                  <CheckCircle className="w-4 h-4 mr-2" />
-                                  Marcar como Concluída
-                                </>
-                              )}
-                            </Button>
+                             <Button
+                               onClick={() => {
+                                 setPaymentConfirmationHash(transactionDetails.withdrawal?.hash || "");
+                                 setShowConfirmPaymentDialog(true);
+                               }}
+                               disabled={markingCompleted}
+                               variant="outline"
+                               size="sm"
+                               className="bg-primary text-primary-foreground border-primary hover:bg-primary/90"
+                             >
+                               {markingCompleted ? (
+                                 <>
+                                   <Clock className="w-4 h-4 mr-2 animate-spin" />
+                                   Processando...
+                                 </>
+                               ) : (
+                                 <>
+                                   <CheckCircle className="w-4 h-4 mr-2" />
+                                   {language === "pt" ? "Confirmar Pagamento Realizado" : "Confirm Payment Sent"}
+                                 </>
+                               )}
+                             </Button>
                           </>
                         ) : null}
                       </div>
@@ -4794,6 +4800,78 @@ function AdminDashboardContent() {
               }
             >
               {balanceConfirmStep === 1 ? "Sim, Continuar" : "Confirmar Ajuste"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Payment Confirmation Dialog */}
+      <Dialog
+        open={showConfirmPaymentDialog}
+        onOpenChange={setShowConfirmPaymentDialog}
+      >
+        <DialogContent className="bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">
+              {language === "pt" ? "Confirmar Pagamento Realizado" : "Confirm Payment Sent"}
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              {language === "pt"
+                ? "Confirme que você enviou o valor solicitado para o usuário. Se for uma transação cripto, você pode fornecer o hash de transação abaixo."
+                : "Confirm that you have sent the requested amount to the user. For crypto transactions, you can provide the transaction hash below."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-foreground">
+                {language === "pt" ? "Hash de Transação (Opcional)" : "Transaction Hash (Optional)"}
+              </Label>
+              <Input
+                placeholder="e.g. 0x..."
+                value={paymentConfirmationHash}
+                onChange={(e) => setPaymentConfirmationHash(e.target.value)}
+                className="bg-muted/50 border-border text-foreground focus:ring-primary rounded-xl"
+              />
+            </div>
+            {transactionDetails?.withdrawal?.walletAddress && (
+              <div className="p-3 bg-muted rounded-lg border border-border">
+                <p className="text-xs text-muted-foreground uppercase mb-1">
+                   {language === "pt" ? "Endereço de Destino" : "Destination Address"}
+                </p>
+                <p className="text-sm font-mono break-all text-foreground">
+                  {transactionDetails.withdrawal.walletAddress}
+                </p>
+                {transactionDetails.withdrawal.network && (
+                  <p className="text-xs text-primary mt-1 font-semibold">
+                    Rede: {transactionDetails.withdrawal.network}
+                  </p>
+                )}
+              </div>
+            )}
+            {transactionDetails?.withdrawal?.pixKey && (
+              <div className="p-3 bg-muted rounded-lg border border-border">
+                <p className="text-xs text-muted-foreground uppercase mb-1">
+                   {language === "pt" ? "Chave PIX do Usuário" : "User PIX Key"}
+                </p>
+                <p className="text-sm font-mono break-all text-foreground">
+                  {transactionDetails.withdrawal.pixKey}
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowConfirmPaymentDialog(false)}
+              className="border-border text-muted-foreground hover:bg-muted"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => handleMarkAsCompleted(paymentConfirmationHash)}
+              disabled={markingCompleted}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {markingCompleted ? "Confirmando..." : "Confirmar Pagamento"}
             </Button>
           </DialogFooter>
         </DialogContent>

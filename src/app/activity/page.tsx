@@ -221,9 +221,7 @@ export default function ActivityPage() {
                         <button
                           type="button"
                           onClick={() =>
-                            router.push(
-                              tx.type === "WITHDRAWAL" ? "/withdraw" : "/trade"
-                            )
+                            router.push(`/transaction/${tx.id}`)
                           }
                           className="flex w-full items-center justify-between rounded-lg border border-border bg-muted/20 px-4 py-3 text-left transition-colors hover:bg-muted/40"
                         >

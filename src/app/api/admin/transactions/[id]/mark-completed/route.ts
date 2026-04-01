@@ -16,6 +16,13 @@ export async function POST(
     }
 
     const { id } = await params;
+    let body = {};
+    try {
+      body = await request.json();
+    } catch {
+      // Body may be empty
+    }
+    const { hash: providedHash } = body as { hash?: string };
 
     // Get transaction with all related data
     const transaction = await prisma.transaction.findUnique({
@@ -51,6 +58,7 @@ export async function POST(
         data: {
           status: "COMPLETED",
           processedAt: new Date(),
+          hash: providedHash || transaction.withdrawal.hash,
         },
       });
     } else if (transaction.order) {
@@ -62,7 +70,8 @@ export async function POST(
           executedAt: new Date(),
         },
       });
-    } else if (transaction.type === "WITHDRAWAL") {
+    }
+ else if (transaction.type === "WITHDRAWAL") {
       // Try multiple methods to find the withdrawal
       let withdrawal = null;
       
@@ -118,6 +127,7 @@ export async function POST(
             processedAt: new Date(),
             // Also link the transaction if not already linked
             transactionId: withdrawal.transactionId || transaction.id,
+            hash: providedHash || withdrawal.hash,
           },
         });
       } else {
@@ -162,7 +172,7 @@ export async function POST(
             type: withdrawalType,
             walletAddress: walletAddress,
             network: network,
-            hash: hash,
+            hash: providedHash || hash,
             pixKey: pixKey,
             protocol: protocol,
             transactionId: transaction.id,

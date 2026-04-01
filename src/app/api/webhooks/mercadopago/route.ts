@@ -241,7 +241,7 @@ export async function POST(request: NextRequest) {
 
       if (foundDeposit) {
         const depositUser = foundDeposit.user;
-        const networkMatch = external_id?.match(/deposit_.*_(TRC20|ERC20|BSC)_/);
+        const networkMatch = external_id?.match(/deposit_.*_(TRC20|ERC20|POLYGON)_/);
         const network = networkMatch ? networkMatch[1] : "TRC20";
         
         let depositStatus: "PENDING" | "CONFIRMED" | "REJECTED" | "CANCELLED" = 

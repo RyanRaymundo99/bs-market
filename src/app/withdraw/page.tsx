@@ -142,6 +142,7 @@ export default function WithdrawPage() {
   >([]);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [newTransactionId, setNewTransactionId] = useState<string | null>(null);
 
   // USDT Form States
   const [usdtAmount, setUsdtAmount] = useState("");
@@ -365,7 +366,9 @@ export default function WithdrawPage() {
       });
 
       if (response.ok) {
+        const data = await response.json();
         setSuccessMessage(t("transactionSent"));
+        setNewTransactionId(data.data.id || data.data.transaction_id || null);
         setShowSuccessModal(true);
         setUsdtAmount("");
         setWalletAddress("");
@@ -552,6 +555,7 @@ export default function WithdrawPage() {
                 parseFloat(pixAmount)
               )} requested successfully! Protocol: ${data.withdrawal.protocol}`
         );
+        setNewTransactionId(data.withdrawal.id);
         setShowSuccessModal(true);
         setPixAmount("");
         setPixKey("");
@@ -1070,7 +1074,8 @@ export default function WithdrawPage() {
                     {withdrawalHistory.map((withdrawal) => (
                       <tr
                         key={withdrawal.id}
-                        className="border-b hover:bg-muted/50"
+                        className="border-b hover:bg-muted/50 cursor-pointer"
+                        onClick={() => router.push(`/transaction/${withdrawal.id}`)}
                       >
                         <td className="py-3 px-4">
                           {new Date(withdrawal.createdAt).toLocaleDateString(
@@ -1143,7 +1148,12 @@ export default function WithdrawPage() {
             </DialogTitle>
             <DialogDescription>{successMessage}</DialogDescription>
           </DialogHeader>
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-3">
+            {newTransactionId && (
+              <Button variant="outline" onClick={() => router.push(`/transaction/${newTransactionId}`)}>
+                {language === "pt" ? "Ver Detalhes" : "View Details"}
+              </Button>
+            )}
             <Button onClick={() => setShowSuccessModal(false)}>
               {t("close")}
             </Button>

@@ -219,7 +219,7 @@ const TradePage = () => {
     new Set()
   );
 
-  const [cryptoNetwork, setCryptoNetwork] = useState<"TRC20" | "ERC20" | "BSC" | "POLYGON">("TRC20");
+  const [cryptoNetwork, setCryptoNetwork] = useState<"TRC20" | "ERC20" | "POLYGON">("TRC20");
   const [cryptoAddress, setCryptoAddress] = useState<string>("");
   const [cryptoAddressLoading, setCryptoAddressLoading] = useState(false);
   const [cryptoQrCode, setCryptoQrCode] = useState<string>("");
@@ -1229,7 +1229,6 @@ const TradePage = () => {
                         { id: "TRC20", label: "Tron" },
                         { id: "POLYGON", label: "Polygon" },
                         { id: "ERC20", label: "Ethereum" },
-                        { id: "BSC", label: "BSC" },
                       ] as const).map((network) => (
                         <button
                           key={network.id}
@@ -1411,28 +1410,8 @@ const TradePage = () => {
                   return (
                     <div
                       key={transaction.id}
-                      onClick={() => {
-                        if (isPending && hasPixData) {
-                          const pixData = storedPixData.get(transaction.id);
-                          if (pixData) {
-                            setPixData(pixData);
-                            setShowPixModal(true);
-                          }
-                        } else if (isCompleted) {
-                          setReceiptData({
-                            transactionId: transaction.id,
-                            amount: transaction.amount,
-                            usdtAmount: transaction.received,
-                            date: transaction.date,
-                          });
-                          setShowReceipt(true);
-                        }
-                      }}
-                      className={`p-4 rounded-xl bg-muted/30 border border-border transition-colors ${
-                        isClickable
-                          ? "hover:bg-muted/50 cursor-pointer hover:border-primary/30"
-                          : "hover:bg-muted/40"
-                      }`}
+                      onClick={() => router.push(`/transaction/${transaction.id}`)}
+                      className={`p-4 rounded-xl bg-muted/30 border border-border transition-colors hover:bg-muted/50 cursor-pointer hover:border-primary/30`}
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div className="flex-1">
@@ -1649,6 +1628,15 @@ const TradePage = () => {
               <p className="text-[10px] sm:text-xs text-muted-foreground text-center pt-2">
                 {t("paymentInstructions")}
               </p>
+              
+              <Button 
+                variant="outline" 
+                className="w-full mt-4 h-12 rounded-xl gap-2 border-primary/30 text-primary hover:bg-primary/5"
+                onClick={() => router.push(`/transaction/${pixData.transactionId}`)}
+              >
+                <FileText className="h-4 w-4" />
+                {language === "pt" ? "Acompanhar Status Detalhado" : "Track Detailed Status"}
+              </Button>
             </div>
           )}
         </DialogContent>
@@ -1711,13 +1699,21 @@ const TradePage = () => {
                   PDF
                 </Button>
                 <Button
+                  variant="ghost"
                   onClick={() => {
                     setShowReceipt(false);
                     setReceiptData(null);
                   }}
-                  className="flex-[2] py-3"
+                  className="flex-1 py-3"
                 >
                   Fechar
+                </Button>
+                <Button
+                  onClick={() => router.push(`/transaction/${receiptData.transactionId}`)}
+                  className="flex-[2] py-3 gap-2"
+                >
+                   <FileText className="h-4 w-4" />
+                  {language === "pt" ? "Ver Detalhes" : "View Details"}
                 </Button>
               </div>
             </div>
