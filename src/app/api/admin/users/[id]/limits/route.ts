@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { ensureUserLimitsColumns } from "@/lib/user-limits-db";
-import { Decimal } from "@prisma/client/runtime/library";
 
 export async function PATCH(
   request: NextRequest,

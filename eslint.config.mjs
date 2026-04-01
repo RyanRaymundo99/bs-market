@@ -14,7 +14,10 @@ const eslintConfig = [
   {
     rules: {
       // Allow unused vars in production builds
-      "@typescript-eslint/no-unused-vars": "warn",
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
       // Disable no-console since we remove console statements in production via Next.js compiler
       "no-console": "off",
       // Allow img tags (Next.js Image optimization warnings)

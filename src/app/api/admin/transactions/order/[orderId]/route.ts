@@ -41,7 +41,6 @@ export async function GET(
     }
 
     const amount = Number(order.amount);
-    const total = Number(order.total);
     const status =
       order.status === "COMPLETED"
         ? "APPROVED"

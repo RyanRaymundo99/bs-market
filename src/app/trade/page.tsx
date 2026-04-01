@@ -1262,10 +1262,13 @@ const TradePage = () => {
                         <div className="flex flex-col sm:flex-row items-center gap-6">
                           <div className="bg-white p-2 rounded-xl shadow-inner shrink-0 min-w-[120px] min-h-[120px] flex items-center justify-center">
                             {cryptoQrCode ? (
-                              <img 
-                                src={cryptoQrCode} 
-                                alt="QR Code" 
+                              <Image
+                                src={cryptoQrCode}
+                                alt="QR Code"
+                                width={150}
+                                height={150}
                                 className="w-[120px] h-[120px] sm:w-[150px] sm:h-[150px] animate-in fade-in zoom-in-50 duration-500"
+                                unoptimized
                               />
                             ) : (
                               <div className="w-[120px] h-[120px] sm:w-[150px] sm:h-[150px] bg-muted animate-pulse rounded-lg" />
@@ -1404,7 +1407,6 @@ const TradePage = () => {
                   const hasPixData = storedPixData.has(transaction.id);
                   const isPending = transaction.status === "PENDING";
                   const isCompleted = transaction.status === "COMPLETED";
-                  const isClickable = (isPending && hasPixData) || isCompleted;
                   const isLoading = loadingTransactions.has(transaction.id);
 
                   return (

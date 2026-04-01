@@ -32,6 +32,7 @@ import NavbarNew from "@/components/ui/navbar-new";
 import { PageLoader, Spinner } from "@/components/ui/loading";
 import { GlobalKYCBanner } from "@/components/GlobalKYCBanner";
 import { useLanguage } from "@/contexts/LanguageContext";
+import Image from "next/image";
 import { formatUSDT, formatBRL } from "@/lib/format-currency";
 import { useToast } from "@/hooks/use-toast";
 
@@ -59,7 +60,7 @@ interface TransactionData {
 export default function TransactionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
   const { toast } = useToast();
   
   const [loading, setLoading] = useState(true);
@@ -91,7 +92,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
         const err = await res.json();
         setError(err.error || "Transaction not found");
       }
-    } catch (err) {
+    } catch {
       setError("Failed to load transaction details");
     } finally {
       setLoading(false);
@@ -426,7 +427,14 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                         <CardContent className="p-8 space-y-6">
                             <div className="mx-auto w-48 h-48 bg-white p-3 rounded-2xl shadow-xl transition-transform hover:scale-105 duration-300">
                                 {transaction.pixQrCodeBase64 ? (
-                                    <img src={`data:image/png;base64,${transaction.pixQrCodeBase64}`} alt="PIX QR Code" className="w-full h-full" />
+                                    <Image
+                                      src={`data:image/png;base64,${transaction.pixQrCodeBase64}`}
+                                      alt="PIX QR Code"
+                                      width={192}
+                                      height={192}
+                                      className="w-full h-full object-contain"
+                                      unoptimized
+                                    />
                                 ) : (
                                     <div className="w-full h-full bg-muted flex items-center justify-center rounded-xl">
                                         <Spinner size="lg" />

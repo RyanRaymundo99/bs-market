@@ -31,7 +31,7 @@ export async function GET(
     const userId = session.user.id;
 
     // Try finding as a main Transaction first
-    let transaction = await prisma.transaction.findFirst({
+    const transaction = await prisma.transaction.findFirst({
       where: {
         id: id,
         userId: userId,

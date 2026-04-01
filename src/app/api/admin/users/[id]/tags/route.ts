@@ -2,13 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { validateAdminSession } from "@/lib/admin-session";
 
-type UserTagDelegate = {
-  findMany: (args: { where: { userId: string }; select: { id?: boolean; tag?: boolean } }) => Promise<{ tag: string }[]>;
-  upsert: (args: { where: { userId_tag: { userId: string; tag: string } }; create: { userId: string; tag: string }; update: object }) => Promise<unknown>;
-  deleteMany: (args: { where: { userId: string; tag: string } }) => Promise<unknown>;
-};
-type PrismaWithUserTag = typeof prisma & { userTag: UserTagDelegate };
-
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

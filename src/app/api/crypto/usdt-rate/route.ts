@@ -42,7 +42,7 @@ export async function GET() {
         timestamp: new Date().toISOString(),
         warning: "Using Banco Central as fallback due to real-time API error",
       });
-    } catch (fallbackError) {
+    } catch {
       // Final fallback
       return NextResponse.json({
         success: true,

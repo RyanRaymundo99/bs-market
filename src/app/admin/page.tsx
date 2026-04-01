@@ -225,6 +225,7 @@ interface TransactionDetails {
     protocol?: string | null;
     walletAddress?: string | null;
     network?: string | null;
+    pixKey?: string | null;
   } | null;
   order?: {
     id: string;
@@ -364,7 +365,7 @@ function AdminDashboardContent() {
   const [adminActivityLog, setAdminActivityLog] = useState<AdminLogItem[]>([]);
 
   const { toast } = useToast();
-  const { language, t } = useLanguage();
+  const { language } = useLanguage();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { settings } = useAdminSettings();

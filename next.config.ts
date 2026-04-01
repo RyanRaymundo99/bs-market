@@ -88,6 +88,13 @@ const nextConfig: NextConfig = {
 
   // Webpack optimizations
   webpack: (config, { isServer }) => {
+    config.ignoreWarnings = [
+      ...(config.ignoreWarnings ?? []),
+      {
+        module: /libheif-js\/libheif-wasm\/libheif-bundle\.js/,
+        message: /Critical dependency/,
+      },
+    ];
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
