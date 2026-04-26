@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Bell, Clock, FileText, Users, ChevronRight } from "lucide-react";
+import { Bell, Clock, FileText, Users, ChevronRight, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -117,6 +117,10 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
         return <FileText className="w-3.5 h-3.5 text-orange-400" />;
       case "approval_needed":
         return <Clock className="w-3.5 h-3.5 text-yellow-400" />;
+      case "new_deposit":
+        return <ArrowDownToLine className="w-3.5 h-3.5 text-green-400" />;
+      case "new_withdrawal":
+        return <ArrowUpFromLine className="w-3.5 h-3.5 text-purple-400" />;
       default:
         return <Bell className="w-3.5 h-3.5 text-gray-400" />;
     }
@@ -130,6 +134,10 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
         return "KYC Pendente";
       case "approval_needed":
         return "Aprovações Pendentes";
+      case "new_deposit":
+        return "Novos Depósitos";
+      case "new_withdrawal":
+        return "Solicitações de Saque";
       default:
         return "Outros";
     }
@@ -145,6 +153,10 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
         break;
       case "kyc_pending":
         router.push("/admin/kyc");
+        break;
+      case "new_deposit":
+      case "new_withdrawal":
+        router.push("/admin/transactions");
         break;
     }
     setIsOpen(false);

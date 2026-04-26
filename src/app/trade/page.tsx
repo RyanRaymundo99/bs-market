@@ -41,9 +41,11 @@ import {
 import { ButtonLoader, Spinner } from "@/components/ui/loading";
 import { useLanguage } from "@/contexts/LanguageContext";
 import QRCode from "qrcode";
+import { TransactionReceipt } from "@/components/TransactionReceipt";
+import { PixPaymentDialog } from "@/components/trade/PixPaymentDialog";
 
 import { handleLogout as performLogout } from "../../lib/auth-utils";
-import { formatUSDTInput, parseUSDTInput } from "../../lib/trade-utils";
+import { formatUSDTInput, parseUSDTInput, formatBRL, formatUSDT, getWhatsAppUrlForLargeDeposit } from "../../lib/trade-utils";
 const WHATSAPP_SUPPORT_URL = `https://wa.me/${
   process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "5511984284867"
 }`;
@@ -52,24 +54,7 @@ const WHATSAPP_SUPPORT_URL = `https://wa.me/${
 const ONLINE_MAX_USDT = 2000;
 
 // Generate WhatsApp URL with pre-filled message for deposits > 2k
-const getWhatsAppUrlForLargeDeposit = (
-  usdtAmount: number,
-  language: string
-) => {
-  const whatsappNumber =
-    process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "5511984284867";
-  const message =
-    language === "pt"
-      ? `Olá! Tenho interesse em fazer um depósito de ${usdtAmount.toLocaleString(
-          "pt-BR",
-          { minimumFractionDigits: 2, maximumFractionDigits: 2 }
-        )} USDT. Gostaria de mais informações.`
-      : `Hello! I'm interested in making a deposit of ${usdtAmount.toLocaleString(
-          "en-US",
-          { minimumFractionDigits: 2, maximumFractionDigits: 2 }
-        )} USDT. I'd like more information.`;
-  return `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
-};
+
 
 const TradePage = () => {
   const router = useRouter();
@@ -227,6 +212,9 @@ const TradePage = () => {
   const [cryptoAddress, setCryptoAddress] = useState<string>("");
   const [cryptoAddressLoading, setCryptoAddressLoading] = useState(false);
   const [cryptoQrCode, setCryptoQrCode] = useState<string>("");
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [cryptoHash, setCryptoHash] = useState<string>("");
+  const [isSubmittingHash, setIsSubmittingHash] = useState(false);
 
   // Store PIX data by transaction ID so we can reopen the modal for pending payments
   // Load from localStorage on mount
@@ -261,21 +249,9 @@ const TradePage = () => {
   const FEE_RATE = 0.03; // 3% de taxa
 
   // Currency formatting functions
-  const formatBRL = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value);
-  };
+  
 
-  const formatUSDT = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 4,
-    }).format(value);
-  };
+  
 
   // Handle USDT input change
   const handleUSDTInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -755,19 +731,11 @@ const TradePage = () => {
                 : `data:image/png;base64,${qrCodeBase64}`;
               domImg.src = base64Data;
             });
-
             if (decodedCode) {
-              console.log("✅ Successfully decoded PIX code from QR image!");
-              console.log(
-                "Decoded PIX code:",
-                decodedCode.substring(0, 50) + "..."
-              );
               pixCode = decodedCode;
-            } else {
-              console.log("⚠️ Could not decode PIX code from QR image");
             }
           } catch (error) {
-            console.error("Error importing or using jsQR:", error);
+            // Error decoding QR code from image is non-fatal as the user can still see the image
           }
         }
 
@@ -841,12 +809,22 @@ const TradePage = () => {
         }, 10000);
 
         toast({
-          title: "Compra iniciada!",
+          title: language === "pt" ? "Compra iniciada!" : "Purchase started!",
           description:
             language === "pt"
               ? "Escaneie o QR Code PIX para finalizar o pagamento"
               : "Scan the PIX QR Code to complete payment",
         });
+
+        // Show receipt immediately as a "pending voucher"
+        setReceiptData({
+          transactionId: data.data.transaction_id,
+          amount: totalBRL,
+          usdtAmount: data.data.amount_usdt,
+          date: new Date(),
+          type: "PIX"
+        });
+        setShowReceipt(true);
       }
     } catch (error: unknown) {
       console.error("Purchase error:", error);
@@ -963,6 +941,111 @@ const TradePage = () => {
       fetchCryptoAddress(cryptoNetwork);
     }
   }, [depositMethod, cryptoNetwork, fetchCryptoAddress, cryptoAddress]);
+
+  const handleSimulatePayment = async () => {
+    if (!receiptData?.transactionId) return;
+    
+    setIsSimulating(true);
+    try {
+      const response = await fetch("/api/test/simulate-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transactionId: receiptData.transactionId }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        toast({
+          title: "Sucesso",
+          description: "Pagamento simulado com sucesso! Saldo atualizado.",
+        });
+        setShowReceipt(false);
+        setCryptoAddress("");
+        setCryptoAmount("");
+        fetchTransactionHistory();
+      } else {
+        throw new Error(data.error || "Erro ao simular pagamento");
+      }
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: error instanceof Error ? error.message : "Falha ao simular pagamento",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSimulating(false);
+    }
+  };
+
+  const handleCryptoHashSubmit = async () => {
+    if (!receiptData?.transactionId || !cryptoHash.trim()) return;
+    
+    setIsSubmittingHash(true);
+    try {
+      const response = await fetch("/api/deposit/crypto/hash", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          transactionId: receiptData.transactionId,
+          hash: cryptoHash.trim()
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        toast({
+          title: language === "pt" ? "Sucesso" : "Success",
+          description: language === "pt" ? "Hash da transação enviado com sucesso!" : "Transaction hash submitted successfully!",
+        });
+        setCryptoHash("");
+        // Optionally update receipt data or status
+        fetchTransactionHistory();
+      } else {
+        throw new Error(data.error || "Erro ao enviar hash");
+      }
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: error instanceof Error ? error.message : "Falha ao enviar hash",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmittingHash(false);
+    }
+  };
+
+  const handleSimulatePixPayment = async () => {
+    if (!pixData?.transactionId) return;
+    
+    setIsSimulating(true);
+    try {
+      const response = await fetch("/api/test/simulate-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transactionId: pixData.transactionId }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        toast({
+          title: "Sucesso",
+          description: "Pagamento PIX simulado com sucesso! Saldo atualizado.",
+        });
+        setShowPixModal(false);
+        fetchTransactionHistory();
+      } else {
+        throw new Error(data.error || "Erro ao simular pagamento");
+      }
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: error instanceof Error ? error.message : "Falha ao simular pagamento",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSimulating(false);
+    }
+  };
 
   const copyAddress = async (address: string) => {
     try {
@@ -1370,6 +1453,61 @@ const TradePage = () => {
                         </Button>
                       )}
 
+                      {/* Transaction Hash Input */}
+                      <div className="space-y-3 pt-2 border-t border-border/50">
+                        <div className="flex flex-col gap-2">
+                          <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                            {language === "pt" ? "Já enviou? Informe o Hash da Transação:" : "Sent it? Enter Transaction Hash:"}
+                          </label>
+                          <div className="flex gap-2">
+                            <Input
+                              value={cryptoHash}
+                              onChange={(e) => setCryptoHash(e.target.value)}
+                              placeholder="0x..."
+                              className="flex-1 bg-black/20 border-border h-11 rounded-xl"
+                            />
+                            <Button 
+                              onClick={handleCryptoHashSubmit}
+                              disabled={!cryptoHash.trim() || isSubmittingHash}
+                              className="h-11 px-6 rounded-xl font-bold whitespace-nowrap"
+                            >
+                              {isSubmittingHash ? (
+                                <Spinner size="sm" />
+                              ) : (
+                                language === "pt" ? "Enviar Hash" : "Submit Hash"
+                              )}
+                            </Button>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground italic">
+                            {language === "pt" 
+                              ? "O hash nos ajuda a identificar e aprovar seu depósito mais rapidamente." 
+                              : "The hash helps us identify and approve your deposit faster."}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Simulation Button (Development Only) */}
+                      {process.env.NODE_ENV === "development" && (
+                        <Button
+                          onClick={handleSimulatePayment}
+                          disabled={isSimulating}
+                          variant="secondary"
+                          className="w-full h-12 bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/20 rounded-xl gap-2 font-bold shadow-sm mt-2"
+                        >
+                          {isSimulating ? (
+                            <>
+                              <Spinner size="sm" />
+                              Simulando...
+                            </>
+                          ) : (
+                            <>
+                              <Check className="w-4 h-4" />
+                              Simular Pagamento (Dev Mode)
+                            </>
+                          )}
+                        </Button>
+                      )}
+
                       <div className="p-4 bg-muted/30 border border-border rounded-xl space-y-3">
                         <div className="flex items-start gap-3">
                           <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-0.5">
@@ -1493,7 +1631,7 @@ const TradePage = () => {
                                 {transaction.status === "COMPLETED"
                                   ? t("completed")
                                   : transaction.status === "PENDING"
-                                  ? t("pending")
+                                  ? (language === "pt" ? "Em andamento" : "In progress")
                                   : t("failed")}
                               </Badge>
                             )}
@@ -1579,205 +1717,60 @@ const TradePage = () => {
       </div>
 
       {/* PIX QR Code Modal */}
-      <Dialog
+      <PixPaymentDialog
         open={showPixModal}
         onOpenChange={(open) => {
           setShowPixModal(open);
-          // When modal closes, wait a bit before refetching to avoid race conditions
-          // This prevents showing "FAILED" status immediately after closing if payment is still processing
           if (!open && pixData) {
-            // Mark transaction as loading when modal closes
-            setLoadingTransactions((prev) =>
-              new Set(prev).add(pixData.transactionId)
-            );
-
-            // Remove from loading after 8 seconds and refetch
-            setTimeout(() => {
-              setLoadingTransactions((prev) => {
-                const newSet = new Set(prev);
-                newSet.delete(pixData.transactionId);
-                return newSet;
-              });
-              fetchTransactionHistory();
-            }, 8000); // 8 second delay to allow webhook processing
+            // Check if there are still pending transactions that need loading states
+            setLoadingTransactions((prev) => {
+              const newSet = new Set(prev);
+              newSet.add(pixData.transactionId);
+              // Small delay to allow polling to catch up
+              setTimeout(() => {
+                setLoadingTransactions((prev) => {
+                  const newSet = new Set(prev);
+                  newSet.delete(pixData.transactionId);
+                  return newSet;
+                });
+                fetchTransactionHistory();
+              }, 8000);
+              return newSet;
+            });
           }
         }}
-      >
-        <DialogContent className="bg-card border-border text-foreground max-w-2xl w-full p-4 sm:p-6">
-          <DialogHeader className="pb-3">
-            <DialogTitle className="text-foreground text-lg sm:text-xl">
-              {t("scanQRCode")}
-            </DialogTitle>
-            <DialogDescription className="text-muted-foreground text-sm">
-              {language === "pt"
-                ? "Escaneie o código abaixo com o app do seu banco para finalizar o pagamento"
-                : "Scan the code below with your bank app to complete payment"}
-            </DialogDescription>
-          </DialogHeader>
-          {pixData && (
-            <div className="space-y-4 sm:space-y-5">
-              {/* QR Code and Amount - Centered */}
-              <div className="flex flex-col items-center space-y-3">
-                {pixData.qrCodeBase64 ? (
-                  <Image
-                    src={`data:image/png;base64,${pixData.qrCodeBase64}`}
-                    alt="QR Code PIX"
-                    width={224}
-                    height={224}
-                    className="w-48 h-48 sm:w-56 sm:h-56 border-2 border-border rounded-xl"
-                    unoptimized
-                  />
-                ) : (
-                  <div className="w-48 h-48 sm:w-56 sm:h-56 bg-muted border-2 border-border rounded-xl flex items-center justify-center">
-                    <p className="text-muted-foreground text-sm">
-                      {language === "pt"
-                        ? "QR Code não disponível"
-                        : "QR Code not available"}
-                    </p>
-                  </div>
-                )}
-                <div className="text-center space-y-1">
-                  <p className="text-xs text-muted-foreground">Valor:</p>
-                  <p className="text-xl sm:text-2xl font-bold text-primary">
-                    {formatBRL(pixData.amount)}
-                  </p>
-                  <p className="text-xs sm:text-sm text-muted-foreground">
-                    Você receberá: {formatUSDT(pixData.usdtAmount)} USDT
-                  </p>
-                </div>
-              </div>
-
-              {/* Copy Button with PIX Code */}
-              <div className="space-y-2">
-                <label className="text-xs sm:text-sm font-medium text-foreground">
-                  Código PIX (Copia e Cola):
-                </label>
-                <button
-                  onClick={copyPixCode}
-                  disabled={!pixData.qrCode}
-                  className="w-full py-2.5 px-3 sm:py-3 sm:px-4 bg-muted hover:bg-muted/80 disabled:bg-muted/50 disabled:cursor-not-allowed border-2 border-warning/50 hover:border-warning/70 text-foreground rounded-lg transition-colors flex items-center justify-between gap-2 font-medium min-h-[52px]"
-                >
-                  {copied ? (
-                    <>
-                      <Check className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
-                      <span className="text-sm sm:text-base text-primary font-semibold">
-                        {t("codeCopied")}
-                      </span>
-                    </>
-                  ) : pixData.qrCode ? (
-                    <>
-                      <code className="flex-1 text-[10px] sm:text-xs text-left font-mono break-all pr-2 text-foreground">
-                        {pixData.qrCode}
-                      </code>
-                      <Copy className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 text-warning" />
-                    </>
-                  ) : (
-                    <>
-                      <span className="flex-1 text-xs sm:text-sm text-muted-foreground text-left">
-                        {t("pixCodeNotAvailable")}
-                      </span>
-                      <Copy className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 text-gray-500" />
-                    </>
-                  )}
-                </button>
-              </div>
-
-              <p className="text-[10px] sm:text-xs text-muted-foreground text-center pt-2">
-                {t("paymentInstructions")}
-              </p>
-              
-              <Button 
-                variant="outline" 
-                className="w-full mt-4 h-12 rounded-xl gap-2 border-primary/30 text-primary hover:bg-primary/5"
-                onClick={() => router.push(`/transaction/${pixData.transactionId}`)}
-              >
-                <FileText className="h-4 w-4" />
-                {language === "pt" ? "Acompanhar Status Detalhado" : "Track Detailed Status"}
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+        pixData={pixData}
+        copied={copied}
+        copyPixCode={copyPixCode}
+        language={language}
+        handleSimulatePixPayment={handleSimulatePixPayment}
+        isSimulating={isSimulating}
+      />
 
       {/* Receipt Modal */}
       <Dialog open={showReceipt} onOpenChange={setShowReceipt}>
-        <DialogContent className="bg-card border-border text-foreground max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-foreground flex items-center gap-2">
-              <Check className="w-6 h-6 text-primary" />
-              Pagamento Confirmado!
-            </DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              Seu pagamento foi processado com sucesso
-            </DialogDescription>
+        <DialogContent className="bg-transparent border-none p-0 max-w-md shadow-none outline-none ring-0">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Recibo da Transação</DialogTitle>
           </DialogHeader>
           {receiptData && (
-            <div className="space-y-4">
-              <div className="bg-muted/50 rounded-lg p-6 space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Valor pago:</span>
-                  <span className="text-xl font-bold text-foreground">
-                    {formatBRL(receiptData.amount)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">USDT recebido:</span>
-                  <span className="text-xl font-bold text-primary">
-                    {formatUSDT(receiptData.usdtAmount)} USDT
-                  </span>
-                </div>
-                <div className="border-t border-border pt-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm text-muted-foreground">
-                      ID da transação:
-                    </span>
-                    <span className="text-xs font-mono text-foreground">
-                      {receiptData.transactionId.substring(0, 20)}...
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Data:</span>
-                    <span className="text-sm text-foreground">
-                      {receiptData.date.toLocaleString("pt-BR")}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    // Simple print implementation
-                    window.print();
-                  }}
-                  className="flex-1 py-3 flex items-center justify-center gap-2"
-                >
-                  <Download className="w-4 h-4" />
-                  PDF
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setShowReceipt(false);
-                    setReceiptData(null);
-                  }}
-                  className="flex-1 py-3"
-                >
-                  Fechar
-                </Button>
-                <Button
-                  onClick={() => router.push(`/transaction/${receiptData.transactionId}`)}
-                  className="flex-[2] py-3 gap-2"
-                >
-                   <FileText className="h-4 w-4" />
-                  {language === "pt" ? "Ver Detalhes" : "View Details"}
-                </Button>
-              </div>
-            </div>
+            <TransactionReceipt 
+              transaction={{
+                id: receiptData.transactionId,
+                amount: receiptData.amount,
+                usdtAmount: receiptData.usdtAmount,
+                date: receiptData.date,
+                status: transactionHistory.find(t => t.id === receiptData.transactionId)?.status || "PENDING",
+                type: receiptData.type,
+                network: cryptoNetwork,
+                address: cryptoAddress
+              }}
+              onClose={() => setShowReceipt(false)}
+              language={language}
+            />
           )}
         </DialogContent>
       </Dialog>
-
 
       {/* Mobile Page Indicator - Bottom Navigation */}
       {isMobile && (

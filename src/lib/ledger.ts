@@ -1,9 +1,19 @@
 import prisma from "./prisma";
 import { Decimal } from "@prisma/client/runtime/library";
+import { Prisma } from "@prisma/client";
+
+// Use a type that represents either the main prisma client or a transaction client
+type PrismaClientOrTransaction = 
+  | typeof prisma 
+  | Prisma.TransactionClient;
 
 export class LedgerService {
-  async getUserBalance(userId: string, currency: string) {
-    const balance = await prisma.balance.findUnique({
+  /**
+   * Retrieves the current balance for a user.
+   * If no balance record exists, returns a default one (not saved to DB).
+   */
+  async getUserBalance(userId: string, currency: string, tx: PrismaClientOrTransaction = prisma) {
+    const balance = await tx.balance.findUnique({
       where: {
         userId_currency: {
           userId,
@@ -22,35 +32,56 @@ export class LedgerService {
     );
   }
 
+  /**
+   * Atomic balance update to prevent race conditions.
+   * Uses Prisma's increment/decrement capabilities.
+   */
   async updateBalance(
     userId: string,
     currency: string,
-    amount: Decimal,
-    type: "ADD" | "SUBTRACT" | "LOCK" | "UNLOCK"
+    amount: Decimal | number,
+    operation: "ADD" | "SUBTRACT" | "LOCK" | "UNLOCK",
+    tx: PrismaClientOrTransaction = prisma
   ) {
-    const balance = await this.getUserBalance(userId, currency);
+    const decAmount = new Decimal(amount);
 
-    let newAmount = balance.amount;
-    let newLocked = balance.locked;
+    // Prepare update data based on operation
+    let data: Prisma.BalanceUpdateInput = {};
+    let createData: Prisma.BalanceCreateInput = {
+      userId,
+      currency,
+      amount: new Decimal(0),
+      locked: new Decimal(0),
+    };
 
-    switch (type) {
+    switch (operation) {
       case "ADD":
-        newAmount = newAmount.add(amount);
+        data = { amount: { increment: decAmount } };
+        createData.amount = decAmount;
         break;
       case "SUBTRACT":
-        newAmount = newAmount.sub(amount);
+        data = { amount: { decrement: decAmount } };
+        createData.amount = decAmount.negated();
         break;
       case "LOCK":
-        newLocked = newLocked.add(amount);
-        newAmount = newAmount.sub(amount);
+        data = { 
+          amount: { decrement: decAmount },
+          locked: { increment: decAmount }
+        };
+        createData.amount = decAmount.negated();
+        createData.locked = decAmount;
         break;
       case "UNLOCK":
-        newLocked = newLocked.sub(amount);
-        newAmount = newAmount.add(amount);
+        data = { 
+          amount: { increment: decAmount },
+          locked: { decrement: decAmount }
+        };
+        createData.amount = decAmount;
+        createData.locked = decAmount.negated();
         break;
     }
 
-    return await prisma.balance.upsert({
+    return await tx.balance.upsert({
       where: {
         userId_currency: {
           userId,
@@ -58,42 +89,40 @@ export class LedgerService {
         },
       },
       update: {
-        amount: newAmount,
-        locked: newLocked,
+        ...data,
         updatedAt: new Date(),
       },
-      create: {
-        userId,
-        currency,
-        amount: newAmount,
-        locked: newLocked,
-      },
+      create: createData,
     });
   }
 
-  async createTransaction(data: {
-    userId: string;
-    type: string;
-    amount: Decimal;
-    currency: string;
-    description: string;
-    metadata?: Record<string, unknown>;
-  }) {
-    const balance = await this.getUserBalance(data.userId, data.currency);
+  /**
+   * Creates a transaction record and snapshots the balance.
+   * Best used inside a Prisma transaction.
+   */
+  async recordTransaction(
+    data: {
+      userId: string;
+      type: "DEPOSIT" | "WITHDRAWAL" | "BUY_CRYPTO" | "SELL_CRYPTO" | "FEE" | "REFUND" | "ADJUSTMENT";
+      amount: Decimal | number;
+      currency: string;
+      description: string;
+      status?: "PENDING" | "COMPLETED" | "REJECTED" | "CANCELLED";
+      metadata?: Record<string, unknown>;
+    },
+    tx: PrismaClientOrTransaction = prisma
+  ) {
+    const balance = await this.getUserBalance(data.userId, data.currency, tx);
+    const decAmount = new Decimal(data.amount);
 
-    return await prisma.transaction.create({
+    return await tx.transaction.create({
       data: {
         userId: data.userId,
-        type: data.type as
-          | "DEPOSIT"
-          | "WITHDRAWAL"
-          | "BUY_CRYPTO"
-          | "SELL_CRYPTO"
-          | "FEE"
-          | "REFUND",
-        amount: data.amount,
+        type: data.type,
+        amount: decAmount,
         currency: data.currency,
-        balance: balance.amount,
+        balance: balance.amount, // Snapshot BEFORE this transaction
+        status: data.status || "COMPLETED",
         description: data.description,
         metadata: data.metadata ? JSON.parse(JSON.stringify(data.metadata)) : null,
       },

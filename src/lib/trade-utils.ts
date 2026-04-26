@@ -29,3 +29,39 @@ export const parseUSDTInput = (value: string): number => {
   const parsed = parseFloat(normalized);
   return isNaN(parsed) ? 0 : parsed;
 };
+
+// Generate WhatsApp URL with pre-filled message for deposits > 2k
+export const getWhatsAppUrlForLargeDeposit = (
+  usdtAmount: number,
+  language: string
+) => {
+  const whatsappNumber =
+    process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "5511984284867";
+  const message =
+    language === "pt"
+      ? `Olá! Tenho interesse em fazer um depósito de ${usdtAmount.toLocaleString(
+          "pt-BR",
+          { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+        )} USDT. Gostaria de mais informações.`
+      : `Hello! I'm interested in making a deposit of ${usdtAmount.toLocaleString(
+          "en-US",
+          { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+        )} USDT. I'd like more information.`;
+  return `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+};
+
+// Format BRL value for display
+export const formatBRL = (value: number) => {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
+};
+
+// Format USDT value for display (4 decimal places)
+export const formatUSDT = (value: number) => {
+  return value.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 4,
+  });
+};

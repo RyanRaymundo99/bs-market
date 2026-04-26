@@ -86,3 +86,39 @@ export function safeLocalStorageRemove(key: string): boolean {
     return false;
   }
 }
+
+export function formatCurrency(value: number): string {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
+}
+
+export function getStatusLabel(status: string): string {
+  const statusMap: Record<string, string> = {
+    PENDING: "Pendente",
+    PROCESSING: "Processando",
+    APPROVED: "Aprovado",
+    COMPLETED: "Concluído",
+    REJECTED: "Rejeitado",
+    CANCELLED: "Cancelado",
+    EXECUTING: "Executando",
+    CONFIRMED: "Confirmado",
+    FAILED: "Falhou",
+  };
+  return statusMap[status] || status;
+}
+
+export function getTransactionTypeLabel(type: string): string {
+  const typeMap: Record<string, string> = {
+    DEPOSIT: "Depósito",
+    WITHDRAWAL: "Saque",
+    BUY_CRYPTO: "Compra Crypto",
+    TRADE: "Trade",
+    JACKPOT: "Jackpot",
+    PROFIT: "Lucro",
+    REFUND: "Reembolso",
+    ADJUSTMENT: "Ajuste",
+  };
+  return typeMap[type] || type;
+}

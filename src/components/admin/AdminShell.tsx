@@ -34,6 +34,7 @@ import { AdminCommandPalette } from "@/components/admin/AdminCommandPalette";
 
 const SIDEBAR_LINKS = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/transactions", label: "Transações", icon: ScrollText },
   { href: "/admin/users", label: "Usuários", icon: Users },
   { href: "/admin/kyc", label: "KYC", icon: FileText },
   { href: "/admin/notification-center", label: "Notificações", icon: Mail },
@@ -41,7 +42,7 @@ const SIDEBAR_LINKS = [
   { href: "/admin/webhook-logs", label: "Webhooks", icon: Webhook },
   { href: "/admin/audit-log", label: "Audit log", icon: ScrollText },
   { href: "/admin/backup", label: "Backup / Restore", icon: Database },
-] as const;
+];
 
 function NavLinks({
   pathname,

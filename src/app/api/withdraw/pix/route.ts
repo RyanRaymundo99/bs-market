@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { sendPIXWithdrawalReceipt } from "@/lib/receipt-email";
 import { getMoneyControls } from "@/lib/money-controls";
+import { ledgerService } from "@/lib/ledger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -161,28 +162,23 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Update user balance (subtract the amount)
-    await prisma.balance.update({
-      where: {
-        id: brlBalance.id,
-      },
-      data: {
-        amount: Number(brlBalance.amount) - amount,
-        updatedAt: new Date(),
-      },
+    // Update user balance and record transaction atomically via LedgerService
+    const pixWithdrawalTransaction = await ledgerService.recordTransaction({
+      userId: user.id,
+      type: "WITHDRAWAL",
+      amount: -amount,
+      currency: "BRL",
+      description: `PIX withdrawal to ${pixKey}`,
+      status: "PENDING",
+      metadata: { withdrawalId: withdrawal.id, protocol },
     });
 
-    // Create transaction record
-    const pixWithdrawalTransaction = await prisma.transaction.create({
-      data: {
-        userId: user.id,
-        type: "WITHDRAWAL",
-        amount: amount,
-        currency: "BRL",
-        balance: Number(brlBalance.amount) - amount,
-        description: `PIX withdrawal to ${pixKey}`,
-        createdAt: new Date(),
-      },
+    await ledgerService.updateBalance(user.id, "BRL", amount, "SUBTRACT");
+
+    // Link withdrawal to transaction
+    await prisma.withdrawal.update({
+      where: { id: withdrawal.id },
+      data: { transactionId: pixWithdrawalTransaction.id },
     });
 
     // Send PIX withdrawal receipt email (don't await to avoid blocking response)

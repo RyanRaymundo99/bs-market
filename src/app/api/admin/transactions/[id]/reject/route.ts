@@ -78,6 +78,8 @@ export async function POST(
     });
 
     // Send notification (non-blocking)
+    // Disabled per user request due to domain verification issues
+    /*
     try {
       const { sendRejectionReceipt } = await import("@/lib/receipt-email");
       await sendRejectionReceipt({
@@ -93,6 +95,7 @@ export async function POST(
     } catch (err) {
       console.error("Failed to send rejection email:", err);
     }
+    */
 
     const { ipAddress, userAgent } = getAuditLogIpAndAgent(request);
     await writeAuditLog({

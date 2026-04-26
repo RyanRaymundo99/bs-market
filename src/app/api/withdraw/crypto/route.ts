@@ -7,6 +7,7 @@ import {
   getAdminAlertSettings,
   sendAdminAlertToAll,
 } from "@/lib/admin-alert-email";
+import { ledgerService } from "@/lib/ledger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -240,30 +241,17 @@ export async function POST(request: NextRequest) {
       });
 
       // Update user balance (subtract only the amount, not amount + fee)
-      await prisma.balance.update({
-        where: {
-          id: usdtBalance.id,
-        },
-        data: {
-          amount: Number(usdtBalance.amount) - amount,
-          updatedAt: new Date(),
-        },
-      });
+      await ledgerService.updateBalance(user.id, "USDT", amount, "SUBTRACT");
 
       // Create transaction record
-      const withdrawalTransaction = await prisma.transaction.create({
-        data: {
-          userId: user.id,
-          type: "WITHDRAWAL",
-          amount: amount,
-          currency: "USDT",
-          balance: Number(usdtBalance.amount) - amount,
-          description: `USDT withdrawal to ${walletAddress} (${network}) - Taxa de rede: ${responseFee.toFixed(
-            2
-          )} USDT (informativa)`,
-          metadata: { withdrawalId: withdrawal.id, provider: paymentService.name },
-          createdAt: new Date(),
-        },
+      const withdrawalTransaction = await ledgerService.recordTransaction({
+        userId: user.id,
+        type: "WITHDRAWAL",
+        amount: -amount,
+        currency: "USDT",
+        description: `USDT withdrawal to ${walletAddress} (${network}) - Taxa de rede: ${responseFee.toFixed(2)} USDT (informativa)`,
+        metadata: { withdrawalId: withdrawal.id, provider: paymentService.name },
+        status: responseStatus === "completed" ? "COMPLETED" : "PENDING",
       });
 
       // Link withdrawal to transaction

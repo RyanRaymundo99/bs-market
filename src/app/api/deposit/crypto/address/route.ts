@@ -156,6 +156,8 @@ export async function POST(request: NextRequest) {
     });
 
     // Notify admin (non-blocking)
+    // Disabled per user request due to domain verification issues
+    /*
     import("@/lib/admin-alert-email").then(async ({ getAdminAlertSettings, sendAdminAlertToAll }) => {
       try {
         const settings = await getAdminAlertSettings();
@@ -168,6 +170,7 @@ export async function POST(request: NextRequest) {
         console.error("Failed to send admin notification:", err);
       }
     }).catch(err => console.error("Failed to import alert module:", err));
+    */
 
     return NextResponse.json({
       success: true,

@@ -49,8 +49,8 @@ export async function GET(request: NextRequest) {
           kycSubmittedAt: { gt: adminLastSeen },
         };
 
-    // Fetch pending users and KYC requests
-    const [pendingUsers, pendingKYC] = await Promise.all([
+    // Fetch pending users, KYC, deposits and withdrawals
+    const [pendingUsers, pendingKYC, pendingDeposits, pendingWithdrawals] = await Promise.all([
       prisma.user.findMany({
         where: userWhereClause,
         select: {
@@ -74,16 +74,25 @@ export async function GET(request: NextRequest) {
         orderBy: { kycSubmittedAt: "desc" },
         take: showAll ? 50 : 10,
       }),
+      prisma.deposit.findMany({
+        where: {
+          status: "PENDING",
+          createdAt: showAll ? undefined : { gt: adminLastSeen },
+        },
+        include: { user: { select: { name: true, email: true } } },
+        orderBy: { createdAt: "desc" },
+        take: showAll ? 50 : 10,
+      }),
+      prisma.withdrawal.findMany({
+        where: {
+          status: "PENDING",
+          createdAt: showAll ? undefined : { gt: adminLastSeen },
+        },
+        include: { user: { select: { name: true, email: true } } },
+        orderBy: { createdAt: "desc" },
+        take: showAll ? 50 : 10,
+      }),
     ]);
-
-    // Debug logging
-    console.log("Notifications API Debug:", {
-      adminLastSeen: adminLastSeen.toISOString(),
-      pendingUsers: pendingUsers.length,
-      pendingKYC: pendingKYC.length,
-      pendingUserEmails: pendingUsers.map((u) => u.email),
-      pendingKYCEmails: pendingKYC.map((u) => u.email),
-    });
 
     // Create notifications from the data
     const notifications: Array<{
@@ -104,8 +113,8 @@ export async function GET(request: NextRequest) {
       notifications.push({
         id: `user_${user.id}`,
         type: "new_user",
-        title: "New User Registration",
-        message: `${user.name} (${user.email}) has registered and is pending approval`,
+        title: "Novo Registro de Usuário",
+        message: `${user.name} (${user.email}) registrou-se e aguarda aprovação`,
         timestamp: userCreatedAt.toISOString(),
         read: isRead,
         userId: user.id,
@@ -114,18 +123,47 @@ export async function GET(request: NextRequest) {
 
     // Add KYC pending notifications
     pendingKYC.forEach((user) => {
-      const kycSubmittedAt =
-        user.kycSubmittedAt || user.createdAt || new Date();
+      const kycSubmittedAt = user.kycSubmittedAt || user.createdAt || new Date();
       const isRead = kycSubmittedAt <= adminLastSeen;
 
       notifications.push({
         id: `kyc_${user.id}`,
         type: "kyc_pending",
-        title: "KYC Document Review Needed",
-        message: `${user.name} has submitted KYC documents for review`,
+        title: "Revisão de KYC Necessária",
+        message: `${user.name} enviou documentos KYC para revisão`,
         timestamp: kycSubmittedAt.toISOString(),
         read: isRead,
         userId: user.id,
+      });
+    });
+
+    // Add new deposit notifications
+    pendingDeposits.forEach((deposit) => {
+      const isRead = deposit.createdAt <= adminLastSeen;
+
+      notifications.push({
+        id: `deposit_${deposit.id}`,
+        type: "new_deposit",
+        title: "Novo Depósito Pendente",
+        message: `${deposit.user.name} iniciou um depósito de ${Number(deposit.amount).toFixed(2)} ${deposit.currency}`,
+        timestamp: deposit.createdAt.toISOString(),
+        read: isRead,
+        userId: deposit.userId,
+      });
+    });
+
+    // Add new withdrawal notifications
+    pendingWithdrawals.forEach((withdrawal) => {
+      const isRead = withdrawal.createdAt <= adminLastSeen;
+
+      notifications.push({
+        id: `withdrawal_${withdrawal.id}`,
+        type: "new_withdrawal",
+        title: "Nova Solicitação de Saque",
+        message: `${withdrawal.user.name} solicitou um saque de ${Number(withdrawal.amount).toFixed(2)} ${withdrawal.currency}`,
+        timestamp: withdrawal.createdAt.toISOString(),
+        read: isRead,
+        userId: withdrawal.userId,
       });
     });
 

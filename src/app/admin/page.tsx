@@ -88,6 +88,8 @@ import {
 } from "recharts";
 import { Tooltip as CustomTooltip } from "@/components/ui/tooltip";
 import { formatUSDT } from "@/lib/format-currency";
+import { TransactionDetailsDialog } from "@/components/admin/TransactionDetailsDialog";
+import { cn, formatCurrency, getStatusLabel, getTransactionTypeLabel } from "@/lib/utils";
 
 interface DashboardStats {
   totalUsers: number;
@@ -240,7 +242,6 @@ interface TransactionDetails {
 }
 
 function AdminDashboardContent() {
-  const { language } = useLanguage();
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     pendingApprovals: 0,
@@ -265,48 +266,17 @@ function AdminDashboardContent() {
   });
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [chartData, setChartData] = useState<ChartData[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [sortField, setSortField] = useState<keyof Transaction>("date");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [, setLoading] = useState(true);
-  const [, setSelectedTransaction] = useState<Transaction | null>(null);
-  const [transactionDetails, setTransactionDetails] =
-    useState<TransactionDetails | null>(null);
-  const [detailsLoading, setDetailsLoading] = useState(false);
-  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
-  const [resendingReceipt, setResendingReceipt] = useState(false);
-  const [syncingStatus, setSyncingStatus] = useState(false);
-  const [markingCompleted, setMarkingCompleted] = useState(false);
-  const [rejectingTransaction, setRejectingTransaction] = useState(false);
-  const [rejectionReason, setRejectionReason] = useState("");
-  const [showRejectionDialog, setShowRejectionDialog] = useState(false);
-  const [showConfirmPaymentDialog, setShowConfirmPaymentDialog] = useState(false);
-  const [paymentConfirmationHash, setPaymentConfirmationHash] = useState("");
   const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
   const lastUpdateTimeRef = useRef<Date>(lastUpdateTime);
   const hasRealtimeTransactionsRef = useRef(false);
   const [isPolling, setIsPolling] = useState(false);
-  const [showBalanceDialog, setShowBalanceDialog] = useState(false);
-  const [showBalanceConfirmDialog, setShowBalanceConfirmDialog] =
-    useState(false);
-  const [balanceConfirmStep, setBalanceConfirmStep] = useState(1);
-  const [balanceUserId, setBalanceUserId] = useState("");
-  const [balanceCurrency, setBalanceCurrency] = useState<"USDT" | "BRL">(
-    "USDT"
-  );
-  const [balanceAmount, setBalanceAmount] = useState("");
-  const [balanceOperation, setBalanceOperation] = useState<"CREDIT" | "DEDUCT">(
-    "CREDIT"
-  );
-  const [balanceReason, setBalanceReason] = useState("");
-  const [usersList, setUsersList] = useState<
-    Array<{ id: string; name: string; email: string }>
-  >([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
-  const [processingBalance, setProcessingBalance] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [downloadingReport, setDownloadingReport] = useState(false);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [financeLoading, setFinanceLoading] = useState(true);
+  const [transactionsLoading, setTransactionsLoading] = useState(true);
 
   // Global switch: disable deposits/withdrawals + show maintenance message
   const [moneyControlsLoading, setMoneyControlsLoading] = useState(true);
@@ -354,61 +324,27 @@ function AdminDashboardContent() {
   const [loadingQuickSearch, setLoadingQuickSearch] = useState(false);
 
   // Transaction table enhancements
-  const [selectedTransactions, setSelectedTransactions] = useState<Set<string>>(
-    new Set()
-  );
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [amountMin, setAmountMin] = useState("");
-  const [amountMax, setAmountMax] = useState("");
-  const [processingTransaction, setProcessingTransaction] = useState<
-    string | null
-  >(null);
   const [chartDateRange, setChartDateRange] = useState<number>(30);
   const [adminActivityLog, setAdminActivityLog] = useState<AdminLogItem[]>([]);
 
-  const { toast } = useToast();
+    const [transactionDetails, setTransactionDetails] = useState<Transaction | null>(null);
+  const [rejectingTransaction, setRejectingTransaction] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [showRejectionDialog, setShowRejectionDialog] = useState(false);
+  const [showConfirmPaymentDialog, setShowConfirmPaymentDialog] = useState(false);
+  const [paymentConfirmationHash, setPaymentConfirmationHash] = useState("");
+  const [markingCompleted, setMarkingCompleted] = useState(false);
+  const [syncingStatus, setSyncingStatus] = useState(false);
+  const [resendingReceipt, setResendingReceipt] = useState(false);
+
+const { toast } = useToast();
   const { language } = useLanguage();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { settings } = useAdminSettings();
   const dashboardSectionOrder = settings.dashboardSectionOrder;
-
-  // Open transaction details from URL (e.g. from webhook logs: /admin?openTransaction=<id_or_external_id>)
-  useEffect(() => {
-    const openId = searchParams.get("openTransaction");
-    if (!openId) return;
-    const url = `/api/admin/transactions/${encodeURIComponent(openId)}`;
-    setShowDetailsDialog(true);
-    setDetailsLoading(true);
-    setTransactionDetails(null);
-    fetch(url)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && data.transaction) {
-          setTransactionDetails(data.transaction);
-          router.replace("/admin", { scroll: false });
-        } else {
-          setTransactionDetails(null);
-          toast({
-            variant: "destructive",
-            title: "Erro",
-            description: data.error || "Transação não encontrada",
-          });
-        }
-      })
-      .catch(() => {
-        setTransactionDetails(null);
-        toast({
-          variant: "destructive",
-          title: "Erro",
-          description: "Falha ao carregar detalhes da transação",
-        });
-      })
-      .finally(() => setDetailsLoading(false));
-  }, [searchParams, router, toast]);
 
   useEffect(() => {
     const loadMoneyControls = async () => {
@@ -562,7 +498,6 @@ function AdminDashboardContent() {
     }
   };
 
-  // Real-time transaction updates (lightweight, fast)
   const fetchRealtimeTransactions = useCallback(
     async (since?: Date) => {
       try {
@@ -591,16 +526,14 @@ function AdminDashboardContent() {
 
         if (data.success && data.transactions) {
           if (since) {
-            // Incremental update - prepend new transactions
             setTransactions((prev) => {
               const existingIds = new Set(prev.map((t) => t.id));
               const newTransactions = data.transactions.filter(
                 (t: Transaction) => !existingIds.has(t.id)
               );
-              return [...newTransactions, ...prev].slice(0, 100); // Keep max 100
+              return [...newTransactions, ...prev].slice(0, 100);
             });
           } else {
-            // Full refresh
             hasRealtimeTransactionsRef.current = true;
             setTransactions(data.transactions);
           }
@@ -610,7 +543,6 @@ function AdminDashboardContent() {
         }
       } catch (error) {
         console.error("Error fetching realtime transactions:", error);
-        // Don't show toast for polling errors to avoid spam
       } finally {
         if (!since) {
           setTransactionsLoading(false);
@@ -635,10 +567,8 @@ function AdminDashboardContent() {
 
       if (data.success) {
         setFinanceStats(data.financeStats);
-        // Only set transactions if we don't have realtime updates yet
         if (!hasRealtimeTransactionsRef.current) {
           setTransactions(data.transactions);
-          setTransactionsLoading(false);
         }
         setChartData(data.chartData);
       } else {
@@ -658,13 +588,11 @@ function AdminDashboardContent() {
 
   const [statsLoading, setStatsLoading] = useState(true);
   const [financeLoading, setFinanceLoading] = useState(true);
-  const [transactionsLoading, setTransactionsLoading] = useState(true);
 
   const fetchStats = useCallback(async () => {
     try {
       setStatsLoading(true);
 
-      // Use optimized stats endpoint that uses COUNT queries instead of fetching all records
       const response = await fetch("/api/admin/stats", { cache: "no-store" });
 
       if (!response.ok) {
@@ -690,12 +618,6 @@ function AdminDashboardContent() {
     }
   }, [toast]);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
 
   const formatPercentage = (value: number) => {
     const sign = value >= 0 ? "+" : "";
@@ -831,132 +753,9 @@ function AdminDashboardContent() {
     );
   };
 
-  const getTransactionTypeLabel = (type: string) => {
-    const labels = {
-      DEPOSIT: "Depósito",
-      WITHDRAWAL: "Saque",
-      FEE: "Comissão",
-      BUY_CRYPTO: "Compra Crypto",
-      SELL_CRYPTO: "Venda Crypto",
-      REFUND: "Reembolso",
-    };
-    return labels[type as keyof typeof labels] || type;
-  };
-
-  const handleTransactionClick = async (transaction: Transaction) => {
-    setSelectedTransaction(transaction);
-    setShowDetailsDialog(true);
-    setDetailsLoading(true);
-    setTransactionDetails(null);
-
-    const detailsUrl =
-      transaction.id.startsWith("order_") &&
-      transaction.id.length > "order_".length
-        ? `/api/admin/transactions/order/${transaction.id.slice(
-            "order_".length
-          )}`
-        : `/api/admin/transactions/${transaction.id}`;
-
-    try {
-      const response = await fetch(detailsUrl);
-      let data: {
-        success?: boolean;
-        transaction?: TransactionDetails;
-        error?: string;
-      } = {};
-      try {
-        data = await response.json();
-      } catch {
-        // Non-JSON response (e.g. 404 HTML page)
-      }
-      if (response.ok && data.success && data.transaction) {
-        setTransactionDetails(data.transaction);
-      } else {
-        const userObj =
-          transaction.user && typeof transaction.user === "object"
-            ? transaction.user
-            : { name: "—", email: "—" };
-        const fallback: TransactionDetails = {
-          id: transaction.id,
-          type: transaction.type,
-          amount: Math.abs(transaction.value ?? transaction.amount ?? 0),
-          currency: transaction.currency ?? "BRL",
-          balance: 0,
-          description: "",
-          status: transaction.status,
-          createdAt:
-            typeof transaction.date === "string"
-              ? transaction.date
-              : new Date().toISOString(),
-          user: {
-            name: userObj.name ?? "—",
-            email: userObj.email ?? "—",
-          },
-        };
-        setTransactionDetails(fallback);
-        const apiMessage = data.error
-          ? `${data.error} Exibindo informações da lista.`
-          : "Detalhes completos não carregaram. Exibindo informações da lista.";
-        toast({
-          variant: "destructive",
-          title: "Erro",
-          description: apiMessage,
-        });
-      }
-    } catch (error) {
-      console.error("Error fetching transaction details:", error);
-      const userObj =
-        transaction.user && typeof transaction.user === "object"
-          ? transaction.user
-          : { name: "—", email: "—" };
-      const fallback: TransactionDetails = {
-        id: transaction.id,
-        type: transaction.type,
-        amount: Math.abs(transaction.value ?? transaction.amount ?? 0),
-        currency: transaction.currency ?? "BRL",
-        balance: 0,
-        description: "",
-        status: transaction.status,
-        createdAt:
-          typeof transaction.date === "string"
-            ? transaction.date
-            : new Date().toISOString(),
-        user: {
-          name: userObj.name ?? "—",
-          email: userObj.email ?? "—",
-        },
-      };
-      setTransactionDetails(fallback);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description:
-          "Falha ao carregar detalhes da transação. Exibindo informações da lista.",
-      });
-    } finally {
-      setDetailsLoading(false);
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    const labels = {
-      PENDING: "Pendente",
-      APPROVED: "Aprovado",
-      REJECTED: "Rejeitado",
-      COMPLETED: "Aprovado", // Map COMPLETED to Aprovado for consistency
-      CONFIRMED: "Aprovado", // Map CONFIRMED to Aprovado for consistency
-      FAILED: "Falhou",
-      CANCELLED: "Cancelado",
-      PROCESSING: "Processando",
-      EXECUTING: "Executando",
-    };
-    return labels[status as keyof typeof labels] || status;
-  };
 
   const handleSyncStatus = async () => {
     if (!transactionDetails) return;
-    if (transactionDetails.id.startsWith("order_")) return;
-
     setSyncingStatus(true);
     try {
       const response = await fetch(
@@ -973,7 +772,7 @@ function AdminDashboardContent() {
           title: "Status Sincronizado",
           description: data.message || "Status atualizado com sucesso",
         });
-        // Refresh transaction details by fetching from API
+        
         const detailsResponse = await fetch(
           `/api/admin/transactions/${transactionDetails.id}`
         );
@@ -987,8 +786,7 @@ function AdminDashboardContent() {
         toast({
           variant: "destructive",
           title: "Erro",
-          description:
-            data.message || data.error || "Falha ao sincronizar status",
+          description: data.message || data.error || "Falha ao sincronizar status",
         });
       }
     } catch (error) {
@@ -1919,8 +1717,9 @@ function AdminDashboardContent() {
   // Don't block the entire page - show skeleton loaders instead
 
   return (
-    <div className="min-h-full bg-background text-foreground">
-      <div className="max-w-[1920px] mx-auto space-y-8">
+    <>
+      <div className="min-h-full bg-background text-foreground">
+        <div className="max-w-[1920px] mx-auto space-y-8">
         {/* Page header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -2295,6 +2094,18 @@ function AdminDashboardContent() {
             Atalhos
           </h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6">
+            <Link href="/admin/transactions">
+              <Card className="bg-card border-border hover:bg-muted hover:border-primary transition-all cursor-pointer h-full">
+                <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
+                  <ScrollText className="w-6 h-6 text-primary mb-2" />
+                  <CardTitle className="text-sm text-foreground mb-1">
+                    Transações
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground">Histórico completo</p>
+                </CardContent>
+              </Card>
+            </Link>
+
             <Link href="/admin/users">
               <Card className="bg-card border-border hover:bg-muted hover:border-primary transition-all cursor-pointer h-full">
                 <CardContent className="p-4 flex flex-col items-center justify-center text-center min-h-[100px]">
@@ -3536,405 +3347,83 @@ function AdminDashboardContent() {
           </div>
         </section>
 
-        {/* Transações */}
+        {/* Transações Recentes */}
         <section
           key="transactions"
           style={{ order: dashboardSectionOrder.indexOf("transactions" as DashboardSectionId) }}
         >
-          <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-muted-foreground">
-            Transações
-          </h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
+              Transações Recentes
+            </h2>
+            <Link href="/admin/transactions">
+              <Button variant="ghost" size="sm" className="text-primary hover:text-primary hover:bg-primary/10">
+                Ver Tudo <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
           <Card className="bg-card border-border">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-foreground">Tabela detalhada</CardTitle>
-                <Button
-                  onClick={handleOpenBalanceDialog}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                >
-                  <Wallet className="h-4 w-4 mr-2" />
-                  Ajustar Saldo
-                </Button>
-              </div>
-              <div className="flex flex-wrap items-center gap-3 mt-4">
-                <div className="relative flex-1 max-w-sm">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                  <Input
-                    placeholder="Buscar transações..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 bg-muted border-border text-foreground placeholder-muted-foreground"
-                  />
-                </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-40 bg-muted border-border text-foreground">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-card border-border">
-                    <SelectItem
-                      value="all"
-                      className="text-foreground hover:bg-muted"
-                    >
-                      Todos Status
-                    </SelectItem>
-                    <SelectItem
-                      value="PENDING"
-                      className="text-foreground hover:bg-muted"
-                    >
-                      Pendente
-                    </SelectItem>
-                    <SelectItem
-                      value="APPROVED"
-                      className="text-foreground hover:bg-muted"
-                    >
-                      Aprovado
-                    </SelectItem>
-                    <SelectItem
-                      value="REJECTED"
-                      className="text-foreground hover:bg-muted"
-                    >
-                      Rejeitado
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={typeFilter} onValueChange={setTypeFilter}>
-                  <SelectTrigger className="w-40 bg-muted border-border text-foreground">
-                    <SelectValue placeholder="Tipo" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-card border-border">
-                    <SelectItem
-                      value="all"
-                      className="text-foreground hover:bg-muted"
-                    >
-                      Todos Tipos
-                    </SelectItem>
-                    <SelectItem
-                      value="DEPOSIT"
-                      className="text-foreground hover:bg-muted"
-                    >
-                      Depósito
-                    </SelectItem>
-                    <SelectItem
-                      value="WITHDRAWAL"
-                      className="text-foreground hover:bg-muted"
-                    >
-                      Saque
-                    </SelectItem>
-                    <SelectItem
-                      value="FEE"
-                      className="text-foreground hover:bg-muted"
-                    >
-                      Comissão
-                    </SelectItem>
-                    <SelectItem
-                      value="BUY_CRYPTO"
-                      className="text-foreground hover:bg-muted"
-                    >
-                      Compra Crypto
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-                <Input
-                  type="date"
-                  placeholder="De"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  className="w-36 bg-muted border-border text-foreground text-sm"
-                />
-                <Input
-                  type="date"
-                  placeholder="Até"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  className="w-36 bg-muted border-border text-foreground text-sm"
-                />
-                <Input
-                  type="number"
-                  placeholder="Valor mín."
-                  value={amountMin}
-                  onChange={(e) => setAmountMin(e.target.value)}
-                  className="w-28 bg-muted border-border text-foreground text-sm"
-                  min={0}
-                  step="any"
-                />
-                <Input
-                  type="number"
-                  placeholder="Valor máx."
-                  value={amountMax}
-                  onChange={(e) => setAmountMax(e.target.value)}
-                  className="w-28 bg-muted border-border text-foreground text-sm"
-                  min={0}
-                  step="any"
-                />
-                <Button
-                  size="sm"
-                  onClick={() => fetchRealtimeTransactions()}
-                  variant="outline"
-                  className="border-border text-muted-foreground hover:bg-muted"
-                >
-                  <RefreshCw className="h-4 w-4 mr-1" />
-                  Aplicar
-                </Button>
-                {selectedTransactions.size > 0 && (
-                  <Button
-                    size="sm"
-                    onClick={() => handleBulkAction("approve")}
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                  >
-                    <CheckCircle className="h-4 w-4 mr-1" />
-                    Aprovar ({selectedTransactions.size})
-                  </Button>
-                )}
-                <Button
-                  size="sm"
-                  onClick={handleExportCSV}
-                  variant="outline"
-                  className="border-border text-muted-foreground hover:bg-muted"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Exportar CSV
-                </Button>
-                {(statusFilter !== "all" ||
-                  typeFilter !== "all" ||
-                  searchTerm ||
-                  dateFrom ||
-                  dateTo ||
-                  amountMin ||
-                  amountMax) && (
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      setStatusFilter("all");
-                      setTypeFilter("all");
-                      setSearchTerm("");
-                      setDateFrom("");
-                      setDateTo("");
-                      setAmountMin("");
-                      setAmountMax("");
-                      fetchRealtimeTransactions();
-                    }}
-                    variant="ghost"
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="h-4 w-4 mr-1" />
-                    Limpar Filtros
-                  </Button>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left py-3 px-4 w-12">
-                        <Checkbox
-                          checked={
-                            filteredAndSortedTransactions.length > 0 &&
-                            selectedTransactions.size ===
-                              filteredAndSortedTransactions.length
-                          }
-                          onCheckedChange={toggleSelectAll}
-                          className="border-border"
-                        />
-                      </th>
-                      <th
-                        className="text-left py-3 px-4 cursor-pointer hover:text-foreground text-muted-foreground"
-                        onClick={() => handleSort("date")}
-                      >
-                        <div className="flex items-center">
-                          Data
-                          <ArrowUpDown className="h-3 w-3 ml-1" />
-                        </div>
-                      </th>
-                      <th
-                        className="text-left py-3 px-4 cursor-pointer hover:text-foreground text-muted-foreground"
-                        onClick={() => handleSort("type")}
-                      >
-                        <div className="flex items-center">
-                          Tipo
-                          <ArrowUpDown className="h-3 w-3 ml-1" />
-                        </div>
-                      </th>
-                      <th
-                        className="text-left py-3 px-4 cursor-pointer hover:text-foreground text-muted-foreground"
-                        onClick={() => handleSort("user")}
-                      >
-                        <div className="flex items-center">
-                          Usuário
-                          <ArrowUpDown className="h-3 w-3 ml-1" />
-                        </div>
-                      </th>
-                      <th
-                        className="text-left py-3 px-4 cursor-pointer hover:text-foreground text-muted-foreground"
-                        onClick={() => handleSort("value")}
-                      >
-                        <div className="flex items-center">
-                          Valor
-                          <ArrowUpDown className="h-3 w-3 ml-1" />
-                        </div>
-                      </th>
-                      <th
-                        className="text-left py-3 px-4 cursor-pointer hover:text-foreground text-muted-foreground"
-                        onClick={() => handleSort("status")}
-                      >
-                        <div className="flex items-center">
-                          Status
-                          <ArrowUpDown className="h-3 w-3 ml-1" />
-                        </div>
-                      </th>
+                    <tr className="border-b border-border bg-muted/20">
+                      <th className="text-left py-3 px-4 text-muted-foreground font-medium">Data</th>
+                      <th className="text-left py-3 px-4 text-muted-foreground font-medium">Tipo</th>
+                      <th className="text-left py-3 px-4 text-muted-foreground font-medium">Usuário</th>
+                      <th className="text-left py-3 px-4 text-muted-foreground font-medium">Valor</th>
+                      <th className="text-left py-3 px-4 text-muted-foreground font-medium">Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {transactionsLoading ? (
                       <tr>
-                        <td colSpan={6} className="py-8 text-center">
+                        <td colSpan={5} className="py-8 text-center">
                           <div className="flex flex-col items-center justify-center space-y-2">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                            <p className="text-muted-foreground">
-                              Carregando transações...
-                            </p>
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
                           </div>
                         </td>
                       </tr>
-                    ) : filteredAndSortedTransactions.length === 0 ? (
+                    ) : transactions.length === 0 ? (
                       <tr>
-                        <td
-                          colSpan={6}
-                          className="py-8 text-center text-muted-foreground"
-                        >
-                          Nenhuma transação encontrada
+                        <td colSpan={5} className="py-8 text-center text-muted-foreground">
+                          Nenhuma transação recente
                         </td>
                       </tr>
                     ) : (
-                      filteredAndSortedTransactions.map((transaction) => (
+                      transactions.slice(0, 10).map((transaction) => (
                         <tr
                           key={transaction.id}
-                          className="border-b border-border hover:bg-muted transition-colors"
+                          className="border-b border-border hover:bg-muted/30 transition-colors cursor-pointer"
+                          onClick={() => router.push(`/admin/transactions?id=${transaction.id}`)}
                         >
-                          <td
-                            className="py-3 px-4"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Checkbox
-                              checked={selectedTransactions.has(transaction.id)}
-                              onCheckedChange={() =>
-                                toggleTransactionSelection(transaction.id)
-                              }
-                              className="border-border"
-                            />
-                          </td>
-                          <td
-                            className="py-3 px-4 text-muted-foreground cursor-pointer"
-                            onClick={() => handleTransactionClick(transaction)}
-                          >
-                            {new Date(transaction.date).toLocaleString(
-                              "pt-BR",
-                              {
-                                day: "2-digit",
-                                month: "2-digit",
-                                year: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                second: "2-digit",
-                              }
-                            )}
+                          <td className="py-3 px-4 text-muted-foreground">
+                            {new Date(transaction.date).toLocaleDateString("pt-BR", {
+                              day: "2-digit",
+                              month: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit"
+                            })}
                           </td>
                           <td className="py-3 px-4">
-                            <span
-                              className={`px-2 py-1 rounded text-xs font-medium ${
-                                transaction.type === "DEPOSIT"
-                                  ? "bg-primary/20 text-primary"
-                                  : transaction.type === "WITHDRAWAL"
-                                  ? "bg-red-900 text-red-300"
-                                  : transaction.type === "FEE"
-                                  ? "bg-primary/20 text-primary"
-                                  : transaction.type === "BUY_CRYPTO"
-                                  ? "bg-emerald-900 text-emerald-300"
-                                  : transaction.type === "SELL_CRYPTO"
-                                  ? "bg-orange-900 text-orange-300"
-                                  : transaction.type === "REFUND"
-                                  ? "bg-card text-muted-foreground"
-                                  : "bg-card text-muted-foreground"
-                              }`}
-                            >
+                            <span className="text-xs font-medium">
                               {getTransactionTypeLabel(transaction.type)}
                             </span>
                           </td>
-                          <td
-                            className="py-3 px-4 text-muted-foreground"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {typeof transaction.user === "string" ? (
-                              transaction.user
-                            ) : transaction.user ? (
-                              <button
-                                onClick={() => {
-                                  if (transaction.userId) {
-                                    router.push(
-                                      `/admin/users/${transaction.userId}`
-                                    );
-                                  }
-                                }}
-                                className="text-primary hover:text-primary hover:underline"
-                              >
-                                {transaction.user.name} (
-                                {transaction.user.email})
-                              </button>
-                            ) : (
-                              "N/A"
-                            )}
+                          <td className="py-3 px-4 text-muted-foreground truncate max-w-[200px]">
+                            {typeof transaction.user === "string" ? transaction.user : transaction.user?.name || "—"}
                           </td>
                           <td className="py-3 px-4 text-foreground font-medium">
-                            {transaction.value && !isNaN(transaction.value)
-                              ? formatCurrency(transaction.value)
-                              : transaction.currency === "USDT"
-                              ? formatUSDT(Math.abs(transaction.amount || 0))
-                              : formatCurrency(0)}
+                            {formatCurrency(transaction.value || 0)}
                           </td>
                           <td className="py-3 px-4">
-                            <div className="flex items-center gap-2">
-                              <span
-                                className={`px-2 py-1 rounded text-xs font-medium ${
-                                  transaction.status === "APPROVED" ||
-                                  transaction.status === "COMPLETED" ||
-                                  transaction.status === "CONFIRMED"
-                                    ? "bg-primary/20 text-primary"
-                                    : transaction.status === "PENDING" ||
-                                      transaction.status === "PROCESSING" ||
-                                      transaction.status === "EXECUTING"
-                                    ? "bg-yellow-900 text-yellow-300"
-                                    : transaction.status === "REJECTED" ||
-                                      transaction.status === "FAILED" ||
-                                      transaction.status === "CANCELLED"
-                                    ? "bg-red-900 text-red-300"
-                                    : "bg-card text-muted-foreground"
-                                }`}
-                              >
-                                {getStatusLabel(transaction.status)}
-                              </span>
-                              {(transaction.status === "PENDING" ||
-                                transaction.status === "PROCESSING") &&
-                                !transaction.id.startsWith("order_") && (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleTransactionAction(
-                                        transaction.id,
-                                        "approve"
-                                      );
-                                    }}
-                                    disabled={
-                                      processingTransaction === transaction.id
-                                    }
-                                    className="h-6 w-6 p-0 text-primary hover:text-primary hover:bg-primary/15"
-                                  >
-                                    <CheckCircle className="h-3 w-3" />
-                                  </Button>
-                                )}
-                            </div>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                              ["APPROVED", "COMPLETED", "CONFIRMED"].includes(transaction.status) ? "bg-emerald-500/15 text-emerald-500" :
+                              ["PENDING", "PROCESSING", "EXECUTING"].includes(transaction.status) ? "bg-yellow-500/15 text-yellow-500" :
+                              "bg-red-500/15 text-red-500"
+                            }`}>
+                              {getStatusLabel(transaction.status)}
+                            </span>
                           </td>
                         </tr>
                       ))
@@ -3946,653 +3435,19 @@ function AdminDashboardContent() {
           </Card>
         </section>
 
-        </div>
-
-        {/* Transaction Details Dialog */}
-        <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-          <DialogContent className="bg-card border-border text-foreground max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-foreground">
-                Detalhes da Transação
-              </DialogTitle>
-              <DialogDescription className="text-muted-foreground">
-                Informações completas da transação
-              </DialogDescription>
-            </DialogHeader>
-            {detailsLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-              </div>
-            ) : transactionDetails ? (
-              <div className="space-y-4 mt-4">
-                {/* Basic Info */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">ID da Transação</p>
-                    <p className="text-foreground font-mono text-sm">
-                      {transactionDetails.id}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Tipo</p>
-                    <p className="text-foreground">
-                      {getTransactionTypeLabel(transactionDetails.type)}
-                    </p>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Status</p>
-                        <div className="flex flex-wrap items-center gap-2 mt-1">
-                          <span
-                            className={`px-2 py-1 rounded text-xs font-medium inline-block ${
-                              transactionDetails.status === "APPROVED" ||
-                              transactionDetails.status === "COMPLETED" ||
-                              transactionDetails.status === "CONFIRMED"
-                                ? "bg-primary/20 text-primary"
-                                : transactionDetails.status === "PENDING" ||
-                                  transactionDetails.status === "PROCESSING" ||
-                                  transactionDetails.status === "EXECUTING"
-                                ? "bg-yellow-900 text-yellow-300"
-                                : "bg-red-900 text-red-300"
-                            }`}
-                          >
-                            {getStatusLabel(transactionDetails.status)}
-                          </span>
-                          
-                          {(transactionDetails.status === "PENDING" ||
-                            transactionDetails.status === "PROCESSING" ||
-                            transactionDetails.status === "EXECUTING") &&
-                            !transactionDetails.id.startsWith("order_") && (
-                              <div className="flex gap-2">
-                                <Button
-                                  onClick={() => handleMarkAsCompleted()}
-                                  disabled={markingCompleted || rejectingTransaction}
-                                  variant="outline"
-                                  size="sm"
-                                  className="border-primary text-primary hover:bg-primary/15 hover:text-primary"
-                                >
-                                  {markingCompleted ? (
-                                    <>
-                                      <Clock className="w-3 h-3 mr-1 animate-spin" />
-                                      {language === "pt" ? "Marcando..." : "Marking..."}
-                                    </>
-                                  ) : (
-                                    <>
-                                      <CheckCircle className="w-3 h-3 mr-1" />
-                                      {language === "pt" ? "Aprovar" : "Approve"}
-                                    </>
-                                  )}
-                                </Button>
-                                <Button
-                                  onClick={() => setShowRejectionDialog(true)}
-                                  disabled={markingCompleted || rejectingTransaction}
-                                  variant="outline"
-                                  size="sm"
-                                  className="border-red-500 text-red-500 hover:bg-red-500/15"
-                                >
-                                  <XCircle className="w-3 h-3 mr-1" />
-                                  {language === "pt" ? "Negar" : "Reject"}
-                                </Button>
-                              </div>
-                            )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Data</p>
-                    <p className="text-foreground">
-                      {new Date(transactionDetails.createdAt).toLocaleString(
-                        "pt-BR"
-                      )}
-                    </p>
-                  </div>
-                  {transactionDetails.description && (
-                    <div className="col-span-2">
-                      <p className="text-sm text-muted-foreground">Descrição</p>
-                      <p className="text-foreground text-sm">
-                        {transactionDetails.description}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* User Info */}
-                <div className="border-t border-border pt-4">
-                  <h3 className="text-lg font-semibold mb-3">Usuário</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Nome</p>
-                      <p className="text-foreground">
-                        {transactionDetails.user.name}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Email</p>
-                      <p className="text-foreground">
-                        {transactionDetails.user.email}
-                      </p>
-                    </div>
-                    {/* Receipt Email Status - only for real transactions, not orphan orders */}
-                    {(transactionDetails.type === "BUY_CRYPTO" ||
-                      transactionDetails.type === "WITHDRAWAL") &&
-                      !transactionDetails.id.startsWith("order_") && (
-                        <div className="col-span-2 border-t border-border pt-4 mt-2">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <Mail className="h-4 w-4 text-muted-foreground" />
-                              <div>
-                                <p className="text-sm text-muted-foreground">
-                                  Status do Recibo por Email
-                                </p>
-                                {(() => {
-                                  const receiptStatus = getReceiptStatus();
-                                  if (!receiptStatus) {
-                                    return (
-                                      <p className="text-yellow-400 text-sm">
-                                        Não enviado
-                                      </p>
-                                    );
-                                  }
-                                  return (
-                                    <div className="flex items-center gap-2">
-                                      {receiptStatus.sent ? (
-                                        <>
-                                          <CheckCircle className="h-4 w-4 text-primary" />
-                                          <p className="text-primary text-sm">
-                                            Enviado em{" "}
-                                            {new Date(
-                                              receiptStatus.sentAt
-                                            ).toLocaleString("pt-BR")}
-                                          </p>
-                                        </>
-                                      ) : (
-                                        <>
-                                          <X className="h-4 w-4 text-red-400" />
-                                          <p className="text-red-400 text-sm">
-                                            Falha ao enviar
-                                            {receiptStatus.error &&
-                                              `: ${receiptStatus.error}`}
-                                          </p>
-                                        </>
-                                      )}
-                                      {receiptStatus.count > 1 && (
-                                        <span className="text-xs text-muted-foreground">
-                                          ({receiptStatus.count} tentativas)
-                                        </span>
-                                      )}
-                                    </div>
-                                  );
-                                })()}
-                              </div>
-                            </div>
-                            <Button
-                              onClick={handleResendReceipt}
-                              disabled={resendingReceipt}
-                              variant="outline"
-                              size="sm"
-                              className="border-border text-foreground hover:bg-muted"
-                            >
-                              {resendingReceipt ? (
-                                <>
-                                  <Clock className="h-4 w-4 mr-2 animate-spin" />
-                                  Enviando...
-                                </>
-                              ) : (
-                                <>
-                                  <Send className="h-4 w-4 mr-2" />
-                                  Reenviar Recibo
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    {transactionDetails.user.cpf && (
-                      <div>
-                        <p className="text-sm text-muted-foreground">CPF</p>
-                        <p className="text-foreground">
-                          {transactionDetails.user.cpf}
-                        </p>
-                      </div>
-                    )}
-                    {transactionDetails.user.phone && (
-                      <div>
-                        <p className="text-sm text-muted-foreground">Telefone</p>
-                        <p className="text-foreground">
-                          {transactionDetails.user.phone}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Transaction Amount */}
-                <div className="border-t border-border pt-4">
-                  <h3 className="text-lg font-semibold mb-3">Valores</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Valor</p>
-                      <p className="text-foreground font-semibold">
-                        {formatCurrency(transactionDetails.amount)}{" "}
-                        {transactionDetails.currency}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">
-                        Saldo após transação
-                      </p>
-                      <p className="text-foreground">
-                        {formatCurrency(transactionDetails.balance)}{" "}
-                        {transactionDetails.currency}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Order Details (for BUY_CRYPTO) */}
-                {transactionDetails.order && (
-                  <div className="border-t border-border pt-4">
-                    <h3 className="text-lg font-semibold mb-3">
-                      Detalhes do Pedido
-                    </h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">ID do Pedido</p>
-                        <p className="text-foreground font-mono text-sm">
-                          {transactionDetails.order.id}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">
-                          Status do Pedido
-                        </p>
-                        <p className="text-foreground">
-                          {transactionDetails.order.status}
-                        </p>
-                      </div>
-                      {transactionDetails.order.externalOrderId && (
-                        <div>
-                          <p className="text-sm text-muted-foreground">ID Externo</p>
-                          <p className="text-foreground font-mono text-sm">
-                            {transactionDetails.order.externalOrderId}
-                          </p>
-                        </div>
-                      )}
-                      {transactionDetails.order.createdAt && (
-                        <div>
-                          <p className="text-sm text-muted-foreground">Criado em</p>
-                          <p className="text-foreground">
-                            {new Date(
-                              transactionDetails.order.createdAt
-                            ).toLocaleString("pt-BR")}
-                          </p>
-                        </div>
-                      )}
-                      {transactionDetails.order.executedAt && (
-                        <div>
-                          <p className="text-sm text-muted-foreground">Executado em</p>
-                          <p className="text-foreground">
-                            {new Date(
-                              transactionDetails.order.executedAt
-                            ).toLocaleString("pt-BR")}
-                          </p>
-                        </div>
-                      )}
-                      <div>
-                        <p className="text-sm text-muted-foreground">Quantidade USDT</p>
-                        <p className="text-foreground">
-                          {Number(transactionDetails.order.amount)} USDT
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Valor Total BRL</p>
-                        <p className="text-foreground">
-                          {formatCurrency(
-                            Number(transactionDetails.order.total)
-                          )}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Taxa de Câmbio</p>
-                        <p className="text-foreground">
-                          {formatCurrency(
-                            Number(transactionDetails.order.total) /
-                              Number(transactionDetails.order.amount)
-                          )}{" "}
-                          BRL/USDT
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Calculation Breakdown (for BUY_CRYPTO orders) */}
-                {transactionDetails.order &&
-                  transactionDetails.type === "BUY_CRYPTO" && (
-                    <div className="border-t border-border pt-4 mt-4">
-                      <Card className="bg-muted border-border">
-                        <CardHeader>
-                          <CardTitle className="text-foreground text-lg">
-                            📊 Cálculo do Valor Total
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between py-2 border-b border-border">
-                              <span className="text-muted-foreground">
-                                Quantidade USDT:
-                              </span>
-                              <span className="text-foreground font-semibold">
-                                {Number(
-                                  transactionDetails.order.amount
-                                ).toLocaleString("pt-BR", {
-                                  minimumFractionDigits: 0,
-                                  maximumFractionDigits: 8,
-                                })}{" "}
-                                USDT
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between py-2 border-b border-border">
-                              <span className="text-muted-foreground">
-                                Taxa de Câmbio:
-                              </span>
-                              <span className="text-foreground font-semibold">
-                                {formatCurrency(
-                                  Number(transactionDetails.order.total) /
-                                    Number(transactionDetails.order.amount)
-                                )}{" "}
-                                BRL/USDT
-                              </span>
-                            </div>
-                            <div className="bg-card rounded-lg p-4 my-3">
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-muted-foreground text-sm">
-                                  Cálculo:
-                                </span>
-                              </div>
-                              <div className="text-foreground font-mono text-sm space-y-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-muted-foreground">=</span>
-                                  <span>
-                                    {Number(
-                                      transactionDetails.order.amount
-                                    ).toLocaleString("pt-BR", {
-                                      minimumFractionDigits: 0,
-                                      maximumFractionDigits: 8,
-                                    })}{" "}
-                                    USDT
-                                  </span>
-                                  <span className="text-muted-foreground">×</span>
-                                  <span>
-                                    {formatCurrency(
-                                      Number(transactionDetails.order.total) /
-                                        Number(transactionDetails.order.amount)
-                                    )}
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-2 pt-2 border-t border-border">
-                                  <span className="text-muted-foreground">=</span>
-                                  <span className="text-primary font-bold">
-                                    {formatCurrency(
-                                      Number(transactionDetails.order.total)
-                                    )}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="text-xs text-muted-foreground italic">
-                              * A taxa de câmbio já inclui todas as taxas e
-                              comissões aplicadas
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  )}
-
-                {/* Deposit Details */}
-                {transactionDetails.deposit && (
-                  <div className="border-t border-border pt-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-lg font-semibold">
-                        Detalhes do Depósito
-                      </h3>
-                      {transactionDetails.deposit.status === "PENDING" && (
-                        <div className="flex gap-2">
-                          <Button
-                            onClick={() => handleMarkAsCompleted()}
-                            disabled={markingCompleted || rejectingTransaction}
-                            variant="outline"
-                            size="sm"
-                            className="border-primary text-primary hover:bg-primary/15 hover:text-primary"
-                          >
-                            {markingCompleted ? (
-                              <>
-                                <Clock className="w-4 h-4 mr-2 animate-spin" />
-                                Marcando...
-                              </>
-                            ) : (
-                              <>
-                                <CheckCircle className="w-4 h-4 mr-2" />
-                                Aprovar Pagamento
-                              </>
-                            )}
-                          </Button>
-                          <Button
-                            onClick={() => setShowRejectionDialog(true)}
-                            disabled={markingCompleted || rejectingTransaction}
-                            variant="outline"
-                            size="sm"
-                            className="border-red-500 text-red-500 hover:bg-red-500/15"
-                          >
-                            <XCircle className="w-4 h-4 mr-2" />
-                            Negar Pagamento
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Status</p>
-                        <p className="text-foreground">
-                          {transactionDetails.deposit.status}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Valor</p>
-                        <p className="text-foreground">
-                          {formatCurrency(
-                            Number(transactionDetails.deposit.amount)
-                          )}
-                        </p>
-                      </div>
-                      {transactionDetails.deposit.externalId && (
-                        <div>
-                          <p className="text-sm text-muted-foreground">ID Externo</p>
-                          <p className="text-foreground font-mono text-sm">
-                            {transactionDetails.deposit.externalId}
-                          </p>
-                        </div>
-                      )}
-                      {transactionDetails.deposit.confirmedAt && (
-                        <div>
-                          <p className="text-sm text-muted-foreground">Confirmado em</p>
-                          <p className="text-foreground">
-                            {new Date(
-                              transactionDetails.deposit.confirmedAt
-                            ).toLocaleString("pt-BR")}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Withdrawal Details */}
-                {transactionDetails.withdrawal && (
-                  <div className="border-t border-border pt-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-lg font-semibold">
-                        Detalhes do Saque
-                      </h3>
-                      <div className="flex gap-2">
-                        {(transactionDetails.withdrawal.status === "PENDING" ||
-                          transactionDetails.withdrawal.status ===
-                            "PROCESSING") &&
-                        !transactionDetails.id.startsWith("order_") ? (
-                          <>
-                            <Button
-                              onClick={handleSyncStatus}
-                              disabled={syncingStatus}
-                              variant="outline"
-                              size="sm"
-                              className="border-primary text-primary hover:bg-primary/15 hover:text-primary"
-                            >
-                              {syncingStatus ? (
-                                <>
-                                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                                  Sincronizando...
-                                </>
-                              ) : (
-                                <>
-                                  <RefreshCw className="w-4 h-4 mr-2" />
-                                  Sincronizar Status
-                                </>
-                              )}
-                            </Button>
-                             <Button
-                               onClick={() => {
-                                 setPaymentConfirmationHash(transactionDetails.withdrawal?.hash || "");
-                                 setShowConfirmPaymentDialog(true);
-                               }}
-                               disabled={markingCompleted}
-                               variant="outline"
-                               size="sm"
-                               className="bg-primary text-primary-foreground border-primary hover:bg-primary/90"
-                             >
-                               {markingCompleted ? (
-                                 <>
-                                   <Clock className="w-4 h-4 mr-2 animate-spin" />
-                                   Processando...
-                                 </>
-                               ) : (
-                                 <>
-                                   <CheckCircle className="w-4 h-4 mr-2" />
-                                   {language === "pt" ? "Confirmar Pagamento Realizado" : "Confirm Payment Sent"}
-                                 </>
-                               )}
-                             </Button>
-                          </>
-                        ) : null}
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Status</p>
-                        <p className="text-foreground">
-                          {transactionDetails.withdrawal.status}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Valor</p>
-                        <p className="text-foreground">
-                          {formatCurrency(
-                            Number(transactionDetails.withdrawal.amount)
-                          )}
-                        </p>
-                      </div>
-                      {transactionDetails.withdrawal.hash && (
-                        <div>
-                          <p className="text-sm text-muted-foreground">Hash</p>
-                          <p className="text-foreground font-mono text-sm break-all">
-                            {transactionDetails.withdrawal.hash}
-                          </p>
-                        </div>
-                      )}
-                      {transactionDetails.withdrawal.protocol && (
-                        <div>
-                          <p className="text-sm text-muted-foreground">Protocolo</p>
-                          <p className="text-foreground">
-                            {transactionDetails.withdrawal.protocol}
-                          </p>
-                        </div>
-                      )}
-                      {transactionDetails.withdrawal.walletAddress && (
-                        <div>
-                          <p className="text-sm text-muted-foreground">
-                            Endereço da Carteira
-                          </p>
-                          <p className="text-foreground font-mono text-sm break-all">
-                            {transactionDetails.withdrawal.walletAddress}
-                          </p>
-                        </div>
-                      )}
-                      {transactionDetails.withdrawal.network && (
-                        <div>
-                          <p className="text-sm text-muted-foreground">Rede</p>
-                          <p className="text-foreground">
-                            {transactionDetails.withdrawal.network}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Metadata */}
-                {transactionDetails.metadata && (
-                  <div className="border-t border-border pt-4">
-                    <h3 className="text-lg font-semibold mb-3">Metadados</h3>
-                    <pre className="bg-muted p-4 rounded text-xs overflow-x-auto">
-                      {JSON.stringify(transactionDetails.metadata, null, 2)}
-                    </pre>
-                  </div>
-                )}
-
-                {/* Webhook logs link */}
-                <div className="border-t border-border pt-4 flex flex-wrap items-center gap-2">
-                  <Link
-                    href="/admin/webhook-logs"
-                    className="text-sm text-primary hover:text-primary hover:underline"
-                  >
-                    Ver logs de webhook
-                  </Link>
-                  {Boolean(
-                    transactionDetails.order?.externalOrderId ||
-                      (transactionDetails.metadata as Record<string, unknown>)
-                        ?.orderId
-                  ) && (
-                    <span className="text-muted-foreground text-xs">
-                      (ID externo / pedido para buscar nos logs)
-                    </span>
-                  )}
-                </div>
-
-                {/* Full log - complete transaction object */}
-                <div className="border-t border-border pt-4">
-                  <details className="group">
-                    <summary className="cursor-pointer list-none flex items-center gap-2 text-lg font-semibold mb-3 text-muted-foreground hover:text-foreground">
-                      <span className="group-open:rotate-90 transition-transform inline-block">
-                        ▶
-                      </span>
-                      Log completo
-                    </summary>
-                    <pre className="bg-muted p-4 rounded text-xs overflow-x-auto max-h-80 overflow-y-auto border border-border">
-                      {JSON.stringify(transactionDetails, null, 2)}
-                    </pre>
-                  </details>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                Nenhum detalhe disponível
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
-
+        <TransactionDetailsDialog
+          transactionDetails={transactionDetails}
+          onClose={() => setTransactionDetails(null)}
+          markingCompleted={markingCompleted}
+          rejectingTransaction={rejectingTransaction}
+          handleMarkAsCompleted={handleMarkAsCompleted}
+          setShowRejectionDialog={setShowRejectionDialog}
+          handleSyncStatus={handleSyncStatus}
+          syncingStatus={syncingStatus}
+          resendingReceipt={resendingReceipt}
+          handleResendReceipt={handleResendReceipt}
+          language={language}
+        />
         {/* Recent Activity Summary */}
         <Card className="bg-card border-border">
           <CardHeader>
@@ -4630,7 +3485,6 @@ function AdminDashboardContent() {
             </div>
           </CardContent>
         </Card>
-      </div>
 
       {/* Balance Adjustment Dialog */}
       <Dialog open={showBalanceDialog} onOpenChange={setShowBalanceDialog}>
@@ -5017,9 +3871,12 @@ function AdminDashboardContent() {
               )}
             </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
+  </div>
+    </>
   );
 }
 
