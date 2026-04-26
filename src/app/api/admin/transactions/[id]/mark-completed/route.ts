@@ -43,13 +43,69 @@ export async function POST(
 
     // Update based on transaction type
     if (transaction.deposit) {
-      // Update deposit status to CONFIRMED
-      await prisma.deposit.update({
-        where: { id: transaction.deposit.id },
-        data: {
-          status: "CONFIRMED",
-          confirmedAt: new Date(),
-        },
+      // Use a transaction to ensure both deposit, balance and transaction records are updated
+      await prisma.$transaction(async (tx) => {
+        // 1. Update deposit status to CONFIRMED
+        const updatedDeposit = await tx.deposit.update({
+          where: { id: transaction.deposit!.id },
+          data: {
+            status: "CONFIRMED",
+            confirmedAt: new Date(),
+          },
+          include: { user: true }
+        });
+
+        // 2. Update user balance
+        const balance = await tx.balance.upsert({
+          where: { 
+            userId_currency: { 
+              userId: transaction.userId, 
+              currency: transaction.currency 
+            } 
+          },
+          update: {
+            amount: { increment: transaction.amount }
+          },
+          create: {
+            userId: transaction.userId,
+            currency: transaction.currency,
+            amount: transaction.amount
+          }
+        });
+
+        // 3. Update transaction record
+        await tx.transaction.update({
+          where: { id: transaction.id },
+          data: {
+            status: "COMPLETED",
+            balance: balance.amount, // Updated snapshot
+            description: transaction.description || `Depósito de ${transaction.amount} ${transaction.currency} confirmado`,
+          },
+        });
+
+        // 4. Send receipt email (non-blocking notification)
+        // We'll do this after the transaction to be safe, or just call it from here
+        // For simplicity and speed, we'll import and call it
+        try {
+          const { sendPurchaseReceipt } = await import("@/lib/receipt-email");
+          // Convert Decimal to number for the email helper
+          const amountNum = Number(transaction.amount);
+          
+          await sendPurchaseReceipt({
+            userName: updatedDeposit.user.name || "Cliente",
+            userEmail: updatedDeposit.user.email,
+            amountBRL: 0, // Not applicable for crypto
+            amountUSDT: amountNum,
+            exchangeRate: 0, // Not applicable
+            fee: 0,
+            totalPaid: amountNum,
+            transactionId: transaction.id,
+            date: new Date(),
+            paymentMethod: "USDT",
+          });
+        } catch (emailErr) {
+          console.error("Failed to send receipt email:", emailErr);
+        }
       });
     } else if (transaction.withdrawal) {
       // Update withdrawal status to COMPLETED

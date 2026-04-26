@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse request body
-    const { network } = await request.json();
+    const { network, amount } = await request.json();
 
     if (!network || !["TRC20", "ERC20", "POLYGON"].includes(network)) {
       return NextResponse.json(
@@ -67,6 +67,8 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const requestedAmount = new Decimal(amount || 0);
 
     // Generate a unique external ID for tracking this deposit
     const externalId = `deposit_${user.id}_${network}_${Date.now()}`;
@@ -104,27 +106,78 @@ export async function POST(request: NextRequest) {
       console.warn(`Using fallback deposit address for network ${network}. Configure DEPOSIT_ADDRESS_${network} or PAYMENT_DEPOSIT_ADDRESS in environment variables.`);
     }
 
-    // Create a pending deposit record to track this deposit request
-    const deposit = await prisma.deposit.create({
-      data: {
-        userId: user.id,
-        amount: new Decimal(0),
-        currency: "USDT",
-        status: "PENDING",
-        paymentMethod: "USDT",
-        externalId: externalId,
-        paymentId: depositAddress,
-        createdAt: new Date(),
-      },
+    // Use a transaction to ensure both deposit and transaction records are created
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Create the deposit record
+      const deposit = await tx.deposit.create({
+        data: {
+          userId: user.id,
+          amount: requestedAmount,
+          currency: "USDT",
+          status: "PENDING",
+          paymentMethod: "USDT",
+          externalId: externalId,
+          paymentId: depositAddress,
+          createdAt: new Date(),
+        },
+      });
+
+      // 2. Get current user balance for USDT
+      const balance = await tx.balance.findUnique({
+        where: { userId_currency: { userId: user.id, currency: "USDT" } },
+      });
+      const currentBalance = balance?.amount || new Decimal(0);
+
+      // 3. Create a transaction record so it shows up in history immediately
+      const transaction = await tx.transaction.create({
+        data: {
+          userId: user.id,
+          type: "DEPOSIT",
+          amount: requestedAmount,
+          currency: "USDT",
+          balance: currentBalance, // Current balance, will be updated upon confirmation
+          description: `Depósito USDT via ${network}`,
+          metadata: {
+            depositId: deposit.id,
+            network: network,
+            address: depositAddress,
+            requestedAmount: requestedAmount.toNumber(),
+          },
+        },
+      });
+
+      // 4. Link transaction to deposit
+      await tx.deposit.update({
+        where: { id: deposit.id },
+        data: { transactionId: transaction.id },
+      });
+
+      return { deposit, transaction };
     });
+
+    // Notify admin (non-blocking)
+    import("@/lib/admin-alert-email").then(async ({ getAdminAlertSettings, sendAdminAlertToAll }) => {
+      try {
+        const settings = await getAdminAlertSettings();
+        await sendAdminAlertToAll(
+          settings,
+          "Novo Depósito USDT Iniciado",
+          `Usuário: ${user.name} (${user.email})\nValor: ${requestedAmount.toNumber()} USDT\nRede: ${network}\nEndereço: ${depositAddress}`
+        );
+      } catch (err) {
+        console.error("Failed to send admin notification:", err);
+      }
+    }).catch(err => console.error("Failed to import alert module:", err));
 
     return NextResponse.json({
       success: true,
       address: depositAddress,
       network: network,
-      depositId: deposit.id,
+      depositId: result.deposit.id,
+      transactionId: result.transaction.id,
       externalId: externalId,
-      message: "Deposit address generated. Send USDT to this address. Include the memo/reference if required.",
+      amount: requestedAmount.toNumber(),
+      message: "Deposit address generated. Send USDT to this address.",
     });
   } catch (error) {
     console.error("Error generating deposit address:", error);

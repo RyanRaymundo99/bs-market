@@ -197,7 +197,11 @@ const TradePage = () => {
     amount: number;
     usdtAmount: number;
     date: Date;
+    type?: string;
   } | null>(null);
+
+  // Crypto deposit states
+  const [cryptoAmount, setCryptoAmount] = useState<string>("");
 
   // Estado para o histórico de transações
   const [transactionHistory, setTransactionHistory] = useState<
@@ -885,13 +889,13 @@ const TradePage = () => {
     }
   };
 
-  const fetchCryptoAddress = useCallback(async (network: string) => {
+  const fetchCryptoAddress = useCallback(async (network: string, amount?: number) => {
     try {
       setCryptoAddressLoading(true);
       const response = await fetch("/api/deposit/crypto/address", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ network }),
+        body: JSON.stringify({ network, amount }),
       });
 
       if (!response.ok) {
@@ -915,6 +919,19 @@ const TradePage = () => {
         } catch (err) {
           console.error("Error generating QR code:", err);
         }
+
+        if (amount && data.transactionId) {
+          // If we provided an amount, this was an intentional deposit start
+          setReceiptData({
+            transactionId: data.transactionId,
+            amount: 0, // BRL not applicable
+            usdtAmount: amount,
+            date: new Date(),
+            type: "CRYPTO"
+          });
+          setShowReceipt(true);
+          fetchTransactionHistory(); // Refresh history to show pending
+        }
       }
     } catch (error) {
       console.error("Error fetching crypto address:", error);
@@ -926,13 +943,26 @@ const TradePage = () => {
     } finally {
       setCryptoAddressLoading(false);
     }
-  }, [language, toast]);
+  }, [language, toast, fetchTransactionHistory]);
+
+  const handleCryptoDepositConfirm = () => {
+    const amount = parseUSDTInput(cryptoAmount);
+    if (amount <= 0) {
+      toast({
+        title: "Erro",
+        description: language === "pt" ? "Insira um valor válido" : "Enter a valid amount",
+        variant: "destructive",
+      });
+      return;
+    }
+    fetchCryptoAddress(cryptoNetwork, amount);
+  };
 
   useEffect(() => {
-    if (depositMethod === "CRYPTO") {
+    if (depositMethod === "CRYPTO" && !cryptoAddress) {
       fetchCryptoAddress(cryptoNetwork);
     }
-  }, [depositMethod, cryptoNetwork, fetchCryptoAddress]);
+  }, [depositMethod, cryptoNetwork, fetchCryptoAddress, cryptoAddress]);
 
   const copyAddress = async (address: string) => {
     try {
@@ -1221,6 +1251,18 @@ const TradePage = () => {
               <>
                 <div className="space-y-6">
                   <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                      {language === "pt" ? "Quantidade de USDT para depositar:" : "USDT Amount to deposit:"}
+                    </label>
+                    <input
+                      type="text"
+                      value={cryptoAmount}
+                      onChange={(e) => setCryptoAmount(formatUSDTInput(e.target.value))}
+                      placeholder="0,00"
+                      inputMode="decimal"
+                      className="w-full px-4 py-3 bg-muted/50 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all mb-4"
+                    />
+                    
                     <label className="block text-sm font-medium text-foreground mb-3">
                       {language === "pt" ? "Selecione a Rede (Network):" : "Select Network:"}
                     </label>
@@ -1232,7 +1274,10 @@ const TradePage = () => {
                       ] as const).map((network) => (
                         <button
                           key={network.id}
-                          onClick={() => setCryptoNetwork(network.id)}
+                          onClick={() => {
+                            setCryptoNetwork(network.id);
+                            setCryptoAddress(""); // Reset address when network changes
+                          }}
                           className={`px-3 py-2.5 rounded-xl border text-xs font-semibold transition-all ${
                             cryptoNetwork === network.id
                               ? "bg-primary/20 border-primary text-primary"
@@ -1244,6 +1289,16 @@ const TradePage = () => {
                       ))}
                     </div>
                   </div>
+
+                  {!cryptoAddress && !cryptoAddressLoading && (
+                    <Button 
+                      onClick={handleCryptoDepositConfirm}
+                      disabled={!cryptoAmount || parseUSDTInput(cryptoAmount) <= 0 || moneyDisabled}
+                      className="w-full h-12 sm:h-14 font-semibold rounded-xl text-base sm:text-lg"
+                    >
+                      {language === "pt" ? "Gerar Endereço de Depósito" : "Generate Deposit Address"}
+                    </Button>
+                  )}
 
                   {cryptoAddressLoading ? (
                     <div className="py-12 flex flex-col items-center gap-3">
@@ -1322,8 +1377,8 @@ const TradePage = () => {
                           </div>
                           <p className="text-xs text-muted-foreground leading-relaxed">
                             {language === "pt" 
-                              ? `Certifique-se de enviar apenas USDT via rede ${cryptoNetwork}. O envio de qualquer outra moeda resultará em perda permanente.` 
-                              : `Make sure to only send USDT via the ${cryptoNetwork} network. Sending any other currency will result in permanent loss.`}
+                              ? `Certifique-se de enviar exatamente ${cryptoAmount} USDT via rede ${cryptoNetwork}. O envio de qualquer outra moeda resultará em perda permanente.` 
+                              : `Make sure to only send exactly ${cryptoAmount} USDT via the ${cryptoNetwork} network. Sending any other currency will result in permanent loss.`}
                           </p>
                         </div>
                         <div className="flex items-start gap-3">
@@ -1332,8 +1387,8 @@ const TradePage = () => {
                           </div>
                           <p className="text-xs text-muted-foreground leading-relaxed">
                             {language === "pt"
-                              ? "O crédito será automático após 3-6 confirmações na rede (geralmente 5-10 minutos)."
-                              : "Credit will be automatic after 3-6 network confirmations (usually 5-10 minutes)."}
+                              ? "O crédito será automático após aprovação manual (geralmente 5-30 minutos)."
+                              : "Credit will be automatic after manual approval (usually 5-30 minutes)."}
                           </p>
                         </div>
                       </div>

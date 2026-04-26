@@ -29,6 +29,7 @@ import {
   Search,
   ArrowUpDown,
   X,
+  XCircle,
   Wifi,
   WifiOff,
   Mail,
@@ -239,6 +240,7 @@ interface TransactionDetails {
 }
 
 function AdminDashboardContent() {
+  const { language } = useLanguage();
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     pendingApprovals: 0,
@@ -275,6 +277,9 @@ function AdminDashboardContent() {
   const [resendingReceipt, setResendingReceipt] = useState(false);
   const [syncingStatus, setSyncingStatus] = useState(false);
   const [markingCompleted, setMarkingCompleted] = useState(false);
+  const [rejectingTransaction, setRejectingTransaction] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [showRejectionDialog, setShowRejectionDialog] = useState(false);
   const [showConfirmPaymentDialog, setShowConfirmPaymentDialog] = useState(false);
   const [paymentConfirmationHash, setPaymentConfirmationHash] = useState("");
   const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
@@ -1103,6 +1108,66 @@ function AdminDashboardContent() {
       });
     } finally {
       setMarkingCompleted(false);
+    }
+  };
+
+  const handleRejectTransaction = async () => {
+    if (!transactionDetails) return;
+    if (!rejectionReason.trim()) {
+      toast({
+        title: "Erro",
+        description: "Por favor, informe o motivo da rejeição",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setRejectingTransaction(true);
+    try {
+      const response = await fetch(
+        `/api/admin/transactions/${transactionDetails.id}/reject`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reason: rejectionReason }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast({
+          title: "Sucesso",
+          description: "Transação rejeitada com sucesso!",
+          variant: "default",
+        });
+
+        setShowRejectionDialog(false);
+        setRejectionReason("");
+
+        // Refresh transaction details
+        const detailsResponse = await fetch(
+          `/api/admin/transactions/${transactionDetails.id}`
+        );
+        if (detailsResponse.ok) {
+          const detailsData = await detailsResponse.json();
+          if (detailsData.success) {
+            setTransactionDetails(detailsData.transaction);
+            fetchRealtimeTransactions();
+          }
+        }
+      } else {
+        throw new Error(data.error || "Falha ao rejeitar transação");
+      }
+    } catch (error) {
+      console.error("Error rejecting transaction:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: error instanceof Error ? error.message : "Falha ao rejeitar transação",
+      });
+    } finally {
+      setRejectingTransaction(false);
     }
   };
 
@@ -3918,46 +3983,61 @@ function AdminDashboardContent() {
                     <div className="flex items-center gap-2">
                       <div>
                         <p className="text-sm text-muted-foreground">Status</p>
-                        <span
-                          className={`px-2 py-1 rounded text-xs font-medium inline-block ${
-                            transactionDetails.status === "APPROVED" ||
-                            transactionDetails.status === "COMPLETED" ||
-                            transactionDetails.status === "CONFIRMED"
-                              ? "bg-primary/20 text-primary"
-                              : transactionDetails.status === "PENDING" ||
-                                transactionDetails.status === "PROCESSING" ||
-                                transactionDetails.status === "EXECUTING"
-                              ? "bg-yellow-900 text-yellow-300"
-                              : "bg-red-900 text-red-300"
-                          }`}
-                        >
-                          {getStatusLabel(transactionDetails.status)}
-                        </span>
-                      </div>
-                      {(transactionDetails.status === "PENDING" ||
-                        transactionDetails.status === "PROCESSING" ||
-                        transactionDetails.status === "EXECUTING") &&
-                        !transactionDetails.id.startsWith("order_") && (
-                          <Button
-                            onClick={() => handleMarkAsCompleted()}
-                            disabled={markingCompleted}
-                            variant="outline"
-                            size="sm"
-                            className="border-primary text-primary hover:bg-primary/15 hover:text-primary mt-5"
+                        <div className="flex flex-wrap items-center gap-2 mt-1">
+                          <span
+                            className={`px-2 py-1 rounded text-xs font-medium inline-block ${
+                              transactionDetails.status === "APPROVED" ||
+                              transactionDetails.status === "COMPLETED" ||
+                              transactionDetails.status === "CONFIRMED"
+                                ? "bg-primary/20 text-primary"
+                                : transactionDetails.status === "PENDING" ||
+                                  transactionDetails.status === "PROCESSING" ||
+                                  transactionDetails.status === "EXECUTING"
+                                ? "bg-yellow-900 text-yellow-300"
+                                : "bg-red-900 text-red-300"
+                            }`}
                           >
-                            {markingCompleted ? (
-                              <>
-                                <Clock className="w-4 h-4 mr-2 animate-spin" />
-                                Marcando...
-                              </>
-                            ) : (
-                              <>
-                                <CheckCircle className="w-4 h-4 mr-2" />
-                                Marcar como Concluída
-                              </>
+                            {getStatusLabel(transactionDetails.status)}
+                          </span>
+                          
+                          {(transactionDetails.status === "PENDING" ||
+                            transactionDetails.status === "PROCESSING" ||
+                            transactionDetails.status === "EXECUTING") &&
+                            !transactionDetails.id.startsWith("order_") && (
+                              <div className="flex gap-2">
+                                <Button
+                                  onClick={() => handleMarkAsCompleted()}
+                                  disabled={markingCompleted || rejectingTransaction}
+                                  variant="outline"
+                                  size="sm"
+                                  className="border-primary text-primary hover:bg-primary/15 hover:text-primary"
+                                >
+                                  {markingCompleted ? (
+                                    <>
+                                      <Clock className="w-3 h-3 mr-1 animate-spin" />
+                                      {language === "pt" ? "Marcando..." : "Marking..."}
+                                    </>
+                                  ) : (
+                                    <>
+                                      <CheckCircle className="w-3 h-3 mr-1" />
+                                      {language === "pt" ? "Aprovar" : "Approve"}
+                                    </>
+                                  )}
+                                </Button>
+                                <Button
+                                  onClick={() => setShowRejectionDialog(true)}
+                                  disabled={markingCompleted || rejectingTransaction}
+                                  variant="outline"
+                                  size="sm"
+                                  className="border-red-500 text-red-500 hover:bg-red-500/15"
+                                >
+                                  <XCircle className="w-3 h-3 mr-1" />
+                                  {language === "pt" ? "Negar" : "Reject"}
+                                </Button>
+                              </div>
                             )}
-                          </Button>
-                        )}
+                        </div>
+                      </div>
                     </div>
                   </div>
                   <div>
@@ -4280,25 +4360,37 @@ function AdminDashboardContent() {
                         Detalhes do Depósito
                       </h3>
                       {transactionDetails.deposit.status === "PENDING" && (
-                        <Button
-                          onClick={() => handleMarkAsCompleted()}
-                          disabled={markingCompleted}
-                          variant="outline"
-                          size="sm"
-                          className="border-primary text-primary hover:bg-primary/15 hover:text-primary"
-                        >
-                          {markingCompleted ? (
-                            <>
-                              <Clock className="w-4 h-4 mr-2 animate-spin" />
-                              Marcando...
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle className="w-4 h-4 mr-2" />
-                              Marcar como Concluída
-                            </>
-                          )}
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => handleMarkAsCompleted()}
+                            disabled={markingCompleted || rejectingTransaction}
+                            variant="outline"
+                            size="sm"
+                            className="border-primary text-primary hover:bg-primary/15 hover:text-primary"
+                          >
+                            {markingCompleted ? (
+                              <>
+                                <Clock className="w-4 h-4 mr-2 animate-spin" />
+                                Marcando...
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle className="w-4 h-4 mr-2" />
+                                Aprovar Pagamento
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            onClick={() => setShowRejectionDialog(true)}
+                            disabled={markingCompleted || rejectingTransaction}
+                            variant="outline"
+                            size="sm"
+                            className="border-red-500 text-red-500 hover:bg-red-500/15"
+                          >
+                            <XCircle className="w-4 h-4 mr-2" />
+                            Negar Pagamento
+                          </Button>
+                        </div>
                       )}
                     </div>
                     <div className="grid grid-cols-2 gap-4">
@@ -4873,6 +4965,56 @@ function AdminDashboardContent() {
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {markingCompleted ? "Confirmando..." : "Confirmar Pagamento"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Rejection Reason Dialog */}
+      <Dialog open={showRejectionDialog} onOpenChange={setShowRejectionDialog}>
+        <DialogContent className="bg-card border-border text-foreground max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">
+              Negar Transação
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Informe o motivo da rejeição. O usuário será notificado.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground">
+                Motivo da Rejeição
+              </label>
+              <textarea
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="Ex: Comprovante inválido, valor incorreto, etc."
+                className="w-full h-32 px-3 py-2 bg-muted border border-border rounded-md text-foreground focus:outline-none focus:ring-2 focus:ring-red-500"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowRejectionDialog(false)}
+              disabled={rejectingTransaction}
+              className="border-border text-muted-foreground hover:bg-muted"
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleRejectTransaction}
+              disabled={rejectingTransaction || !rejectionReason.trim()}
+            >
+              {rejectingTransaction ? (
+                <>
+                  <Clock className="w-4 h-4 mr-2 animate-spin" />
+                  Negando...
+                </>
+              ) : (
+                "Confirmar Rejeição"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

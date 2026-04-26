@@ -54,7 +54,7 @@ const translations = {
     amountPaid: "Valor pago",
     received: "Recebido",
     completed: "Concluída",
-    pending: "Pendente",
+    pending: "Em andamento",
     failed: "Falhou",
 
     // PIX Modal

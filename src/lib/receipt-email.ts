@@ -660,3 +660,91 @@ ${data.reason ? `Motivo: ${data.reason}` : ""}
     };
   }
 }
+export async function sendRejectionReceipt(data: {
+  userName: string;
+  userEmail: string;
+  amount: number;
+  currency: string;
+  type: "DEPOSIT" | "WITHDRAWAL";
+  reason: string;
+  transactionId: string;
+  date: Date;
+}) {
+  try {
+    const formattedDate = new Intl.DateTimeFormat("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(data.date);
+
+    const title = data.type === "DEPOSIT" ? "Depósito Rejeitado" : "Saque Rejeitado";
+    const subject = `BS Market - ${title} #${data.transactionId.slice(0, 8)}`;
+
+    const text = `
+${title} - BS Market
+
+ID da Transação: ${data.transactionId}
+Data: ${formattedDate}
+Valor: ${data.amount.toFixed(2)} ${data.currency}
+
+Infelizmente, sua solicitação foi rejeitada.
+Motivo: ${data.reason}
+
+Se você tiver dúvidas, entre em contato com nosso suporte via WhatsApp.
+`;
+
+    const html = generateBankReceiptHTML({
+      title,
+      transactionId: data.transactionId,
+      date: formattedDate,
+      userName: data.userName,
+      items: [
+        {
+          label: "Tipo",
+          value: data.type === "DEPOSIT" ? "Depósito" : "Saque",
+        },
+        {
+          label: "Valor",
+          value: `${data.amount.toFixed(2)} ${data.currency}`,
+        },
+        {
+          label: "Status",
+          value: "REJEITADO",
+          highlight: true,
+        },
+        {
+          label: "Motivo da Rejeição",
+          value: data.reason,
+          highlight: true,
+        },
+      ],
+      footerMessage:
+        "Sua solicitação não pôde ser processada no momento devido ao motivo acima. Se precisar de ajuda, entre em contato com nosso suporte.",
+      status: "FALHOU",
+    });
+
+    const result = await sendEmail({
+      to: data.userEmail,
+      subject,
+      text,
+      html,
+    });
+
+    if (result.success) {
+      console.log(`✅ Rejection email sent to ${data.userEmail}`);
+      await logSentEmailByEmail({
+        userEmail: data.userEmail,
+        type: "receipt",
+        subject,
+        metadata: { kind: "rejection_receipt", reason: data.reason },
+      });
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Error sending rejection email:", error);
+    return { success: false, message: "Failed to send rejection email" };
+  }
+}
