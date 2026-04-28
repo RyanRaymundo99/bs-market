@@ -1,6 +1,6 @@
 import prisma from "./prisma";
 import { Decimal } from "@prisma/client/runtime/library";
-import { Prisma } from "@prisma/client";
+import { Prisma, TransactionType } from "../../prisma/generated/client";
 
 // Use a type that represents either the main prisma client or a transaction client
 type PrismaClientOrTransaction = 
@@ -47,7 +47,7 @@ export class LedgerService {
 
     // Prepare update data based on operation
     let data: Prisma.BalanceUpdateInput = {};
-    let createData: Prisma.BalanceCreateInput = {
+    const createData: Prisma.BalanceUncheckedCreateInput = {
       userId,
       currency,
       amount: new Decimal(0),
@@ -103,11 +103,10 @@ export class LedgerService {
   async recordTransaction(
     data: {
       userId: string;
-      type: "DEPOSIT" | "WITHDRAWAL" | "BUY_CRYPTO" | "SELL_CRYPTO" | "FEE" | "REFUND" | "ADJUSTMENT";
+      type: TransactionType;
       amount: Decimal | number;
       currency: string;
       description: string;
-      status?: "PENDING" | "COMPLETED" | "REJECTED" | "CANCELLED";
       metadata?: Record<string, unknown>;
     },
     tx: PrismaClientOrTransaction = prisma
@@ -122,11 +121,20 @@ export class LedgerService {
         amount: decAmount,
         currency: data.currency,
         balance: balance.amount, // Snapshot BEFORE this transaction
-        status: data.status || "COMPLETED",
         description: data.description,
-        metadata: data.metadata ? JSON.parse(JSON.stringify(data.metadata)) : null,
+        metadata: data.metadata
+          ? (JSON.parse(JSON.stringify(data.metadata)) as Prisma.InputJsonValue)
+          : undefined,
       },
     });
+  }
+
+  /** Alias for {@link recordTransaction} (legacy call sites). */
+  createTransaction(
+    data: Parameters<LedgerService["recordTransaction"]>[0],
+    tx?: Parameters<LedgerService["recordTransaction"]>[1]
+  ) {
+    return this.recordTransaction(data, tx);
   }
 }
 

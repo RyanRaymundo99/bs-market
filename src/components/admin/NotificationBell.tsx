@@ -14,7 +14,12 @@ import { useRouter } from "next/navigation";
 
 interface Notification {
   id: string;
-  type: "new_user" | "kyc_pending" | "approval_needed";
+  type:
+    | "new_user"
+    | "kyc_pending"
+    | "approval_needed"
+    | "new_deposit"
+    | "new_withdrawal";
   title: string;
   message: string;
   timestamp: string;

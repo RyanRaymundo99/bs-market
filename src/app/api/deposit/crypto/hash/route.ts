@@ -1,14 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import prisma from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
+    const sessionCookie = req.cookies.get("better-auth.session");
+    if (!sessionCookie?.value) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const session = await prisma.session.findUnique({
+      where: { token: sessionCookie.value },
+      include: { user: true },
+    });
+
+    if (!session || session.expiresAt <= new Date()) {
+      return NextResponse.json(
+        { error: "Invalid or expired session" },
+        { status: 401 }
+      );
+    }
+
+    const userEmail = session.user.email;
 
     const body = await req.json();
     const { transactionId, hash } = body;
@@ -31,22 +43,34 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify ownership
-    if (deposit.user.email !== session.user.email) {
+    if (deposit.user.email !== userEmail) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Update metadata with the hash
-    const currentMetadata = (deposit.metadata as Record<string, any>) || {};
-    const updatedMetadata = {
-      ...currentMetadata,
+    const hashPayload = {
       transactionHash: hash,
       hashSubmittedAt: new Date().toISOString(),
     };
 
-    await prisma.deposit.update({
-      where: { id: transactionId },
+    if (!deposit.transactionId) {
+      return NextResponse.json(
+        {
+          error:
+            "Este depósito ainda não está vinculado a uma transação no sistema; não é possível salvar o hash.",
+        },
+        { status: 422 }
+      );
+    }
+
+    const ledgerTx = await prisma.transaction.findUnique({
+      where: { id: deposit.transactionId },
+    });
+    const currentMetadata =
+      (ledgerTx?.metadata as Record<string, unknown>) || {};
+    await prisma.transaction.update({
+      where: { id: deposit.transactionId },
       data: {
-        metadata: updatedMetadata,
+        metadata: { ...currentMetadata, ...hashPayload },
       },
     });
 

@@ -250,8 +250,12 @@ export async function POST(request: NextRequest) {
         amount: -amount,
         currency: "USDT",
         description: `USDT withdrawal to ${walletAddress} (${network}) - Taxa de rede: ${responseFee.toFixed(2)} USDT (informativa)`,
-        metadata: { withdrawalId: withdrawal.id, provider: paymentService.name },
-        status: responseStatus === "completed" ? "COMPLETED" : "PENDING",
+        metadata: {
+          withdrawalId: withdrawal.id,
+          provider: paymentService.name,
+          withdrawalFlowStatus:
+            responseStatus === "completed" ? "COMPLETED" : "PENDING",
+        },
       });
 
       // Link withdrawal to transaction

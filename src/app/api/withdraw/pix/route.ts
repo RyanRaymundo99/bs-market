@@ -169,7 +169,6 @@ export async function POST(request: NextRequest) {
       amount: -amount,
       currency: "BRL",
       description: `PIX withdrawal to ${pixKey}`,
-      status: "PENDING",
       metadata: { withdrawalId: withdrawal.id, protocol },
     });
 

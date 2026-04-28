@@ -36,19 +36,29 @@ export async function POST(
       return NextResponse.json({ error: "Transaction not found" }, { status: 404 });
     }
 
-    if (transaction.status !== "PENDING" && transaction.status !== "PROCESSING") {
-      return NextResponse.json({ error: "Apenas transações pendentes podem ser rejeitadas" }, { status: 400 });
+    const depositRejectable =
+      transaction.deposit &&
+      transaction.deposit.status === "PENDING";
+    const withdrawalRejectable =
+      transaction.withdrawal &&
+      (transaction.withdrawal.status === "PENDING" ||
+        transaction.withdrawal.status === "PROCESSING");
+
+    if (!depositRejectable && !withdrawalRejectable) {
+      return NextResponse.json(
+        { error: "Apenas transações pendentes podem ser rejeitadas" },
+        { status: 400 }
+      );
     }
 
     // Update records
     await prisma.$transaction(async (tx) => {
-      // 1. Update transaction
+      // 1. Update transaction metadata (ledger row has no status field)
       await tx.transaction.update({
         where: { id },
         data: {
-          status: "REJECTED",
           metadata: {
-            ...(transaction.metadata as object || {}),
+            ...((transaction.metadata as Record<string, unknown>) || {}),
             rejectionReason: reason,
             rejectedAt: new Date().toISOString(),
             rejectedBy: adminSession.user.email,
@@ -71,7 +81,7 @@ export async function POST(
         await tx.withdrawal.update({
           where: { id: transaction.withdrawal.id },
           data: {
-            status: "REJECTED",
+            status: "FAILED",
           },
         });
       }

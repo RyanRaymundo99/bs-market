@@ -9,7 +9,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { 
   Clock, 
   CheckCircle, 
@@ -24,8 +23,46 @@ import {
 import Link from "next/link";
 import { formatCurrency, getStatusLabel, getTransactionTypeLabel } from "@/lib/utils";
 
+/** Shape passed from admin dashboard / transactions when opening the details dialog */
+export interface AdminTransactionDetail {
+  id: string;
+  type: string;
+  status: string;
+  date: string;
+  description?: string | null;
+  amount?: number;
+  balance?: number;
+  currency?: string;
+  metadata?: Record<string, unknown> | null;
+  user?:
+    | string
+    | {
+        name?: string;
+        email?: string;
+        cpf?: string | null;
+      }
+    | null;
+  deposit?: {
+    status?: string;
+    amount?: number | null;
+    externalId?: string | null;
+  } | null;
+  order?: {
+    status?: string;
+    amount?: number | string | null;
+    externalOrderId?: string | null;
+  } | null;
+  withdrawal?: {
+    status?: string;
+    amount?: number | null;
+    walletAddress?: string | null;
+    network?: string | null;
+    pixKey?: string | null;
+  } | null;
+}
+
 interface TransactionDetailsDialogProps {
-  transactionDetails: any;
+  transactionDetails: AdminTransactionDetail | null;
   onClose: () => void;
   markingCompleted: boolean;
   rejectingTransaction: boolean;
@@ -52,6 +89,12 @@ export const TransactionDetailsDialog: React.FC<TransactionDetailsDialogProps> =
   language,
 }) => {
   if (!transactionDetails) return null;
+
+  const userRecord =
+    transactionDetails.user != null &&
+    typeof transactionDetails.user === "object"
+      ? transactionDetails.user
+      : null;
 
   return (
     <Dialog open={!!transactionDetails} onOpenChange={(open) => !open && onClose()}>
@@ -142,14 +185,16 @@ export const TransactionDetailsDialog: React.FC<TransactionDetailsDialogProps> =
               <div>
                 <p className="text-sm text-muted-foreground">Nome</p>
                 <p className="text-foreground">
-                  {transactionDetails.user?.name || "N/A"}
+                  {typeof transactionDetails.user === "string"
+                    ? transactionDetails.user
+                    : userRecord?.name || "N/A"}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Email</p>
                 <div className="flex items-center gap-2">
                   <p className="text-foreground text-sm">
-                    {transactionDetails.user?.email || "N/A"}
+                    {userRecord?.email || "N/A"}
                   </p>
                   {transactionDetails.type === "DEPOSIT" && (
                     <Button
@@ -169,12 +214,10 @@ export const TransactionDetailsDialog: React.FC<TransactionDetailsDialogProps> =
                   )}
                 </div>
               </div>
-              {transactionDetails.user?.cpf && (
+              {userRecord?.cpf && (
                 <div>
                   <p className="text-sm text-muted-foreground">CPF</p>
-                  <p className="text-foreground">
-                    {transactionDetails.user.cpf}
-                  </p>
+                  <p className="text-foreground">{userRecord.cpf}</p>
                 </div>
               )}
             </div>
@@ -191,14 +234,14 @@ export const TransactionDetailsDialog: React.FC<TransactionDetailsDialogProps> =
                 <p className="text-sm text-muted-foreground">Valor</p>
                 <p className="text-foreground font-semibold">
                   {formatCurrency(transactionDetails.amount || 0)}{" "}
-                  {transactionDetails.currency}
+                  {transactionDetails.currency ?? ""}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Saldo após transação</p>
                 <p className="text-foreground">
                   {formatCurrency(transactionDetails.balance || 0)}{" "}
-                  {transactionDetails.currency}
+                  {transactionDetails.currency ?? ""}
                 </p>
               </div>
             </div>
@@ -221,7 +264,7 @@ export const TransactionDetailsDialog: React.FC<TransactionDetailsDialogProps> =
                 <div>
                   <p className="text-sm text-muted-foreground">Valor USDT</p>
                   <p className="text-foreground">
-                    {transactionDetails.order.amount} USDT
+                    {String(transactionDetails.order.amount ?? "")} USDT
                   </p>
                 </div>
                 {transactionDetails.order.externalOrderId && (
@@ -248,7 +291,11 @@ export const TransactionDetailsDialog: React.FC<TransactionDetailsDialogProps> =
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground uppercase">Valor</p>
-                    <p className="text-sm font-semibold">{formatCurrency(transactionDetails.deposit.amount)}</p>
+                    <p className="text-sm font-semibold">
+                      {formatCurrency(
+                        Number(transactionDetails.deposit.amount ?? 0)
+                      )}
+                    </p>
                   </div>
                 </div>
                 
@@ -259,18 +306,23 @@ export const TransactionDetailsDialog: React.FC<TransactionDetailsDialogProps> =
                   </div>
                 )}
 
-                {(transactionDetails.metadata as any)?.transactionHash && (
+                {typeof transactionDetails.metadata?.transactionHash ===
+                  "string" && (
                   <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
                     <p className="text-sm font-semibold text-primary mb-1 flex items-center">
                       <RefreshCcw className="w-4 h-4 mr-2" />
                       Hash da Transação (Informado pelo Cliente)
                     </p>
                     <p className="text-xs font-mono break-all text-foreground bg-background p-2 rounded border border-border">
-                      {(transactionDetails.metadata as any).transactionHash}
+                      {transactionDetails.metadata.transactionHash}
                     </p>
-                    {(transactionDetails.metadata as any).hashSubmittedAt && (
+                    {typeof transactionDetails.metadata.hashSubmittedAt ===
+                      "string" && (
                       <p className="text-[10px] text-muted-foreground mt-1">
-                        Enviado em: {new Date((transactionDetails.metadata as any).hashSubmittedAt).toLocaleString("pt-BR")}
+                        Enviado em:{" "}
+                        {new Date(
+                          transactionDetails.metadata.hashSubmittedAt
+                        ).toLocaleString("pt-BR")}
                       </p>
                     )}
                   </div>
@@ -290,7 +342,7 @@ export const TransactionDetailsDialog: React.FC<TransactionDetailsDialogProps> =
                     transactionDetails.withdrawal.status === "PENDING" ? "bg-yellow-500/15 text-yellow-500" :
                     "bg-red-500/15 text-red-500"
                   }`}>
-                    {transactionDetails.withdrawal.status}
+                    {transactionDetails.withdrawal.status ?? ""}
                   </span>
                   
                   {(transactionDetails.withdrawal.status === "PENDING" || transactionDetails.withdrawal.status === "PROCESSING") && (
@@ -314,7 +366,11 @@ export const TransactionDetailsDialog: React.FC<TransactionDetailsDialogProps> =
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Valor</p>
-                    <p className="text-foreground font-semibold">{formatCurrency(transactionDetails.withdrawal.amount)}</p>
+                    <p className="text-foreground font-semibold">
+                      {formatCurrency(
+                        Number(transactionDetails.withdrawal.amount ?? 0)
+                      )}
+                    </p>
                   </div>
                   {transactionDetails.withdrawal.walletAddress && (
                     <div className="col-span-2">

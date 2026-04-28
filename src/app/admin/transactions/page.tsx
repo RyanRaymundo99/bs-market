@@ -946,7 +946,10 @@ function TransactionsPageContent() {
             <div className="grid grid-cols-2 gap-4">
                <div>
                   <Label>Moeda</Label>
-                  <Select value={balanceCurrency} onValueChange={(v: any) => setBalanceCurrency(v)}>
+                  <Select
+                    value={balanceCurrency}
+                    onValueChange={(v) => setBalanceCurrency(v as "USDT" | "BRL")}
+                  >
                     <SelectTrigger className="bg-muted border-border">
                       <SelectValue />
                     </SelectTrigger>
@@ -958,7 +961,12 @@ function TransactionsPageContent() {
                </div>
                <div>
                   <Label>Operação</Label>
-                   <Select value={balanceOperation} onValueChange={(v: any) => setBalanceOperation(v)}>
+                   <Select
+                    value={balanceOperation}
+                    onValueChange={(v) =>
+                      setBalanceOperation(v as "CREDIT" | "DEDUCT")
+                    }
+                  >
                     <SelectTrigger className="bg-muted border-border">
                       <SelectValue />
                     </SelectTrigger>

@@ -50,6 +50,7 @@ import {
   Download,
   Database,
   Server,
+  ChevronRight,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -144,6 +145,11 @@ interface Transaction {
   orderId?: string | null;
   depositId?: string | null;
   withdrawalId?: string | null;
+  withdrawal?: {
+    walletAddress?: string | null;
+    network?: string | null;
+    pixKey?: string | null;
+  } | null;
 }
 
 interface ChartData {
@@ -338,6 +344,29 @@ function AdminDashboardContent() {
   const [markingCompleted, setMarkingCompleted] = useState(false);
   const [syncingStatus, setSyncingStatus] = useState(false);
   const [resendingReceipt, setResendingReceipt] = useState(false);
+  const [sortField, setSortField] = useState<keyof Transaction>("date");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedTransactions, setSelectedTransactions] = useState<Set<string>>(
+    () => new Set()
+  );
+  const [_processingTransaction, setProcessingTransaction] = useState<
+    string | null
+  >(null);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [usersList, setUsersList] = useState<ApiUserRecord[]>([]);
+  const [showBalanceDialog, setShowBalanceDialog] = useState(false);
+  const [showBalanceConfirmDialog, setShowBalanceConfirmDialog] =
+    useState(false);
+  const [balanceConfirmStep, setBalanceConfirmStep] = useState(1);
+  const [balanceUserId, setBalanceUserId] = useState("");
+  const [balanceAmount, setBalanceAmount] = useState("");
+  const [balanceCurrency, setBalanceCurrency] = useState("USDT");
+  const [balanceOperation, setBalanceOperation] = useState<
+    "CREDIT" | "DEDUCT"
+  >("CREDIT");
+  const [balanceReason, setBalanceReason] = useState("");
+  const [processingBalance, setProcessingBalance] = useState(false);
 
 const { toast } = useToast();
   const { language } = useLanguage();
@@ -585,9 +614,6 @@ const { toast } = useToast();
       setFinanceLoading(false);
     }
   }, [toast]);
-
-  const [statsLoading, setStatsLoading] = useState(true);
-  const [financeLoading, setFinanceLoading] = useState(true);
 
   const fetchStats = useCallback(async () => {
     try {
