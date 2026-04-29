@@ -1064,13 +1064,6 @@ const TradePage = () => {
     }
   };
 
-  const getTrustWalletLink = (network: string, address: string) => {
-    if (network === "TRC20") return `https://link.trustwallet.com/send?address=${address}&asset=c195_tTR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t`;
-    if (network === "POLYGON") return `https://link.trustwallet.com/send?asset=c966_t0xc2132D05D31c914a87C6611C10748AEb04B58e8F&address=${address}`;
-    if (network === "ERC20") return `https://link.trustwallet.com/send?asset=c60_t0xdAC17F958D2ee523a2206206994597C13D831ec7&address=${address}`;
-    return null;
-  };
-
   return (
 
     <div
@@ -1435,24 +1428,6 @@ const TradePage = () => {
                           </div>
                         </div>
                       </div>
-
-                      {/* Trust Wallet Integration */}
-                      {getTrustWalletLink(cryptoNetwork, cryptoAddress) && (
-                        <Button
-                          asChild
-                          variant="outline"
-                          className="w-full h-12 border-primary/30 text-primary hover:bg-primary/10 rounded-xl gap-2 font-semibold shadow-sm"
-                        >
-                          <a
-                            href={getTrustWalletLink(cryptoNetwork, cryptoAddress)!}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <Wallet className="w-4 h-4" />
-                            {language === "pt" ? "Pagar via Trust Wallet" : "Pay via Trust Wallet"}
-                          </a>
-                        </Button>
-                      )}
 
                       {/* Transaction Hash Input */}
                       <div className="space-y-3 pt-2 border-t border-border/50">
