@@ -23,18 +23,24 @@ export async function POST(req: NextRequest) {
     const userEmail = session.user.email;
 
     const body = await req.json();
-    const { transactionId, hash } = body;
+    const { transactionId, depositId, hash } = body;
+    const depositRef =
+      (typeof depositId === "string" && depositId.trim()) ||
+      (typeof transactionId === "string" && transactionId.trim()) ||
+      "";
 
-    if (!transactionId || !hash) {
+    if (!depositRef || !hash || typeof hash !== "string") {
       return NextResponse.json(
-        { error: "Transaction ID and Hash are required" },
+        { error: "Deposit reference and Hash are required" },
         { status: 400 }
       );
     }
 
-    // Find the deposit
-    const deposit = await prisma.deposit.findUnique({
-      where: { id: transactionId },
+    // Resolve deposit by Deposit.id or by ledger Transaction.id (FK on Deposit)
+    const deposit = await prisma.deposit.findFirst({
+      where: {
+        OR: [{ id: depositRef }, { transactionId: depositRef }],
+      },
       include: { user: true },
     });
 
@@ -73,6 +79,24 @@ export async function POST(req: NextRequest) {
         metadata: { ...currentMetadata, ...hashPayload },
       },
     });
+
+    // Notify admins (non-blocking)
+    import("@/lib/admin-alert-email")
+      .then(({ getAdminAlertSettings, sendAdminAlertToAll }) =>
+        getAdminAlertSettings().then((settings) =>
+          sendAdminAlertToAll(
+            settings,
+            "Hash de depósito USDT recebido",
+            [
+              `Usuário: ${deposit.user.name} (${deposit.user.email})`,
+              `ID depósito: ${deposit.id}`,
+              `Valor: ${deposit.amount} ${deposit.currency}`,
+              `Hash informado: ${hash.trim()}`,
+            ].join("\n")
+          )
+        )
+      )
+      .catch((err) => console.error("Admin alert (crypto hash):", err));
 
     return NextResponse.json({
       success: true,

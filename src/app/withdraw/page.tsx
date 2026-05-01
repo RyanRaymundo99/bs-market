@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import {
   Card,
@@ -536,6 +536,7 @@ export default function WithdrawPage() {
       setProcessingPix(true);
       const response = await fetch("/api/withdraw/pix", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           amount: parseFloat(pixAmount),
@@ -583,18 +584,13 @@ export default function WithdrawPage() {
     }
   };
 
-  // Get BRL balance - calculated from USDT with 2% discount
-  const getBrlBalance = () => {
-    if (!walletData || !usdtToBrlRate) return 0;
-
-    // Find USDT balance
+  // BRL available for PIX — null until wallet + rate load (avoids disabling the button with a false 0 balance).
+  const brlAvailableForPix = useMemo(() => {
+    if (!walletData || usdtToBrlRate == null) return null;
     const usdtBalance = walletData.balances.find((b) => b.currency === "USDT");
-    if (!usdtBalance) return 0;
-
-    // Calculate BRL = USDT * rate * 0.98 (2% discount)
-    const usdtAmount = Number(usdtBalance.amount);
-    return usdtAmount * usdtToBrlRate * 0.98;
-  };
+    if (!usdtBalance) return null;
+    return Number(usdtBalance.amount) * usdtToBrlRate * 0.98;
+  }, [walletData, usdtToBrlRate]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -918,8 +914,17 @@ export default function WithdrawPage() {
                         </span>
                       </div>
                       <p className="text-2xl sm:text-3xl font-bold text-primary">
-                        {formatBRL(getBrlBalance())}
+                        {brlAvailableForPix != null
+                          ? formatBRL(brlAvailableForPix)
+                          : "—"}
                       </p>
+                      {brlAvailableForPix == null && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {language === "pt"
+                            ? "Carregando cotação USDT/BRL…"
+                            : "Loading USDT/BRL rate…"}
+                        </p>
+                      )}
                     </div>
 
                     <div className="space-y-4">
@@ -937,7 +942,7 @@ export default function WithdrawPage() {
                           onChange={(e) => setPixAmount(e.target.value)}
                           min="0"
                           step="0.01"
-                          max={getBrlBalance()}
+                          max={brlAvailableForPix ?? undefined}
                           className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground focus:ring-primary rounded-xl"
                         />
                       </div>
@@ -1015,7 +1020,8 @@ export default function WithdrawPage() {
                           !pixCPF ||
                           isCPFValid === false ||
                           parseFloat(pixAmount) <= 0 ||
-                          parseFloat(pixAmount) > getBrlBalance()
+                          (brlAvailableForPix != null &&
+                            parseFloat(pixAmount) > brlAvailableForPix)
                         }
                         className="w-full h-12 sm:h-14 font-semibold rounded-xl text-base sm:text-lg"
                       >

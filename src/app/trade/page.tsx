@@ -180,6 +180,8 @@ const TradePage = () => {
   const [showReceipt, setShowReceipt] = useState(false);
   const [receiptData, setReceiptData] = useState<{
     transactionId: string;
+    /** Deposit row id — required for /api/deposit/crypto/hash */
+    depositId?: string;
     amount: number;
     usdtAmount: number;
     date: Date;
@@ -873,6 +875,7 @@ const TradePage = () => {
       setCryptoAddressLoading(true);
       const response = await fetch("/api/deposit/crypto/address", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ network, amount }),
       });
@@ -899,17 +902,24 @@ const TradePage = () => {
           console.error("Error generating QR code:", err);
         }
 
-        if (amount && data.transactionId) {
-          // If we provided an amount, this was an intentional deposit start
+        const usdtForReceipt =
+          typeof amount === "number" && amount > 0
+            ? amount
+            : parseUSDTInput(cryptoAmount);
+
+        if (data.depositId && data.transactionId) {
           setReceiptData({
             transactionId: data.transactionId,
-            amount: 0, // BRL not applicable
-            usdtAmount: amount,
+            depositId: data.depositId,
+            amount: 0,
+            usdtAmount: usdtForReceipt,
             date: new Date(),
-            type: "CRYPTO"
+            type: "CRYPTO",
           });
-          setShowReceipt(true);
-          fetchTransactionHistory(); // Refresh history to show pending
+          if (typeof amount === "number" && amount > 0) {
+            setShowReceipt(true);
+            fetchTransactionHistory();
+          }
         }
       }
     } catch (error) {
@@ -922,7 +932,7 @@ const TradePage = () => {
     } finally {
       setCryptoAddressLoading(false);
     }
-  }, [language, toast, fetchTransactionHistory]);
+  }, [language, toast, fetchTransactionHistory, cryptoAmount]);
 
   const handleCryptoDepositConfirm = () => {
     const amount = parseUSDTInput(cryptoAmount);
@@ -944,14 +954,19 @@ const TradePage = () => {
   }, [depositMethod, cryptoNetwork, fetchCryptoAddress, cryptoAddress]);
 
   const handleSimulatePayment = async () => {
-    if (!receiptData?.transactionId) return;
-    
+    const txRef = receiptData?.transactionId;
+    if (!txRef) return;
+
     setIsSimulating(true);
     try {
       const response = await fetch("/api/test/simulate-payment", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transactionId: receiptData.transactionId }),
+        body: JSON.stringify({
+          depositId: receiptData.depositId,
+          transactionId: txRef,
+        }),
       });
 
       const data = await response.json();
@@ -979,16 +994,31 @@ const TradePage = () => {
   };
 
   const handleCryptoHashSubmit = async () => {
-    if (!receiptData?.transactionId || !cryptoHash.trim()) return;
-    
+    if (!cryptoHash.trim()) return;
+
+    const depositRef = receiptData?.depositId ?? receiptData?.transactionId;
+    if (!depositRef) {
+      toast({
+        title: language === "pt" ? "Aguarde" : "Please wait",
+        description:
+          language === "pt"
+            ? "Carregue o endereço de depósito antes de enviar o hash."
+            : "Load the deposit address before submitting the hash.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmittingHash(true);
     try {
       const response = await fetch("/api/deposit/crypto/hash", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          transactionId: receiptData.transactionId,
-          hash: cryptoHash.trim()
+        body: JSON.stringify({
+          depositId: receiptData?.depositId,
+          transactionId: receiptData?.depositId ?? receiptData?.transactionId,
+          hash: cryptoHash.trim(),
         }),
       });
 
@@ -1444,7 +1474,11 @@ const TradePage = () => {
                             />
                             <Button 
                               onClick={handleCryptoHashSubmit}
-                              disabled={!cryptoHash.trim() || isSubmittingHash}
+                              disabled={
+                                !cryptoHash.trim() ||
+                                isSubmittingHash ||
+                                !(receiptData?.depositId ?? receiptData?.transactionId)
+                              }
                               className="h-11 px-6 rounded-xl font-bold whitespace-nowrap"
                             >
                               {isSubmittingHash ? (

@@ -155,22 +155,24 @@ export async function POST(request: NextRequest) {
       return { deposit, transaction };
     });
 
-    // Notify admin (non-blocking)
-    // Disabled per user request due to domain verification issues
-    /*
-    import("@/lib/admin-alert-email").then(async ({ getAdminAlertSettings, sendAdminAlertToAll }) => {
-      try {
-        const settings = await getAdminAlertSettings();
-        await sendAdminAlertToAll(
-          settings,
-          "Novo Depósito USDT Iniciado",
-          `Usuário: ${user.name} (${user.email})\nValor: ${requestedAmount.toNumber()} USDT\nRede: ${network}\nEndereço: ${depositAddress}`
-        );
-      } catch (err) {
-        console.error("Failed to send admin notification:", err);
-      }
-    }).catch(err => console.error("Failed to import alert module:", err));
-    */
+    // Notify admin (non-blocking; failures only log)
+    import("@/lib/admin-alert-email")
+      .then(({ getAdminAlertSettings, sendAdminAlertToAll }) =>
+        getAdminAlertSettings().then((settings) =>
+          sendAdminAlertToAll(
+            settings,
+            "Novo depósito USDT (cripto) iniciado",
+            [
+              `Usuário: ${user.name} (${user.email})`,
+              `Valor: ${requestedAmount.toNumber()} USDT`,
+              `Rede: ${network}`,
+              `ID depósito: ${result.deposit.id}`,
+              `Endereço: ${depositAddress}`,
+            ].join("\n")
+          )
+        )
+      )
+      .catch((err) => console.error("Admin alert (crypto deposit):", err));
 
     return NextResponse.json({
       success: true,
