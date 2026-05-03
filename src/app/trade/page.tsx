@@ -452,49 +452,56 @@ const TradePage = () => {
     }
   }, []);
 
+  const wasAwaitingPayment = (status: string | undefined) => {
+    if (!status) return false;
+    const u = String(status).toUpperCase();
+    return !["COMPLETED", "FAILED", "CANCELLED"].includes(u);
+  };
 
-  // Effect to show toast when a payment completes
+  // After PIX is confirmed (webhook / poll), show receipt — not while still awaiting payment
   useEffect(() => {
-    if (prevHistoryRef.current.length > 0) {
-      const previouslyPending = prevHistoryRef.current.some(t => t.status === "PENDING");
-      const nowCompleted = transactionHistory.some(t => t.status === "COMPLETED" && 
-        prevHistoryRef.current.find(prev => prev.id === t.id)?.status === "PENDING"
-      );
-      
-      if (nowCompleted && previouslyPending) {
-        toast({
-          title: language === "pt" ? "Pagamento Confirmado!" : "Payment Confirmed!",
-          description: language === "pt" 
-            ? "Seu saldo já foi atualizado." 
-            : "Your balance has been updated.",
-        });
-        
-        // Auto-close PIX modal if open
-        setShowPixModal(false);
-        // Clear buy input
-        setBuyUSDT("");
-
-        // Show receipt for the newly completed transaction
-        const completedTx = transactionHistory.find(t => t.status === "COMPLETED" && 
-          prevHistoryRef.current.find(prev => prev.id === t.id)?.status === "PENDING"
-        );
-        
-        if (completedTx) {
-          setReceiptData({
-            transactionId: completedTx.id,
-            amount: completedTx.amount,
-            usdtAmount: completedTx.received,
-            date: completedTx.date,
-          });
-          setShowReceipt(true);
-        }
-        
-        // Trigger balance refresh in sidebar/navbar
-        window.dispatchEvent(new CustomEvent("refresh-balance"));
-      }
+    if (prevHistoryRef.current.length === 0) {
+      prevHistoryRef.current = transactionHistory.map((t) => ({
+        id: t.id,
+        status: t.status,
+      }));
+      return;
     }
 
-    prevHistoryRef.current = transactionHistory.map(t => ({ id: t.id, status: t.status }));
+    const completedTx = transactionHistory.find((t) => {
+      if (t.status !== "COMPLETED") return false;
+      const prev = prevHistoryRef.current.find((p) => p.id === t.id);
+      return wasAwaitingPayment(prev?.status);
+    });
+
+    if (completedTx) {
+      toast({
+        title: language === "pt" ? "Pagamento Confirmado!" : "Payment Confirmed!",
+        description:
+          language === "pt"
+            ? "Seu saldo já foi atualizado."
+            : "Your balance has been updated.",
+      });
+
+      setShowPixModal(false);
+      setBuyUSDT("");
+
+      setReceiptData({
+        transactionId: completedTx.id,
+        amount: completedTx.amount,
+        usdtAmount: completedTx.received,
+        date: completedTx.date,
+        type: "PIX",
+      });
+      setShowReceipt(true);
+
+      window.dispatchEvent(new CustomEvent("refresh-balance"));
+    }
+
+    prevHistoryRef.current = transactionHistory.map((t) => ({
+      id: t.id,
+      status: t.status,
+    }));
   }, [transactionHistory, language, toast]);
   
   const exportHistory = (days: number) => {
@@ -784,6 +791,9 @@ const TradePage = () => {
         const totalBRL = data.data.amount_brl; // Total paid (base + fee)
         const baseAmount = totalBRL / 1.03; // Base amount
         const fee = totalBRL - baseAmount; // Fee amount
+        const purchaseStatus = String(
+          data.data.status ?? "PENDING"
+        ).toUpperCase();
         const newTransaction = {
           id: data.data.transaction_id,
           date: new Date(),
@@ -792,7 +802,7 @@ const TradePage = () => {
           received: data.data.amount_usdt,
           fee: fee,
           rate: data.data.exchange_rate,
-          status: data.data.status,
+          status: purchaseStatus,
         };
         setTransactionHistory((prev) => [newTransaction, ...prev]);
 
@@ -819,15 +829,18 @@ const TradePage = () => {
               : "Scan the PIX QR Code to complete payment",
         });
 
-        // Show receipt immediately as a "pending voucher"
-        setReceiptData({
-          transactionId: data.data.transaction_id,
-          amount: totalBRL,
-          usdtAmount: data.data.amount_usdt,
-          date: new Date(),
-          type: "PIX"
-        });
-        setShowReceipt(true);
+        // Receipt only after payment is confirmed (webhook), unless provider already returned completed
+        if (purchaseStatus === "COMPLETED" || purchaseStatus === "CONFIRMED") {
+          setReceiptData({
+            transactionId: data.data.transaction_id,
+            amount: totalBRL,
+            usdtAmount: data.data.amount_usdt,
+            date: new Date(),
+            type: "PIX",
+          });
+          setShowReceipt(true);
+          setShowPixModal(false);
+        }
       }
     } catch (error: unknown) {
       console.error("Purchase error:", error);

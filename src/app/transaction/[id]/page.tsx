@@ -27,6 +27,8 @@ import {
   ExternalLink,
   Info,
   HelpCircle,
+  MessageSquare,
+  ShieldCheck,
 } from "lucide-react";
 import NavbarNew from "@/components/ui/navbar-new";
 import { PageLoader, Spinner } from "@/components/ui/loading";
@@ -55,6 +57,9 @@ interface TransactionData {
   protocol?: string;
   externalId?: string;
   description?: string;
+  adminMessage?: string | null;
+  adminActionAt?: string | null;
+  adminActionBy?: string | null;
 }
 
 export default function TransactionDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -202,6 +207,27 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
 
   const isDeposit = transaction.type === "DEPOSIT" || transaction.type === "BUY_CRYPTO";
   const isWithdrawal = transaction.type === "WITHDRAWAL";
+  const isFailed = ["FAILED", "REJECTED", "CANCELLED"].includes(transaction.status);
+  const isSuccess = ["COMPLETED", "CONFIRMED"].includes(transaction.status);
+  const isPixWithdrawal = isWithdrawal && (transaction.paymentMethod === "PIX" || transaction.currency === "BRL" || Boolean(transaction.pixKey));
+  const transactionTitle = isWithdrawal
+    ? isPixWithdrawal
+      ? language === "pt"
+        ? "Saque via PIX"
+        : "PIX Withdrawal"
+      : language === "pt"
+      ? "Saque de USDT"
+      : "USDT Withdrawal"
+    : language === "pt"
+    ? "Depósito de USDT"
+    : "USDT Deposit";
+  const adminMessage =
+    transaction.adminMessage?.trim() ||
+    (isFailed
+      ? language === "pt"
+        ? "O saque não foi aprovado. Entre em contato com o suporte caso precise de mais detalhes."
+        : "The withdrawal was not approved. Contact support if you need more details."
+      : null);
   
   const statusLabel = {
       PENDING: language === "pt" ? "Pendente" : "Pending",
@@ -251,22 +277,69 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-20" />
                     
                     <CardHeader className="text-center pb-2">
-                        <div className="mx-auto w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4 shadow-inner">
-                            {isWithdrawal ? (
-                                <ArrowDownRight className="h-8 w-8 text-primary" />
+                        <div className={`mx-auto w-16 h-16 rounded-2xl flex items-center justify-center mb-4 shadow-inner ${
+                            isFailed
+                                ? "bg-destructive/10 text-destructive"
+                                : isSuccess
+                                ? "bg-primary/10 text-primary"
+                                : "bg-warning/10 text-warning"
+                        }`}>
+                            {isFailed ? (
+                                <XCircle className="h-8 w-8" />
+                            ) : isWithdrawal ? (
+                                <ArrowDownRight className="h-8 w-8" />
                             ) : (
-                                <ArrowUpRight className="h-8 w-8 text-primary" />
+                                <ArrowUpRight className="h-8 w-8" />
                             )}
                         </div>
                         <CardTitle className="text-2xl sm:text-3xl font-bold tracking-tight">
-                            {isWithdrawal ? (language === "pt" ? "Saque de USDT" : "USDT Withdrawal") : (language === "pt" ? "Depósito de USDT" : "USDT Deposit")}
+                            {transactionTitle}
                         </CardTitle>
                         <CardDescription className="text-lg">
                             {transaction.currency === "BRL" ? formatBRL(transaction.amount) : formatUSDT(transaction.amount)}
                         </CardDescription>
+                        <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
+                            {isFailed
+                                ? language === "pt"
+                                    ? "A solicitação foi analisada pela equipe e não pôde ser concluída."
+                                    : "The request was reviewed by our team and could not be completed."
+                                : isSuccess
+                                ? language === "pt"
+                                    ? "Transação concluída com sucesso."
+                                    : "Transaction completed successfully."
+                                : language === "pt"
+                                ? "Sua solicitação está em análise pela equipe financeira."
+                                : "Your request is being reviewed by the finance team."}
+                        </p>
                     </CardHeader>
 
                     <CardContent className="space-y-8 pt-6">
+                        {isFailed && adminMessage && (
+                            <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-5">
+                                <div className="flex items-start gap-3">
+                                    <div className="mt-0.5 rounded-xl bg-destructive/15 p-2 text-destructive">
+                                        <MessageSquare className="h-5 w-5" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <p className="text-sm font-bold text-destructive">
+                                            {language === "pt" ? "Mensagem do administrador" : "Admin message"}
+                                        </p>
+                                        <p className="text-sm leading-relaxed text-foreground">
+                                            {adminMessage}
+                                        </p>
+                                        {transaction.adminActionAt && (
+                                            <p className="text-xs text-muted-foreground">
+                                                {language === "pt" ? "Atualizado em" : "Updated on"}{" "}
+                                                {new Date(transaction.adminActionAt).toLocaleString(
+                                                    language === "pt" ? "pt-BR" : "en-US"
+                                                )}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Status Stepper */}
                         <div className="relative py-4">
                             <div className="absolute left-[20px] top-[4px] bottom-[4px] w-0.5 bg-border lg:left-0 lg:top-[20px] lg:bottom-auto lg:right-0 lg:w-auto lg:h-0.5" />
@@ -310,9 +383,17 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                                     </div>
                                     <div className="lg:text-center">
                                         <p className={`text-sm font-bold ${["COMPLETED", "CONFIRMED", "FAILED", "REJECTED", "CANCELLED"].includes(transaction.status) ? "" : "text-muted-foreground"}`}>
-                                            {transaction.status === "FAILED" || transaction.status === "REJECTED" ? (language === "pt" ? "Falhou" : "Failed") : (language === "pt" ? "Finalizado" : "Finalized")}
+                                            {transaction.status === "FAILED" || transaction.status === "REJECTED" ? (language === "pt" ? "Não aprovado" : "Not approved") : (language === "pt" ? "Finalizado" : "Finalized")}
                                         </p>
-                                        <p className="text-[10px] text-muted-foreground">{language === "pt" ? "Saldo atualizado" : "Balance updated"}</p>
+                                        <p className="text-[10px] text-muted-foreground">
+                                            {isFailed
+                                                ? language === "pt"
+                                                    ? "Mensagem disponível"
+                                                    : "Message available"
+                                                : language === "pt"
+                                                ? "Saldo atualizado"
+                                                : "Balance updated"}
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -344,6 +425,23 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                                 <div>
                                     <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1 font-semibold">{language === "pt" ? "Taxa" : "Fee"}</p>
                                     <p className="text-sm font-medium">{transaction.currency === "BRL" ? formatBRL(transaction.fee) : formatUSDT(transaction.fee)}</p>
+                                </div>
+                            )}
+                            {isWithdrawal && transaction.netAmount !== undefined && transaction.netAmount > 0 && (
+                                <div>
+                                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1 font-semibold">{language === "pt" ? "Valor líquido" : "Net amount"}</p>
+                                    <p className="text-sm font-medium text-primary">{transaction.currency === "BRL" ? formatBRL(transaction.netAmount) : formatUSDT(transaction.netAmount)}</p>
+                                </div>
+                            )}
+                            {isPixWithdrawal && transaction.pixKey && (
+                                <div className="sm:col-span-2">
+                                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1 font-semibold">Chave PIX</p>
+                                    <div className="flex items-center gap-2 p-3 bg-card border border-border/50 rounded-xl">
+                                        <code className="text-xs font-mono break-all flex-1 text-primary">{transaction.pixKey}</code>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => copyToClipboard(transaction.pixKey!, "PIX")}>
+                                            {copied === "PIX" ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
+                                        </Button>
+                                    </div>
                                 </div>
                             )}
                             {isWithdrawal && transaction.walletAddress && (
@@ -395,12 +493,24 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                 <Card className="border border-primary/20 bg-primary/5 rounded-3xl">
                     <CardContent className="p-6 flex gap-4">
                         <div className="hidden sm:flex h-10 w-10 shrink-0 rounded-full bg-primary/10 items-center justify-center text-primary">
-                            <Info className="h-5 w-5" />
+                            {isFailed ? <ShieldCheck className="h-5 w-5" /> : <Info className="h-5 w-5" />}
                         </div>
                         <div>
-                            <h4 className="font-bold mb-1">{language === "pt" ? "Informações Importantes" : "Important Information"}</h4>
+                            <h4 className="font-bold mb-1">
+                                {isFailed
+                                    ? language === "pt"
+                                        ? "O que acontece agora?"
+                                        : "What happens now?"
+                                    : language === "pt"
+                                    ? "Informações Importantes"
+                                    : "Important Information"}
+                            </h4>
                             <p className="text-sm text-muted-foreground leading-relaxed">
-                                {isWithdrawal ? 
+                                {isFailed && isWithdrawal
+                                    ? language === "pt"
+                                        ? "Quando um saque não é aprovado, a equipe informa o motivo acima. Se houver valor debitado, ele é devolvido conforme o processo de reembolso exibido nas suas notificações e histórico."
+                                        : "When a withdrawal is not approved, the team explains the reason above. If any amount was debited, it is returned according to the refund process shown in your notifications and history."
+                                    : isWithdrawal ? 
                                     (language === "pt" ? 
                                         "Os saques de criptomoedas são processados manualmente para garantir a máxima segurança dos seus ativos. Este processo geralmente leva entre 15 a 30 minutos em horário comercial." : 
                                         "Cryptocurrency withdrawals are manually processed to ensure maximum security for your assets. This process typically takes 15 to 30 minutes during business hours.") :

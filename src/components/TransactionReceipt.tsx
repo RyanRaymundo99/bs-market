@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { CheckCircle2, Clock, Download, Share2, Wallet, ArrowDownToLine, Receipt } from "lucide-react";
+import { CheckCircle2, Clock, Download, Wallet, Receipt, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -27,7 +27,8 @@ export const TransactionReceipt: React.FC<ReceiptProps> = ({
   language,
 }) => {
   const isCompleted = transaction.status === "COMPLETED" || transaction.status === "APPROVED" || transaction.status === "CONFIRMED";
-  const isPending = !isCompleted && transaction.status !== "FAILED" && transaction.status !== "CANCELLED";
+  const receiptNumber = `BSM-${transaction.id.slice(-8).toUpperCase()}`;
+  const issuedAt = transaction.date.toLocaleString(language === "pt" ? "pt-BR" : "en-US");
 
   const formatBRL = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -76,7 +77,7 @@ export const TransactionReceipt: React.FC<ReceiptProps> = ({
       {/* Receipt Body - Voucher Style */}
       <div className="w-full bg-card border-x border-b border-border rounded-b-3xl p-6 shadow-2xl relative">
         {/* Decorative Scalloped Bottom Effect */}
-        <div className="absolute -bottom-1 left-0 right-0 h-2 flex overflow-hidden">
+        <div className="absolute -bottom-1 left-0 right-0 h-2 flex overflow-hidden" aria-hidden="true">
           {Array.from({ length: 20 }).map((_, i) => (
             <div key={i} className="w-full h-4 bg-background rounded-full -mt-2 mx-0.5 border border-border" />
           ))}
@@ -148,29 +149,55 @@ export const TransactionReceipt: React.FC<ReceiptProps> = ({
           {/* Security Note */}
           <div className="bg-muted/30 rounded-2xl p-4 flex gap-3 items-start border border-border/50">
             <div className="bg-primary/10 p-2 rounded-xl">
-              <Wallet className="w-4 h-4 text-primary" />
+              <ShieldCheck className="w-4 h-4 text-primary" />
             </div>
             <div className="space-y-1">
               <p className="text-[11px] font-bold text-foreground">
-                {language === "pt" ? "Transação Segura" : "Secure Transaction"}
+                {language === "pt" ? "Comprovante emitido com segurança" : "Secure receipt issued"}
               </p>
               <p className="text-[10px] text-muted-foreground leading-relaxed">
                 {language === "pt" 
-                  ? "Esta transação foi processada através de nossa infraestrutura de segurança criptográfica de ponta." 
-                  : "This transaction was processed through our state-of-the-art cryptographic security infrastructure."}
+                  ? "Guarde este comprovante até a compensação final. Em caso de suporte, informe o número do recibo e o ID da transação." 
+                  : "Keep this receipt until final settlement. For support, provide the receipt number and transaction ID."}
+              </p>
+            </div>
+          </div>
+
+          <div className="relative py-2">
+            <div className="border-t border-dashed border-border" />
+            <div className="absolute -left-8 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-background border border-border" />
+            <div className="absolute -right-8 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-background border border-border" />
+          </div>
+
+          {/* Receipt Footer */}
+          <div className="rounded-2xl border border-border/50 bg-background/40 p-4 space-y-3">
+            <div className="flex items-center justify-between gap-4 text-xs">
+              <div>
+                <p className="text-muted-foreground">{language === "pt" ? "Nº do recibo" : "Receipt no."}</p>
+                <p className="font-mono font-bold text-foreground">{receiptNumber}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-muted-foreground">{language === "pt" ? "Emitido em" : "Issued at"}</p>
+                <p className="font-medium text-foreground">{issuedAt}</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-center gap-2 rounded-xl bg-muted/40 px-3 py-2">
+              <Wallet className="h-3.5 w-3.5 text-primary" />
+              <p className="text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                {language === "pt" ? "BS Market - Comprovante digital" : "BS Market - Digital receipt"}
               </p>
             </div>
           </div>
 
           {/* Actions */}
-          <div className="grid grid-cols-2 gap-3 pt-4">
+          <div className="grid grid-cols-2 gap-3 pt-1">
             <Button
               variant="outline"
               onClick={handlePrint}
               className="h-12 rounded-2xl gap-2 border-border hover:bg-muted font-bold transition-all"
             >
               <Download className="w-4 h-4" />
-              {language === "pt" ? "Recibo" : "Receipt"}
+              {language === "pt" ? "Baixar recibo" : "Download"}
             </Button>
             <Button
               onClick={onClose}
@@ -183,9 +210,13 @@ export const TransactionReceipt: React.FC<ReceiptProps> = ({
       </div>
 
       {/* Footer Branding */}
-      <div className="mt-8 flex items-center gap-2 opacity-40 grayscale hover:grayscale-0 transition-all">
-        <ArrowDownToLine className="w-4 h-4" />
-        <span className="text-[10px] font-black uppercase tracking-widest">BS Market Official Receipt</span>
+      <div className="mt-7 text-center opacity-60 transition-opacity hover:opacity-100">
+        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+          {language === "pt" ? "Recibo oficial BS Market" : "BS Market Official Receipt"}
+        </p>
+        <p className="mt-1 text-[10px] text-muted-foreground">
+          {language === "pt" ? "Documento gerado automaticamente" : "Automatically generated document"}
+        </p>
       </div>
     </div>
   );

@@ -329,16 +329,21 @@ function TransactionsPageContent() {
 
   const handleMarkAsCompleted = async (hash?: string) => {
     if (!transactionDetails) return;
+    const isOrderReview = transactionDetails.id.startsWith("order_");
+    const orderId = isOrderReview
+      ? transactionDetails.id.slice("order_".length)
+      : null;
+    const reviewUrl = isOrderReview
+      ? `/api/admin/transactions/order/${orderId}`
+      : `/api/admin/transactions/${transactionDetails.id}/mark-completed`;
+
     setMarkingCompleted(true);
     try {
-      const response = await fetch(
-        `/api/admin/transactions/${transactionDetails.id}/mark-completed`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ hash }),
-        }
-      );
+      const response = await fetch(reviewUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(isOrderReview ? { action: "approve" } : { hash }),
+      });
       const data = await response.json();
       if (response.ok && data.success) {
         toast({ title: "Sucesso", description: "Transação confirmada!" });
@@ -346,7 +351,11 @@ function TransactionsPageContent() {
         setPaymentConfirmationHash("");
         fetchTransactions();
         // Refresh details
-        const detailsRes = await fetch(`/api/admin/transactions/${transactionDetails.id}`);
+        const detailsRes = await fetch(
+          isOrderReview
+            ? `/api/admin/transactions/order/${orderId}`
+            : `/api/admin/transactions/${transactionDetails.id}`
+        );
         const detailsData = await detailsRes.json();
         if (detailsData.success) setTransactionDetails(detailsData.transaction);
       } else {
@@ -361,12 +370,24 @@ function TransactionsPageContent() {
 
   const handleRejectTransaction = async () => {
     if (!transactionDetails || !rejectionReason.trim()) return;
+    const isOrderReview = transactionDetails.id.startsWith("order_");
+    const orderId = isOrderReview
+      ? transactionDetails.id.slice("order_".length)
+      : null;
+    const reviewUrl = isOrderReview
+      ? `/api/admin/transactions/order/${orderId}`
+      : `/api/admin/transactions/${transactionDetails.id}/reject`;
+
     setRejectingTransaction(true);
     try {
-      const response = await fetch(`/api/admin/transactions/${transactionDetails.id}/reject`, {
+      const response = await fetch(reviewUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason: rejectionReason }),
+        body: JSON.stringify(
+          isOrderReview
+            ? { action: "reject", reason: rejectionReason }
+            : { reason: rejectionReason }
+        ),
       });
       const data = await response.json();
       if (response.ok && data.success) {
@@ -374,7 +395,11 @@ function TransactionsPageContent() {
         setShowRejectionDialog(false);
         setRejectionReason("");
         fetchTransactions();
-        const detailsRes = await fetch(`/api/admin/transactions/${transactionDetails.id}`);
+        const detailsRes = await fetch(
+          isOrderReview
+            ? `/api/admin/transactions/order/${orderId}`
+            : `/api/admin/transactions/${transactionDetails.id}`
+        );
         const detailsData = await detailsRes.json();
         if (detailsData.success) setTransactionDetails(detailsData.transaction);
       } else {
@@ -904,7 +929,34 @@ function TransactionsPageContent() {
 
                {transactionDetails.order && (
                  <div className="space-y-4 border-t border-border pt-6">
-                    <h3 className="text-sm font-bold uppercase text-muted-foreground tracking-widest">Pedido PIX Automático</h3>
+                    <div className="flex items-center justify-between gap-4">
+                      <h3 className="text-sm font-bold uppercase text-muted-foreground tracking-widest">
+                        Pedido PIX Automático
+                      </h3>
+                      {["PENDING", "PROCESSING", "EXECUTING"].includes(
+                        transactionDetails.status
+                      ) && (
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => handleMarkAsCompleted()}
+                            disabled={markingCompleted}
+                          >
+                            {markingCompleted
+                              ? "Processando..."
+                              : "Aprovar Depósito"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => setShowRejectionDialog(true)}
+                            disabled={rejectingTransaction}
+                          >
+                            Rejeitar Depósito
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                     <div className="grid grid-cols-2 gap-4">
                        <div>
                           <p className="text-xs text-muted-foreground">ID Externo</p>
@@ -915,6 +967,16 @@ function TransactionsPageContent() {
                           <p className="font-bold">{formatCurrency(Number(transactionDetails.order.total))}</p>
                        </div>
                     </div>
+                    {transactionDetails.id.startsWith("order_") &&
+                      ["PENDING", "PROCESSING", "EXECUTING"].includes(
+                        transactionDetails.status
+                      ) && (
+                        <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/10 p-3 text-xs text-yellow-500">
+                          Aprovar este depósito credita o saldo em USDT e cria a
+                          transação financeira vinculada. Rejeitar envia o motivo
+                          para o usuário por notificação.
+                        </div>
+                      )}
                  </div>
                )}
 

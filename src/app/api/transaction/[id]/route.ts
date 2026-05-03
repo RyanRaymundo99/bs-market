@@ -1,6 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
+function getMetadataString(metadata: unknown, key: string) {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return null;
+  }
+
+  const value = (metadata as Record<string, unknown>)[key];
+  return typeof value === "string" ? value : null;
+}
+
+function getAdminMessage(metadata: unknown) {
+  return (
+    getMetadataString(metadata, "rejectionReason") ||
+    getMetadataString(metadata, "refundRejectionReason") ||
+    getMetadataString(metadata, "reason") ||
+    getMetadataString(metadata, "refundReason")
+  );
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -55,6 +73,7 @@ export async function GET(
       });
 
       if (deposit) {
+        const metadata = deposit.transaction?.metadata ?? null;
         // Return structured data for the page
         return NextResponse.json({
           success: true,
@@ -71,6 +90,9 @@ export async function GET(
             externalId: deposit.externalId,
             transactionId: deposit.transactionId,
             proofUrl: deposit.proofUrl,
+            adminMessage: getAdminMessage(metadata),
+            adminActionAt: getMetadataString(metadata, "rejectedAt"),
+            adminActionBy: getMetadataString(metadata, "rejectedBy"),
             // Add other relevant fields
           },
         });
@@ -90,6 +112,7 @@ export async function GET(
       });
 
       if (withdrawal) {
+        const metadata = withdrawal.transaction?.metadata ?? null;
         return NextResponse.json({
           success: true,
           data: {
@@ -108,6 +131,9 @@ export async function GET(
             netAmount: Number(withdrawal.netAmount || 0),
             protocol: withdrawal.protocol,
             transactionId: withdrawal.transactionId,
+            adminMessage: getAdminMessage(metadata),
+            adminActionAt: getMetadataString(metadata, "rejectedAt"),
+            adminActionBy: getMetadataString(metadata, "rejectedBy"),
           },
         });
       }
@@ -115,6 +141,12 @@ export async function GET(
 
     // If found as main Transaction
     if (transaction) {
+      const metadata = transaction.metadata ?? null;
+      const relatedStatus =
+        transaction.withdrawal?.status ||
+        transaction.deposit?.status ||
+        transaction.type;
+
       return NextResponse.json({
         success: true,
         data: {
@@ -122,8 +154,12 @@ export async function GET(
           type: transaction.type,
           amount: Number(transaction.amount),
           currency: transaction.currency,
+          status: relatedStatus,
           description: transaction.description,
           createdAt: transaction.createdAt,
+          adminMessage: getAdminMessage(metadata),
+          adminActionAt: getMetadataString(metadata, "rejectedAt"),
+          adminActionBy: getMetadataString(metadata, "rejectedBy"),
           deposit: transaction.deposit ? {
             ...transaction.deposit,
             amount: Number(transaction.deposit.amount),
