@@ -37,6 +37,15 @@ function firstPositiveNumber(...values: Array<number | null | undefined>) {
   );
 }
 
+function getMetadataString(metadata: unknown, key: string) {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return null;
+  }
+
+  const value = (metadata as Record<string, unknown>)[key];
+  return typeof value === "string" ? value : null;
+}
+
 export async function GET(request: NextRequest) {
   try {
     // Validate admin session
@@ -197,6 +206,7 @@ export async function GET(request: NextRequest) {
       let fiatAmount = 0;
       let status = "PENDING"; // Default to PENDING (not COMPLETED)
       let relatedId = null;
+      const metadataRefundStatus = getMetadataString(tx.metadata, "refundStatus");
 
       if (tx.deposit) {
         fiatAmount =
@@ -250,6 +260,14 @@ export async function GET(request: NextRequest) {
           status = "PENDING";
         }
         relatedId = tx.order.externalOrderId || tx.order.id;
+      } else if (tx.type === "REFUND") {
+        if (metadataRefundStatus === "APPROVED") {
+          status = "COMPLETED";
+        } else if (metadataRefundStatus === "REJECTED") {
+          status = "REJECTED";
+        } else {
+          status = "PENDING";
+        }
       }
 
       // Calculate value: use fiatAmount if valid, otherwise use absolute amount

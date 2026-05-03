@@ -46,8 +46,14 @@ export async function POST(
       transaction.withdrawal &&
       (transaction.withdrawal.status === "PENDING" ||
         transaction.withdrawal.status === "PROCESSING");
+    const transactionMetadata =
+      (transaction.metadata as Record<string, unknown>) || {};
+    const refundRejectable =
+      transaction.type === "REFUND" &&
+      transactionMetadata.refundStatus !== "APPROVED" &&
+      transactionMetadata.refundStatus !== "REJECTED";
 
-    if (!depositRejectable && !withdrawalRejectable) {
+    if (!depositRejectable && !withdrawalRejectable && !refundRejectable) {
       return NextResponse.json(
         { error: "Apenas transações pendentes podem ser rejeitadas" },
         { status: 400 }
@@ -125,6 +131,14 @@ export async function POST(
             rejectionReason: reason,
             rejectedAt: new Date().toISOString(),
             rejectedBy: adminSession.user.email,
+            ...(transaction.type === "REFUND"
+              ? {
+                  refundStatus: "REJECTED",
+                  refundRejectedAt: new Date().toISOString(),
+                  refundRejectedBy: adminSession.user.email,
+                  refundRejectionReason: reason,
+                }
+              : {}),
             ...(refund
               ? {
                   refundCurrency: refund.currency,
@@ -198,9 +212,13 @@ export async function POST(
           userId: transaction.userId,
           type: transaction.withdrawal
             ? "withdrawal_rejected"
+            : transaction.type === "REFUND"
+            ? "refund_rejected"
             : "deposit_rejected",
           title: transaction.withdrawal
             ? "Saque não aprovado"
+            : transaction.type === "REFUND"
+            ? "Reembolso não aprovado"
             : "Depósito não aprovado",
           message: transaction.withdrawal
             ? `Seu saque de ${amountLabel} não foi aprovado. Motivo: ${reason}. ${
@@ -208,6 +226,8 @@ export async function POST(
                   ? `O valor foi devolvido ao seu saldo em ${refundForNotification.currency}.`
                   : ""
               }`
+            : transaction.type === "REFUND"
+            ? `Seu reembolso de ${amountLabel} não foi aprovado. Motivo: ${reason}.`
             : `Seu depósito de ${amountLabel} não foi aprovado. Motivo: ${reason}.`,
           metadata: {
             transactionId: transaction.id,

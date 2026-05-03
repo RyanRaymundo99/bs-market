@@ -918,6 +918,44 @@ function TransactionsPageContent() {
                  </div>
                )}
 
+               {transactionDetails.type === "REFUND" &&
+                 !transactionDetails.deposit &&
+                 !transactionDetails.withdrawal &&
+                 !transactionDetails.order && (
+                   <div className="space-y-4 border-t border-border pt-6">
+                     <div className="flex items-center justify-between">
+                       <h3 className="text-sm font-bold uppercase text-muted-foreground tracking-widest">
+                         Revisão do Reembolso
+                       </h3>
+                       {transactionDetails.status === "PENDING" && (
+                         <div className="flex gap-2">
+                           <Button
+                             size="sm"
+                             onClick={() => handleMarkAsCompleted()}
+                             disabled={markingCompleted}
+                           >
+                             {markingCompleted
+                               ? "Processando..."
+                               : "Aprovar Reembolso"}
+                           </Button>
+                           <Button
+                             size="sm"
+                             variant="destructive"
+                             onClick={() => setShowRejectionDialog(true)}
+                             disabled={rejectingTransaction}
+                           >
+                             Negar Reembolso
+                           </Button>
+                         </div>
+                       )}
+                     </div>
+                     <div className="rounded-lg border border-border bg-muted/20 p-3 text-sm text-muted-foreground">
+                       Aprovar ou negar aqui apenas marca o reembolso como
+                       revisado. O saldo não é alterado novamente.
+                     </div>
+                   </div>
+                 )}
+
                <details className="mt-4">
                  <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">Ver Metadados Raw</summary>
                  <pre className="mt-2 p-2 bg-black/40 rounded text-[10px] overflow-auto max-h-40">

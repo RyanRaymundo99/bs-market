@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { validateAdminSession } from "@/lib/admin-session";
 
+function getMetadataString(metadata: unknown, key: string) {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return null;
+  }
+
+  const value = (metadata as Record<string, unknown>)[key];
+  return typeof value === "string" ? value : null;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -352,6 +361,14 @@ export async function GET(
         transaction.order.status === "COMPLETED"
           ? "APPROVED"
           : transaction.order.status === "FAILED"
+          ? "REJECTED"
+          : "PENDING";
+    } else if (transaction.type === "REFUND") {
+      const refundStatus = getMetadataString(transaction.metadata, "refundStatus");
+      status =
+        refundStatus === "APPROVED"
+          ? "APPROVED"
+          : refundStatus === "REJECTED"
           ? "REJECTED"
           : "PENDING";
     }

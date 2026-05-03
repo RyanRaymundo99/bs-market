@@ -184,6 +184,31 @@ export async function POST(
           },
         });
       } 
+      else if (transaction.type === "REFUND") {
+        const metadata = (transaction.metadata as Record<string, unknown>) || {};
+        if (metadata.refundStatus === "APPROVED") {
+          return NextResponse.json({
+            success: true,
+            message: "Refund is already approved",
+            transactionId: transaction.id,
+          });
+        }
+        if (metadata.refundStatus === "REJECTED") {
+          throw new Error("Cannot approve a rejected refund");
+        }
+
+        await tx.transaction.update({
+          where: { id: transaction.id },
+          data: {
+            metadata: {
+              ...metadata,
+              refundStatus: "APPROVED",
+              refundApprovedAt: new Date().toISOString(),
+              refundApprovedBy: adminSession.user.email,
+            },
+          },
+        });
+      }
       else {
         throw new Error(`Transaction type ${transaction.type} not supported for manual completion`);
       }
