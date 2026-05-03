@@ -397,7 +397,9 @@ export default function WithdrawPage() {
           id: data.data.external_id || data.data.transaction_id || "",
           type: "USDT",
           amount: Number(data.data.amount ?? parseFloat(usdtAmount)),
-          netAmount: Number(data.data.amount ?? parseFloat(usdtAmount)),
+          netAmount: Number(
+            data.data.net_amount ?? calculateUSDTNetAmount()
+          ),
           fee: Number(data.data.fee ?? getNetworkFee()),
           status: String(data.data.status || "PENDING").toUpperCase(),
           walletAddress,

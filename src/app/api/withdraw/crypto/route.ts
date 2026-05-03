@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { paymentService } from "@/lib/payment";
 import { sendWithdrawalReceipt } from "@/lib/receipt-email";
 import { getMoneyControls } from "@/lib/money-controls";
 import {
@@ -8,6 +7,17 @@ import {
   sendAdminAlertToAll,
 } from "@/lib/admin-alert-email";
 import { ledgerService } from "@/lib/ledger";
+
+function getNetworkFee(network: string) {
+  switch (network) {
+    case "ERC20":
+      return 5;
+    case "TRC20":
+    case "POLYGON":
+    default:
+      return 1;
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -178,208 +188,138 @@ export async function POST(request: NextRequest) {
     // Generate external ID for tracking
     const externalId = `withdrawal_${user.id}_${Date.now()}`;
 
-    // Create withdrawal record first (before API call)
-    const withdrawal = await prisma.withdrawal.create({
-      data: {
-        userId: user.id,
-        type: "USDT",
-        amount: amount,
-        fee: null,
-        netAmount: null,
-        status: "PENDING",
-        paymentMethod: "USDT",
-        walletAddress: walletAddress,
-        network: network,
-        hash: null,
-        externalId: externalId,
-        createdAt: new Date(),
-      },
-    });
+    const networkFee = getNetworkFee(network);
+    const netAmount = Math.max(0, amount - networkFee);
 
-    try {
-      // Build webhook callback URL
-      const callbackUrl =
-        process.env.PAYMENT_WEBHOOK_URL ||
-        `${
-          process.env.NEXT_PUBLIC_APP_URL || "https://bsmarket.com.br"
-        }/api/webhooks/mercadopago`;
-
-      // Create USDT withdrawal via active payment provider
-      const withdrawalResponse = await paymentService.createUSDTWithdrawal({
-        amount: amount,
-        recipientAddress: walletAddress,
-        recipientNetwork: network,
-        description: `USDT withdrawal - ${user.email || user.id}`,
-        externalId: externalId,
-        callbackUrl: callbackUrl,
-      });
-
-      // Extract data from response
-      const transactionId = withdrawalResponse.transactionId;
-      const responseStatus = withdrawalResponse.status;
-      const responseFee = (withdrawalResponse.raw.fee as number) || 0;
-      const responseAmount = (withdrawalResponse.raw.amount as number) || amount;
-      const totalDeducted =
-        (withdrawalResponse.raw.total_deducted as number) || responseAmount + responseFee;
-
-      // Update withdrawal with provider response data
-      await prisma.withdrawal.update({
-        where: { id: withdrawal.id },
-        data: {
-          hash: transactionId || null,
-          fee: responseFee,
-          netAmount: responseAmount,
-          status:
-            responseStatus === "completed"
-              ? "COMPLETED"
-              : responseStatus === "pending"
-              ? "PENDING"
-              : responseStatus === "failed"
-              ? "FAILED"
-              : "PENDING",
-        },
-      });
-
-      // Update user balance (subtract only the amount, not amount + fee)
-      await ledgerService.updateBalance(user.id, "USDT", amount, "SUBTRACT");
-
-      // Create transaction record
-      const withdrawalTransaction = await ledgerService.recordTransaction({
-        userId: user.id,
-        type: "WITHDRAWAL",
-        amount: -amount,
-        currency: "USDT",
-        description: `USDT withdrawal to ${walletAddress} (${network}) - Taxa de rede: ${responseFee.toFixed(2)} USDT (informativa)`,
-        metadata: {
-          withdrawalId: withdrawal.id,
-          provider: paymentService.name,
-          withdrawalFlowStatus:
-            responseStatus === "completed" ? "COMPLETED" : "PENDING",
-        },
-      });
-
-      // Link withdrawal to transaction
-      await prisma.withdrawal.update({
-        where: { id: withdrawal.id },
-        data: { transactionId: withdrawalTransaction.id },
-      });
-
-      // Send withdrawal receipt email (non-blocking)
-      if (user.email && user.name) {
-        sendWithdrawalReceipt({
-          userName: user.name,
-          userEmail: user.email,
-          amount: Number(amount),
-          networkFee: Number(responseFee),
-          netAmount: Number(responseAmount),
-          network: network,
-          walletAddress: walletAddress,
-          transactionHash: transactionId || undefined,
-          transactionId: externalId,
-          date: new Date(),
-          status: responseStatus === "completed" ? "COMPLETED" : "PENDING",
-        })
-          .then(async (result) => {
-            const metadata =
-              (withdrawalTransaction.metadata as Record<string, unknown>) || {};
-            const receiptHistory =
-              (metadata.receiptHistory as Array<{
-                sentAt: string;
-                success: boolean;
-                error?: string;
-              }>) || [];
-
-            receiptHistory.push({
-              sentAt: new Date().toISOString(),
-              success: result.success,
-              ...(result.message && !result.success
-                ? { error: result.message }
-                : {}),
-            });
-
-            await prisma.transaction.update({
-              where: { id: withdrawalTransaction.id },
-              data: {
-                metadata: {
-                  ...metadata,
-                  receiptHistory,
-                  lastReceiptSentAt: new Date().toISOString(),
-                  lastReceiptSuccess: result.success,
-                },
-              },
-            });
-          })
-          .catch((error) => {
-            console.error("Failed to send withdrawal receipt email:", error);
-          });
-      }
-
-      return NextResponse.json({
-        success: true,
-        data: {
-          transaction_id: transactionId,
-          external_id: (withdrawalResponse.raw.external_id as string) || externalId,
-          status: responseStatus,
-          amount: responseAmount,
-          fee: responseFee,
-          total_deducted: totalDeducted,
-          recipient_address: (withdrawalResponse.raw.recipient_address as string) || walletAddress,
-          recipient_network: (withdrawalResponse.raw.recipient_network as string) || network,
-          created_at: (withdrawalResponse.raw.created_at as string) || new Date().toISOString(),
-          message:
-            (withdrawalResponse.raw.message as string) ||
-            "Withdrawal request submitted for processing. You will receive a webhook notification when completed",
-          provider: paymentService.name,
-        },
-      });
-    } catch (error: unknown) {
-      // If provider API call fails, update withdrawal status to failed
-      await prisma.withdrawal.update({
-        where: { id: withdrawal.id },
-        data: {
-          status: "FAILED",
-        },
-      });
-
-      console.error("Payment provider withdrawal error:", error);
-
-      let errorMessage = "Failed to process USDT withdrawal";
-      let errorDetails: unknown = undefined;
-      let statusCode = 500;
-
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if (error && typeof error === "object" && "response" in error) {
-        const axiosError = error as {
-          response?: { data?: unknown; status?: number };
-        };
-        if (axiosError.response?.data) {
-          errorDetails = axiosError.response.data;
-          if (
-            axiosError.response.data &&
-            typeof axiosError.response.data === "object" &&
-            "error" in axiosError.response.data &&
-            axiosError.response.data.error &&
-            typeof axiosError.response.data.error === "object" &&
-            "message" in axiosError.response.data.error &&
-            typeof axiosError.response.data.error.message === "string"
-          ) {
-            errorMessage = axiosError.response.data.error.message;
-          }
-        }
-        if (axiosError.response?.status) {
-          statusCode = axiosError.response.status;
-        }
-      }
-
+    if (netAmount <= 0) {
       return NextResponse.json(
         {
-          error: errorMessage,
-          ...(errorDetails ? { details: errorDetails } : {}),
+          error: `O valor do saque precisa ser maior que a taxa de rede de ${networkFee.toFixed(
+            2
+          )} USDT.`,
         },
-        { status: statusCode }
+        { status: 400 }
       );
     }
+
+    const { withdrawal, withdrawalTransaction } = await prisma.$transaction(
+      async (tx) => {
+        const withdrawal = await tx.withdrawal.create({
+          data: {
+            userId: user.id,
+            type: "USDT",
+            amount,
+            fee: networkFee,
+            netAmount,
+            status: "PENDING",
+            paymentMethod: "USDT",
+            walletAddress,
+            network,
+            hash: null,
+            externalId,
+            createdAt: new Date(),
+          },
+        });
+
+        await ledgerService.updateBalance(user.id, "USDT", amount, "SUBTRACT", tx);
+
+        const withdrawalTransaction = await ledgerService.recordTransaction(
+          {
+            userId: user.id,
+            type: "WITHDRAWAL",
+            amount: -amount,
+            currency: "USDT",
+            description: `USDT withdrawal request to ${walletAddress} (${network}) - Taxa de rede: ${networkFee.toFixed(
+              2
+            )} USDT`,
+            metadata: {
+              withdrawalId: withdrawal.id,
+              provider: "manual_admin_processing",
+              withdrawalFlowStatus: "PENDING",
+              networkFee,
+              netAmount,
+            },
+          },
+          tx
+        );
+
+        const linkedWithdrawal = await tx.withdrawal.update({
+          where: { id: withdrawal.id },
+          data: { transactionId: withdrawalTransaction.id },
+        });
+
+        return { withdrawal: linkedWithdrawal, withdrawalTransaction };
+      }
+    );
+
+    // Send withdrawal receipt email (non-blocking)
+    if (user.email && user.name) {
+      sendWithdrawalReceipt({
+        userName: user.name,
+        userEmail: user.email,
+        amount: Number(amount),
+        networkFee: Number(networkFee),
+        netAmount: Number(netAmount),
+        network,
+        walletAddress,
+        transactionId: externalId,
+        date: new Date(),
+        status: "PENDING",
+      })
+        .then(async (result) => {
+          const metadata =
+            (withdrawalTransaction.metadata as Record<string, unknown>) || {};
+          const receiptHistory =
+            (metadata.receiptHistory as Array<{
+              sentAt: string;
+              success: boolean;
+              error?: string;
+            }>) || [];
+
+          receiptHistory.push({
+            sentAt: new Date().toISOString(),
+            success: result.success,
+            ...(result.message && !result.success
+              ? { error: result.message }
+              : {}),
+          });
+
+          await prisma.transaction.update({
+            where: { id: withdrawalTransaction.id },
+            data: {
+              metadata: {
+                ...metadata,
+                receiptHistory,
+                lastReceiptSentAt: new Date().toISOString(),
+                lastReceiptSuccess: result.success,
+              },
+            },
+          });
+        })
+        .catch((error) => {
+          console.error("Failed to send withdrawal receipt email:", error);
+        });
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        id: withdrawal.id,
+        transaction_id: withdrawalTransaction.id,
+        external_id: externalId,
+        status: "pending",
+        amount,
+        fee: networkFee,
+        net_amount: netAmount,
+        total_deducted: amount,
+        recipient_address: walletAddress,
+        recipient_network: network,
+        created_at: withdrawal.createdAt.toISOString(),
+        message:
+          "Withdrawal request submitted for manual admin processing.",
+        provider: "manual_admin_processing",
+      },
+    });
   } catch (error) {
     console.error("USDT withdrawal error:", error);
     return NextResponse.json(
