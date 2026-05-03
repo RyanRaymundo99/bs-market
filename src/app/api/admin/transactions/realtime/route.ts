@@ -4,6 +4,39 @@ import type { Prisma } from "../../../../../../prisma/generated/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { validateAdminSession } from "@/lib/admin-session";
 
+function getMetadataNumber(
+  metadata: unknown,
+  keys: string[]
+): number | null {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return null;
+  }
+
+  const record = metadata as Record<string, unknown>;
+
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+    if (typeof value === "string") {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+  }
+
+  return null;
+}
+
+function firstPositiveNumber(...values: Array<number | null | undefined>) {
+  return values.find(
+    (value): value is number =>
+      typeof value === "number" && Number.isFinite(value) && value > 0
+  );
+}
+
 export async function GET(request: NextRequest) {
   try {
     // Validate admin session
@@ -89,6 +122,7 @@ export async function GET(request: NextRequest) {
             select: {
               status: true,
               amount: true,
+              paymentAmount: true,
               externalId: true,
               confirmedAt: true,
             },
@@ -152,13 +186,26 @@ export async function GET(request: NextRequest) {
     const formattedTransactions = recentTransactions.map((tx) => {
       const amount = Number(tx.amount);
       const balance = Number(tx.balance);
+      const metadataBRLAmount = getMetadataNumber(tx.metadata, [
+        "amountBRL",
+        "totalBRL",
+        "paymentAmount",
+        "paidAmount",
+        "amount_brl",
+      ]);
 
       let fiatAmount = 0;
       let status = "PENDING"; // Default to PENDING (not COMPLETED)
       let relatedId = null;
 
       if (tx.deposit) {
-        fiatAmount = Number(tx.deposit.amount || 0);
+        fiatAmount =
+          firstPositiveNumber(
+            tx.order ? Number(tx.order.total) : null,
+            metadataBRLAmount,
+            tx.deposit.paymentAmount ? Number(tx.deposit.paymentAmount) : null,
+            Number(tx.deposit.amount || 0)
+          ) ?? 0;
         const depositStatus = tx.deposit.status;
         if (depositStatus === "CONFIRMED") {
           status = "COMPLETED";
@@ -186,7 +233,11 @@ export async function GET(request: NextRequest) {
         }
         relatedId = tx.withdrawal.protocol || tx.withdrawal.hash;
       } else if (tx.order) {
-        fiatAmount = Number(tx.order.total || 0);
+        fiatAmount =
+          firstPositiveNumber(
+            Number(tx.order.total || 0),
+            metadataBRLAmount
+          ) ?? 0;
         const orderStatus = tx.order.status;
         if (orderStatus === "COMPLETED") {
           status = "COMPLETED";
@@ -204,15 +255,13 @@ export async function GET(request: NextRequest) {
       // Calculate value: use fiatAmount if valid, otherwise use absolute amount
       // For transactions in BRL, use the amount directly; for USDT, we'd need conversion
       let value = 0;
-      if (fiatAmount && !isNaN(fiatAmount) && fiatAmount > 0) {
-        value = fiatAmount;
-      } else if (tx.currency === "BRL") {
-        // If currency is BRL, use the absolute transaction amount
-        value = Math.abs(amount);
-      } else {
-        // For USDT or other currencies, use absolute amount (will need conversion on frontend if needed)
-        value = Math.abs(amount);
-      }
+      value =
+        firstPositiveNumber(
+          fiatAmount,
+          metadataBRLAmount,
+          tx.currency === "BRL" ? Math.abs(amount) : null,
+          Math.abs(amount)
+        ) ?? 0;
 
       // Ensure value is never NaN
       if (isNaN(value)) {
