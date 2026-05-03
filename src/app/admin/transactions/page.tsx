@@ -871,7 +871,18 @@ function TransactionsPageContent() {
                     <div className="flex items-center justify-between">
                        <h3 className="text-sm font-bold uppercase text-muted-foreground tracking-widest">Detalhes do Saque</h3>
                        {(transactionDetails.status === "PENDING" || transactionDetails.status === "PROCESSING") && (
-                         <Button onClick={() => setShowConfirmPaymentDialog(true)}>Confirmar Pagamento</Button>
+                         <div className="flex gap-2">
+                           <Button onClick={() => setShowConfirmPaymentDialog(true)}>
+                             Confirmar Pagamento
+                           </Button>
+                           <Button
+                             variant="destructive"
+                             onClick={() => setShowRejectionDialog(true)}
+                             disabled={rejectingTransaction}
+                           >
+                             Negar Saque
+                           </Button>
+                         </div>
                        )}
                     </div>
                     <div className="space-y-3 bg-muted/20 p-3 rounded-lg border border-border">

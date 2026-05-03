@@ -76,6 +76,28 @@ interface WithdrawalHistory {
   netAmount?: number;
 }
 
+interface WithdrawalReceiptDetails {
+  id: string;
+  type: "USDT" | "PIX";
+  amount: number;
+  netAmount?: number | null;
+  fee?: number | null;
+  status: string;
+  protocol?: string | null;
+  pixKey?: string | null;
+  walletAddress?: string | null;
+  network?: string | null;
+  transactionHash?: string | null;
+  createdAt: string;
+}
+
+const maskPixKey = (value?: string | null) => {
+  if (!value) return "-";
+  const cleanValue = value.trim();
+  if (cleanValue.length <= 6) return cleanValue;
+  return `${cleanValue.slice(0, 3)}***${cleanValue.slice(-3)}`;
+};
+
 export default function WithdrawPage() {
   const router = useRouter();
   const pathname = usePathname();
@@ -142,6 +164,8 @@ export default function WithdrawPage() {
   >([]);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [successDetails, setSuccessDetails] =
+    useState<WithdrawalReceiptDetails | null>(null);
   const [newTransactionId, setNewTransactionId] = useState<string | null>(null);
 
   // USDT Form States
@@ -369,9 +393,22 @@ export default function WithdrawPage() {
         const data = await response.json();
         setSuccessMessage(t("transactionSent"));
         setNewTransactionId(data.data.id || data.data.transaction_id || null);
+        setSuccessDetails({
+          id: data.data.external_id || data.data.transaction_id || "",
+          type: "USDT",
+          amount: Number(data.data.amount ?? parseFloat(usdtAmount)),
+          netAmount: Number(data.data.amount ?? parseFloat(usdtAmount)),
+          fee: Number(data.data.fee ?? getNetworkFee()),
+          status: String(data.data.status || "PENDING").toUpperCase(),
+          walletAddress,
+          network: selectedNetwork,
+          transactionHash: data.data.transaction_id || null,
+          createdAt: data.data.created_at || new Date().toISOString(),
+        });
         setShowSuccessModal(true);
         setUsdtAmount("");
         setWalletAddress("");
+        window.dispatchEvent(new Event("refresh-balance"));
         fetchWalletData();
         fetchWithdrawalHistory();
       } else {
@@ -547,21 +584,34 @@ export default function WithdrawPage() {
 
       if (response.ok) {
         const data = await response.json();
+        const withdrawal = data.withdrawal;
         setSuccessMessage(
           language === "pt"
             ? `Saque PIX de ${formatBRL(
                 parseFloat(pixAmount)
-              )} solicitado com sucesso! Protocolo: ${data.withdrawal.protocol}`
+              )} solicitado com sucesso! Protocolo: ${withdrawal.protocol}`
             : `PIX withdrawal of ${formatBRL(
                 parseFloat(pixAmount)
-              )} requested successfully! Protocol: ${data.withdrawal.protocol}`
+              )} requested successfully! Protocol: ${withdrawal.protocol}`
         );
-        setNewTransactionId(data.withdrawal.id);
+        setSuccessDetails({
+          id: withdrawal.id,
+          type: "PIX",
+          amount: Number(withdrawal.amount ?? parseFloat(pixAmount)),
+          netAmount: Number(withdrawal.netAmount ?? parseFloat(pixAmount)),
+          fee: Number(withdrawal.fee ?? 0),
+          status: withdrawal.status || "PENDING",
+          protocol: withdrawal.protocol,
+          pixKey: withdrawal.pixKey,
+          createdAt: withdrawal.createdAt || new Date().toISOString(),
+        });
+        setNewTransactionId(withdrawal.id);
         setShowSuccessModal(true);
         setPixAmount("");
         setPixKey("");
         setPixCPF("");
         setIsCPFValid(null);
+        window.dispatchEvent(new Event("refresh-balance"));
         fetchWalletData();
         fetchWithdrawalHistory();
       } else {
@@ -620,6 +670,24 @@ export default function WithdrawPage() {
         );
       default:
         return <Badge variant="secondary">{t("unknown")}</Badge>;
+    }
+  };
+
+  const getReceiptStatusLabel = (status: string) => {
+    switch (status.toUpperCase()) {
+      case "PENDING":
+        return language === "pt" ? "Em andamento" : "Pending";
+      case "PROCESSING":
+        return language === "pt" ? "Processando" : "Processing";
+      case "COMPLETED":
+        return language === "pt" ? "Concluído" : "Completed";
+      case "FAILED":
+      case "REJECTED":
+        return language === "pt" ? "Não aprovado" : "Not approved";
+      case "CANCELLED":
+        return language === "pt" ? "Cancelado" : "Cancelled";
+      default:
+        return status;
     }
   };
 
@@ -1146,17 +1214,144 @@ export default function WithdrawPage() {
 
       {/* Success Modal */}
       <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-primary" />
-              {t("withdrawalProcessed")}
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/15">
+                <CheckCircle className="h-5 w-5 text-primary" />
+              </span>
+              <span>
+                {language === "pt" ? "Comprovante de Saque" : "Withdrawal Receipt"}
+              </span>
             </DialogTitle>
             <DialogDescription>{successMessage}</DialogDescription>
           </DialogHeader>
+
+          {successDetails ? (
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-primary/25 bg-primary/10 p-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {language === "pt" ? "Valor solicitado" : "Requested amount"}
+                </p>
+                <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+                  <p className="text-3xl font-bold text-primary">
+                    {successDetails.type === "PIX"
+                      ? formatBRL(successDetails.amount)
+                      : formatUSDT(successDetails.amount)}
+                  </p>
+                  <Badge className="bg-primary text-primary-foreground">
+                    {getReceiptStatusLabel(successDetails.status)}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-border bg-muted/30 p-4">
+                  <p className="text-xs text-muted-foreground">
+                    {language === "pt" ? "Método" : "Method"}
+                  </p>
+                  <p className="mt-1 font-semibold text-foreground">
+                    {successDetails.type === "PIX"
+                      ? "PIX (BRL)"
+                      : `${successDetails.network || selectedNetwork} USDT`}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-border bg-muted/30 p-4">
+                  <p className="text-xs text-muted-foreground">
+                    {language === "pt" ? "Data da solicitação" : "Requested at"}
+                  </p>
+                  <p className="mt-1 font-semibold text-foreground">
+                    {new Date(successDetails.createdAt).toLocaleString(
+                      language === "pt" ? "pt-BR" : "en-US",
+                      {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      }
+                    )}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-border bg-muted/30 p-4">
+                  <p className="text-xs text-muted-foreground">
+                    {successDetails.type === "PIX"
+                      ? language === "pt"
+                        ? "Chave PIX"
+                        : "PIX key"
+                      : language === "pt"
+                      ? "Carteira destino"
+                      : "Destination wallet"}
+                  </p>
+                  <p className="mt-1 break-all font-semibold text-foreground">
+                    {successDetails.type === "PIX"
+                      ? maskPixKey(successDetails.pixKey)
+                      : successDetails.walletAddress || "-"}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-border bg-muted/30 p-4">
+                  <p className="text-xs text-muted-foreground">
+                    {successDetails.type === "PIX"
+                      ? language === "pt"
+                        ? "Protocolo"
+                        : "Protocol"
+                      : language === "pt"
+                      ? "Hash / ID"
+                      : "Hash / ID"}
+                  </p>
+                  <p className="mt-1 break-all font-mono text-sm font-semibold text-foreground">
+                    {successDetails.protocol ||
+                      successDetails.transactionHash ||
+                      successDetails.id}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-border bg-card p-4">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    {language === "pt" ? "Taxa" : "Fee"}
+                  </span>
+                  <span className="font-medium text-foreground">
+                    {successDetails.type === "PIX"
+                      ? formatBRL(Number(successDetails.fee || 0))
+                      : formatUSDT(Number(successDetails.fee || 0))}
+                  </span>
+                </div>
+                <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-sm">
+                  <span className="text-muted-foreground">
+                    {language === "pt" ? "Valor líquido" : "Net amount"}
+                  </span>
+                  <span className="font-semibold text-primary">
+                    {successDetails.type === "PIX"
+                      ? formatBRL(
+                          Number(successDetails.netAmount ?? successDetails.amount)
+                        )
+                      : formatUSDT(
+                          Number(successDetails.netAmount ?? successDetails.amount)
+                        )}
+                  </span>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-warning/30 bg-warning/10 p-4 text-sm text-warning">
+                {successDetails.type === "PIX"
+                  ? language === "pt"
+                    ? "Seu saque PIX foi registrado e será processado manualmente. Prazo estimado: até 24 horas úteis."
+                    : "Your PIX withdrawal was registered and will be processed manually. Estimated time: up to 24 business hours."
+                  : language === "pt"
+                  ? "Seu saque USDT foi enviado para processamento. A confirmação pode depender da rede selecionada."
+                  : "Your USDT withdrawal was sent for processing. Confirmation can depend on the selected network."}
+              </div>
+            </div>
+          ) : null}
+
           <div className="flex justify-end gap-3">
             {newTransactionId && (
-              <Button variant="outline" onClick={() => router.push(`/transaction/${newTransactionId}`)}>
+              <Button
+                variant="outline"
+                onClick={() => router.push(`/transaction/${newTransactionId}`)}
+              >
                 {language === "pt" ? "Ver Detalhes" : "View Details"}
               </Button>
             )}

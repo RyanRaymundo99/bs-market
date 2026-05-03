@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { validateAdminSession } from "@/lib/admin-session";
 import { writeAuditLog, getAuditLogIpAndAgent } from "@/lib/audit-log";
+import { ledgerService } from "@/lib/ledger";
+import { Decimal } from "@prisma/client/runtime/library";
 
 export async function POST(
   request: NextRequest,
@@ -16,7 +18,8 @@ export async function POST(
 
     const { id } = await params;
     const body = await request.json();
-    const { reason } = body as { reason: string };
+    const { reason: rawReason } = body as { reason?: string };
+    const reason = rawReason?.trim();
 
     if (!reason) {
       return NextResponse.json({ error: "Motivo da rejeição é obrigatório" }, { status: 400 });
@@ -51,17 +54,84 @@ export async function POST(
       );
     }
 
+    let refundForNotification:
+      | {
+          currency: string;
+          amount: Decimal;
+          operation: "ADD" | "UNLOCK";
+        }
+      | null = null;
+
     // Update records
     await prisma.$transaction(async (tx) => {
+      const existingMetadata =
+        (transaction.metadata as Record<string, unknown>) || {};
+      let refund:
+        | {
+            currency: string;
+            amount: Decimal;
+            operation: "ADD" | "UNLOCK";
+          }
+        | null = null;
+
+      if (transaction.withdrawal) {
+        const sourceCurrency = existingMetadata.sourceCurrency;
+        const sourceAmountUSDT = existingMetadata.sourceAmountUSDT;
+
+        if (
+          sourceCurrency === "USDT" &&
+          (typeof sourceAmountUSDT === "number" ||
+            typeof sourceAmountUSDT === "string")
+        ) {
+          refund = {
+            currency: "USDT",
+            amount: new Decimal(sourceAmountUSDT),
+            operation: "ADD",
+          };
+        } else if (transaction.withdrawal.type === "USDT") {
+          refund = {
+            currency: "USDT",
+            amount: new Decimal(transaction.withdrawal.amount),
+            operation: "ADD",
+          };
+        } else if (transaction.withdrawal.type === "PIX") {
+          refund = {
+            currency: "BRL",
+            amount: new Decimal(transaction.withdrawal.amount),
+            operation: "ADD",
+          };
+        } else {
+          // Legacy BRL withdrawals moved funds from available -> locked.
+          refund = {
+            currency: transaction.withdrawal.currency || transaction.currency,
+            amount: new Decimal(transaction.withdrawal.amount),
+            operation: "UNLOCK",
+          };
+        }
+
+        if (refund.amount.lessThanOrEqualTo(0)) {
+          refund = null;
+        }
+
+        refundForNotification = refund;
+      }
+
       // 1. Update transaction metadata (ledger row has no status field)
       await tx.transaction.update({
         where: { id },
         data: {
           metadata: {
-            ...((transaction.metadata as Record<string, unknown>) || {}),
+            ...existingMetadata,
             rejectionReason: reason,
             rejectedAt: new Date().toISOString(),
             rejectedBy: adminSession.user.email,
+            ...(refund
+              ? {
+                  refundCurrency: refund.currency,
+                  refundAmount: refund.amount.toNumber(),
+                  refundOperation: refund.operation,
+                }
+              : {}),
           },
         },
       });
@@ -84,7 +154,77 @@ export async function POST(
             status: "FAILED",
           },
         });
+
+        if (refund) {
+          await ledgerService.updateBalance(
+            transaction.userId,
+            refund.currency,
+            refund.amount,
+            refund.operation,
+            tx
+          );
+
+          await ledgerService.recordTransaction(
+            {
+              userId: transaction.userId,
+              type: "REFUND",
+              amount: refund.amount,
+              currency: refund.currency,
+              description: `Refund for rejected withdrawal ${transaction.withdrawal.protocol || transaction.withdrawal.id}`,
+              metadata: {
+                originalTransactionId: transaction.id,
+                withdrawalId: transaction.withdrawal.id,
+                reason,
+                refundOperation: refund.operation,
+              },
+            },
+            tx
+          );
+        }
       }
+
+      const amountLabel = transaction.withdrawal
+        ? `${Number(transaction.withdrawal.amount).toLocaleString("pt-BR", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })} ${transaction.withdrawal.currency}`
+        : `${Number(transaction.amount).toLocaleString("pt-BR", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })} ${transaction.currency}`;
+
+      await tx.notification.create({
+        data: {
+          userId: transaction.userId,
+          type: transaction.withdrawal
+            ? "withdrawal_rejected"
+            : "deposit_rejected",
+          title: transaction.withdrawal
+            ? "Saque não aprovado"
+            : "Depósito não aprovado",
+          message: transaction.withdrawal
+            ? `Seu saque de ${amountLabel} não foi aprovado. Motivo: ${reason}. ${
+                refundForNotification
+                  ? `O valor foi devolvido ao seu saldo em ${refundForNotification.currency}.`
+                  : ""
+              }`
+            : `Seu depósito de ${amountLabel} não foi aprovado. Motivo: ${reason}.`,
+          metadata: {
+            transactionId: transaction.id,
+            withdrawalId: transaction.withdrawal?.id,
+            depositId: transaction.deposit?.id,
+            reason,
+            rejectedAt: new Date().toISOString(),
+            rejectedBy: adminSession.user.email,
+            ...(refundForNotification
+              ? {
+                  refundCurrency: refundForNotification.currency,
+                  refundAmount: refundForNotification.amount.toNumber(),
+                }
+              : {}),
+          },
+        },
+      });
     });
 
     // Send notification (non-blocking)

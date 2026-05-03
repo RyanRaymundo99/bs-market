@@ -3,6 +3,27 @@ import prisma from "@/lib/prisma";
 import { sendPIXWithdrawalReceipt } from "@/lib/receipt-email";
 import { getMoneyControls } from "@/lib/money-controls";
 import { ledgerService } from "@/lib/ledger";
+import { bancoCentralService } from "@/lib/banco-central";
+import { cryptoRatesService } from "@/lib/crypto-rates";
+import { Decimal } from "@prisma/client/runtime/library";
+
+const PIX_USDT_TO_BRL_PAYOUT_RATE = new Decimal(0.98);
+
+async function getServerUSDTBRLRate() {
+  try {
+    if (process.env.USE_REALTIME_RATES !== "false") {
+      return new Decimal(await cryptoRatesService.getUSDTRate());
+    }
+
+    return new Decimal(await bancoCentralService.getUSDTRate());
+  } catch {
+    try {
+      return new Decimal(await bancoCentralService.getUSDTRate());
+    } catch {
+      return new Decimal(5);
+    }
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -72,9 +93,10 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const { amount, pixKey, cpf } = await request.json();
+    const withdrawalAmountBRL = new Decimal(amount || 0);
 
     // Validate input
-    if (!amount || amount <= 0) {
+    if (withdrawalAmountBRL.lessThanOrEqualTo(0)) {
       return NextResponse.json(
         { error: "Amount must be greater than 0" },
         { status: 400 }
@@ -121,73 +143,112 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "CPF informado é inválido" }, { status: 400 });
     }
 
-    // Check BRL balance
-    const brlBalance = await prisma.balance.findFirst({
-      where: {
-        userId: user.id,
-        currency: "BRL",
-      },
-    });
+    // No fee on PIX withdrawals
+    const fee = new Decimal(0);
+    const netAmount = withdrawalAmountBRL;
+    const usdtBrlRate = await getServerUSDTBRLRate();
+    const effectiveRate = usdtBrlRate.mul(PIX_USDT_TO_BRL_PAYOUT_RATE);
+    const usdtToDebit = withdrawalAmountBRL.div(effectiveRate).toDecimalPlaces(8);
 
-    if (!brlBalance || brlBalance.amount < amount) {
+    if (usdtToDebit.lessThanOrEqualTo(0)) {
       return NextResponse.json(
-        { error: "Insufficient BRL balance" },
+        { error: "Invalid conversion rate" },
+        { status: 500 }
+      );
+    }
+
+    const transactionResult = await prisma.$transaction(async (tx) => {
+        const usdtBalance = await tx.balance.findUnique({
+          where: { userId_currency: { userId: user.id, currency: "USDT" } },
+        });
+
+        if (!usdtBalance || usdtBalance.amount.lessThan(usdtToDebit)) {
+          throw new Error("INSUFFICIENT_USDT_BALANCE");
+        }
+
+        // Generate protocol number
+        const protocol = `PIX${Date.now()}${Math.random()
+          .toString(36)
+          .substr(2, 5)
+          .toUpperCase()}`;
+
+        // Create withdrawal record in BRL for admin payout processing.
+        const withdrawal = await tx.withdrawal.create({
+          data: {
+            userId: user.id,
+            type: "PIX",
+            amount: withdrawalAmountBRL,
+            fee,
+            netAmount,
+            status: "PENDING",
+            paymentMethod: "PIX",
+            pixKey: pixKey,
+            protocol: protocol,
+            createdAt: new Date(),
+          },
+        });
+
+        const pixWithdrawalTransaction = await ledgerService.recordTransaction(
+          {
+            userId: user.id,
+            type: "WITHDRAWAL",
+            amount: withdrawalAmountBRL.negated(),
+            currency: "BRL",
+            description: `PIX withdrawal to ${pixKey}`,
+            metadata: {
+              withdrawalId: withdrawal.id,
+              protocol,
+              sourceCurrency: "USDT",
+              sourceAmountUSDT: usdtToDebit.toNumber(),
+              exchangeRate: usdtBrlRate.toNumber(),
+              payoutRate: PIX_USDT_TO_BRL_PAYOUT_RATE.toNumber(),
+            },
+          },
+          tx
+        );
+
+        await ledgerService.updateBalance(
+          user.id,
+          "USDT",
+          usdtToDebit,
+          "SUBTRACT",
+          tx
+        );
+
+        // Link withdrawal to transaction
+        await tx.withdrawal.update({
+          where: { id: withdrawal.id },
+          data: { transactionId: pixWithdrawalTransaction.id },
+        });
+
+        return { withdrawal, pixWithdrawalTransaction, protocol };
+      }).catch((error) => {
+        if (
+          error instanceof Error &&
+          error.message === "INSUFFICIENT_USDT_BALANCE"
+        ) {
+          return null;
+        }
+        throw error;
+      });
+
+    if (!transactionResult) {
+      return NextResponse.json(
+        { error: "Insufficient USDT balance" },
         { status: 400 }
       );
     }
 
-    // No fee on PIX withdrawals
-    const fee = 0;
-    const netAmount = amount;
-
-    // Generate protocol number
-    const protocol = `PIX${Date.now()}${Math.random()
-      .toString(36)
-      .substr(2, 5)
-      .toUpperCase()}`;
-
-    // Create withdrawal record
-    const withdrawal = await prisma.withdrawal.create({
-      data: {
-        userId: user.id,
-        type: "PIX",
-        amount: amount,
-        fee: fee,
-        netAmount: netAmount,
-        status: "PENDING",
-        paymentMethod: "PIX",
-        pixKey: pixKey,
-        protocol: protocol,
-        createdAt: new Date(),
-      },
-    });
-
-    // Update user balance and record transaction atomically via LedgerService
-    const pixWithdrawalTransaction = await ledgerService.recordTransaction({
-      userId: user.id,
-      type: "WITHDRAWAL",
-      amount: -amount,
-      currency: "BRL",
-      description: `PIX withdrawal to ${pixKey}`,
-      metadata: { withdrawalId: withdrawal.id, protocol },
-    });
-
-    await ledgerService.updateBalance(user.id, "BRL", amount, "SUBTRACT");
-
-    // Link withdrawal to transaction
-    await prisma.withdrawal.update({
-      where: { id: withdrawal.id },
-      data: { transactionId: pixWithdrawalTransaction.id },
-    });
+    const { withdrawal, pixWithdrawalTransaction, protocol } = transactionResult;
 
     // Send PIX withdrawal receipt email (don't await to avoid blocking response)
     if (user.email && user.name) {
       sendPIXWithdrawalReceipt({
         userName: user.name,
         userEmail: user.email,
-        amount: Number(amount),
-        fee: Number(fee),
-        netAmount: Number(netAmount),
+        amount: withdrawalAmountBRL.toNumber(),
+        fee: fee.toNumber(),
+        netAmount: netAmount.toNumber(),
         pixKey: pixKey,
         protocol: protocol,
         date: new Date(),
