@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse request body
-    const { network, amount } = await request.json();
+    const { network, amount, addressOnly } = await request.json();
 
     if (!network || !["TRC20", "ERC20", "POLYGON"].includes(network)) {
       return NextResponse.json(
@@ -67,8 +67,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    const requestedAmount = new Decimal(amount || 0);
 
     // Generate a unique external ID for tracking this deposit
     const externalId = `deposit_${user.id}_${network}_${Date.now()}`;
@@ -104,6 +102,29 @@ export async function POST(request: NextRequest) {
         `TMainDepositAddress_${network}`;
       
       console.warn(`Using fallback deposit address for network ${network}. Configure DEPOSIT_ADDRESS_${network} or PAYMENT_DEPOSIT_ADDRESS in environment variables.`);
+    }
+
+    if (addressOnly) {
+      return NextResponse.json({
+        success: true,
+        address: depositAddress,
+        network: network,
+        message: "Deposit address generated. Enter the amount and transaction hash after sending USDT.",
+      });
+    }
+
+    let requestedAmount: Decimal;
+    try {
+      requestedAmount = new Decimal(amount ?? 0);
+    } catch {
+      return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
+    }
+
+    if (!Number.isFinite(requestedAmount.toNumber()) || requestedAmount.lte(0)) {
+      return NextResponse.json(
+        { error: "A valid amount greater than zero is required" },
+        { status: 400 }
+      );
     }
 
     // Use a transaction to ensure both deposit and transaction records are created

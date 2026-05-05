@@ -444,6 +444,17 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                                     </div>
                                 </div>
                             )}
+                            {isPixWithdrawal && transaction.protocol && (
+                                <div className="sm:col-span-2">
+                                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1 font-semibold">{language === "pt" ? "Protocolo PIX" : "PIX Protocol"}</p>
+                                    <div className="flex items-center gap-2 p-3 bg-card border border-border/50 rounded-xl">
+                                        <code className="text-xs font-mono break-all flex-1 text-primary">{transaction.protocol}</code>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => copyToClipboard(transaction.protocol!, "Protocolo")}>
+                                            {copied === "Protocolo" ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
                             {isWithdrawal && transaction.walletAddress && (
                                 <div className="sm:col-span-2">
                                     <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1 font-semibold">{language === "pt" ? "Endereço de Destino" : "Destination Address"}</p>
@@ -460,7 +471,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                                     )}
                                 </div>
                             )}
-                            {transaction.hash && (
+                            {!isPixWithdrawal && transaction.hash && (
                                 <div className="sm:col-span-2">
                                     <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1 font-semibold">{language === "pt" ? "Hash da Transação" : "Transaction Hash"}</p>
                                     <div className="flex items-center gap-2">

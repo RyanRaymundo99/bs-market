@@ -157,6 +157,31 @@ export async function GET(
           status: relatedStatus,
           description: transaction.description,
           createdAt: transaction.createdAt,
+          paymentMethod:
+            transaction.withdrawal?.paymentMethod ||
+            transaction.deposit?.paymentMethod ||
+            undefined,
+          walletAddress: transaction.withdrawal?.walletAddress || undefined,
+          network:
+            transaction.withdrawal?.network ||
+            getMetadataString(metadata, "network") ||
+            undefined,
+          pixKey: transaction.withdrawal?.pixKey || undefined,
+          hash:
+            transaction.withdrawal?.hash ||
+            getMetadataString(metadata, "transactionHash") ||
+            undefined,
+          protocol: transaction.withdrawal?.protocol || undefined,
+          fee:
+            transaction.withdrawal?.fee !== undefined &&
+            transaction.withdrawal?.fee !== null
+              ? Number(transaction.withdrawal.fee)
+              : undefined,
+          netAmount:
+            transaction.withdrawal?.netAmount !== undefined &&
+            transaction.withdrawal?.netAmount !== null
+              ? Number(transaction.withdrawal.netAmount)
+              : undefined,
           adminMessage: getAdminMessage(metadata),
           adminActionAt: getMetadataString(metadata, "rejectedAt"),
           adminActionBy: getMetadataString(metadata, "rejectedBy"),

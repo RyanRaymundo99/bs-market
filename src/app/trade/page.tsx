@@ -8,7 +8,6 @@ import Image from "next/image";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -883,14 +882,14 @@ const TradePage = () => {
     }
   };
 
-  const fetchCryptoAddress = useCallback(async (network: string, amount?: number) => {
+  const fetchCryptoAddress = useCallback(async (network: string) => {
     try {
       setCryptoAddressLoading(true);
       const response = await fetch("/api/deposit/crypto/address", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ network, amount }),
+        body: JSON.stringify({ network, addressOnly: true }),
       });
 
       if (!response.ok) {
@@ -915,25 +914,7 @@ const TradePage = () => {
           console.error("Error generating QR code:", err);
         }
 
-        const usdtForReceipt =
-          typeof amount === "number" && amount > 0
-            ? amount
-            : parseUSDTInput(cryptoAmount);
-
-        if (data.depositId && data.transactionId) {
-          setReceiptData({
-            transactionId: data.transactionId,
-            depositId: data.depositId,
-            amount: 0,
-            usdtAmount: usdtForReceipt,
-            date: new Date(),
-            type: "CRYPTO",
-          });
-          if (typeof amount === "number" && amount > 0) {
-            setShowReceipt(true);
-            fetchTransactionHistory();
-          }
-        }
+        setReceiptData(null);
       }
     } catch (error) {
       console.error("Error fetching crypto address:", error);
@@ -945,26 +926,23 @@ const TradePage = () => {
     } finally {
       setCryptoAddressLoading(false);
     }
-  }, [language, toast, fetchTransactionHistory, cryptoAmount]);
+  }, [language, toast]);
 
   const handleCryptoDepositConfirm = () => {
-    const amount = parseUSDTInput(cryptoAmount);
-    if (amount <= 0) {
+    if (moneyDisabled) {
       toast({
-        title: "Erro",
-        description: language === "pt" ? "Insira um valor válido" : "Enter a valid amount",
+        title: language === "pt" ? "Indisponível" : "Unavailable",
+        description:
+          moneyDisabledMessage ||
+          (language === "pt"
+            ? "Depósitos temporariamente desativados."
+            : "Deposits are temporarily disabled."),
         variant: "destructive",
       });
       return;
     }
-    fetchCryptoAddress(cryptoNetwork, amount);
+    fetchCryptoAddress(cryptoNetwork);
   };
-
-  useEffect(() => {
-    if (depositMethod === "CRYPTO" && !cryptoAddress) {
-      fetchCryptoAddress(cryptoNetwork);
-    }
-  }, [depositMethod, cryptoNetwork, fetchCryptoAddress, cryptoAddress]);
 
   const handleSimulatePayment = async () => {
     const txRef = receiptData?.transactionId;
@@ -1009,18 +987,29 @@ const TradePage = () => {
   const handleCryptoHashSubmit = async () => {
     if (!cryptoHash.trim()) return;
 
-    const depositRef = receiptData?.depositId ?? receiptData?.transactionId;
-    if (!depositRef) {
+    if (!cryptoAddress) {
       toast({
-        title: language === "pt" ? "Aguarde" : "Please wait",
+        title: language === "pt" ? "Gere o QR Code" : "Generate the QR Code",
         description:
           language === "pt"
-            ? "Carregue o endereço de depósito antes de enviar o hash."
-            : "Load the deposit address before submitting the hash.",
+            ? "Selecione a moeda e a rede para gerar o QR Code antes de enviar."
+            : "Select the currency and network to generate the QR Code before submitting.",
         variant: "destructive",
       });
       return;
     }
+
+    const amount = parseUSDTInput(cryptoAmount);
+    if (amount <= 0) {
+      toast({
+        title: "Erro",
+        description: language === "pt" ? "Insira um valor válido" : "Enter a valid amount",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const depositRef = receiptData?.depositId ?? receiptData?.transactionId;
 
     setIsSubmittingHash(true);
     try {
@@ -1030,19 +1019,34 @@ const TradePage = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           depositId: receiptData?.depositId,
-          transactionId: receiptData?.depositId ?? receiptData?.transactionId,
+          transactionId: depositRef,
+          amount,
+          network: cryptoNetwork,
+          address: cryptoAddress,
           hash: cryptoHash.trim(),
         }),
       });
 
       const data = await response.json();
       if (data.success) {
+        const transactionId = data.transactionId ?? receiptData?.transactionId;
+        const depositId = data.depositId ?? receiptData?.depositId;
+        if (transactionId) {
+          setReceiptData({
+            transactionId,
+            depositId,
+            amount,
+            usdtAmount: amount,
+            date: new Date(),
+            type: "CRYPTO",
+          });
+        }
         toast({
           title: language === "pt" ? "Sucesso" : "Success",
           description: language === "pt" ? "Hash da transação enviado com sucesso!" : "Transaction hash submitted successfully!",
         });
         setCryptoHash("");
-        // Optionally update receipt data or status
+        setShowReceipt(Boolean(transactionId));
         fetchTransactionHistory();
       } else {
         throw new Error(data.error || "Erro ao enviar hash");
@@ -1371,19 +1375,19 @@ const TradePage = () => {
               <>
                 <div className="space-y-6">
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      {language === "pt" ? "Quantidade de USDT para depositar:" : "USDT Amount to deposit:"}
-                    </label>
-                    <input
-                      type="text"
-                      value={cryptoAmount}
-                      onChange={(e) => setCryptoAmount(formatUSDTInput(e.target.value))}
-                      placeholder="0,00"
-                      inputMode="decimal"
-                      className="w-full px-4 py-3 bg-muted/50 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all mb-4"
-                    />
-                    
                     <label className="block text-sm font-medium text-foreground mb-3">
+                      {language === "pt" ? "Selecione a moeda:" : "Select currency:"}
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
+                      <button
+                        type="button"
+                        className="px-3 py-2.5 rounded-xl border text-xs font-semibold transition-all bg-primary/20 border-primary text-primary"
+                      >
+                        USDT
+                      </button>
+                    </div>
+
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       {language === "pt" ? "Selecione a Rede (Network):" : "Select Network:"}
                     </label>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -1397,6 +1401,8 @@ const TradePage = () => {
                           onClick={() => {
                             setCryptoNetwork(network.id);
                             setCryptoAddress(""); // Reset address when network changes
+                            setCryptoQrCode("");
+                            setReceiptData(null);
                           }}
                           className={`px-3 py-2.5 rounded-xl border text-xs font-semibold transition-all ${
                             cryptoNetwork === network.id
@@ -1413,10 +1419,10 @@ const TradePage = () => {
                   {!cryptoAddress && !cryptoAddressLoading && (
                     <Button 
                       onClick={handleCryptoDepositConfirm}
-                      disabled={!cryptoAmount || parseUSDTInput(cryptoAmount) <= 0 || moneyDisabled}
+                      disabled={moneyDisabled}
                       className="w-full h-12 sm:h-14 font-semibold rounded-xl text-base sm:text-lg"
                     >
-                      {language === "pt" ? "Gerar Endereço de Depósito" : "Generate Deposit Address"}
+                      {language === "pt" ? "Gerar QR Code de Depósito" : "Generate Deposit QR Code"}
                     </Button>
                   )}
 
@@ -1472,6 +1478,20 @@ const TradePage = () => {
                         </div>
                       </div>
 
+                      <div className="space-y-3 pt-2 border-t border-border/50">
+                        <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                          {language === "pt" ? "Valor enviado em USDT:" : "USDT amount sent:"}
+                        </label>
+                        <input
+                          type="text"
+                          value={cryptoAmount}
+                          onChange={(e) => setCryptoAmount(formatUSDTInput(e.target.value))}
+                          placeholder="0,00"
+                          inputMode="decimal"
+                          className="w-full px-4 py-3 bg-muted/50 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+                        />
+                      </div>
+
                       {/* Transaction Hash Input */}
                       <div className="space-y-3 pt-2 border-t border-border/50">
                         <div className="flex flex-col gap-2">
@@ -1489,8 +1509,10 @@ const TradePage = () => {
                               onClick={handleCryptoHashSubmit}
                               disabled={
                                 !cryptoHash.trim() ||
+                                !cryptoAmount ||
+                                parseUSDTInput(cryptoAmount) <= 0 ||
                                 isSubmittingHash ||
-                                !(receiptData?.depositId ?? receiptData?.transactionId)
+                                !cryptoAddress
                               }
                               className="h-11 px-6 rounded-xl font-bold whitespace-nowrap"
                             >

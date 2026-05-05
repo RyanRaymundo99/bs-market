@@ -27,6 +27,7 @@ export const TransactionReceipt: React.FC<ReceiptProps> = ({
   language,
 }) => {
   const isCompleted = transaction.status === "COMPLETED" || transaction.status === "APPROVED" || transaction.status === "CONFIRMED";
+  const isCryptoDeposit = transaction.type === "CRYPTO";
   const receiptNumber = `BSM-${transaction.id.slice(-8).toUpperCase()}`;
   const issuedAt = transaction.date.toLocaleString(language === "pt" ? "pt-BR" : "en-US");
 
@@ -93,7 +94,7 @@ export const TransactionReceipt: React.FC<ReceiptProps> = ({
               <span className="text-4xl font-black text-foreground">{formatUSDT(transaction.usdtAmount)}</span>
               <span className="text-xl font-bold text-primary">USDT</span>
             </div>
-            {transaction.amount > 0 && (
+            {!isCryptoDeposit && transaction.amount > 0 && (
               <p className="text-sm text-muted-foreground">
                 {language === "pt" ? "Custo total:" : "Total cost:"} {formatBRL(transaction.amount)}
               </p>

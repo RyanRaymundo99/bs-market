@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Check, Copy, FileText, QrCode } from "lucide-react";
+import { Check, Copy, FileText } from "lucide-react";
 import Image from "next/image";
 import { Spinner } from "@/components/ui/loading";
 import { formatBRL } from "@/lib/trade-utils";
@@ -85,12 +85,15 @@ export const PixPaymentDialog: React.FC<PixPaymentDialogProps> = ({
             )}
 
             <div className="text-center space-y-1">
-              <p className="text-xs text-muted-foreground">Valor:</p>
+              <p className="text-xs text-muted-foreground">
+                {language === "pt" ? "Valor em reais (BRL):" : "Amount in BRL:"}
+              </p>
               <p className="text-xl sm:text-2xl font-bold text-primary">
                 {formatBRL(pixData.amount)}
               </p>
               <p className="text-xs sm:text-sm text-muted-foreground">
-                ({pixData.usdtAmount.toFixed(2)} USDT)
+                {language === "pt" ? "Quantidade em USDT:" : "USDT amount:"}{" "}
+                {pixData.usdtAmount.toFixed(2)} USDT
               </p>
             </div>
           </div>

@@ -98,6 +98,31 @@ const maskPixKey = (value?: string | null) => {
   return `${cleanValue.slice(0, 3)}***${cleanValue.slice(-3)}`;
 };
 
+const parseBRLInput = (value: string) => {
+  const trimmedValue = value.trim();
+  if (!trimmedValue) return 0;
+
+  const commaIndex = trimmedValue.lastIndexOf(",");
+  const dotIndex = trimmedValue.lastIndexOf(".");
+  const decimalSeparator =
+    commaIndex > dotIndex ? "," : dotIndex > commaIndex ? "." : null;
+
+  const normalizedValue = decimalSeparator
+    ? trimmedValue
+        .replace(new RegExp(`[^0-9\\${decimalSeparator}]`, "g"), "")
+        .replace(decimalSeparator, ".")
+    : trimmedValue.replace(/[^\d]/g, "");
+
+  const [integerPart, ...decimalParts] = normalizedValue.split(".");
+  const normalizedNumber =
+    decimalParts.length > 0
+      ? `${integerPart}.${decimalParts.join("")}`
+      : integerPart;
+  const amount = Number(normalizedNumber);
+
+  return Number.isFinite(amount) ? amount : 0;
+};
+
 export default function WithdrawPage() {
   const router = useRouter();
   const pathname = usePathname();
@@ -455,9 +480,8 @@ export default function WithdrawPage() {
 
 
   const calculatePixNetAmount = () => {
-    if (!pixAmount || parseFloat(pixAmount) <= 0) return 0;
-    const amount = parseFloat(pixAmount);
-    return isNaN(amount) ? 0 : amount;
+    const amount = parseBRLInput(pixAmount);
+    return amount > 0 ? amount : 0;
   };
 
   const validateCPF = (cpf: string) => {
@@ -525,7 +549,8 @@ export default function WithdrawPage() {
       });
       return;
     }
-    if (!pixAmount || parseFloat(pixAmount) <= 0) {
+    const parsedPixAmount = parseBRLInput(pixAmount);
+    if (!pixAmount || parsedPixAmount <= 0) {
       toast({
         title: language === "pt" ? "Valor inválido" : "Invalid amount",
         description:
@@ -578,7 +603,7 @@ export default function WithdrawPage() {
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amount: parseFloat(pixAmount),
+          amount: parsedPixAmount,
           pixKey: pixKey.trim(),
           cpf: pixCPF.replace(/\D/g, ""),
         }),
@@ -590,17 +615,17 @@ export default function WithdrawPage() {
         setSuccessMessage(
           language === "pt"
             ? `Saque PIX de ${formatBRL(
-                parseFloat(pixAmount)
+                parsedPixAmount
               )} solicitado com sucesso! Protocolo: ${withdrawal.protocol}`
             : `PIX withdrawal of ${formatBRL(
-                parseFloat(pixAmount)
+                parsedPixAmount
               )} requested successfully! Protocol: ${withdrawal.protocol}`
         );
         setSuccessDetails({
           id: withdrawal.id,
           type: "PIX",
-          amount: Number(withdrawal.amount ?? parseFloat(pixAmount)),
-          netAmount: Number(withdrawal.netAmount ?? parseFloat(pixAmount)),
+          amount: Number(withdrawal.amount ?? parsedPixAmount),
+          netAmount: Number(withdrawal.netAmount ?? parsedPixAmount),
           fee: Number(withdrawal.fee ?? 0),
           status: withdrawal.status || "PENDING",
           protocol: withdrawal.protocol,
@@ -1006,13 +1031,11 @@ export default function WithdrawPage() {
                         </Label>
                         <Input
                           id="pix-amount"
-                          type="number"
-                          placeholder="0.00"
+                          type="text"
+                          placeholder="0,00"
                           value={pixAmount}
                           onChange={(e) => setPixAmount(e.target.value)}
-                          min="0"
-                          step="0.01"
-                          max={brlAvailableForPix ?? undefined}
+                          inputMode="decimal"
                           className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground focus:ring-primary rounded-xl"
                         />
                       </div>
@@ -1089,9 +1112,9 @@ export default function WithdrawPage() {
                           !pixKey ||
                           !pixCPF ||
                           isCPFValid === false ||
-                          parseFloat(pixAmount) <= 0 ||
+                          parseBRLInput(pixAmount) <= 0 ||
                           (brlAvailableForPix != null &&
-                            parseFloat(pixAmount) > brlAvailableForPix)
+                            parseBRLInput(pixAmount) > brlAvailableForPix)
                         }
                         className="w-full h-12 sm:h-14 font-semibold rounded-xl text-base sm:text-lg"
                       >
@@ -1295,11 +1318,11 @@ export default function WithdrawPage() {
                   <p className="text-xs text-muted-foreground">
                     {successDetails.type === "PIX"
                       ? language === "pt"
-                        ? "Protocolo"
-                        : "Protocol"
+                        ? "Protocolo PIX"
+                        : "PIX Protocol"
                       : language === "pt"
-                      ? "Hash / ID"
-                      : "Hash / ID"}
+                      ? "Hash da transação"
+                      : "Transaction Hash"}
                   </p>
                   <p className="mt-1 break-all font-mono text-sm font-semibold text-foreground">
                     {successDetails.protocol ||
