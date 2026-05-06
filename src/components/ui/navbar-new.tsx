@@ -16,6 +16,7 @@ import { UserNotificationBell } from "./user-notification-bell";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { FlagBR } from "@/components/icons/FlagBR";
 import { FlagUS } from "@/components/icons/FlagUS";
+import { syncMobileMenuToBody } from "@/hooks/useMobileMenuOpen";
 
 const NAV_LINKS_KEYS = [
   { key: "dashboard", href: "/dashboard", icon: Home },
@@ -75,9 +76,11 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
     } else {
       document.body.style.overflow = "unset";
     }
+    syncMobileMenuToBody(isMobileMenuOpen);
 
     return () => {
       document.body.style.overflow = "unset";
+      syncMobileMenuToBody(false);
     };
   }, [isMobileMenuOpen]);
 

@@ -208,6 +208,7 @@ interface WithdrawalReceiptData {
   userName: string;
   userEmail: string;
   amount: number;
+  currency?: string;
   networkFee: number;
   netAmount: number;
   network: string;
@@ -426,6 +427,7 @@ Chave PIX: ${data.pixKey}
 
 export async function sendWithdrawalReceipt(data: WithdrawalReceiptData) {
   try {
+    const currency = data.currency || "USDT";
     const formattedDate = new Intl.DateTimeFormat("pt-BR", {
       day: "2-digit",
       month: "2-digit",
@@ -455,9 +457,9 @@ Data: ${formattedDate}
 Status: ${statusText}
 Rede: ${data.network}
 
-Valor Solicitado: ${data.amount.toFixed(4)} USDT
-Taxa de Rede (${data.network}): ${data.networkFee.toFixed(4)} USDT
-Valor Líquido Recebido: ${data.netAmount.toFixed(4)} USDT
+Valor Solicitado: ${data.amount.toFixed(4)} ${currency}
+Taxa de Rede (${data.network}): ${data.networkFee.toFixed(4)} ${currency}
+Valor Líquido Recebido: ${data.netAmount.toFixed(4)} ${currency}
 
 Endereço da Carteira: ${data.walletAddress}
 ${data.transactionHash ? `Hash da Transação: ${data.transactionHash}` : ""}
@@ -465,7 +467,7 @@ ${data.transactionHash ? `Hash da Transação: ${data.transactionHash}` : ""}
 
     const footerMessage =
       data.status === "COMPLETED"
-        ? "Seus USDT foram enviados para o endereço informado. A transação pode levar alguns minutos para aparecer na blockchain. Este comprovante serve como recibo oficial da transação."
+        ? `Seus ${currency} foram enviados para o endereço informado. A transação pode levar alguns minutos para aparecer na blockchain. Este comprovante serve como recibo oficial da transação.`
         : data.status === "PENDING"
         ? "Seu saque está aguardando processamento. Você receberá uma notificação quando for concluído."
         : "Seu saque está sendo processado. Você receberá uma notificação quando for concluído.";
@@ -477,15 +479,15 @@ ${data.transactionHash ? `Hash da Transação: ${data.transactionHash}` : ""}
       },
       {
         label: "Valor Solicitado",
-        value: `${data.amount.toFixed(4)} USDT`,
+        value: `${data.amount.toFixed(4)} ${currency}`,
       },
       {
         label: `Taxa de Rede (${data.network})`,
-        value: `${data.networkFee.toFixed(4)} USDT`,
+        value: `${data.networkFee.toFixed(4)} ${currency}`,
       },
       {
         label: "Valor Líquido Recebido",
-        value: `${data.netAmount.toFixed(4)} USDT`,
+        value: `${data.netAmount.toFixed(4)} ${currency}`,
         highlight: true,
       },
       {

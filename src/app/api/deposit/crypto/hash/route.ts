@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { Decimal } from "@prisma/client/runtime/library";
+import {
+  isCryptoCurrency,
+  isCryptoNetworkForCurrency,
+} from "@/lib/crypto-assets";
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,7 +28,15 @@ export async function POST(req: NextRequest) {
     const userEmail = session.user.email;
 
     const body = await req.json();
-    const { transactionId, depositId, hash, amount, network, address } = body;
+    const {
+      transactionId,
+      depositId,
+      hash,
+      amount,
+      currency = "USDT",
+      network,
+      address,
+    } = body;
     const depositRef =
       (typeof depositId === "string" && depositId.trim()) ||
       (typeof transactionId === "string" && transactionId.trim()) ||
@@ -43,9 +55,12 @@ export async function POST(req: NextRequest) {
     }
 
     if (!depositRef) {
-      if (!network || !["TRC20", "ERC20", "POLYGON"].includes(network)) {
+      if (
+        !isCryptoCurrency(currency) ||
+        !isCryptoNetworkForCurrency(currency, network)
+      ) {
         return NextResponse.json(
-          { error: "Invalid network. Must be TRC20, ERC20, or POLYGON" },
+          { error: "Invalid currency/network combination" },
           { status: 400 }
         );
       }
@@ -72,16 +87,16 @@ export async function POST(req: NextRequest) {
       }
 
       const result = await prisma.$transaction(async (tx) => {
-        const externalId = `deposit_${session.user.id}_${network}_${Date.now()}`;
+        const externalId = `deposit_${session.user.id}_${currency}_${network}_${Date.now()}`;
         const depositAddress = address.trim();
 
         const deposit = await tx.deposit.create({
           data: {
             userId: session.user.id,
             amount: requestedAmount,
-            currency: "USDT",
+            currency,
             status: "PENDING",
-            paymentMethod: "USDT",
+            paymentMethod: currency,
             externalId,
             paymentId: depositAddress,
             createdAt: new Date(),
@@ -90,7 +105,7 @@ export async function POST(req: NextRequest) {
 
         const balance = await tx.balance.findUnique({
           where: {
-            userId_currency: { userId: session.user.id, currency: "USDT" },
+            userId_currency: { userId: session.user.id, currency },
           },
         });
 
@@ -99,11 +114,12 @@ export async function POST(req: NextRequest) {
             userId: session.user.id,
             type: "DEPOSIT",
             amount: requestedAmount,
-            currency: "USDT",
+            currency,
             balance: balance?.amount || new Decimal(0),
-            description: `Depósito USDT via ${network}`,
+            description: `Depósito ${currency} via ${network}`,
             metadata: {
               depositId: deposit.id,
+              currency,
               network,
               address: depositAddress,
               requestedAmount: requestedAmount.toNumber(),
@@ -126,11 +142,11 @@ export async function POST(req: NextRequest) {
           getAdminAlertSettings().then((settings) =>
             sendAdminAlertToAll(
               settings,
-              "Novo depósito USDT (cripto) recebido",
+              `Novo depósito ${currency} (cripto) recebido`,
               [
                 `Usuário: ${session.user.name} (${session.user.email})`,
                 `ID depósito: ${result.deposit.id}`,
-                `Valor: ${requestedAmount.toNumber()} USDT`,
+                `Valor: ${requestedAmount.toNumber()} ${currency}`,
                 `Rede: ${network}`,
                 `Endereço: ${address.trim()}`,
                 `Hash informado: ${trimmedHash}`,
@@ -199,7 +215,7 @@ export async function POST(req: NextRequest) {
         getAdminAlertSettings().then((settings) =>
           sendAdminAlertToAll(
             settings,
-            "Hash de depósito USDT recebido",
+            `Hash de depósito ${deposit.currency} recebido`,
             [
               `Usuário: ${deposit.user.name} (${deposit.user.email})`,
               `ID depósito: ${deposit.id}`,

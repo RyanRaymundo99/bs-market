@@ -202,7 +202,9 @@ export async function GET(request: NextRequest) {
     // Convert Decimal to Number for frontend and format for new structure
     const formattedWithdrawals = withdrawals.map((withdrawal) => ({
       id: withdrawal.id,
-      type: withdrawal.type || (withdrawal.currency === "BRL" ? "PIX" : "USDT"),
+      type:
+        withdrawal.type || (withdrawal.currency === "BRL" ? "PIX" : withdrawal.currency),
+      currency: withdrawal.currency,
       amount: Number(withdrawal.amount),
       status: withdrawal.status,
       createdAt: withdrawal.createdAt.toISOString(),

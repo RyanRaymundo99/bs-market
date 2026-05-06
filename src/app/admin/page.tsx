@@ -27,9 +27,7 @@ import {
   BarChart3,
   PieChart,
   Search,
-  ArrowUpDown,
   X,
-  XCircle,
   Wifi,
   WifiOff,
   Mail,
@@ -47,7 +45,6 @@ import {
   CheckCircle2,
   Zap,
   UserPlus,
-  Download,
   Database,
   Server,
   ChevronRight,
@@ -69,7 +66,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAdminSettings } from "@/contexts/AdminSettingsContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -88,9 +85,11 @@ import {
   ReferenceLine,
 } from "recharts";
 import { Tooltip as CustomTooltip } from "@/components/ui/tooltip";
-import { formatUSDT } from "@/lib/format-currency";
+import {
+  formatCurrency as formatAssetCurrency,
+} from "@/lib/format-currency";
 import { TransactionDetailsDialog } from "@/components/admin/TransactionDetailsDialog";
-import { cn, formatCurrency, getStatusLabel, getTransactionTypeLabel } from "@/lib/utils";
+import { formatCurrency, getStatusLabel, getTransactionTypeLabel } from "@/lib/utils";
 
 interface DashboardStats {
   totalUsers: number;
@@ -171,6 +170,7 @@ interface ApiUserRecord {
 interface ApiTxRecord {
   type: string;
   value?: number;
+  currency?: string;
   user?: { name?: string; email?: string };
   date?: string;
 }
@@ -203,7 +203,7 @@ interface AdminLogItem {
   timestamp: string;
 }
 
-interface TransactionDetails {
+interface _TransactionDetails {
   id: string;
   type: string;
   amount: number;
@@ -248,6 +248,17 @@ interface TransactionDetails {
 }
 
 function AdminDashboardContent() {
+  const formatTransactionValue = (value: number, currency = "BRL") => {
+    if (currency === "BRL") {
+      return formatCurrency(value);
+    }
+
+    return formatAssetCurrency(value, currency, {
+      maxDecimals: 4,
+      showCurrency: true,
+    });
+  };
+
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     pendingApprovals: 0,
@@ -330,7 +341,7 @@ function AdminDashboardContent() {
   const [loadingQuickSearch, setLoadingQuickSearch] = useState(false);
 
   // Transaction table enhancements
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [chartDateRange, setChartDateRange] = useState<number>(30);
   const [adminActivityLog, setAdminActivityLog] = useState<AdminLogItem[]>([]);
@@ -371,7 +382,6 @@ function AdminDashboardContent() {
 const { toast } = useToast();
   const { language } = useLanguage();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { settings } = useAdminSettings();
   const dashboardSectionOrder = settings.dashboardSectionOrder;
 
@@ -996,7 +1006,7 @@ const { toast } = useToast();
   };
 
   // Get receipt status from metadata
-  const getReceiptStatus = () => {
+  const _getReceiptStatus = () => {
     if (!transactionDetails?.metadata) return null;
 
     const metadata = transactionDetails.metadata as Record<string, unknown>;
@@ -1021,7 +1031,7 @@ const { toast } = useToast();
     };
   };
 
-  const handleSort = (field: keyof Transaction) => {
+  const _handleSort = (field: keyof Transaction) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
@@ -1099,7 +1109,7 @@ const { toast } = useToast();
   };
 
   // Bulk actions
-  const handleBulkAction = async (action: "approve" | "reject") => {
+  const _handleBulkAction = async (action: "approve" | "reject") => {
     if (selectedTransactions.size === 0) {
       toast({
         variant: "destructive",
@@ -1151,7 +1161,7 @@ const { toast } = useToast();
   };
 
   // Export to CSV
-  const handleExportCSV = () => {
+  const _handleExportCSV = () => {
     const headers = ["Data", "Tipo", "Usuário", "Valor", "Status"];
     const rows = filteredAndSortedTransactions.map((tx) => [
       new Date(tx.date).toLocaleString("pt-BR"),
@@ -1161,7 +1171,7 @@ const { toast } = useToast();
         : tx.user
         ? `${tx.user.name} (${tx.user.email})`
         : "N/A",
-      formatCurrency(tx.value || 0),
+      formatTransactionValue(tx.value || 0, tx.currency || "BRL"),
       getStatusLabel(tx.status),
     ]);
 
@@ -1186,7 +1196,7 @@ const { toast } = useToast();
   };
 
   // Toggle transaction selection
-  const toggleTransactionSelection = (id: string) => {
+  const _toggleTransactionSelection = (id: string) => {
     setSelectedTransactions((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -1199,7 +1209,7 @@ const { toast } = useToast();
   };
 
   // Select all filtered transactions
-  const toggleSelectAll = () => {
+  const _toggleSelectAll = () => {
     if (selectedTransactions.size === filteredAndSortedTransactions.length) {
       setSelectedTransactions(new Set());
     } else {
@@ -1295,7 +1305,7 @@ const { toast } = useToast();
     }
   }, [toast]);
 
-  const handleOpenBalanceDialog = () => {
+  const _handleOpenBalanceDialog = () => {
     setShowBalanceDialog(true);
     fetchUsersList();
   };
@@ -1519,7 +1529,10 @@ const { toast } = useToast();
           activities.push({
             type: "transaction",
             title: `Transação ${tx.type}`,
-            description: `${formatCurrency(tx.value || 0)} - ${
+            description: `${formatTransactionValue(
+              tx.value || 0,
+              tx.currency || "BRL"
+            )} - ${
               tx.user?.name || "N/A"
             }`,
             timestamp: tx.date ?? "",
@@ -1660,8 +1673,11 @@ const { toast } = useToast();
           .forEach((tx: ApiTxRecord) => {
             results.push({
               type: "transaction",
-              title: `${getTransactionTypeLabel(tx.type)} - ${formatCurrency(
-                tx.value || 0
+              title: `${getTransactionTypeLabel(
+                tx.type
+              )} - ${formatTransactionValue(
+                tx.value || 0,
+                tx.currency || "BRL"
               )}`,
               subtitle: tx.user?.name || "N/A",
               link: "#",
@@ -3440,7 +3456,10 @@ const { toast } = useToast();
                             {typeof transaction.user === "string" ? transaction.user : transaction.user?.name || "—"}
                           </td>
                           <td className="py-3 px-4 text-foreground font-medium">
-                            {formatCurrency(transaction.value || 0)}
+                            {formatTransactionValue(
+                              transaction.value || 0,
+                              transaction.currency || "BRL"
+                            )}
                           </td>
                           <td className="py-3 px-4">
                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
@@ -3561,7 +3580,7 @@ const { toast } = useToast();
               <Select
                 value={balanceCurrency}
                 onValueChange={(value) =>
-                  setBalanceCurrency(value as "USDT" | "BRL")
+                  setBalanceCurrency(value as "USDT" | "USDC" | "BRL")
                 }
               >
                 <SelectTrigger
@@ -3576,6 +3595,12 @@ const { toast } = useToast();
                     className="text-foreground hover:bg-muted"
                   >
                     USDT
+                  </SelectItem>
+                  <SelectItem
+                    value="USDC"
+                    className="text-foreground hover:bg-muted"
+                  >
+                    USDC
                   </SelectItem>
                   <SelectItem
                     value="BRL"

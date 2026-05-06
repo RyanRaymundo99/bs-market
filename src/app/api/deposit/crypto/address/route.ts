@@ -3,6 +3,11 @@ import prisma from "@/lib/prisma";
 import { paymentService } from "@/lib/payment";
 import { Decimal } from "@prisma/client/runtime/library";
 import { getMoneyControls } from "@/lib/money-controls";
+import {
+  getCryptoDepositAddress,
+  isCryptoCurrency,
+  isCryptoNetworkForCurrency,
+} from "@/lib/crypto-assets";
 
 export async function POST(request: NextRequest) {
   try {
@@ -59,24 +64,27 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse request body
-    const { network, amount, addressOnly } = await request.json();
+    const { currency = "USDT", network, amount, addressOnly } = await request.json();
 
-    if (!network || !["TRC20", "ERC20", "POLYGON"].includes(network)) {
+    if (
+      !isCryptoCurrency(currency) ||
+      !isCryptoNetworkForCurrency(currency, network)
+    ) {
       return NextResponse.json(
-        { error: "Invalid network. Must be TRC20, ERC20, or POLYGON" },
+        { error: "Invalid currency/network combination" },
         { status: 400 }
       );
     }
 
     // Generate a unique external ID for tracking this deposit
-    const externalId = `deposit_${user.id}_${network}_${Date.now()}`;
+    const externalId = `deposit_${user.id}_${currency}_${network}_${Date.now()}`;
     
     // For crypto deposits, we need a wallet address for users to send to
-    // Try to get address from environment variable first
-    let depositAddress = process.env[`DEPOSIT_ADDRESS_${network.toUpperCase()}`];
+    // Try configured env vars and known fallbacks first.
+    let depositAddress = getCryptoDepositAddress(currency, network);
     
-    // If no address configured, try to get from payment provider balance endpoint
-    if (!depositAddress) {
+    // If no USDT address is configured, try to get it from the payment provider.
+    if (!depositAddress && currency === "USDT") {
       try {
         const balanceInfo = await paymentService.getUSDTBalance();
         // Some providers return deposit address with balance info
@@ -87,29 +95,23 @@ export async function POST(request: NextRequest) {
         console.log("Could not get address from balance endpoint, using fallback");
       }
     }
-    
-    // Fallback: Use user-provided addresses as main defaults
-    const USER_CONFIGURED_ADDRESSES: Record<string, string> = {
-      TRC20: "THzBRcQGz2fY9Xcu2ZZtVhKsDDeE98iW2N",
-      POLYGON: "0x55853FfD5D8772306640B806F445Fc31C33e2FcF",
-      ERC20: "0x55853FfD5D8772306640B806F445Fc31C33e2FcF",
-    };
 
     if (!depositAddress) {
-      depositAddress = USER_CONFIGURED_ADDRESSES[network] || 
-        process.env.DEPOSIT_ADDRESS_MAIN || 
-        process.env.PAYMENT_DEPOSIT_ADDRESS ||
-        `TMainDepositAddress_${network}`;
-      
-      console.warn(`Using fallback deposit address for network ${network}. Configure DEPOSIT_ADDRESS_${network} or PAYMENT_DEPOSIT_ADDRESS in environment variables.`);
+      return NextResponse.json(
+        {
+          error: `Deposit address is not configured for ${currency} on ${network}`,
+        },
+        { status: 500 }
+      );
     }
 
     if (addressOnly) {
       return NextResponse.json({
         success: true,
         address: depositAddress,
+        currency,
         network: network,
-        message: "Deposit address generated. Enter the amount and transaction hash after sending USDT.",
+        message: `Deposit address generated. Enter the amount and transaction hash after sending ${currency}.`,
       });
     }
 
@@ -134,9 +136,9 @@ export async function POST(request: NextRequest) {
         data: {
           userId: user.id,
           amount: requestedAmount,
-          currency: "USDT",
+          currency,
           status: "PENDING",
-          paymentMethod: "USDT",
+          paymentMethod: currency,
           externalId: externalId,
           paymentId: depositAddress,
           createdAt: new Date(),
@@ -145,7 +147,7 @@ export async function POST(request: NextRequest) {
 
       // 2. Get current user balance for USDT
       const balance = await tx.balance.findUnique({
-        where: { userId_currency: { userId: user.id, currency: "USDT" } },
+        where: { userId_currency: { userId: user.id, currency } },
       });
       const currentBalance = balance?.amount || new Decimal(0);
 
@@ -155,11 +157,12 @@ export async function POST(request: NextRequest) {
           userId: user.id,
           type: "DEPOSIT",
           amount: requestedAmount,
-          currency: "USDT",
+          currency,
           balance: currentBalance, // Current balance, will be updated upon confirmation
-          description: `Depósito USDT via ${network}`,
+          description: `Depósito ${currency} via ${network}`,
           metadata: {
             depositId: deposit.id,
+            currency,
             network: network,
             address: depositAddress,
             requestedAmount: requestedAmount.toNumber(),
@@ -182,10 +185,10 @@ export async function POST(request: NextRequest) {
         getAdminAlertSettings().then((settings) =>
           sendAdminAlertToAll(
             settings,
-            "Novo depósito USDT (cripto) iniciado",
+            `Novo depósito ${currency} (cripto) iniciado`,
             [
               `Usuário: ${user.name} (${user.email})`,
-              `Valor: ${requestedAmount.toNumber()} USDT`,
+              `Valor: ${requestedAmount.toNumber()} ${currency}`,
               `Rede: ${network}`,
               `ID depósito: ${result.deposit.id}`,
               `Endereço: ${depositAddress}`,
@@ -198,12 +201,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       address: depositAddress,
+      currency,
       network: network,
       depositId: result.deposit.id,
       transactionId: result.transaction.id,
       externalId: externalId,
       amount: requestedAmount.toNumber(),
-      message: "Deposit address generated. Send USDT to this address.",
+      message: `Deposit address generated. Send ${currency} to this address.`,
     });
   } catch (error) {
     console.error("Error generating deposit address:", error);

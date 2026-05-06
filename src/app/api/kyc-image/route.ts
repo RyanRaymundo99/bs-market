@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
 
     if (isHeic && buffer.length > 0) {
       const jpegBuffer = await heicToJpegBuffer(buffer);
-      return new NextResponse(jpegBuffer, {
+      return new NextResponse(new Uint8Array(jpegBuffer), {
         headers: {
           "Content-Type": "image/jpeg",
           "Cache-Control": "public, max-age=86400",
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    return new NextResponse(buffer, {
+    return new NextResponse(new Uint8Array(buffer), {
       headers: {
         "Content-Type": res.headers.get("content-type") || "image/jpeg",
         "Cache-Control": "public, max-age=86400",

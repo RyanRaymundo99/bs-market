@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,15 +22,6 @@ import {
   Download,
   Wallet,
   CheckCircle,
-  Plus,
-  Minus,
-  Clock,
-  XCircle,
-  Mail,
-  Send,
-  ChevronLeft,
-  ChevronRight,
-  TrendingUp,
 } from "lucide-react";
 import {
   Dialog,
@@ -41,11 +32,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { useAdminSettings } from "@/contexts/AdminSettingsContext";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { formatUSDT } from "@/lib/format-currency";
+import {
+  formatCurrency as formatAssetCurrency,
+  formatUSDT,
+} from "@/lib/format-currency";
 
 interface Transaction {
   id: string;
@@ -130,9 +120,6 @@ interface ApiUserRecord {
 
 function TransactionsPageContent() {
   const { toast } = useToast();
-  const { language } = useLanguage();
-  const router = useRouter();
-  const { settings } = useAdminSettings();
 
   // State
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -158,9 +145,6 @@ function TransactionsPageContent() {
   const [, setSelectedTransaction] = useState<Transaction | null>(null);
 
   // Action states
-  const [processingTransaction, setProcessingTransaction] = useState<string | null>(null);
-  const [resendingReceipt, setResendingReceipt] = useState(false);
-  const [syncingStatus, setSyncingStatus] = useState(false);
   const [markingCompleted, setMarkingCompleted] = useState(false);
   const [rejectingTransaction, setRejectingTransaction] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
@@ -171,22 +155,30 @@ function TransactionsPageContent() {
   // Balance adjustment
   const [showBalanceDialog, setShowBalanceDialog] = useState(false);
   const [balanceUserId, setBalanceUserId] = useState("");
-  const [balanceCurrency, setBalanceCurrency] = useState<"USDT" | "BRL">("USDT");
+  const [balanceCurrency, setBalanceCurrency] =
+    useState<"USDT" | "USDC" | "BRL">("USDT");
   const [balanceAmount, setBalanceAmount] = useState("");
   const [balanceOperation, setBalanceOperation] = useState<"CREDIT" | "DEDUCT">("CREDIT");
   const [balanceReason, setBalanceReason] = useState("");
   const [processingBalance, setProcessingBalance] = useState(false);
   const [usersList, setUsersList] = useState<ApiUserRecord[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [, setLoadingUsers] = useState(false);
 
   const lastUpdateTimeRef = useRef<Date>(new Date());
 
   // Helpers
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
+  const formatCurrency = (value: number, currency = "BRL") => {
+    if (currency === "BRL") {
+      return new Intl.NumberFormat("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+      }).format(value);
+    }
+
+    return formatAssetCurrency(value, currency, {
+      maxDecimals: 4,
+      showCurrency: true,
+    });
   };
 
   const getTransactionTypeLabel = (type: string) => {
@@ -405,7 +397,7 @@ function TransactionsPageContent() {
       } else {
         throw new Error(data.error);
       }
-    } catch (error) {
+    } catch {
       toast({ variant: "destructive", title: "Erro", description: "Falha ao rejeitar" });
     } finally {
       setRejectingTransaction(false);
@@ -418,7 +410,7 @@ function TransactionsPageContent() {
       new Date(tx.date).toLocaleString("pt-BR"),
       getTransactionTypeLabel(tx.type),
       typeof tx.user === "string" ? tx.user : tx.user ? `${tx.user.name} (${tx.user.email})` : "N/A",
-      formatCurrency(tx.value || 0),
+      formatCurrency(tx.value || 0, tx.currency || "BRL"),
       getStatusLabel(tx.status),
     ]);
 
@@ -517,7 +509,7 @@ function TransactionsPageContent() {
     }
   };
 
-  const handleBulkAction = async (action: "approve") => {
+  const handleBulkAction = async (_action: "approve") => {
     if (selectedTransactions.size === 0) return;
     const confirm = window.confirm(`Deseja aprovar ${selectedTransactions.size} transações?`);
     if (!confirm) return;
@@ -778,7 +770,7 @@ function TransactionsPageContent() {
                       {typeof tx.user === "string" ? tx.user : tx.user?.name || "N/A"}
                     </td>
                     <td className="py-3 px-4 font-mono font-bold text-foreground">
-                      {formatCurrency(tx.value || 0)}
+                      {formatCurrency(tx.value || 0, tx.currency || "BRL")}
                     </td>
                     <td className="py-3 px-4">
                       <span className={`px-2 py-1 rounded text-[11px] font-semibold ${
@@ -833,7 +825,12 @@ function TransactionsPageContent() {
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Valor</p>
-                    <p className="font-mono text-xl font-bold text-primary">{formatCurrency(transactionDetails.amount)} {transactionDetails.currency}</p>
+                    <p className="font-mono text-xl font-bold text-primary">
+                      {formatCurrency(
+                        transactionDetails.amount,
+                        transactionDetails.currency
+                      )}
+                    </p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Data</p>
@@ -1059,13 +1056,16 @@ function TransactionsPageContent() {
                   <Label>Moeda</Label>
                   <Select
                     value={balanceCurrency}
-                    onValueChange={(v) => setBalanceCurrency(v as "USDT" | "BRL")}
+                    onValueChange={(v) =>
+                      setBalanceCurrency(v as "USDT" | "USDC" | "BRL")
+                    }
                   >
                     <SelectTrigger className="bg-muted border-border">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-muted border-border">
                        <SelectItem value="USDT">USDT</SelectItem>
+                       <SelectItem value="USDC">USDC</SelectItem>
                        <SelectItem value="BRL">BRL</SelectItem>
                     </SelectContent>
                   </Select>

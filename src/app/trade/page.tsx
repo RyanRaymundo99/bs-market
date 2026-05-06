@@ -43,6 +43,15 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import QRCode from "qrcode";
 import { TransactionReceipt } from "@/components/TransactionReceipt";
 import { PixPaymentDialog } from "@/components/trade/PixPaymentDialog";
+import { useMobileMenuOpen } from "@/hooks/useMobileMenuOpen";
+import {
+  CRYPTO_CURRENCIES,
+  CRYPTO_NETWORK_LABELS,
+  CryptoCurrency,
+  CryptoNetwork,
+  getCryptoNetworks,
+  getDefaultCryptoNetwork,
+} from "@/lib/crypto-assets";
 
 import { handleLogout as performLogout } from "../../lib/auth-utils";
 import { formatUSDTInput, parseUSDTInput, formatBRL, formatUSDT, getWhatsAppUrlForLargeDeposit } from "../../lib/trade-utils";
@@ -71,11 +80,8 @@ const TradePage = () => {
   const [inMaintenance, setInMaintenance] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState<string>("");
 
-  // Swipe gesture state for mobile navigation
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [isMobile, setIsMobile] = useState(false);
-  const minSwipeDistance = 50;
+  const mobileMenuOpen = useMobileMenuOpen();
 
   // Detect mobile device
   useEffect(() => {
@@ -120,34 +126,6 @@ const TradePage = () => {
     loadMoneyStatus();
   }, []);
 
-  // Swipe gesture handlers
-  const onTouchStart = (e: React.TouchEvent) => {
-    if (!isMobile) return;
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
-  };
-
-  const onTouchMove = (e: React.TouchEvent) => {
-    if (!isMobile) return;
-    setTouchEnd(e.targetTouches[0].clientX);
-  };
-
-  const onTouchEnd = () => {
-    if (!isMobile || !touchStart || !touchEnd) return;
-
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > minSwipeDistance;
-    const isRightSwipe = distance < -minSwipeDistance;
-
-    if (isLeftSwipe) {
-      // Swipe left -> go to withdraw
-      router.push("/withdraw");
-    } else if (isRightSwipe) {
-      // Swipe right -> go to dashboard
-      router.push("/dashboard");
-    }
-  };
-
   const handleLogout = useCallback(async () => {
     setIsLoggingOut(true);
     await performLogout();
@@ -183,6 +161,7 @@ const TradePage = () => {
     depositId?: string;
     amount: number;
     usdtAmount: number;
+    currency?: CryptoCurrency;
     date: Date;
     type?: string;
   } | null>(null);
@@ -210,7 +189,9 @@ const TradePage = () => {
     new Set()
   );
 
-  const [cryptoNetwork, setCryptoNetwork] = useState<"TRC20" | "ERC20" | "POLYGON">("TRC20");
+  const [cryptoCurrency, setCryptoCurrency] = useState<CryptoCurrency>("USDT");
+  const [cryptoNetwork, setCryptoNetwork] =
+    useState<CryptoNetwork>(getDefaultCryptoNetwork("USDT"));
   const [cryptoAddress, setCryptoAddress] = useState<string>("");
   const [cryptoAddressLoading, setCryptoAddressLoading] = useState(false);
   const [cryptoQrCode, setCryptoQrCode] = useState<string>("");
@@ -743,7 +724,7 @@ const TradePage = () => {
             if (decodedCode) {
               pixCode = decodedCode;
             }
-          } catch (error) {
+          } catch {
             // Error decoding QR code from image is non-fatal as the user can still see the image
           }
         }
@@ -882,14 +863,31 @@ const TradePage = () => {
     }
   };
 
-  const fetchCryptoAddress = useCallback(async (network: string) => {
+  const resetCryptoAddress = () => {
+    setCryptoAddress("");
+    setCryptoQrCode("");
+    setReceiptData(null);
+  };
+
+  const handleCryptoCurrencyChange = (currency: CryptoCurrency) => {
+    setCryptoCurrency(currency);
+    setCryptoNetwork(getDefaultCryptoNetwork(currency));
+    resetCryptoAddress();
+  };
+
+  const handleCryptoNetworkChange = (network: CryptoNetwork) => {
+    setCryptoNetwork(network);
+    resetCryptoAddress();
+  };
+
+  const fetchCryptoAddress = useCallback(async (currency: CryptoCurrency, network: CryptoNetwork) => {
     try {
       setCryptoAddressLoading(true);
       const response = await fetch("/api/deposit/crypto/address", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ network, addressOnly: true }),
+        body: JSON.stringify({ currency, network, addressOnly: true }),
       });
 
       if (!response.ok) {
@@ -941,7 +939,7 @@ const TradePage = () => {
       });
       return;
     }
-    fetchCryptoAddress(cryptoNetwork);
+    fetchCryptoAddress(cryptoCurrency, cryptoNetwork);
   };
 
   const handleSimulatePayment = async () => {
@@ -1021,6 +1019,7 @@ const TradePage = () => {
           depositId: receiptData?.depositId,
           transactionId: depositRef,
           amount,
+          currency: cryptoCurrency,
           network: cryptoNetwork,
           address: cryptoAddress,
           hash: cryptoHash.trim(),
@@ -1037,6 +1036,7 @@ const TradePage = () => {
             depositId,
             amount,
             usdtAmount: amount,
+            currency: cryptoCurrency,
             date: new Date(),
             type: "CRYPTO",
           });
@@ -1113,12 +1113,7 @@ const TradePage = () => {
 
   return (
 
-    <div
-      className="min-h-screen bg-background text-foreground"
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
-    >
+    <div className="min-h-screen bg-background text-foreground">
       <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
       <GlobalKYCBanner />
       <div
@@ -1378,39 +1373,38 @@ const TradePage = () => {
                     <label className="block text-sm font-medium text-foreground mb-3">
                       {language === "pt" ? "Selecione a moeda:" : "Select currency:"}
                     </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
-                      <button
-                        type="button"
-                        className="px-3 py-2.5 rounded-xl border text-xs font-semibold transition-all bg-primary/20 border-primary text-primary"
-                      >
-                        USDT
-                      </button>
+                    <div className="grid grid-cols-2 gap-2 mb-4">
+                      {CRYPTO_CURRENCIES.map((currency) => (
+                        <button
+                          key={currency}
+                          type="button"
+                          onClick={() => handleCryptoCurrencyChange(currency)}
+                          className={`px-3 py-2.5 rounded-xl border text-xs font-semibold transition-all ${
+                            cryptoCurrency === currency
+                              ? "bg-primary/20 border-primary text-primary"
+                              : "bg-muted/50 border-border text-muted-foreground hover:border-primary/50"
+                          }`}
+                        >
+                          {currency}
+                        </button>
+                      ))}
                     </div>
 
                     <label className="block text-sm font-medium text-foreground mb-2">
                       {language === "pt" ? "Selecione a Rede (Network):" : "Select Network:"}
                     </label>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {([
-                        { id: "TRC20", label: "Tron" },
-                        { id: "POLYGON", label: "Polygon" },
-                        { id: "ERC20", label: "Ethereum" },
-                      ] as const).map((network) => (
+                      {getCryptoNetworks(cryptoCurrency).map((network) => (
                         <button
-                          key={network.id}
-                          onClick={() => {
-                            setCryptoNetwork(network.id);
-                            setCryptoAddress(""); // Reset address when network changes
-                            setCryptoQrCode("");
-                            setReceiptData(null);
-                          }}
+                          key={network}
+                          onClick={() => handleCryptoNetworkChange(network)}
                           className={`px-3 py-2.5 rounded-xl border text-xs font-semibold transition-all ${
-                            cryptoNetwork === network.id
+                            cryptoNetwork === network
                               ? "bg-primary/20 border-primary text-primary"
                               : "bg-muted/50 border-border text-muted-foreground hover:border-primary/50"
                           }`}
                         >
-                          {network.label}
+                          {CRYPTO_NETWORK_LABELS[network]}
                         </button>
                       ))}
                     </div>
@@ -1458,7 +1452,9 @@ const TradePage = () => {
                           
                           <div className="flex-1 space-y-3 w-full">
                             <label className="block text-[10px] font-bold text-primary uppercase tracking-widest mb-1.5">
-                              {language === "pt" ? "Endereço USDT (" + cryptoNetwork + "):" : "USDT Address (" + cryptoNetwork + "):"}
+                              {language === "pt"
+                                ? `Endereço ${cryptoCurrency} (${cryptoNetwork}):`
+                                : `${cryptoCurrency} Address (${cryptoNetwork}):`}
                             </label>
                             
                             <div className="flex items-center gap-2">
@@ -1480,7 +1476,9 @@ const TradePage = () => {
 
                       <div className="space-y-3 pt-2 border-t border-border/50">
                         <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                          {language === "pt" ? "Valor enviado em USDT:" : "USDT amount sent:"}
+                          {language === "pt"
+                            ? `Valor enviado em ${cryptoCurrency}:`
+                            : `${cryptoCurrency} amount sent:`}
                         </label>
                         <input
                           type="text"
@@ -1560,8 +1558,8 @@ const TradePage = () => {
                           </div>
                           <p className="text-xs text-muted-foreground leading-relaxed">
                             {language === "pt" 
-                              ? `Certifique-se de enviar exatamente ${cryptoAmount} USDT via rede ${cryptoNetwork}. O envio de qualquer outra moeda resultará em perda permanente.` 
-                              : `Make sure to only send exactly ${cryptoAmount} USDT via the ${cryptoNetwork} network. Sending any other currency will result in permanent loss.`}
+                              ? `Certifique-se de enviar exatamente ${cryptoAmount} ${cryptoCurrency} via rede ${cryptoNetwork}. O envio de qualquer outra moeda ou rede resultará em perda permanente.` 
+                              : `Make sure to only send exactly ${cryptoAmount} ${cryptoCurrency} via the ${cryptoNetwork} network. Sending any other currency or network will result in permanent loss.`}
                           </p>
                         </div>
                         <div className="flex items-start gap-3">
@@ -1807,6 +1805,7 @@ const TradePage = () => {
                 date: receiptData.date,
                 status: transactionHistory.find(t => t.id === receiptData.transactionId)?.status || "PENDING",
                 type: receiptData.type,
+                currency: receiptData.currency,
                 network: cryptoNetwork,
                 address: cryptoAddress
               }}
@@ -1818,7 +1817,7 @@ const TradePage = () => {
       </Dialog>
 
       {/* Mobile Page Indicator - Bottom Navigation */}
-      {isMobile && (
+      {isMobile && !mobileMenuOpen && (
         <div
           className="fixed bottom-0 left-0 right-0 z-50"
           style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}

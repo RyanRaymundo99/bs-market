@@ -45,7 +45,15 @@ import { PageLoader, ButtonLoader } from "@/components/ui/loading";
 import { GlobalKYCBanner } from "@/components/GlobalKYCBanner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useMobileMenuOpen } from "@/hooks/useMobileMenuOpen";
-import { formatUSDT, formatBRL } from "@/lib/format-currency";
+import { formatCurrency, formatBRL } from "@/lib/format-currency";
+import {
+  CRYPTO_CURRENCIES,
+  CRYPTO_NETWORK_LABELS,
+  CryptoCurrency,
+  CryptoNetwork,
+  getCryptoNetworks,
+  getDefaultCryptoNetwork,
+} from "@/lib/crypto-assets";
 
 interface CryptoBalance {
   currency: string;
@@ -63,7 +71,8 @@ interface WalletData {
 
 interface WithdrawalHistory {
   id: string;
-  type: "USDT" | "PIX";
+  type: CryptoCurrency | "PIX";
+  currency?: string;
   amount: number;
   status: "PENDING" | "PROCESSING" | "COMPLETED" | "REJECTED";
   createdAt: string;
@@ -78,7 +87,8 @@ interface WithdrawalHistory {
 
 interface WithdrawalReceiptDetails {
   id: string;
-  type: "USDT" | "PIX";
+  type: CryptoCurrency | "PIX";
+  currency?: string;
   amount: number;
   netAmount?: number | null;
   fee?: number | null;
@@ -135,12 +145,8 @@ export default function WithdrawPage() {
   const [withdrawalsDisabledMessage, setWithdrawalsDisabledMessage] =
     useState<string>("");
 
-  // Swipe gesture state for mobile navigation
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const mobileMenuOpen = useMobileMenuOpen();
-  const minSwipeDistance = 50;
 
   // Detect mobile device
   useEffect(() => {
@@ -156,33 +162,6 @@ export default function WithdrawPage() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // Swipe gesture handlers
-  const onTouchStart = (e: React.TouchEvent) => {
-    if (!isMobile) return;
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
-  };
-
-  const onTouchMove = (e: React.TouchEvent) => {
-    if (!isMobile) return;
-    setTouchEnd(e.targetTouches[0].clientX);
-  };
-
-  const onTouchEnd = () => {
-    if (!isMobile || !touchStart || !touchEnd) return;
-
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > minSwipeDistance;
-    const isRightSwipe = distance < -minSwipeDistance;
-
-    if (isLeftSwipe) {
-      // Swipe left -> go to dashboard (wrap around)
-      router.push("/dashboard");
-    } else if (isRightSwipe) {
-      // Swipe right -> go to deposit (trade page)
-      router.push("/trade");
-    }
-  };
   const [processing, setProcessing] = useState(false);
   const [withdrawalHistory, setWithdrawalHistory] = useState<
     WithdrawalHistory[]
@@ -193,13 +172,18 @@ export default function WithdrawPage() {
     useState<WithdrawalReceiptDetails | null>(null);
   const [newTransactionId, setNewTransactionId] = useState<string | null>(null);
 
-  // USDT Form States
+  // Crypto Form States
+  const [selectedCurrency, setSelectedCurrency] =
+    useState<CryptoCurrency>("USDT");
   const [usdtAmount, setUsdtAmount] = useState("");
   const [walletAddress, setWalletAddress] = useState("");
-  const [selectedNetwork, setSelectedNetwork] = useState("TRC20");
+  const [selectedNetwork, setSelectedNetwork] =
+    useState<CryptoNetwork>(getDefaultCryptoNetwork("USDT"));
 
   // PIX Form States
-  const [withdrawalType, setWithdrawalType] = useState<"USDT" | "PIX">("USDT");
+  const [withdrawalType, setWithdrawalType] = useState<"CRYPTO" | "PIX">(
+    "CRYPTO"
+  );
   const [pixAmount, setPixAmount] = useState("");
   const [pixKey, setPixKey] = useState("");
   const [pixCPF, setPixCPF] = useState("");
@@ -209,6 +193,15 @@ export default function WithdrawPage() {
 
   const { toast } = useToast();
   const { t, language } = useLanguage();
+
+  const selectedBalance = walletData?.balances.find(
+    (balance) => balance.currency === selectedCurrency
+  );
+
+  const handleCurrencyChange = (currency: CryptoCurrency) => {
+    setSelectedCurrency(currency);
+    setSelectedNetwork(getDefaultCryptoNetwork(currency));
+  };
 
   useEffect(() => {
     const loadMoneyStatus = async () => {
@@ -370,8 +363,8 @@ export default function WithdrawPage() {
     }
   }, []);
 
-  // Handle USDT withdrawal
-  const handleUSDTWithdrawal = async () => {
+  // Handle crypto withdrawal
+  const handleCryptoWithdrawal = async () => {
     if (withdrawalsDisabled) {
       toast({
         title: language === "pt" ? "Indisponível" : "Unavailable",
@@ -387,7 +380,10 @@ export default function WithdrawPage() {
     if (!usdtAmount || parseFloat(usdtAmount) <= 0) {
       toast({
         title: t("invalidAmount"),
-        description: t("enterValidUSDT"),
+        description:
+          language === "pt"
+            ? `Digite um valor válido em ${selectedCurrency}`
+            : `Enter a valid ${selectedCurrency} amount`,
         variant: "destructive",
       });
       return;
@@ -409,6 +405,7 @@ export default function WithdrawPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           amount: parseFloat(usdtAmount),
+          currency: selectedCurrency,
           walletAddress: walletAddress.trim(),
           network: selectedNetwork,
         }),
@@ -420,7 +417,8 @@ export default function WithdrawPage() {
         setNewTransactionId(data.data.id || data.data.transaction_id || null);
         setSuccessDetails({
           id: data.data.external_id || data.data.transaction_id || "",
-          type: "USDT",
+          type: selectedCurrency,
+          currency: selectedCurrency,
           amount: Number(data.data.amount ?? parseFloat(usdtAmount)),
           netAmount: Number(
             data.data.net_amount ?? calculateUSDTNetAmount()
@@ -440,7 +438,9 @@ export default function WithdrawPage() {
         fetchWithdrawalHistory();
       } else {
         const error = await response.json();
-        throw new Error(error.error || "Failed to process USDT withdrawal");
+        throw new Error(
+          error.error || `Failed to process ${selectedCurrency} withdrawal`
+        );
       }
     } catch (error) {
       toast({
@@ -468,7 +468,7 @@ export default function WithdrawPage() {
     }
   };
 
-  // Calculate USDT net amount based on network fee
+  // Calculate crypto net amount based on network fee
   const calculateUSDTNetAmount = () => {
     if (!usdtAmount || parseFloat(usdtAmount) <= 0) return 0;
     const amount = parseFloat(usdtAmount);
@@ -778,15 +778,8 @@ export default function WithdrawPage() {
     );
   }
 
-  const usdtBalance = walletData?.balances.find((b) => b.currency === "USDT");
-
   return (
-    <div
-      className="min-h-screen bg-background"
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
-    >
+    <div className="min-h-screen bg-background">
       <NavbarNew isLoggingOut={false} handleLogout={() => {}} />
       <GlobalKYCBanner />
       <div
@@ -806,7 +799,7 @@ export default function WithdrawPage() {
               <CardHeader>
                 <div className="text-center mb-6">
                   <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
-                    {t("withdrawUSDT")}
+                    {language === "pt" ? "Sacar" : "Withdraw"}
                   </h1>
                   <p className="text-muted-foreground text-sm sm:text-base">
                     {t("chooseWithdrawalMethod")}
@@ -832,16 +825,16 @@ export default function WithdrawPage() {
                 <div className="mb-4 flex justify-center">
                   <div className="relative inline-flex items-center bg-muted/60 border border-border rounded-xl p-1">
                     <button
-                      onClick={() => setWithdrawalType("USDT")}
+                      onClick={() => setWithdrawalType("CRYPTO")}
                       className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                        withdrawalType === "USDT"
+                        withdrawalType === "CRYPTO"
                           ? "bg-primary text-primary-foreground shadow-sm"
                           : "text-muted-foreground hover:text-foreground hover:bg-muted"
                       }`}
                     >
                       <div className="flex items-center justify-center gap-2">
                         <Coins className="h-4 w-4" />
-                        <span>USDT</span>
+                        <span>Cripto</span>
                       </div>
                     </button>
                     <div className="h-6 w-px bg-border mx-1" />
@@ -861,10 +854,12 @@ export default function WithdrawPage() {
                   </div>
                 </div>
                 <CardTitle className="flex items-center gap-2 text-foreground">
-                  {withdrawalType === "USDT" ? (
+                  {withdrawalType === "CRYPTO" ? (
                     <>
                       <Coins className="h-5 w-5 text-primary" />
-                      {t("withdrawViaUSDT")}
+                      {language === "pt"
+                        ? `Saque via ${selectedCurrency}`
+                        : `Withdraw via ${selectedCurrency}`}
                     </>
                   ) : (
                     <>
@@ -874,15 +869,17 @@ export default function WithdrawPage() {
                   )}
                 </CardTitle>
                 <CardDescription className="text-muted-foreground">
-                  {withdrawalType === "USDT"
-                    ? t("sendUSDTToWallet")
+                  {withdrawalType === "CRYPTO"
+                    ? language === "pt"
+                      ? `Envie ${selectedCurrency} para sua carteira`
+                      : `Send ${selectedCurrency} to your wallet`
                     : language === "pt"
                     ? "Receba em reais na sua chave PIX"
                     : "Receive in BRL to your PIX key"}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4 sm:space-y-6">
-                {withdrawalType === "USDT" ? (
+                {withdrawalType === "CRYPTO" ? (
                   <>
                     <div className="p-4 sm:p-6 bg-primary/10 rounded-xl border border-primary/30">
                       <div className="flex items-center gap-2 mb-2">
@@ -892,13 +889,41 @@ export default function WithdrawPage() {
                         </span>
                       </div>
                       <p className="text-2xl sm:text-3xl font-bold text-primary">
-                        {usdtBalance && typeof usdtBalance.amount === "number"
-                          ? formatUSDT(usdtBalance.amount)
-                          : "0 USDT"}
+                        {selectedBalance &&
+                        typeof selectedBalance.amount === "number"
+                          ? formatCurrency(
+                              selectedBalance.amount,
+                              selectedCurrency,
+                              { maxDecimals: 4 }
+                            )
+                          : `0 ${selectedCurrency}`}
                       </p>
                     </div>
 
                     <div className="space-y-4">
+                      <div>
+                        <Label className="text-foreground">
+                          {language === "pt" ? "Moeda" : "Currency"}
+                        </Label>
+                        <Select
+                          value={selectedCurrency}
+                          onValueChange={(value) =>
+                            handleCurrencyChange(value as CryptoCurrency)
+                          }
+                        >
+                          <SelectTrigger className="bg-muted/50 border-border text-foreground focus:ring-primary rounded-xl">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {CRYPTO_CURRENCIES.map((currency) => (
+                              <SelectItem key={currency} value={currency}>
+                                {currency}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
                       <div>
                         <Label htmlFor="usdt-amount" className="text-foreground">
                           {t("amountToWithdraw")}
@@ -911,7 +936,9 @@ export default function WithdrawPage() {
                           onChange={(e) => setUsdtAmount(e.target.value)}
                           min="0"
                           step="0.01"
-                          max={usdtBalance ? usdtBalance.amount : undefined}
+                          max={
+                            selectedBalance ? selectedBalance.amount : undefined
+                          }
                           className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground focus:ring-primary rounded-xl"
                         />
                       </div>
@@ -936,21 +963,21 @@ export default function WithdrawPage() {
                         </Label>
                         <Select
                           value={selectedNetwork}
-                          onValueChange={setSelectedNetwork}
+                          onValueChange={(value) =>
+                            setSelectedNetwork(value as CryptoNetwork)
+                          }
                         >
                           <SelectTrigger className="bg-muted/50 border-border text-foreground focus:ring-primary rounded-xl">
                             <SelectValue placeholder={t("selectNetwork")} />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="TRC20">
-                              {t("trc20Option")}
-                            </SelectItem>
-                            <SelectItem value="ERC20">
-                              {t("erc20Option")}
-                            </SelectItem>
-                            <SelectItem value="POLYGON">
-                              {t("polygonOption")}
-                            </SelectItem>
+                            {getCryptoNetworks(selectedCurrency).map(
+                              (network) => (
+                                <SelectItem key={network} value={network}>
+                                  {CRYPTO_NETWORK_LABELS[network]}
+                                </SelectItem>
+                              )
+                            )}
                           </SelectContent>
                         </Select>
                       </div>
@@ -961,7 +988,10 @@ export default function WithdrawPage() {
                             {t("networkFee")}
                           </span>
                           <span className="text-sm font-medium text-destructive">
-                            -{formatUSDT(getNetworkFee())}
+                            -
+                            {formatCurrency(getNetworkFee(), selectedCurrency, {
+                              maxDecimals: 4,
+                            })}
                           </span>
                         </div>
                         <div className="flex items-center justify-between pt-2 border-t border-border">
@@ -969,13 +999,17 @@ export default function WithdrawPage() {
                             {t("netTotal")}
                           </span>
                           <span className="text-lg sm:text-xl font-bold text-primary">
-                            {formatUSDT(calculateUSDTNetAmount() || 0)}
+                            {formatCurrency(
+                              calculateUSDTNetAmount() || 0,
+                              selectedCurrency,
+                              { maxDecimals: 4 }
+                            )}
                           </span>
                         </div>
                       </div>
 
                       <Button
-                        onClick={handleUSDTWithdrawal}
+                        onClick={handleCryptoWithdrawal}
                         disabled={
                           withdrawalsDisabled ||
                           processing ||
@@ -992,7 +1026,9 @@ export default function WithdrawPage() {
                             className="text-primary-foreground"
                           />
                         ) : (
-                          t("sendUSDT")
+                          language === "pt"
+                            ? `Enviar ${selectedCurrency}`
+                            : `Send ${selectedCurrency}`
                         )}
                       </Button>
                     </div>
@@ -1193,13 +1229,19 @@ export default function WithdrawPage() {
                             variant="secondary"
                             className="bg-primary/20 text-primary border-primary/30"
                           >
-                            {withdrawal.type === "PIX" ? "PIX" : "USDT"}
+                            {withdrawal.type === "PIX"
+                              ? "PIX"
+                              : withdrawal.currency || withdrawal.type}
                           </Badge>
                         </td>
                         <td className="py-3 px-4 font-medium text-foreground">
                           {withdrawal.type === "PIX"
                             ? formatBRL(withdrawal.amount)
-                            : formatUSDT(withdrawal.amount)}
+                            : formatCurrency(
+                                withdrawal.amount,
+                                withdrawal.currency || withdrawal.type,
+                                { maxDecimals: 4 }
+                              )}
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
@@ -1262,7 +1304,11 @@ export default function WithdrawPage() {
                   <p className="text-3xl font-bold text-primary">
                     {successDetails.type === "PIX"
                       ? formatBRL(successDetails.amount)
-                      : formatUSDT(successDetails.amount)}
+                      : formatCurrency(
+                          successDetails.amount,
+                          successDetails.currency || successDetails.type,
+                          { maxDecimals: 4 }
+                        )}
                   </p>
                   <Badge className="bg-primary text-primary-foreground">
                     {getReceiptStatusLabel(successDetails.status)}
@@ -1278,7 +1324,9 @@ export default function WithdrawPage() {
                   <p className="mt-1 font-semibold text-foreground">
                     {successDetails.type === "PIX"
                       ? "PIX (BRL)"
-                      : `${successDetails.network || selectedNetwork} USDT`}
+                      : `${successDetails.network || selectedNetwork} ${
+                          successDetails.currency || successDetails.type
+                        }`}
                   </p>
                 </div>
                 <div className="rounded-xl border border-border bg-muted/30 p-4">
@@ -1340,7 +1388,11 @@ export default function WithdrawPage() {
                   <span className="font-medium text-foreground">
                     {successDetails.type === "PIX"
                       ? formatBRL(Number(successDetails.fee || 0))
-                      : formatUSDT(Number(successDetails.fee || 0))}
+                      : formatCurrency(
+                          Number(successDetails.fee || 0),
+                          successDetails.currency || successDetails.type,
+                          { maxDecimals: 4 }
+                        )}
                   </span>
                 </div>
                 <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-sm">
@@ -1352,8 +1404,10 @@ export default function WithdrawPage() {
                       ? formatBRL(
                           Number(successDetails.netAmount ?? successDetails.amount)
                         )
-                      : formatUSDT(
-                          Number(successDetails.netAmount ?? successDetails.amount)
+                      : formatCurrency(
+                          Number(successDetails.netAmount ?? successDetails.amount),
+                          successDetails.currency || successDetails.type,
+                          { maxDecimals: 4 }
                         )}
                   </span>
                 </div>
@@ -1365,8 +1419,8 @@ export default function WithdrawPage() {
                     ? "Seu saque PIX foi registrado e será processado manualmente. Prazo estimado: até 24 horas úteis."
                     : "Your PIX withdrawal was registered and will be processed manually. Estimated time: up to 24 business hours."
                   : language === "pt"
-                  ? "Seu saque USDT foi enviado para processamento. A confirmação pode depender da rede selecionada."
-                  : "Your USDT withdrawal was sent for processing. Confirmation can depend on the selected network."}
+                  ? `Seu saque ${successDetails.currency || successDetails.type} foi enviado para processamento. A confirmação pode depender da rede selecionada.`
+                  : `Your ${successDetails.currency || successDetails.type} withdrawal was sent for processing. Confirmation can depend on the selected network.`}
               </div>
             </div>
           ) : null}

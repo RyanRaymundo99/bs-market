@@ -3,6 +3,10 @@ import prisma from "@/lib/prisma";
 import { sendWithdrawalReceipt } from "@/lib/receipt-email";
 import { getMoneyControls } from "@/lib/money-controls";
 import {
+  isCryptoCurrency,
+  isCryptoNetworkForCurrency,
+} from "@/lib/crypto-assets";
+import {
   getAdminAlertSettings,
   sendAdminAlertToAll,
 } from "@/lib/admin-alert-email";
@@ -86,7 +90,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse request body
-    const { amount, walletAddress, network } = await request.json();
+    const { amount, currency = "USDT", walletAddress, network } = await request.json();
 
     // Validate input
     if (!amount || amount <= 0) {
@@ -103,26 +107,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate network
-    const validNetworks = ["TRC20", "ERC20", "POLYGON"];
-    if (!validNetworks.includes(network)) {
+    // Validate currency/network
+    if (
+      !isCryptoCurrency(currency) ||
+      !isCryptoNetworkForCurrency(currency, network)
+    ) {
       return NextResponse.json(
-        { error: "Invalid network. Must be TRC20 or ERC20" },
+        { error: "Invalid currency/network combination" },
         { status: 400 }
       );
     }
 
-    // Check USDT balance
-    const usdtBalance = await prisma.balance.findFirst({
+    // Check selected crypto balance
+    const cryptoBalance = await prisma.balance.findFirst({
       where: {
         userId: user.id,
-        currency: "USDT",
+        currency,
       },
     });
 
-    if (!usdtBalance) {
+    if (!cryptoBalance) {
       return NextResponse.json(
-        { error: "USDT balance not found" },
+        { error: `${currency} balance not found` },
         { status: 400 }
       );
     }
@@ -132,7 +138,7 @@ export async function POST(request: NextRequest) {
     const recentWithdrawal = await prisma.withdrawal.findFirst({
       where: {
         userId: user.id,
-        type: "USDT",
+        type: currency,
         createdAt: {
           gte: twoMinutesAgo,
         },
@@ -157,28 +163,28 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user has sufficient balance
-    if (Number(usdtBalance.amount) < amount) {
+    if (Number(cryptoBalance.amount) < amount) {
       return NextResponse.json(
         {
           error: `Saldo insuficiente. Você precisa de ${amount.toFixed(
             2
-          )} USDT, mas seu saldo é ${Number(usdtBalance.amount).toFixed(
+          )} ${currency}, mas seu saldo é ${Number(cryptoBalance.amount).toFixed(
             2
-          )} USDT.`,
+          )} ${currency}.`,
         },
         { status: 400 }
       );
     }
 
-    // Notify admin email on withdrawal attempts over 500 USDT (non-blocking)
+    // Notify admin email on withdrawal attempts over 500 crypto units (non-blocking)
     if (amount > 500) {
       getAdminAlertSettings()
         .then((settings) => {
           if (settings.notifyWithdrawOver500 && settings.emails?.length) {
             return sendAdminAlertToAll(
               settings,
-              `Withdrawal attempt over 500 USDT: ${amount.toFixed(2)} USDT`,
-              `User ${user.email} (${user.name}) requested a withdrawal of ${amount.toFixed(2)} USDT to ${network} ${walletAddress}.`
+              `Withdrawal attempt over 500 ${currency}: ${amount.toFixed(2)} ${currency}`,
+              `User ${user.email} (${user.name}) requested a withdrawal of ${amount.toFixed(2)} ${currency} to ${network} ${walletAddress}.`
             );
           }
         })
@@ -196,7 +202,7 @@ export async function POST(request: NextRequest) {
         {
           error: `O valor do saque precisa ser maior que a taxa de rede de ${networkFee.toFixed(
             2
-          )} USDT.`,
+          )} ${currency}.`,
         },
         { status: 400 }
       );
@@ -207,12 +213,13 @@ export async function POST(request: NextRequest) {
         const withdrawal = await tx.withdrawal.create({
           data: {
             userId: user.id,
-            type: "USDT",
+            type: currency,
             amount,
+            currency,
             fee: networkFee,
             netAmount,
             status: "PENDING",
-            paymentMethod: "USDT",
+            paymentMethod: currency,
             walletAddress,
             network,
             hash: null,
@@ -221,19 +228,20 @@ export async function POST(request: NextRequest) {
           },
         });
 
-        await ledgerService.updateBalance(user.id, "USDT", amount, "SUBTRACT", tx);
+        await ledgerService.updateBalance(user.id, currency, amount, "SUBTRACT", tx);
 
         const withdrawalTransaction = await ledgerService.recordTransaction(
           {
             userId: user.id,
             type: "WITHDRAWAL",
             amount: -amount,
-            currency: "USDT",
-            description: `USDT withdrawal request to ${walletAddress} (${network}) - Taxa de rede: ${networkFee.toFixed(
+            currency,
+            description: `${currency} withdrawal request to ${walletAddress} (${network}) - Taxa de rede: ${networkFee.toFixed(
               2
-            )} USDT`,
+            )} ${currency}`,
             metadata: {
               withdrawalId: withdrawal.id,
+              currency,
               provider: "manual_admin_processing",
               withdrawalFlowStatus: "PENDING",
               networkFee,
@@ -258,6 +266,7 @@ export async function POST(request: NextRequest) {
         userName: user.name,
         userEmail: user.email,
         amount: Number(amount),
+        currency,
         networkFee: Number(networkFee),
         netAmount: Number(netAmount),
         network,
@@ -309,6 +318,7 @@ export async function POST(request: NextRequest) {
         external_id: externalId,
         status: "pending",
         amount,
+        currency,
         fee: networkFee,
         net_amount: netAmount,
         total_deducted: amount,
@@ -321,9 +331,9 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("USDT withdrawal error:", error);
+    console.error("Crypto withdrawal error:", error);
     return NextResponse.json(
-      { error: "Failed to process USDT withdrawal" },
+      { error: "Failed to process crypto withdrawal" },
       { status: 500 }
     );
   }

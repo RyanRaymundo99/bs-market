@@ -87,17 +87,11 @@ export default function Dashboard() {
     Array<{ date: string; BRL: number; USDT: number }>
   >([]);
 
-  // Swipe gesture state for mobile navigation
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const mobileMenuOpen = useMobileMenuOpen();
   const primaryHex = usePrimaryColor();
   const [showWelcomeTutorial, setShowWelcomeTutorial] = useState(false);
   const [welcomeTutorialName, setWelcomeTutorialName] = useState("");
-
-  // Minimum swipe distance (in pixels)
-  const minSwipeDistance = 50;
 
   // Detect mobile device
   useEffect(() => {
@@ -128,34 +122,6 @@ export default function Dashboard() {
     sessionStorage.removeItem("show-welcome-tutorial");
     sessionStorage.removeItem("welcome-tutorial-name");
     setShowWelcomeTutorial(false);
-  };
-
-  // Swipe gesture handlers
-  const onTouchStart = (e: React.TouchEvent) => {
-    if (!isMobile) return;
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
-  };
-
-  const onTouchMove = (e: React.TouchEvent) => {
-    if (!isMobile) return;
-    setTouchEnd(e.targetTouches[0].clientX);
-  };
-
-  const onTouchEnd = () => {
-    if (!isMobile || !touchStart || !touchEnd) return;
-
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > minSwipeDistance;
-    const isRightSwipe = distance < -minSwipeDistance;
-
-    if (isLeftSwipe) {
-      // Swipe left -> go to withdraw
-      router.push("/withdraw");
-    } else if (isRightSwipe) {
-      // Swipe right -> go to deposit (trade page)
-      router.push("/trade");
-    }
   };
 
   // Check if user is authenticated
@@ -497,12 +463,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div
-      className="min-h-screen bg-background text-foreground"
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
-    >
+    <div className="min-h-screen bg-background text-foreground">
       <WelcomeTutorial
         isOpen={showWelcomeTutorial}
         onClose={handleWelcomeTutorialClose}
