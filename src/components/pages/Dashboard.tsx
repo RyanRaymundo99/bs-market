@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
@@ -43,7 +43,8 @@ const DashboardChart = dynamic(
   }
 );
 
-
+/** How many transactions to show on the dashboard (grid fits up to 5 per row on xl). */
+const DASHBOARD_RECENT_ACTIVITY_PREVIEW = 10;
 
 interface Balance {
   currency: string;
@@ -330,6 +331,81 @@ export default function Dashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const categorySummary = useMemo(() => {
+    const deposits = transactions.filter(
+      (t) => t.type === "DEPOSIT" || t.type === "BUY_CRYPTO"
+    );
+    const withdrawals = transactions.filter(
+      (t) => t.type === "WITHDRAWAL" || t.type === "WITHDRAW"
+    );
+    const refunds = transactions.filter((t) => t.type === "REFUND");
+
+    const totalDeposits = deposits.reduce(
+      (sum, t) => sum + Number(t.amount),
+      0
+    );
+    const totalWithdrawals = withdrawals.reduce(
+      (sum, t) => sum + Number(t.amount),
+      0
+    );
+    const totalRefunds = refunds.reduce(
+      (sum, t) => sum + Number(t.amount),
+      0
+    );
+
+    const maxValue = Math.max(
+      totalDeposits,
+      totalWithdrawals,
+      totalRefunds,
+      1
+    );
+
+    const txWord = (n: number) =>
+      n === 1
+        ? language === "pt"
+          ? "transação"
+          : "transaction"
+        : language === "pt"
+        ? "transações"
+        : "transactions";
+
+    const categories = [
+      {
+        name: t("deposit"),
+        icon: ArrowUpRight,
+        value: totalDeposits,
+        bgColor: "bg-primary/15",
+        iconColor: "text-primary",
+        progressColor: "bg-primary",
+        count: deposits.length,
+      },
+      {
+        name: t("withdrawal"),
+        icon: ArrowDownRight,
+        value: totalWithdrawals,
+        bgColor: "bg-destructive/15",
+        iconColor: "text-destructive",
+        progressColor: "bg-destructive",
+        count: withdrawals.length,
+      },
+      {
+        name: language === "pt" ? "Reembolso" : "Refund",
+        icon: RotateCcw,
+        value: totalRefunds,
+        bgColor: "bg-accent/15",
+        iconColor: "text-accent",
+        progressColor: "bg-accent",
+        count: refunds.length,
+      },
+    ].map((c) => ({
+      ...c,
+      progressPct: Math.min((c.value / maxValue) * 100, 100),
+      txLabel: `${c.count} ${txWord(c.count)}`,
+    }));
+
+    return { categories };
+  }, [transactions, t, language]);
+
   return (
     <div
       className={`min-h-screen bg-background text-foreground ${DESKTOP_SHELL_PL}`}
@@ -341,7 +417,7 @@ export default function Dashboard() {
       />
 
       <div
-        className={`container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl ${
+        className={`mx-auto w-full max-w-[1800px] px-3 sm:px-5 xl:px-8 py-4 sm:py-6 ${
           isMobile ? "pb-16" : ""
         }`}
         style={
@@ -351,35 +427,41 @@ export default function Dashboard() {
         }
       >
 
-        {/* Main Balance Display - Centered Hero Section */}
-        <div className="mb-6 sm:mb-8">
-          <div className="flex flex-col items-center text-center">
-            {/* Total Balance Label */}
-            <p className="text-sm sm:text-base text-gray-400 mb-2">
-              {t("totalBalance")}
-            </p>
-
-            {/* Balance Amount */}
+        {/* Header: balance first (left), category stats (right) */}
+        <header
+          className="mb-6 sm:mb-8 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between lg:gap-8"
+          aria-label={language === "pt" ? "Resumo do painel" : "Dashboard summary"}
+        >
+          <div className="flex min-w-0 flex-col gap-3 border-b border-white/10 pb-4 lg:max-w-[min(100%,42rem)] lg:flex-row lg:items-center lg:gap-5 lg:border-b-0 lg:border-r lg:border-white/10 lg:pb-0 lg:pr-8">
             {(() => {
               const usdtBalance = balances.find((b) => b.currency === "USDT");
               const usdtAmount = usdtBalance?.amount || 0;
               if (!dashboardReady) {
                 return (
                   <div
-                    className="flex items-center justify-center gap-2 mb-6"
+                    className="flex items-center gap-2"
                     role="status"
                     aria-busy
                     aria-label={
                       language === "pt" ? "Carregando saldo" : "Loading balance"
                     }
                   >
-                    <span className="inline-block h-12 sm:h-14 md:h-16 w-44 sm:w-56 max-w-[85vw] rounded-2xl bg-white/10 animate-pulse" />
+                    <span className="inline-block h-9 w-36 max-w-[70vw] rounded-xl bg-white/10 animate-pulse sm:h-10 sm:w-44" />
                   </div>
                 );
               }
               return (
-                <div className="flex items-center justify-center gap-2 mb-6">
-                  <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white">
+                <div className="flex items-center gap-2">
+                  <h2
+                    className="text-2xl font-bold tracking-tight text-white sm:text-3xl md:text-4xl"
+                    aria-label={
+                      showBalances
+                        ? `${t("totalBalance")}, ${formatUSDT(usdtAmount)}`
+                        : language === "pt"
+                        ? `${t("totalBalance")}, oculto`
+                        : `${t("totalBalance")}, hidden`
+                    }
+                  >
                     {showBalances
                       ? `U$ ${formatUSDT(usdtAmount).replace(" USDT", "")}`
                       : "U$ ••••••"}
@@ -388,7 +470,8 @@ export default function Dashboard() {
                     variant="ghost"
                     size="sm"
                     onClick={() => setShowBalances(!showBalances)}
-                    className="text-white hover:bg-white/10 rounded-full w-8 h-8 sm:w-9 sm:h-9 p-0"
+                    className="text-white hover:bg-white/10 rounded-full w-8 h-8 sm:w-9 sm:h-9 p-0 shrink-0"
+                    aria-pressed={showBalances}
                   >
                     {showBalances ? (
                       <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -400,24 +483,80 @@ export default function Dashboard() {
               );
             })()}
 
-            {/* Deposits/Withdrawals Toggle */}
-            <div className="relative inline-flex items-center bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-1 shadow-lg">
+            <div className="relative inline-flex w-full max-w-md items-center rounded-xl border border-white/10 bg-black/40 p-1 shadow-lg backdrop-blur-sm lg:w-auto lg:max-w-none lg:shrink-0">
               <button
+                type="button"
                 onClick={() => router.push("/withdraw")}
-                className="px-6 py-2 rounded-lg text-sm font-medium transition-all text-gray-400 hover:text-white hover:bg-white/5"
+                className="flex-1 rounded-lg px-4 py-2 text-sm font-medium text-gray-400 transition-all hover:bg-white/5 hover:text-white sm:flex-none sm:px-6"
               >
                 {t("withdraw")}
               </button>
-              <div className="h-6 w-px bg-white/10 mx-1"></div>
+              <div className="h-6 w-px shrink-0 bg-white/10" />
               <button
+                type="button"
                 onClick={() => router.push("/trade")}
-                className="px-6 py-2 rounded-lg text-sm font-medium transition-all text-gray-400 hover:text-white hover:bg-white/5"
+                className="flex-1 rounded-lg px-4 py-2 text-sm font-medium text-gray-400 transition-all hover:bg-white/5 hover:text-white sm:flex-none sm:px-6"
               >
                 {t("deposit")}
               </button>
             </div>
           </div>
-        </div>
+
+          <div
+            className="flex min-w-0 flex-1 flex-nowrap items-stretch justify-start gap-4 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:justify-end sm:overflow-visible [&::-webkit-scrollbar]:hidden lg:justify-end"
+          >
+            {!dashboardReady
+              ? [1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="flex w-[7.75rem] shrink-0 flex-col gap-2 sm:w-auto"
+                    aria-hidden
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-9 w-9 shrink-0 rounded-lg bg-white/10 animate-pulse" />
+                      <div className="min-w-0 flex-1 space-y-1.5">
+                        <div className="h-3.5 w-16 rounded bg-white/10 animate-pulse" />
+                        <div className="h-2.5 w-20 rounded bg-white/10 animate-pulse" />
+                      </div>
+                    </div>
+                    <div className="h-1 rounded-full bg-white/5">
+                      <div className="hidden h-full w-1/3 rounded-full bg-white/10 sm:block" />
+                    </div>
+                  </div>
+                ))
+              : categorySummary.categories.map((category, index) => {
+                  const Icon = category.icon;
+                  return (
+                    <div
+                      key={index}
+                      className="flex w-[7.75rem] shrink-0 flex-col gap-2 sm:w-[9.5rem]"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${category.bgColor}`}
+                        >
+                          <Icon className={`h-4 w-4 ${category.iconColor}`} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold leading-tight text-foreground">
+                            {category.name}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground sm:text-xs">
+                            {category.txLabel}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="h-1 w-full rounded-full bg-muted/80 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${category.progressColor} transition-all duration-300`}
+                          style={{ width: `${category.progressPct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+          </div>
+        </header>
 
         {/* Balance chart — skeleton until first fetch; then show chart if there is series data */}
         {!dashboardReady ? (
@@ -442,127 +581,6 @@ export default function Dashboard() {
           </Card>
         ) : null}
 
-        {/* Category Cards - Grid Layout */}
-        <div className="mb-6 sm:mb-8">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
-            {!dashboardReady
-              ? [1, 2, 3].map((i) => (
-                  <Card
-                    key={i}
-                    className="rounded-xl border-border bg-card/60 backdrop-blur-sm shadow-lg"
-                  >
-                    <CardContent className="p-4 sm:p-5 space-y-3">
-                      <div className="h-12 w-12 rounded-xl bg-muted animate-pulse" />
-                      <div className="h-4 w-28 bg-muted animate-pulse rounded" />
-                      <div className="h-3 w-20 bg-muted animate-pulse rounded" />
-                      <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
-                        <div className="h-full w-1/3 bg-muted-foreground/20 animate-pulse" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              : (() => {
-              // Calculate category stats
-              const deposits = transactions.filter(
-                (t) => t.type === "DEPOSIT" || t.type === "BUY_CRYPTO"
-              );
-              const withdrawals = transactions.filter(
-                (t) => t.type === "WITHDRAWAL" || t.type === "WITHDRAW"
-              );
-              const refunds = transactions.filter((t) => t.type === "REFUND");
-
-              const totalDeposits = deposits.reduce(
-                (sum, t) => sum + Number(t.amount),
-                0
-              );
-              const totalWithdrawals = withdrawals.reduce(
-                (sum, t) => sum + Number(t.amount),
-                0
-              );
-              const totalRefunds = refunds.reduce(
-                (sum, t) => sum + Number(t.amount),
-                0
-              );
-
-              const maxValue = Math.max(
-                totalDeposits,
-                totalWithdrawals,
-                totalRefunds,
-                1
-              );
-
-              const categories = [
-                {
-                  name: t("deposit"),
-                  icon: ArrowUpRight,
-                  value: totalDeposits,
-                  color: "text-primary",
-                  bgColor: "bg-primary/10",
-                  progressColor: "bg-primary",
-                  count: deposits.length,
-                },
-                {
-                  name: t("withdrawal"),
-                  icon: ArrowDownRight,
-                  value: totalWithdrawals,
-                  color: "text-destructive",
-                  bgColor: "bg-destructive/10",
-                  progressColor: "bg-destructive",
-                  count: withdrawals.length,
-                },
-                {
-                  name: "Reembolso",
-                  icon: RotateCcw,
-                  value: totalRefunds,
-                  color: "text-accent",
-                  bgColor: "bg-accent/10",
-                  progressColor: "bg-accent",
-                  count: refunds.length,
-                },
-              ];
-
-              return categories.map((category, index) => {
-                const Icon = category.icon;
-                const progress = (category.value / maxValue) * 100;
-
-                return (
-                  <Card
-                    key={index}
-                    className="rounded-xl border-border bg-card/60 backdrop-blur-sm shadow-lg"
-                  >
-                    <CardContent className="p-4 sm:p-5">
-                      <div
-                        className={`w-12 h-12 rounded-xl ${category.bgColor} flex items-center justify-center mb-3`}
-                      >
-                        <Icon className={`w-6 h-6 ${category.color}`} />
-                      </div>
-                      <h3 className="text-sm sm:text-base font-semibold text-foreground mb-2">
-                        {category.name}
-                      </h3>
-                      <p className="text-xs text-muted-foreground mb-3">
-                        {category.count}{" "}
-                        {category.count === 1
-                          ? language === "pt"
-                            ? "transação"
-                            : "transaction"
-                          : language === "pt"
-                          ? "transações"
-                          : "transactions"}
-                      </p>
-                      <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className={`h-full ${category.progressColor} transition-all duration-300`}
-                          style={{ width: `${Math.min(progress, 100)}%` }}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              });
-            })()}
-          </div>
-        </div>
-
         {/* Recent Activity */}
         <Card className="rounded-xl sm:rounded-2xl border-border bg-card shadow-sm">
           <CardHeader className="pb-3 sm:pb-4 px-4 sm:px-6 pt-4 sm:pt-6">
@@ -571,7 +589,8 @@ export default function Dashboard() {
                 <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                 {t("recentActivity")}
               </CardTitle>
-              {dashboardReady && transactions.length > 5 && (
+              {dashboardReady &&
+                transactions.length > DASHBOARD_RECENT_ACTIVITY_PREVIEW && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -589,7 +608,7 @@ export default function Dashboard() {
           <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
             {!dashboardReady ? (
               <div
-                className="space-y-2"
+                className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3"
                 role="status"
                 aria-busy
                 aria-label={
@@ -598,23 +617,30 @@ export default function Dashboard() {
                     : "Loading activity"
                 }
               >
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-muted/30"
-                  >
-                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-muted animate-pulse shrink-0" />
-                    <div className="flex-1 min-w-0 space-y-2">
-                      <div className="h-4 max-w-[10rem] bg-muted animate-pulse rounded" />
-                      <div className="h-3 max-w-[6rem] bg-muted animate-pulse rounded" />
+                {Array.from({ length: DASHBOARD_RECENT_ACTIVITY_PREVIEW }).map(
+                  (_, i) => (
+                    <div
+                      key={i}
+                      className="flex min-h-[6.5rem] flex-col gap-2 rounded-lg sm:rounded-xl bg-muted/30 p-2.5 sm:p-3"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="h-8 w-8 rounded-lg bg-muted animate-pulse shrink-0" />
+                        <div className="h-4 w-14 rounded bg-muted animate-pulse" />
+                      </div>
+                      <div className="h-3.5 w-[70%] rounded bg-muted animate-pulse" />
+                      <div className="mt-auto flex gap-2">
+                        <div className="h-2.5 w-16 rounded bg-muted animate-pulse" />
+                        <div className="h-2.5 w-12 rounded bg-muted animate-pulse" />
+                      </div>
                     </div>
-                    <div className="h-4 w-16 bg-muted animate-pulse rounded shrink-0" />
-                  </div>
-                ))}
+                  )
+                )}
               </div>
             ) : transactions.length > 0 ? (
-              <div className="space-y-2">
-                {transactions.slice(0, 5).map((transaction, index) => {
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
+                {transactions
+                  .slice(0, DASHBOARD_RECENT_ACTIVITY_PREVIEW)
+                  .map((transaction, index) => {
                   const date = new Date(transaction.createdAt);
                   const time = date.toLocaleTimeString(
                     language === "pt" ? "pt-BR" : "en-US",
@@ -680,68 +706,66 @@ export default function Dashboard() {
                     title = transaction.type;
                   }
 
-                  const rowClass =
-                    "flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors active:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background text-foreground no-underline [color:inherit]";
+                  const tileClass =
+                    "flex h-full min-h-[6.5rem] flex-col gap-2 rounded-lg sm:rounded-xl bg-muted/30 p-2.5 sm:p-3 transition-colors hover:bg-muted/50 active:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background text-foreground no-underline [color:inherit]";
 
-                  const rowInner = (
+                  const tileInner = (
                     <>
-                      <div
-                        className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl ${bgColor} flex items-center justify-center flex-shrink-0`}
-                      >
-                        <div className={iconColor}>{icon}</div>
+                      <div className="flex items-start justify-between gap-2">
+                        <div
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg sm:h-9 sm:w-9 sm:rounded-xl ${bgColor}`}
+                        >
+                          <div className={iconColor}>{icon}</div>
+                        </div>
+                        <p
+                          className={`text-right text-xs font-semibold tabular-nums ${amountColor} shrink-0 leading-tight`}
+                        >
+                          {prefix}
+                          {formattedAmount}
+                        </p>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 sm:gap-2 mb-0.5">
-                          <h4 className="font-medium text-foreground text-xs sm:text-sm truncate">
-                            {title}
-                          </h4>
-                          <p
-                            className={`font-semibold text-xs sm:text-sm ${amountColor} whitespace-nowrap`}
+                      <h4 className="line-clamp-2 text-xs font-medium leading-snug text-foreground sm:text-sm">
+                        {title}
+                      </h4>
+                      <div className="mt-auto flex flex-wrap items-center gap-x-1.5 gap-y-1">
+                        <p className="text-[10px] text-muted-foreground sm:text-xs">
+                          {dateStr} {language === "pt" ? "às" : "at"} {time}
+                        </p>
+                        {transaction.status && (
+                          <span
+                            className={`text-[10px] sm:text-xs px-1.5 py-0.5 rounded ${
+                              transaction.status === "COMPLETED" ||
+                              transaction.status === "APPROVED" ||
+                              transaction.status === "CONFIRMED"
+                                ? "bg-primary/20 text-primary"
+                                : transaction.status === "PENDING" ||
+                                  transaction.status === "Pendente"
+                                ? "bg-warning/20 text-warning"
+                                : transaction.status === "FAILED" ||
+                                  transaction.status === "REJECTED"
+                                ? "bg-destructive/20 text-destructive"
+                                : "bg-muted text-muted-foreground"
+                            }`}
                           >
-                            {prefix}
-                            {formattedAmount}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <p className="text-[10px] sm:text-xs text-muted-foreground">
-                            {dateStr} {language === "pt" ? "às" : "at"} {time}
-                          </p>
-                          {transaction.status && (
-                            <span
-                              className={`text-[10px] sm:text-xs px-1.5 py-0.5 rounded ${
-                                transaction.status === "COMPLETED" ||
-                                transaction.status === "APPROVED" ||
-                                transaction.status === "CONFIRMED"
-                                  ? "bg-primary/20 text-primary"
-                                  : transaction.status === "PENDING" ||
-                                    transaction.status === "Pendente"
-                                  ? "bg-warning/20 text-warning"
-                                  : transaction.status === "FAILED" ||
-                                    transaction.status === "REJECTED"
-                                  ? "bg-destructive/20 text-destructive"
-                                  : "bg-muted text-muted-foreground"
-                              }`}
-                            >
-                              {transaction.status === "PENDING"
-                                ? language === "pt"
-                                  ? "Pendente"
-                                  : "Pending"
-                                : transaction.status === "COMPLETED"
-                                ? language === "pt"
-                                  ? "Concluído"
-                                  : "Completed"
-                                : transaction.status === "APPROVED"
-                                ? language === "pt"
-                                  ? "Aprovado"
-                                  : "Approved"
-                                : transaction.status === "FAILED"
-                                ? language === "pt"
-                                  ? "Falhou"
-                                  : "Failed"
-                                : transaction.status}
-                            </span>
-                          )}
-                        </div>
+                            {transaction.status === "PENDING"
+                              ? language === "pt"
+                                ? "Pendente"
+                                : "Pending"
+                              : transaction.status === "COMPLETED"
+                              ? language === "pt"
+                                ? "Concluído"
+                                : "Completed"
+                              : transaction.status === "APPROVED"
+                              ? language === "pt"
+                                ? "Aprovado"
+                                : "Approved"
+                              : transaction.status === "FAILED"
+                              ? language === "pt"
+                                ? "Falhou"
+                                : "Failed"
+                              : transaction.status}
+                          </span>
+                        )}
                       </div>
                     </>
                   );
@@ -751,13 +775,13 @@ export default function Dashboard() {
                       key={transaction.id}
                       href={`/transaction/${transaction.id}`}
                       prefetch
-                      className={rowClass}
+                      className={tileClass}
                     >
-                      {rowInner}
+                      {tileInner}
                     </Link>
                   ) : (
-                    <div key={index} className={rowClass}>
-                      {rowInner}
+                    <div key={index} className={tileClass}>
+                      {tileInner}
                     </div>
                   );
                 })}

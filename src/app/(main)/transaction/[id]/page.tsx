@@ -163,7 +163,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
   if (loading) {
     return (
       <div className={`min-h-screen bg-background ${DESKTOP_SHELL_PL}`}>
-        <div className="container mx-auto px-4 py-8">
+        <div className="transaction-print-root mx-auto w-full max-w-[1800px] px-3 sm:px-5 xl:px-8 py-4 sm:py-6">
           <PageLoader message={language === "pt" ? "Carregando detalhes da transação..." : "Loading transaction details..."} />
         </div>
       </div>
@@ -173,7 +173,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
   if (error || !transaction) {
     return (
       <div className={`min-h-screen bg-background ${DESKTOP_SHELL_PL}`}>
-        <div className="container mx-auto px-4 py-16 flex flex-col items-center">
+        <div className="transaction-print-root mx-auto w-full max-w-[1800px] px-3 sm:px-5 xl:px-8 py-4 sm:py-16 flex flex-col items-center">
           <div className="p-4 rounded-full bg-destructive/10 text-destructive mb-4">
             <XCircle className="h-12 w-12" />
           </div>
@@ -233,9 +233,9 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
           <div className="absolute bottom-[-5%] left-[-5%] w-[30%] h-[30%] bg-primary opacity-5 rounded-full blur-[100px]" />
       </div>
 
-      <div className="container mx-auto max-w-4xl px-4 py-8">
+      <div className="transaction-print-root mx-auto w-full max-w-[1800px] px-3 sm:px-5 xl:px-8 py-4 sm:py-6">
         {/* Header Navigation */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6 sm:mb-8">
             <Button variant="ghost" size="sm" onClick={() => router.back()} className="gap-2 text-muted-foreground hover:text-foreground">
                 <ChevronLeft className="h-4 w-4" />
                 {language === "pt" ? "Voltar" : "Back"}
@@ -248,15 +248,15 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
             </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Left Column: Status & Details */}
-            <div className="lg:col-span-2 space-y-6">
+        <div className="transaction-detail-grid grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(16.5rem,22rem)] lg:items-start xl:gap-10">
+            {/* Main column: status & details — grows with available width */}
+            <div className="min-w-0 space-y-6">
                 {/* Main Transaction Card */}
-                <Card className="border border-border/50 bg-card/50 backdrop-blur-md shadow-2xl relative overflow-hidden rounded-3xl">
+                <Card className="border border-border/50 bg-card/50 backdrop-blur-md shadow-2xl relative overflow-hidden rounded-xl sm:rounded-2xl lg:rounded-3xl">
                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-20" />
                     
-                    <CardHeader className="text-center pb-2">
-                        <div className={`mx-auto w-16 h-16 rounded-2xl flex items-center justify-center mb-4 shadow-inner ${
+                    <CardHeader className="text-center pb-2 px-4 pt-6 sm:px-6 sm:pt-8 lg:flex lg:flex-row lg:items-center lg:gap-8 lg:text-left">
+                        <div className={`mx-auto mb-4 shrink-0 lg:mx-0 lg:mb-0 w-16 h-16 rounded-2xl flex items-center justify-center shadow-inner ${
                             isFailed
                                 ? "bg-destructive/10 text-destructive"
                                 : isSuccess
@@ -271,13 +271,14 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                                 <ArrowUpRight className="h-8 w-8" />
                             )}
                         </div>
+                        <div className="min-w-0 flex-1 space-y-1">
                         <CardTitle className="text-2xl sm:text-3xl font-bold tracking-tight">
                             {transactionTitle}
                         </CardTitle>
                         <CardDescription className="text-lg">
                             {transaction.currency === "BRL" ? formatBRL(transaction.amount) : formatUSDT(transaction.amount)}
                         </CardDescription>
-                        <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
+                        <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground lg:mx-0 lg:max-w-2xl xl:max-w-none">
                             {isFailed
                                 ? language === "pt"
                                     ? "A solicitação foi analisada pela equipe e não pôde ser concluída."
@@ -290,9 +291,10 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                                 ? "Sua solicitação está em análise pela equipe financeira."
                                 : "Your request is being reviewed by the finance team."}
                         </p>
+                        </div>
                     </CardHeader>
 
-                    <CardContent className="space-y-8 pt-6">
+                    <CardContent className="space-y-8 pt-4 px-4 sm:px-6 sm:pt-6">
                         {isFailed && adminMessage && (
                             <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-5">
                                 <div className="flex items-start gap-3">
@@ -379,7 +381,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                         </div>
 
                         {/* Transaction Details Grid */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-muted/30 p-6 rounded-2xl border border-border/30">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 bg-muted/30 p-4 sm:p-6 rounded-2xl border border-border/30">
                             <div>
                                 <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1 font-semibold">{language === "pt" ? "ID da Transação" : "Transaction ID"}</p>
                                 <div className="flex items-center gap-2 group">
@@ -413,7 +415,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                                 </div>
                             )}
                             {isPixWithdrawal && transaction.pixKey && (
-                                <div className="sm:col-span-2">
+                                <div className="sm:col-span-2 xl:col-span-3">
                                     <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1 font-semibold">Chave PIX</p>
                                     <div className="flex items-center gap-2 p-3 bg-card border border-border/50 rounded-xl">
                                         <code className="text-xs font-mono break-all flex-1 text-primary">{transaction.pixKey}</code>
@@ -424,7 +426,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                                 </div>
                             )}
                             {isPixWithdrawal && transaction.protocol && (
-                                <div className="sm:col-span-2">
+                                <div className="sm:col-span-2 xl:col-span-3">
                                     <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1 font-semibold">{language === "pt" ? "Protocolo PIX" : "PIX Protocol"}</p>
                                     <div className="flex items-center gap-2 p-3 bg-card border border-border/50 rounded-xl">
                                         <code className="text-xs font-mono break-all flex-1 text-primary">{transaction.protocol}</code>
@@ -435,7 +437,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                                 </div>
                             )}
                             {isWithdrawal && transaction.walletAddress && (
-                                <div className="sm:col-span-2">
+                                <div className="sm:col-span-2 xl:col-span-3">
                                     <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1 font-semibold">{language === "pt" ? "Endereço de Destino" : "Destination Address"}</p>
                                     <div className="flex items-center gap-2 p-3 bg-card border border-border/50 rounded-xl group transition-all hover:border-primary/30">
                                         <code className="text-xs font-mono break-all flex-1 text-primary">{transaction.walletAddress}</code>
@@ -451,7 +453,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                                 </div>
                             )}
                             {!isPixWithdrawal && transaction.hash && (
-                                <div className="sm:col-span-2">
+                                <div className="sm:col-span-2 xl:col-span-3">
                                     <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1 font-semibold">{language === "pt" ? "Hash da Transação" : "Transaction Hash"}</p>
                                     <div className="flex items-center gap-2">
                                         <code className="text-xs font-mono break-all line-clamp-1">{transaction.hash}</code>
@@ -467,7 +469,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                         </div>
                     </CardContent>
                     
-                    <div className="flex justify-between p-6 bg-muted/10 border-t border-border/50">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-4 sm:p-6 bg-muted/10 border-t border-border/50">
                         <Button variant="outline" size="sm" className="gap-2 rounded-xl" onClick={() => window.print()}>
                             <Download className="h-4 w-4" />
                             {language === "pt" ? "Salvar Comprovante" : "Save Receipt"}
@@ -514,10 +516,10 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                 </Card>
             </div>
 
-            {/* Right Column: Actions / Instructions */}
-            <div className="space-y-6">
+            {/* Sidebar: PIX / FAQ — fixed readable width; sticks on scroll */}
+            <div className="space-y-6 lg:sticky lg:top-24 lg:self-start">
                 {isDeposit && transaction.status === "PENDING" && (
-                    <Card className="border-border bg-card shadow-lg rounded-3xl overflow-hidden text-center sticky top-24">
+                    <Card className="border-border bg-card shadow-lg rounded-3xl overflow-hidden text-center">
                         <div className="p-6 bg-primary/10 border-b border-primary/10">
                             <h3 className="font-bold flex items-center justify-center gap-2">
                                 <QrCode className="h-5 w-5 text-primary" />
@@ -583,14 +585,11 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
             .navbar-new, button, .GlobalKYCBanner, .header-navigation {
                 display: none !important;
             }
-            .container {
+            .transaction-print-root {
                 max-width: 100% !important;
                 padding: 0 !important;
             }
-            .lg\\:col-span-2 {
-                width: 100% !important;
-            }
-            .lg\\:grid-cols-3 {
+            .transaction-detail-grid {
                 display: block !important;
             }
             .card {
