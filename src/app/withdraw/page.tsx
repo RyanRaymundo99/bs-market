@@ -715,7 +715,7 @@ export default function WithdrawPage() {
     }
   };
 
-  // BRL available for PIX — null until wallet + rate load (avoids disabling the button with a false 0 balance).
+  // Reais available for PIX — null until wallet + rate load
   const brlAvailableForPix = useMemo(() => {
     if (!walletData || usdtToBrlRate == null) return null;
     const usdtBalance = walletData.balances.find((b) => b.currency === "USDT");
@@ -902,7 +902,7 @@ export default function WithdrawPage() {
                     >
                       <div className="flex items-center justify-center gap-2">
                         <Wallet className="h-4 w-4" />
-                        <span>PIX (BRL)</span>
+                        <span>PIX</span>
                       </div>
                     </button>
                   </div>
@@ -929,7 +929,7 @@ export default function WithdrawPage() {
                       : `Send ${selectedCurrency} to your wallet`
                     : language === "pt"
                     ? "Receba em reais na sua chave PIX"
-                    : "Receive in BRL to your PIX key"}
+                    : "Receive in reais on your PIX key"}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4 sm:space-y-6">
@@ -1127,8 +1127,8 @@ export default function WithdrawPage() {
                         <Wallet className="h-5 w-5 text-primary" />
                         <span className="text-sm font-medium text-muted-foreground">
                           {language === "pt"
-                            ? "Saldo Disponível em BRL"
-                            : "Available BRL Balance"}
+                            ? "Saldo disponível para PIX"
+                            : "Available balance for PIX"}
                         </span>
                       </div>
                       <p className="text-2xl sm:text-3xl font-bold text-primary">
@@ -1139,8 +1139,8 @@ export default function WithdrawPage() {
                       {brlAvailableForPix == null && (
                         <p className="text-xs text-muted-foreground mt-1">
                           {language === "pt"
-                            ? "Carregando cotação USDT/BRL…"
-                            : "Loading USDT/BRL rate…"}
+                            ? "Carregando cotação…"
+                            : "Loading exchange rate…"}
                         </p>
                       )}
                     </div>
@@ -1149,8 +1149,8 @@ export default function WithdrawPage() {
                       <div>
                         <Label htmlFor="pix-amount" className="text-foreground">
                           {language === "pt"
-                            ? "Valor a Sacar (R$)"
-                            : "Amount to Withdraw (R$)"}
+                            ? "Valor a sacar"
+                            : "Amount to withdraw"}
                         </Label>
                         <Input
                           id="pix-amount"
@@ -1410,7 +1410,7 @@ export default function WithdrawPage() {
                   </p>
                   <p className="mt-1 font-semibold text-foreground">
                     {successDetails.type === "PIX"
-                      ? "PIX (BRL)"
+                      ? "PIX"
                       : `${successDetails.network || selectedNetwork} ${
                           successDetails.currency || successDetails.type
                         }`}
