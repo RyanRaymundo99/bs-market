@@ -30,7 +30,7 @@ export const parseUSDTInput = (value: string): number => {
   return isNaN(parsed) ? 0 : parsed;
 };
 
-// Generate WhatsApp URL with pre-filled message for deposits > 2k
+// Generate WhatsApp URL with a pre-filled deposit amounts message
 export const getWhatsAppUrlForLargeDeposit = (
   usdtAmount: number,
   language: string

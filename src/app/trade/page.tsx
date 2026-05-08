@@ -59,12 +59,6 @@ const WHATSAPP_SUPPORT_URL = `https://wa.me/${
   process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "5511984284867"
 }`;
 
-// Hard limit for online purchases - above this, redirect to WhatsApp
-const ONLINE_MAX_USDT = 2000;
-
-// Generate WhatsApp URL with pre-filled message for deposits > 2k
-
-
 const TradePage = () => {
   const router = useRouter();
   const pathname = usePathname();
@@ -626,18 +620,6 @@ const TradePage = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        if (data.code === "ONLINE_LIMIT_EXCEEDED") {
-          const msg =
-            language === "pt"
-              ? `O limite máximo para compras online é 2.000 USDT. Para valores maiores, entre em contato conosco via WhatsApp.`
-              : `Maximum online purchase limit is 2,000 USDT. For larger amounts, please contact us via WhatsApp.`;
-          toast({
-            title: language === "pt" ? "Limite online" : "Online limit",
-            description: msg,
-            variant: "destructive",
-          });
-          return;
-        }
         if (data.code === "DEPOSIT_LIMIT_EXCEEDED") {
           const msg =
             language === "pt"
@@ -1297,14 +1279,14 @@ const TradePage = () => {
                 </div>
 
 
-                {buyUSDTAmount > ONLINE_MAX_USDT ? (
+                {buyUSDTAmount > userDailyLimit ? (
                   <div className="space-y-3">
                     <p className="text-sm text-warning text-center">
                       {language === "pt"
-                        ? `O limite máximo para compras online é ${ONLINE_MAX_USDT.toLocaleString(
+                        ? `O seu limite diário é ${userDailyLimit.toLocaleString(
                             "pt-BR"
                           )} USDT. Para valores maiores, entre em contato conosco via WhatsApp.`
-                        : `Maximum online purchase limit is ${ONLINE_MAX_USDT.toLocaleString()} USDT. For larger amounts, please contact us via WhatsApp.`}
+                        : `Your daily limit is ${userDailyLimit.toLocaleString()} USDT. For larger amounts, please contact us via WhatsApp.`}
                     </p>
                     <Button
                       asChild
