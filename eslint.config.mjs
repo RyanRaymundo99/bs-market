@@ -26,6 +26,15 @@ const eslintConfig = [
       "react-hooks/exhaustive-deps": "warn",
     },
   },
+  {
+    files: ["src/app/**/page.tsx", "src/app/**/layout.tsx"],
+    rules: {
+      "max-lines": [
+        "warn",
+        { max: 900, skipBlankLines: true, skipComments: true },
+      ],
+    },
+  },
 ];
 
 export default eslintConfig;

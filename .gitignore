@@ -122,9 +122,6 @@ public/uploads/*
 dist/
 build/
 
-# Vitest / coverage output (keep test sources under src/**/*.test.ts tracked)
-coverage/
-
 # Documentation (keep important ones)
 docs/
 *.md
