@@ -41,7 +41,6 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   ChevronRight,
-  Download,
   AlertTriangle,
   Trash2,
 } from "lucide-react";

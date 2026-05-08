@@ -18,7 +18,7 @@
     "deploy:vercel": "vercel --prod",
     "deploy:preview": "vercel",
     "deploy:check": "pnpm run type-check && pnpm run lint && pnpm run check:large-files && pnpm run test && pnpm run build",
-    "check:large-files": "node scripts/check-large-files.mjs",
+    "check:large-files": "node scripts/check-large-files.cjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "clean": "rm -rf .next && rm -rf node_modules/.cache",
