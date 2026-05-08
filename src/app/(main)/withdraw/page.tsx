@@ -822,18 +822,9 @@ export default function WithdrawPage() {
           {/* Withdrawal form */}
           <div className="min-w-0">
             <Card className="rounded-xl sm:rounded-2xl border-border bg-card shadow-sm">
-              <CardHeader>
-                <div className="mb-4 text-left sm:mb-6">
-                  <h1 className="mb-2 text-2xl font-bold text-foreground sm:text-3xl">
-                    {language === "pt" ? "Sacar" : "Withdraw"}
-                  </h1>
-                  <p className="text-sm text-muted-foreground sm:text-base">
-                    {t("chooseWithdrawalMethod")}
-                  </p>
-                </div>
-
+              <CardHeader className="space-y-3">
                 {withdrawalsDisabled ? (
-                  <div className="mb-4 rounded-xl border border-warning/30 bg-warning/10 p-4">
+                  <div className="rounded-xl border border-warning/30 bg-warning/10 p-4">
                     <p className="text-sm font-medium text-warning">
                       {language === "pt"
                         ? "Atualização da plataforma"
@@ -848,61 +839,93 @@ export default function WithdrawPage() {
                   </div>
                 ) : null}
 
-                <div className="mb-4 flex justify-start sm:justify-center">
-                  <div className="relative inline-flex items-center bg-muted/60 border border-border rounded-xl p-1">
-                    <button
-                      onClick={() => setWithdrawalType("CRYPTO")}
-                      className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                        withdrawalType === "CRYPTO"
-                          ? "bg-primary text-primary-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                      }`}
-                    >
-                      <div className="flex items-center justify-center gap-2">
-                        <Coins className="h-4 w-4" />
-                        <span>Cripto</span>
-                      </div>
-                    </button>
-                    <div className="h-6 w-px bg-border mx-1" />
-                    <button
-                      onClick={() => setWithdrawalType("PIX")}
-                      className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                        withdrawalType === "PIX"
-                          ? "bg-primary text-primary-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                      }`}
-                    >
-                      <div className="flex items-center justify-center gap-2">
-                        <Wallet className="h-4 w-4" />
-                        <span>PIX</span>
-                      </div>
-                    </button>
+                <div
+                  className="flex min-w-0 flex-nowrap items-center gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-3 [&::-webkit-scrollbar]:hidden"
+                  role="group"
+                  aria-label={
+                    language === "pt"
+                      ? "Cabeçalho do saque"
+                      : "Withdraw header"
+                  }
+                >
+                  <h1 className="shrink-0 text-lg font-bold tracking-tight text-foreground sm:text-2xl">
+                    {language === "pt" ? "Sacar" : "Withdraw"}
+                  </h1>
+                  <span
+                    className="hidden h-4 w-px shrink-0 bg-border sm:block"
+                    aria-hidden
+                  />
+                  <p className="min-w-0 max-w-[11rem] truncate text-xs text-muted-foreground sm:max-w-[16rem] sm:text-sm md:max-w-[22rem]">
+                    {t("chooseWithdrawalMethod")}
+                  </p>
+                  <div className="shrink-0">
+                    <div className="relative inline-flex items-center rounded-xl border border-border bg-muted/60 p-0.5 sm:p-1">
+                      <button
+                        type="button"
+                        onClick={() => setWithdrawalType("CRYPTO")}
+                        className={`rounded-lg px-2.5 py-2 text-xs font-medium transition-all sm:px-4 sm:py-2.5 sm:text-sm ${
+                          withdrawalType === "CRYPTO"
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        }`}
+                      >
+                        <span className="flex items-center gap-1.5 sm:gap-2">
+                          <Coins className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                          <span>Cripto</span>
+                        </span>
+                      </button>
+                      <div className="mx-0.5 h-5 w-px shrink-0 bg-border sm:mx-1 sm:h-6" />
+                      <button
+                        type="button"
+                        onClick={() => setWithdrawalType("PIX")}
+                        className={`rounded-lg px-2.5 py-2 text-xs font-medium transition-all sm:px-4 sm:py-2.5 sm:text-sm ${
+                          withdrawalType === "PIX"
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        }`}
+                      >
+                        <span className="flex items-center gap-1.5 sm:gap-2">
+                          <Wallet className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                          <span>PIX</span>
+                        </span>
+                      </button>
+                    </div>
                   </div>
+                  <span
+                    className="hidden h-4 w-px shrink-0 bg-border md:block"
+                    aria-hidden
+                  />
+                  <div className="flex shrink-0 items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-foreground sm:gap-2 sm:text-base">
+                    {withdrawalType === "CRYPTO" ? (
+                      <>
+                        <Coins className="h-4 w-4 shrink-0 text-primary sm:h-5 sm:w-5" />
+                        {language === "pt"
+                          ? `Saque via ${selectedCurrency}`
+                          : `Withdraw via ${selectedCurrency}`}
+                      </>
+                    ) : (
+                      <>
+                        <Wallet className="h-4 w-4 shrink-0 text-primary sm:h-5 sm:w-5" />
+                        {language === "pt"
+                          ? "Saque via PIX"
+                          : "Withdraw via PIX"}
+                      </>
+                    )}
+                  </div>
+                  <span
+                    className="hidden h-4 w-px shrink-0 bg-border sm:block"
+                    aria-hidden
+                  />
+                  <p className="min-w-0 max-w-[9rem] truncate text-[11px] leading-snug text-muted-foreground sm:max-w-[11rem] sm:text-xs md:max-w-[18rem] lg:max-w-[24rem]">
+                    {withdrawalType === "CRYPTO"
+                      ? language === "pt"
+                        ? `Envie ${selectedCurrency} para sua carteira`
+                        : `Send ${selectedCurrency} to your wallet`
+                      : language === "pt"
+                        ? "Receba em reais na sua chave PIX"
+                        : "Receive in reais on your PIX key"}
+                  </p>
                 </div>
-                <CardTitle className="flex items-center gap-2 text-foreground">
-                  {withdrawalType === "CRYPTO" ? (
-                    <>
-                      <Coins className="h-5 w-5 text-primary" />
-                      {language === "pt"
-                        ? `Saque via ${selectedCurrency}`
-                        : `Withdraw via ${selectedCurrency}`}
-                    </>
-                  ) : (
-                    <>
-                      <Wallet className="h-5 w-5 text-primary" />
-                      {language === "pt" ? "Saque via PIX" : "Withdraw via PIX"}
-                    </>
-                  )}
-                </CardTitle>
-                <CardDescription className="text-muted-foreground">
-                  {withdrawalType === "CRYPTO"
-                    ? language === "pt"
-                      ? `Envie ${selectedCurrency} para sua carteira`
-                      : `Send ${selectedCurrency} to your wallet`
-                    : language === "pt"
-                    ? "Receba em reais na sua chave PIX"
-                    : "Receive in reais on your PIX key"}
-                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4 sm:space-y-6">
                 {withdrawalType === "CRYPTO" ? (
