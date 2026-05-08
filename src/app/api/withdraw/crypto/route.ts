@@ -7,6 +7,11 @@ import {
   isCryptoNetworkForCurrency,
 } from "@/lib/crypto-assets";
 import {
+  computeStablecoinLedgerDebits,
+  getUsdtDebitedPerUnitWithdrawnServer,
+  usdcWithdrawalCapacityUsdt,
+} from "@/lib/stablecoin-withdraw";
+import {
   getAdminAlertSettings,
   sendAdminAlertToAll,
 } from "@/lib/admin-alert-email";
@@ -118,20 +123,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check selected crypto balance
-    const cryptoBalance = await prisma.balance.findFirst({
-      where: {
-        userId: user.id,
-        currency,
-      },
-    });
+    const rate = getUsdtDebitedPerUnitWithdrawnServer(currency);
 
-    if (!cryptoBalance) {
-      return NextResponse.json(
-        { error: `${currency} balance not found` },
-        { status: 400 }
-      );
-    }
+    const [usdtBalanceRow, usdcBalanceRow] = await Promise.all([
+      prisma.balance.findFirst({
+        where: { userId: user.id, currency: "USDT" },
+      }),
+      prisma.balance.findFirst({
+        where: { userId: user.id, currency: "USDC" },
+      }),
+    ]);
+
+    const usdtBal = usdtBalanceRow ? Number(usdtBalanceRow.amount) : 0;
+    const usdcBal = usdcBalanceRow ? Number(usdcBalanceRow.amount) : 0;
 
     // Rate limiting: Check if user has made a withdrawal in the last 2 minutes
     const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
@@ -162,18 +166,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user has sufficient balance
-    if (Number(cryptoBalance.amount) < amount) {
-      return NextResponse.json(
-        {
-          error: `Saldo insuficiente. Você precisa de ${amount.toFixed(
-            2
-          )} ${currency}, mas seu saldo é ${Number(cryptoBalance.amount).toFixed(
-            2
-          )} ${currency}.`,
-        },
-        { status: 400 }
-      );
+    const { dUsdt, dUsdc, usdtNeeded } = computeStablecoinLedgerDebits(
+      currency,
+      amount,
+      usdtBal,
+      usdcBal,
+      rate
+    );
+
+    if (currency === "USDT") {
+      if (usdtBal + 1e-10 < amount) {
+        return NextResponse.json(
+          {
+            error: `Saldo insuficiente. Você precisa de ${amount.toFixed(
+              2
+            )} USDT, mas seu saldo é ${usdtBal.toFixed(2)} USDT.`,
+          },
+          { status: 400 }
+        );
+      }
+    } else {
+      const capacity = usdcWithdrawalCapacityUsdt(usdtBal, usdcBal, rate);
+      if (capacity + 1e-8 < usdtNeeded) {
+        return NextResponse.json(
+          {
+            error: `Saldo insuficiente para sacar ${amount.toFixed(
+              2
+            )} USDC. O saldo é contabilizado em USDT (conversão ${rate} USDT por 1 USDC). Equivalente disponível: ${capacity.toFixed(
+              2
+            )} USDT (USDT: ${usdtBal.toFixed(2)}, USDC: ${usdcBal.toFixed(
+              2
+            )}).`,
+          },
+          { status: 400 }
+        );
+      }
     }
 
     // Notify admin email on withdrawal attempts over 500 crypto units (non-blocking)
@@ -228,7 +255,12 @@ export async function POST(request: NextRequest) {
           },
         });
 
-        await ledgerService.updateBalance(user.id, currency, amount, "SUBTRACT", tx);
+        if (dUsdt > 0) {
+          await ledgerService.updateBalance(user.id, "USDT", dUsdt, "SUBTRACT", tx);
+        }
+        if (dUsdc > 0) {
+          await ledgerService.updateBalance(user.id, "USDC", dUsdc, "SUBTRACT", tx);
+        }
 
         const withdrawalTransaction = await ledgerService.recordTransaction(
           {
@@ -238,7 +270,7 @@ export async function POST(request: NextRequest) {
             currency,
             description: `${currency} withdrawal request to ${walletAddress} (${network}) - Taxa de rede: ${networkFee.toFixed(
               2
-            )} ${currency}`,
+            )} ${currency}${currency === "USDC" ? ` (ledger: -${dUsdt.toFixed(8)} USDT${dUsdc > 0 ? `, -${dUsdc.toFixed(8)} USDC` : ""})` : ""}`,
             metadata: {
               withdrawalId: withdrawal.id,
               currency,
@@ -246,6 +278,8 @@ export async function POST(request: NextRequest) {
               withdrawalFlowStatus: "PENDING",
               networkFee,
               netAmount,
+              ledgerDebits: { USDT: dUsdt, USDC: dUsdc },
+              stablecoinDebitRateUsdtPerUnit: rate,
             },
           },
           tx

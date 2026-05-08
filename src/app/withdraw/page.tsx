@@ -54,18 +54,20 @@ import {
   getCryptoNetworks,
   getDefaultCryptoNetwork,
 } from "@/lib/crypto-assets";
+import {
+  getUsdtDebitedPerUnitWithdrawnClient,
+  usdcWithdrawalCapacityUsdt,
+} from "@/lib/stablecoin-withdraw";
 
 interface CryptoBalance {
   currency: string;
   amount: number;
   locked: number;
-  usdtValue: number;
-  brlValue?: number;
 }
 
 interface WalletData {
   balances: CryptoBalance[];
-  totalPortfolioValue: number;
+  totalPortfolioValue?: number;
   lastUpdated: string;
 }
 
@@ -194,9 +196,40 @@ export default function WithdrawPage() {
   const { toast } = useToast();
   const { t, language } = useLanguage();
 
-  const selectedBalance = walletData?.balances.find(
-    (balance) => balance.currency === selectedCurrency
+  const usdtBalanceAmount = useMemo(() => {
+    const row = walletData?.balances.find((b) => b.currency === "USDT");
+    return row ? Number(row.amount) : 0;
+  }, [walletData]);
+
+  const usdcBalanceAmount = useMemo(() => {
+    const row = walletData?.balances.find((b) => b.currency === "USDC");
+    return row ? Number(row.amount) : 0;
+  }, [walletData]);
+
+  const stableDebitRate = useMemo(
+    () => getUsdtDebitedPerUnitWithdrawnClient(selectedCurrency),
+    [selectedCurrency]
   );
+
+  /** Max gross amount withdrawable in the selected asset (matches API). */
+  const maxCryptoWithdrawGross = useMemo(() => {
+    if (!walletData) return 0;
+    if (selectedCurrency === "USDT") {
+      return Math.max(0, usdtBalanceAmount);
+    }
+    const capacity = usdcWithdrawalCapacityUsdt(
+      usdtBalanceAmount,
+      usdcBalanceAmount,
+      stableDebitRate
+    );
+    return Math.max(0, capacity / stableDebitRate);
+  }, [
+    walletData,
+    selectedCurrency,
+    usdtBalanceAmount,
+    usdcBalanceAmount,
+    stableDebitRate,
+  ]);
 
   const handleCurrencyChange = (currency: CryptoCurrency) => {
     setSelectedCurrency(currency);
@@ -398,6 +431,27 @@ export default function WithdrawPage() {
       return;
     }
 
+    const parsedCrypto = parseFloat(usdtAmount);
+    if (parsedCrypto > maxCryptoWithdrawGross + 1e-8) {
+      toast({
+        title: t("withdrawalError"),
+        description:
+          language === "pt"
+            ? `Valor acima do disponível (${formatCurrency(
+                maxCryptoWithdrawGross,
+                selectedCurrency,
+                { maxDecimals: 4 }
+              )}).`
+            : `Amount exceeds available (${formatCurrency(
+                maxCryptoWithdrawGross,
+                selectedCurrency,
+                { maxDecimals: 4 }
+              )}).`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       setProcessing(true);
       const response = await fetch("/api/withdraw/crypto", {
@@ -421,7 +475,7 @@ export default function WithdrawPage() {
           currency: selectedCurrency,
           amount: Number(data.data.amount ?? parseFloat(usdtAmount)),
           netAmount: Number(
-            data.data.net_amount ?? calculateUSDTNetAmount()
+            data.data.net_amount ?? calculateCryptoNetAmount()
           ),
           fee: Number(data.data.fee ?? getNetworkFee()),
           status: String(data.data.status || "PENDING").toUpperCase(),
@@ -469,7 +523,7 @@ export default function WithdrawPage() {
   };
 
   // Calculate crypto net amount based on network fee
-  const calculateUSDTNetAmount = () => {
+  const calculateCryptoNetAmount = () => {
     if (!usdtAmount || parseFloat(usdtAmount) <= 0) return 0;
     const amount = parseFloat(usdtAmount);
     if (isNaN(amount)) return 0;
@@ -889,15 +943,43 @@ export default function WithdrawPage() {
                         </span>
                       </div>
                       <p className="text-2xl sm:text-3xl font-bold text-primary">
-                        {selectedBalance &&
-                        typeof selectedBalance.amount === "number"
-                          ? formatCurrency(
-                              selectedBalance.amount,
-                              selectedCurrency,
-                              { maxDecimals: 4 }
-                            )
-                          : `0 ${selectedCurrency}`}
+                        {formatCurrency(
+                          maxCryptoWithdrawGross,
+                          selectedCurrency,
+                          { maxDecimals: 4 }
+                        )}
                       </p>
+                      {selectedCurrency === "USDC" ? (
+                        <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                          {language === "pt"
+                            ? `Saldo em USDT: ${formatCurrency(
+                                usdtBalanceAmount,
+                                "USDT",
+                                { maxDecimals: 2 }
+                              )}${
+                                usdcBalanceAmount > 0
+                                  ? ` · USDC: ${formatCurrency(
+                                      usdcBalanceAmount,
+                                      "USDC",
+                                      { maxDecimals: 4 }
+                                    )}`
+                                  : ""
+                              }. Retirada em USDC usa ${stableDebitRate} USDT do saldo por 1 USDC.`
+                            : `USDT balance: ${formatCurrency(
+                                usdtBalanceAmount,
+                                "USDT",
+                                { maxDecimals: 2 }
+                              )}${
+                                usdcBalanceAmount > 0
+                                  ? ` · USDC: ${formatCurrency(
+                                      usdcBalanceAmount,
+                                      "USDC",
+                                      { maxDecimals: 4 }
+                                    )}`
+                                  : ""
+                              }. Each 1 USDC withdrawn debits ${stableDebitRate} USDT from your balance.`}
+                        </p>
+                      ) : null}
                     </div>
 
                     <div className="space-y-4">
@@ -925,11 +1007,13 @@ export default function WithdrawPage() {
                       </div>
 
                       <div>
-                        <Label htmlFor="usdt-amount" className="text-foreground">
-                          {t("amountToWithdraw")}
+                        <Label htmlFor="crypto-withdraw-amount" className="text-foreground">
+                          {language === "pt"
+                            ? `Valor a sacar (${selectedCurrency})`
+                            : `Amount to withdraw (${selectedCurrency})`}
                         </Label>
                         <Input
-                          id="usdt-amount"
+                          id="crypto-withdraw-amount"
                           type="number"
                           placeholder="0.00"
                           value={usdtAmount}
@@ -937,7 +1021,9 @@ export default function WithdrawPage() {
                           min="0"
                           step="0.01"
                           max={
-                            selectedBalance ? selectedBalance.amount : undefined
+                            maxCryptoWithdrawGross > 0
+                              ? maxCryptoWithdrawGross
+                              : undefined
                           }
                           className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground focus:ring-primary rounded-xl"
                         />
@@ -1000,7 +1086,7 @@ export default function WithdrawPage() {
                           </span>
                           <span className="text-lg sm:text-xl font-bold text-primary">
                             {formatCurrency(
-                              calculateUSDTNetAmount() || 0,
+                              calculateCryptoNetAmount() || 0,
                               selectedCurrency,
                               { maxDecimals: 4 }
                             )}
@@ -1015,7 +1101,8 @@ export default function WithdrawPage() {
                           processing ||
                           !usdtAmount ||
                           !walletAddress ||
-                          parseFloat(usdtAmount) <= 0
+                          parseFloat(usdtAmount) <= 0 ||
+                          parseFloat(usdtAmount) > maxCryptoWithdrawGross + 1e-8
                         }
                         className="w-full h-12 sm:h-14 font-semibold rounded-xl text-base sm:text-lg"
                       >
