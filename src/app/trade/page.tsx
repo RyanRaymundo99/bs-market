@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import NavbarNew from "@/components/ui/navbar-new";
+import NavbarNew, { DESKTOP_SHELL_PL } from "@/components/ui/navbar-new";
 import { GlobalKYCBanner } from "@/components/GlobalKYCBanner";
 import Image from "next/image";
 import {
@@ -51,10 +51,17 @@ import {
   CryptoNetwork,
   getCryptoNetworks,
   getDefaultCryptoNetwork,
+  isCryptoCurrency,
 } from "@/lib/crypto-assets";
 
 import { handleLogout as performLogout } from "../../lib/auth-utils";
-import { formatUSDTInput, parseUSDTInput, formatBRL, formatUSDT, getWhatsAppUrlForLargeDeposit } from "../../lib/trade-utils";
+import {
+  formatUSDTInput,
+  parseUSDTInput,
+  formatBRL,
+  formatUSDT,
+  getWhatsAppUrlForLargeDeposit,
+} from "../../lib/trade-utils";
 const WHATSAPP_SUPPORT_URL = `https://wa.me/${
   process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "5511984284867"
 }`;
@@ -82,8 +89,8 @@ const TradePage = () => {
     const checkMobile = () => {
       setIsMobile(
         /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-          navigator.userAgent
-        ) || window.innerWidth <= 768
+          navigator.userAgent,
+        ) || window.innerWidth <= 768,
       );
     };
     checkMobile();
@@ -109,8 +116,8 @@ const TradePage = () => {
             data.maintenanceMessage
               ? String(data.maintenanceMessage)
               : tradeDisabled && !inMaint
-              ? "Trading is temporarily disabled."
-              : ""
+                ? "Trading is temporarily disabled."
+                : "",
           );
         }
       } catch (error) {
@@ -125,7 +132,7 @@ const TradePage = () => {
     await performLogout();
     // The page will redirect, so no need to setIsLoggingOut(false)
   }, []);
-  
+
   // Track previous history to detect completed payments
   const prevHistoryRef = useRef<Array<{ id: string; status: string }>>([]);
 
@@ -169,23 +176,28 @@ const TradePage = () => {
       id: string;
       date: Date;
       type: "buy";
+      /** PIX purchase vs on-chain crypto deposit (ledger DEPOSIT) */
+      source?: "pix" | "crypto";
       amount: number;
       received: number;
       fee: number;
       rate: number;
       status: string;
       isRecent?: boolean;
+      cryptoCurrency?: string;
+      network?: string;
     }>
   >([]);
 
   // Track which transactions are in loading state (recently created, status being determined)
   const [loadingTransactions, setLoadingTransactions] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
 
   const [cryptoCurrency, setCryptoCurrency] = useState<CryptoCurrency>("USDT");
-  const [cryptoNetwork, setCryptoNetwork] =
-    useState<CryptoNetwork>(getDefaultCryptoNetwork("USDT"));
+  const [cryptoNetwork, setCryptoNetwork] = useState<CryptoNetwork>(
+    getDefaultCryptoNetwork("USDT"),
+  );
   const [cryptoAddress, setCryptoAddress] = useState<string>("");
   const [cryptoAddressLoading, setCryptoAddressLoading] = useState(false);
   const [cryptoQrCode, setCryptoQrCode] = useState<string>("");
@@ -226,9 +238,6 @@ const TradePage = () => {
   const FEE_RATE = 0.03; // 3% de taxa
 
   // Currency formatting functions
-  
-
-  
 
   // Handle USDT input change
   const handleUSDTInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -244,7 +253,7 @@ const TradePage = () => {
         description:
           language === "pt"
             ? `O seu limite máximo para depósitos online é ${userDailyLimit.toLocaleString(
-                "pt-BR"
+                "pt-BR",
               )} USDT. Para valores maiores, use o botão WhatsApp abaixo.`
             : `Your maximum online deposit limit is ${userDailyLimit.toLocaleString()} USDT. For larger amounts, use the WhatsApp button below.`,
         variant: "default",
@@ -272,9 +281,16 @@ const TradePage = () => {
         if (response.ok) {
           const { success, user } = await response.json();
           if (success && user) {
-            setUserDailyLimit(Number((user as { dailyDepositLimit?: number }).dailyDepositLimit) || 5000);
+            setUserDailyLimit(
+              Number(
+                (user as { dailyDepositLimit?: number }).dailyDepositLimit,
+              ) || 5000,
+            );
             if (user.approvalStatus === "REJECTED") {
-              const message = language === "pt" ? "Sua conta foi rejeitada. Entre em contato com o suporte." : "Your account has been rejected. Please contact support.";
+              const message =
+                language === "pt"
+                  ? "Sua conta foi rejeitada. Entre em contato com o suporte."
+                  : "Your account has been rejected. Please contact support.";
               sessionStorage.setItem("rejectionMessage", message);
               await performLogout();
               return;
@@ -301,11 +317,12 @@ const TradePage = () => {
     checkUserStatus();
   }, [language, toast, router]);
 
-
   const fetchUSDTRate = useCallback(async () => {
     try {
       setPriceLoading(true);
-      const response = await fetch("/api/crypto/usdt-rate", { cache: "no-store" });
+      const response = await fetch("/api/crypto/usdt-rate", {
+        cache: "no-store",
+      });
 
       if (!response.ok) {
         console.warn("Failed to fetch USDT rate, using fallback");
@@ -328,101 +345,176 @@ const TradePage = () => {
 
   const fetchTransactionHistory = useCallback(async () => {
     try {
-      // Fetch orders from API
-      const response = await fetch("/api/crypto/orders", { cache: "no-store" });
-      if (response.ok) {
-        const data = await response.json();
+      const [ordersRes, depositsRes] = await Promise.all([
+        fetch("/api/crypto/orders", { cache: "no-store" }),
+        fetch("/api/transactions?type=DEPOSIT&limit=80", {
+          cache: "no-store",
+        }),
+      ]);
+
+      interface OrderResponse {
+        id: string;
+        type: string;
+        baseCurrency: string;
+        total: number | string;
+        amount: number | string;
+        price: number | string;
+        createdAt: string;
+        status: string;
+        externalOrderId?: string | null;
+      }
+
+      interface LedgerDepositRow {
+        id: string;
+        type: string;
+        currency: string;
+        amount: number | string;
+        createdAt: string;
+        status: string;
+        metadata?: unknown;
+      }
+
+      const buyOrders: Array<{
+        id: string;
+        date: Date;
+        type: "buy";
+        source: "pix";
+        amount: number;
+        received: number;
+        fee: number;
+        rate: number;
+        status: string;
+        isRecent?: boolean;
+      }> = [];
+
+      if (ordersRes.ok) {
+        const data = await ordersRes.json();
         if (data.orders) {
-          interface OrderResponse {
-            id: string;
-            type: string;
-            baseCurrency: string;
-            total: number | string;
-            amount: number | string;
-            price: number | string;
-            createdAt: string;
-            status: string;
-            externalOrderId?: string | null;
-          }
-          const buyOrders = (data.orders as OrderResponse[])
+          (data.orders as OrderResponse[])
             .filter(
-              (order) => order.type === "BUY" && order.baseCurrency === "USDT"
+              (order) => order.type === "BUY" && order.baseCurrency === "USDT",
             )
-            .map((order) => {
+            .forEach((order) => {
               const total = parseFloat(order.total.toString());
-              // Total includes fee, so calculate base and fee
               const baseAmount = total / 1.03;
               const fee = total - baseAmount;
-              // Use externalOrderId (transaction_id) as id if available, otherwise use order.id
-              // This ensures consistency with how new transactions are added
               const transactionId = order.externalOrderId || order.id;
-
-              // Check if this is a recent transaction (within last 10 seconds)
               const orderDate = new Date(order.createdAt);
               const isRecent = Date.now() - orderDate.getTime() < 10000;
 
-              return {
+              buyOrders.push({
                 id: transactionId,
                 date: orderDate,
-                type: "buy" as const,
-                amount: total, // Total paid
+                type: "buy",
+                source: "pix",
+                amount: total,
                 received: parseFloat(order.amount.toString()),
-                fee: fee,
+                fee,
                 rate: parseFloat(order.price.toString()),
                 status: order.status,
-                isRecent: isRecent, // Mark as recent
-              };
+                isRecent,
+              });
             });
+        }
+      }
 
-          // Update transaction history
-          setTransactionHistory(buyOrders);
+      const cryptoRows: Array<{
+        id: string;
+        date: Date;
+        type: "buy";
+        source: "crypto";
+        amount: number;
+        received: number;
+        fee: number;
+        rate: number;
+        status: string;
+        isRecent?: boolean;
+        cryptoCurrency: string;
+        network?: string;
+      }> = [];
 
-          // Mark recent transactions as loading if they're not COMPLETED
-          setLoadingTransactions((prev) => {
-            const newSet = new Set(prev);
-            buyOrders.forEach((order) => {
-              if (order.status !== "COMPLETED" && order.status !== "FAILED" && order.status !== "CANCELLED") {
-                // If it's real recent or already in loading set
-                if (order.isRecent || prev.has(order.id)) {
-                  newSet.add(order.id);
-                }
-              } else {
-                // Remove from loading if terminal status reached
-                newSet.delete(order.id);
-              }
-            });
-            return newSet;
-          });
-          // Clean up PIX data for completed transactions
-          setStoredPixData((prev) => {
-            const newMap = new Map(prev);
-            let hasChanges = false;
+      if (depositsRes.ok) {
+        const depData = await depositsRes.json();
+        const txs = (depData.transactions || []) as LedgerDepositRow[];
+        for (const tx of txs) {
+          if (tx.type !== "DEPOSIT" || !isCryptoCurrency(tx.currency)) {
+            continue;
+          }
+          const meta =
+            tx.metadata && typeof tx.metadata === "object"
+              ? (tx.metadata as Record<string, unknown>)
+              : {};
+          const network =
+            typeof meta.network === "string" ? meta.network : undefined;
+          const orderDate = new Date(tx.createdAt);
+          const isRecent = Date.now() - orderDate.getTime() < 10000;
+          let status = String(tx.status || "PENDING").toUpperCase();
+          if (status === "REJECTED") status = "FAILED";
 
-            buyOrders.forEach((order) => {
-              if (order.status === "COMPLETED" && newMap.has(order.id)) {
-                newMap.delete(order.id);
-                hasChanges = true;
-              }
-            });
-
-            // Update localStorage if there were changes
-            if (hasChanges && typeof window !== "undefined") {
-              try {
-                const obj = Object.fromEntries(newMap);
-                localStorage.setItem("pixData", JSON.stringify(obj));
-              } catch (error) {
-                console.error(
-                  "Error updating PIX data in localStorage:",
-                  error
-                );
-              }
-            }
-
-            return newMap;
+          cryptoRows.push({
+            id: tx.id,
+            date: orderDate,
+            type: "buy",
+            source: "crypto",
+            amount: 0,
+            received: parseFloat(String(tx.amount)),
+            fee: 0,
+            rate: 0,
+            status,
+            isRecent,
+            cryptoCurrency: tx.currency,
+            network,
           });
         }
       }
+
+      const merged = [...buyOrders, ...cryptoRows].sort(
+        (a, b) => b.date.getTime() - a.date.getTime(),
+      );
+
+      setTransactionHistory(merged.slice(0, 60));
+
+      setLoadingTransactions((prev) => {
+        const newSet = new Set<string>();
+        merged.forEach((row) => {
+          if (
+            row.status !== "COMPLETED" &&
+            row.status !== "FAILED" &&
+            row.status !== "CANCELLED"
+          ) {
+            if (row.isRecent || prev.has(row.id)) {
+              newSet.add(row.id);
+            }
+          }
+        });
+        return newSet;
+      });
+
+      setStoredPixData((prev) => {
+        const newMap = new Map(prev);
+        let hasChanges = false;
+        merged.forEach((row) => {
+          if (
+            row.source === "pix" &&
+            row.status === "COMPLETED" &&
+            newMap.has(row.id)
+          ) {
+            newMap.delete(row.id);
+            hasChanges = true;
+          }
+        });
+        if (hasChanges && typeof window !== "undefined") {
+          try {
+            const obj = Object.fromEntries(newMap);
+            localStorage.setItem("pixData", JSON.stringify(obj));
+          } catch (error) {
+            console.error("Error updating PIX data in localStorage:", error);
+          }
+        }
+        return newMap;
+      });
     } catch {
+      // ignore
     }
   }, []);
 
@@ -444,13 +536,15 @@ const TradePage = () => {
 
     const completedTx = transactionHistory.find((t) => {
       if (t.status !== "COMPLETED") return false;
+      if (t.source === "crypto") return false;
       const prev = prevHistoryRef.current.find((p) => p.id === t.id);
       return wasAwaitingPayment(prev?.status);
     });
 
     if (completedTx) {
       toast({
-        title: language === "pt" ? "Pagamento Confirmado!" : "Payment Confirmed!",
+        title:
+          language === "pt" ? "Pagamento Confirmado!" : "Payment Confirmed!",
         description:
           language === "pt"
             ? "Seu saldo já foi atualizado."
@@ -477,10 +571,10 @@ const TradePage = () => {
       status: t.status,
     }));
   }, [transactionHistory, language, toast]);
-  
+
   const exportHistory = (days: number) => {
     const now = new Date();
-    const filtered = transactionHistory.filter(t => {
+    const filtered = transactionHistory.filter((t) => {
       if (days === 365) return true; // Treat 365 as "All"
       const diffTime = Math.abs(now.getTime() - t.date.getTime());
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -490,26 +584,45 @@ const TradePage = () => {
     if (filtered.length === 0) {
       toast({
         title: language === "pt" ? "Nenhuma transação" : "No transactions",
-        description: language === "pt" 
-          ? "Não há transações para exportar neste período." 
-          : "There are no transactions to export in this period.",
-        variant: "destructive"
+        description:
+          language === "pt"
+            ? "Não há transações para exportar neste período."
+            : "There are no transactions to export in this period.",
+        variant: "destructive",
       });
       return;
     }
 
     // Simple CSV export
-    const headers = ["ID", "Data", "Valor Pago", "USDT Recebido", "Taxa", "Status"];
+    const headers = [
+      "ID",
+      "Data",
+      "Tipo",
+      "Pago (BRL ou —)",
+      "Recebido",
+      "Taxa",
+      "Status",
+    ];
     const csvContent = [
       headers.join(","),
-      ...filtered.map(t => [
-        t.id,
-        t.date.toLocaleString(),
-        t.amount.toFixed(2),
-        t.received.toFixed(4),
-        t.fee.toFixed(2),
-        t.status
-      ].join(","))
+      ...filtered.map((t) => {
+        const kind = t.source === "crypto" ? "CRIPTO" : "PIX";
+        const paid = t.source === "crypto" ? "—" : t.amount.toFixed(2);
+        const recv =
+          t.source === "crypto"
+            ? `${t.received.toFixed(4)} ${t.cryptoCurrency ?? "USDT"}`
+            : t.received.toFixed(4);
+        const feeCol = t.source === "crypto" ? "—" : t.fee.toFixed(2);
+        return [
+          t.id,
+          t.date.toLocaleString(),
+          kind,
+          paid,
+          recv,
+          feeCol,
+          t.status,
+        ].join(",");
+      }),
     ].join("\n");
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -530,13 +643,13 @@ const TradePage = () => {
   }, []);
 
   const hasPending = transactionHistory.some(
-    (t) => t.status === "PENDING" || t.status === "EXECUTING"
+    (t) => t.status === "PENDING" || t.status === "EXECUTING",
   );
 
   // Polling effect - separate from mount to avoid frequent recreation
   useEffect(() => {
     const intervalTime = hasPending ? 10000 : 30000;
-    
+
     const interval = setInterval(() => {
       fetchTransactionHistory();
     }, intervalTime);
@@ -578,7 +691,7 @@ const TradePage = () => {
       const msg =
         language === "pt"
           ? `O seu limite diário é ${userDailyLimit.toLocaleString(
-              "pt-BR"
+              "pt-BR",
             )} USDT. Para valores maiores, entre em contato conosco via WhatsApp.`
           : `Your daily limit is ${userDailyLimit.toLocaleString()} USDT. For larger amounts, please contact us via WhatsApp.`;
       toast({
@@ -664,7 +777,7 @@ const TradePage = () => {
             domImg.crossOrigin = "anonymous";
 
             const decodedCode = await new Promise<string | null>((resolve) => {
-                domImg.onload = () => {
+              domImg.onload = () => {
                 try {
                   const canvas = document.createElement("canvas");
                   canvas.width = domImg.width;
@@ -676,12 +789,12 @@ const TradePage = () => {
                       0,
                       0,
                       canvas.width,
-                      canvas.height
+                      canvas.height,
                     );
                     const code = jsQR(
                       imageData.data,
                       imageData.width,
-                      imageData.height
+                      imageData.height,
                     );
                     resolve(code?.data || null);
                   } else {
@@ -754,7 +867,7 @@ const TradePage = () => {
         const baseAmount = totalBRL / 1.03; // Base amount
         const fee = totalBRL - baseAmount; // Fee amount
         const purchaseStatus = String(
-          data.data.status ?? "PENDING"
+          data.data.status ?? "PENDING",
         ).toUpperCase();
         const newTransaction = {
           id: data.data.transaction_id,
@@ -862,51 +975,57 @@ const TradePage = () => {
     resetCryptoAddress();
   };
 
-  const fetchCryptoAddress = useCallback(async (currency: CryptoCurrency, network: CryptoNetwork) => {
-    try {
-      setCryptoAddressLoading(true);
-      const response = await fetch("/api/deposit/crypto/address", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currency, network, addressOnly: true }),
-      });
+  const fetchCryptoAddress = useCallback(
+    async (currency: CryptoCurrency, network: CryptoNetwork) => {
+      try {
+        setCryptoAddressLoading(true);
+        const response = await fetch("/api/deposit/crypto/address", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ currency, network, addressOnly: true }),
+        });
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch address");
-      }
-
-      const data = await response.json();
-      if (data.success && data.address) {
-        setCryptoAddress(data.address);
-        // Generate QR code locally
-        try {
-          const qrUrl = await QRCode.toDataURL(data.address, {
-            width: 300,
-            margin: 2,
-            color: {
-              dark: "#000000",
-              light: "#ffffff",
-            },
-          });
-          setCryptoQrCode(qrUrl);
-        } catch (err) {
-          console.error("Error generating QR code:", err);
+        if (!response.ok) {
+          throw new Error("Failed to fetch address");
         }
 
-        setReceiptData(null);
+        const data = await response.json();
+        if (data.success && data.address) {
+          setCryptoAddress(data.address);
+          // Generate QR code locally
+          try {
+            const qrUrl = await QRCode.toDataURL(data.address, {
+              width: 300,
+              margin: 2,
+              color: {
+                dark: "#000000",
+                light: "#ffffff",
+              },
+            });
+            setCryptoQrCode(qrUrl);
+          } catch (err) {
+            console.error("Error generating QR code:", err);
+          }
+
+          setReceiptData(null);
+        }
+      } catch (error) {
+        console.error("Error fetching crypto address:", error);
+        toast({
+          title: "Erro",
+          description:
+            language === "pt"
+              ? "Não foi possível obter o endereço de depósito"
+              : "Could not obtain deposit address",
+          variant: "destructive",
+        });
+      } finally {
+        setCryptoAddressLoading(false);
       }
-    } catch (error) {
-      console.error("Error fetching crypto address:", error);
-      toast({
-        title: "Erro",
-        description: language === "pt" ? "Não foi possível obter o endereço de depósito" : "Could not obtain deposit address",
-        variant: "destructive",
-      });
-    } finally {
-      setCryptoAddressLoading(false);
-    }
-  }, [language, toast]);
+    },
+    [language, toast],
+  );
 
   const handleCryptoDepositConfirm = () => {
     if (moneyDisabled) {
@@ -956,7 +1075,8 @@ const TradePage = () => {
     } catch (error) {
       toast({
         title: "Erro",
-        description: error instanceof Error ? error.message : "Falha ao simular pagamento",
+        description:
+          error instanceof Error ? error.message : "Falha ao simular pagamento",
         variant: "destructive",
       });
     } finally {
@@ -983,7 +1103,8 @@ const TradePage = () => {
     if (amount <= 0) {
       toast({
         title: "Erro",
-        description: language === "pt" ? "Insira um valor válido" : "Enter a valid amount",
+        description:
+          language === "pt" ? "Insira um valor válido" : "Enter a valid amount",
         variant: "destructive",
       });
       return;
@@ -1025,7 +1146,10 @@ const TradePage = () => {
         }
         toast({
           title: language === "pt" ? "Sucesso" : "Success",
-          description: language === "pt" ? "Hash da transação enviado com sucesso!" : "Transaction hash submitted successfully!",
+          description:
+            language === "pt"
+              ? "Hash da transação enviado com sucesso!"
+              : "Transaction hash submitted successfully!",
         });
         setCryptoHash("");
         setShowReceipt(Boolean(transactionId));
@@ -1036,7 +1160,8 @@ const TradePage = () => {
     } catch (error) {
       toast({
         title: "Erro",
-        description: error instanceof Error ? error.message : "Falha ao enviar hash",
+        description:
+          error instanceof Error ? error.message : "Falha ao enviar hash",
         variant: "destructive",
       });
     } finally {
@@ -1046,7 +1171,7 @@ const TradePage = () => {
 
   const handleSimulatePixPayment = async () => {
     if (!pixData?.transactionId) return;
-    
+
     setIsSimulating(true);
     try {
       const response = await fetch("/api/test/simulate-payment", {
@@ -1069,7 +1194,8 @@ const TradePage = () => {
     } catch (error) {
       toast({
         title: "Erro",
-        description: error instanceof Error ? error.message : "Falha ao simular pagamento",
+        description:
+          error instanceof Error ? error.message : "Falha ao simular pagamento",
         variant: "destructive",
       });
     } finally {
@@ -1082,24 +1208,28 @@ const TradePage = () => {
       await navigator.clipboard.writeText(address);
       toast({
         title: "Copiado!",
-        description: language === "pt" ? "Endereço copiado com sucesso" : "Address copied successfully",
+        description:
+          language === "pt"
+            ? "Endereço copiado com sucesso"
+            : "Address copied successfully",
       });
     } catch {
       toast({
         title: "Erro",
         description: "Não foi possível copiar",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
 
   return (
-
-    <div className="min-h-screen bg-background text-foreground">
+    <div
+      className={`min-h-screen bg-background text-foreground ${DESKTOP_SHELL_PL}`}
+    >
       <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
       <GlobalKYCBanner />
       <div
-        className={`container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl ${
+        className={`mx-auto w-full max-w-[1800px] px-3 sm:px-5 xl:px-8 py-4 sm:py-6 ${
           isMobile ? "pb-16" : ""
         }`}
         style={
@@ -1131,614 +1261,712 @@ const TradePage = () => {
                 ? "Manutenção programada"
                 : "Scheduled maintenance"}
             </p>
-            <p className="text-xs text-warning/90 mt-1">
-              {maintenanceMessage}
-            </p>
+            <p className="text-xs text-warning/90 mt-1">{maintenanceMessage}</p>
           </div>
         ) : null}
 
-        {/* Purchase Card */}
-        <Card className="rounded-xl sm:rounded-2xl border-border bg-card shadow-sm mb-6 sm:mb-8">
-          <CardHeader className="pb-4">
-            <div className="text-center mb-6">
-              <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
-                {language === "pt" ? "Depositar USDT" : "Deposit USDT"}
-              </h1>
-              <p className="text-muted-foreground text-sm sm:text-base">
-                {depositMethod === "PIX"
-                  ? `${t("buyUSDTViaPIX")} • ${t("fee")}`
-                  : language === "pt"
-                  ? "Depositar USDT via Cripto"
-                  : "Deposit USDT via Crypto"}
-              </p>
-            </div>
-
-            <div className="mb-4 flex justify-center">
-              <div className="relative inline-flex items-center bg-muted/60 border border-border rounded-xl p-1">
-                <button
-                  onClick={() => setDepositMethod("PIX")}
-                  className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                    depositMethod === "PIX"
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  }`}
-                >
-                  <div className="flex items-center justify-center gap-2">
-                    <Wallet className="h-4 w-4" />
-                    <span>PIX</span>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,28rem)_minmax(0,1fr)] lg:items-start lg:gap-6 xl:grid-cols-[minmax(0,32rem)_minmax(0,1fr)] xl:gap-10">
+          <div className="min-w-0">
+            {/* Purchase Card */}
+            <Card className="rounded-xl sm:rounded-2xl border-border bg-card shadow-sm mb-6 lg:mb-0">
+              <CardHeader className="space-y-3 pb-4 sm:space-y-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <h1 className="text-xl font-bold text-foreground sm:text-2xl md:text-3xl">
+                      {language === "pt" ? "Depositar USDT" : "Deposit USDT"}
+                    </h1>
+                    <p className="text-xs leading-snug text-muted-foreground sm:text-sm">
+                      {depositMethod === "PIX"
+                        ? `${t("buyUSDTViaPIX")} • ${t("fee")}`
+                        : language === "pt"
+                          ? "Depositar USDT via Cripto"
+                          : "Deposit USDT via Crypto"}
+                    </p>
                   </div>
-                </button>
-                <div className="h-6 w-px bg-border mx-1" />
-                <button
-                  onClick={() => setDepositMethod("CRYPTO")}
-                  className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                    depositMethod === "CRYPTO"
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  }`}
-                >
-                  <div className="flex items-center justify-center gap-2">
-                    <Coins className="h-4 w-4" />
-                    <span>{language === "pt" ? "Cripto" : "Crypto"}</span>
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            {/* Price badge for PIX method */}
-            {depositMethod === "PIX" && (
-              <div className="flex flex-col items-center gap-3 mb-4">
-                <Badge
-                  className="bg-primary/20 text-primary border-primary/30 inline-flex items-center gap-2"
-                >
-                  {priceLoading ? (
-                    <>
-                      <Spinner size="sm" />
-                      {language === "pt" ? "Carregando..." : "Loading..."}
-                    </>
-                  ) : (
-                    `1 USDT = ${formatBRL(usdtPrice)}`
-                  )}
-                </Badge>
-                
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted border border-border">
-                  <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
-                    {language === "pt" ? "Limite Diário:" : "Daily Limit:"}
-                  </span>
-                  <span className="text-xs font-bold text-foreground">
-                    ${userDailyLimit.toLocaleString()} USDT
-                  </span>
-                </div>
-              </div>
-            )}
-          </CardHeader>
-          <CardContent className="space-y-4 sm:space-y-6">
-            {depositMethod === "PIX" ? (
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    {language === "pt" ? "Quantidade de USDT:" : "USDT Amount:"}
-                  </label>
-                  <input
-                    type="text"
-                    value={buyUSDT}
-                    onChange={handleUSDTInputChange}
-                    placeholder="0,00"
-                    inputMode="decimal"
-                    className="w-full px-4 py-3 bg-muted/50 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all"
-                  />
-                  <p className="mt-1.5 text-xs text-muted-foreground">
-                    {language === "pt"
-                      ? `Seu limite diário é ${userDailyLimit.toLocaleString(
-                          "pt-BR"
-                        )} USDT. Valores maiores: entre em contato via WhatsApp.`
-                      : `Your daily limit is ${userDailyLimit.toLocaleString()} USDT. For larger amounts: contact us via WhatsApp.`}
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Total BRL to pay with PIX icon */}
-                  <div className="bg-primary/10 rounded-xl p-4 border border-primary/30 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <QrCode className="w-4 h-4 text-primary" />
-                        <div className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
-                          {language === "pt"
-                            ? "Total a pagar via PIX:"
-                            : "Total to pay via PIX:"}
+                  <div className="shrink-0 self-start">
+                    <div className="relative inline-flex items-center rounded-xl border border-border bg-muted/60 p-0.5 sm:p-1">
+                      <button
+                        type="button"
+                        onClick={() => setDepositMethod("PIX")}
+                        className={`rounded-lg px-2 py-2 text-xs font-medium transition-all sm:px-4 sm:py-2.5 sm:text-sm ${
+                          depositMethod === "PIX"
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        }`}
+                      >
+                        <div className="flex items-center justify-center gap-1 sm:gap-2">
+                          <Wallet className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                          <span>PIX</span>
                         </div>
-                      </div>
-                      <div className="text-xl sm:text-2xl font-bold text-primary flex items-baseline gap-1.5">
-                        {formatBRL(buyTotalBRL)}
-                        <span className="text-[10px] font-bold text-muted-foreground">
-                          BRL
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-4 pt-3 border-t border-border/50 space-y-1">
-                      <div className="flex justify-between text-[11px] text-muted-foreground">
-                        <span>{language === "pt" ? "Base:" : "Base:"}</span>
-                        <span className="text-foreground font-medium">{formatBRL(buyBaseBRL)}</span>
-                      </div>
-                      <div className="flex justify-between text-[11px] text-muted-foreground">
-                        <span>{language === "pt" ? "Taxa (3%):" : "Fee (3%):"}</span>
-                        <span className="text-destructive font-medium">{formatBRL(buyFeeBRL)}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-primary/10 rounded-xl p-4 border border-primary/30 flex flex-col justify-center">
-                    <div className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2">
-                      {language === "pt" ? "Você receberá:" : "You will receive:"}
-                    </div>
-                    <div className="text-2xl sm:text-3xl font-bold text-primary">
-                      {formatUSDT(buyUSDTAmount)} <span className="text-sm">USDT</span>
+                      </button>
+                      <div className="mx-0.5 h-5 w-px bg-border sm:mx-1 sm:h-6" />
+                      <button
+                        type="button"
+                        onClick={() => setDepositMethod("CRYPTO")}
+                        className={`rounded-lg px-2 py-2 text-xs font-medium transition-all sm:px-4 sm:py-2.5 sm:text-sm ${
+                          depositMethod === "CRYPTO"
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        }`}
+                      >
+                        <div className="flex items-center justify-center gap-1 sm:gap-2">
+                          <Coins className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                          <span>{language === "pt" ? "Cripto" : "Crypto"}</span>
+                        </div>
+                      </button>
                     </div>
                   </div>
                 </div>
 
-
-                {buyUSDTAmount > userDailyLimit ? (
-                  <div className="space-y-3">
-                    <p className="text-sm text-warning text-center">
-                      {language === "pt"
-                        ? `O seu limite diário é ${userDailyLimit.toLocaleString(
-                            "pt-BR"
-                          )} USDT. Para valores maiores, entre em contato conosco via WhatsApp.`
-                        : `Your daily limit is ${userDailyLimit.toLocaleString()} USDT. For larger amounts, please contact us via WhatsApp.`}
-                    </p>
-                    <Button
-                      asChild
-                      className="w-full h-12 sm:h-14 font-semibold rounded-xl text-base sm:text-lg flex items-center justify-center gap-2"
-                    >
-                      <a
-                        href={getWhatsAppUrlForLargeDeposit(
-                          buyUSDTAmount,
-                          language
-                        )}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <MessageCircle className="w-5 h-5" />
-                        {language === "pt"
-                          ? "Falar no WhatsApp"
-                          : "Contact via WhatsApp"}
-                      </a>
-                    </Button>
+                {/* Price + limit — one row, wraps on narrow screens */}
+                {depositMethod === "PIX" && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className="bg-primary/20 px-2.5 py-1 text-xs font-semibold text-primary border-primary/30 sm:px-3 sm:text-sm">
+                      {priceLoading ? (
+                        <span className="inline-flex items-center gap-2">
+                          <Spinner size="sm" />
+                          {language === "pt" ? "Carregando..." : "Loading..."}
+                        </span>
+                      ) : (
+                        `1 USDT = ${formatBRL(usdtPrice)}`
+                      )}
+                    </Badge>
+                    <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted px-2.5 py-1 sm:px-3 sm:py-1.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                        {language === "pt" ? "Limite Diário:" : "Daily Limit:"}
+                      </span>
+                      <span className="text-xs font-bold tabular-nums text-foreground">
+                        ${userDailyLimit.toLocaleString()} USDT
+                      </span>
+                    </div>
                   </div>
-                ) : buyUSDTAmount > maxDepositUsdt ? (
-                  <div className="space-y-3">
-                    <p className="text-sm text-warning text-center">
-                      {language === "pt"
-                        ? `Para depósitos acima de ${maxDepositUsdt} USDT, entre em contato conosco via WhatsApp.`
-                        : `For deposits above ${maxDepositUsdt} USDT, please contact us via WhatsApp.`}
-                    </p>
-                    <Button
-                      asChild
-                      className="w-full h-12 sm:h-14 font-semibold rounded-xl text-base sm:text-lg flex items-center justify-center gap-2"
-                    >
-                      <a
-                        href={WHATSAPP_SUPPORT_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <MessageCircle className="w-5 h-5" />
-                        {language === "pt"
-                          ? "Falar no WhatsApp"
-                          : "Contact via WhatsApp"}
-                      </a>
-                    </Button>
-                  </div>
-                ) : (
-                  <Button
-                    onClick={handleBuyConfirm}
-                    disabled={buyUSDTAmount <= 0 || loading || moneyDisabled}
-                    className="w-full h-12 sm:h-14 font-semibold rounded-xl text-base sm:text-lg"
-                  >
-                    {loading ? (
-                      <ButtonLoader
-                        label={language === "pt" ? "Processando..." : "Processing..."}
-                        size="default"
-                        className="text-primary-foreground"
-                      />
-                    ) : (
-                      t("confirmPurchase")
-                    )}
-                  </Button>
                 )}
-              </>
-            ) : (
-              <>
-                <div className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-3">
-                      {language === "pt" ? "Selecione a moeda:" : "Select currency:"}
-                    </label>
-                    <div className="grid grid-cols-2 gap-2 mb-4">
-                      {CRYPTO_CURRENCIES.map((currency) => (
-                        <button
-                          key={currency}
-                          type="button"
-                          onClick={() => handleCryptoCurrencyChange(currency)}
-                          className={`px-3 py-2.5 rounded-xl border text-xs font-semibold transition-all ${
-                            cryptoCurrency === currency
-                              ? "bg-primary/20 border-primary text-primary"
-                              : "bg-muted/50 border-border text-muted-foreground hover:border-primary/50"
-                          }`}
-                        >
-                          {currency}
-                        </button>
-                      ))}
-                    </div>
-
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      {language === "pt" ? "Selecione a Rede (Network):" : "Select Network:"}
-                    </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {getCryptoNetworks(cryptoCurrency).map((network) => (
-                        <button
-                          key={network}
-                          onClick={() => handleCryptoNetworkChange(network)}
-                          className={`px-3 py-2.5 rounded-xl border text-xs font-semibold transition-all ${
-                            cryptoNetwork === network
-                              ? "bg-primary/20 border-primary text-primary"
-                              : "bg-muted/50 border-border text-muted-foreground hover:border-primary/50"
-                          }`}
-                        >
-                          {CRYPTO_NETWORK_LABELS[network]}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {!cryptoAddress && !cryptoAddressLoading && (
-                    <Button 
-                      onClick={handleCryptoDepositConfirm}
-                      disabled={moneyDisabled}
-                      className="w-full h-12 sm:h-14 font-semibold rounded-xl text-base sm:text-lg"
-                    >
-                      {language === "pt" ? "Gerar QR Code de Depósito" : "Generate Deposit QR Code"}
-                    </Button>
-                  )}
-
-                  {cryptoAddressLoading ? (
-                    <div className="py-12 flex flex-col items-center gap-3">
-                      <Spinner size="lg" className="text-primary" />
-                      <p className="text-sm text-muted-foreground animate-pulse">
-                        {language === "pt" ? "Gerando endereço..." : "Generating address..."}
+              </CardHeader>
+              <CardContent className="space-y-4 sm:space-y-6">
+                {depositMethod === "PIX" ? (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">
+                        {language === "pt"
+                          ? "Quantidade de USDT:"
+                          : "USDT Amount:"}
+                      </label>
+                      <input
+                        type="text"
+                        value={buyUSDT}
+                        onChange={handleUSDTInputChange}
+                        placeholder="0,00"
+                        inputMode="decimal"
+                        className="w-full px-4 py-3 bg-muted/50 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+                      />
+                      <p className="mt-1.5 text-xs text-muted-foreground">
+                        {language === "pt"
+                          ? `Seu limite diário é ${userDailyLimit.toLocaleString(
+                              "pt-BR",
+                            )} USDT. Valores maiores: entre em contato via WhatsApp.`
+                          : `Your daily limit is ${userDailyLimit.toLocaleString()} USDT. For larger amounts: contact us via WhatsApp.`}
                       </p>
                     </div>
-                  ) : cryptoAddress ? (
-                    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                      <div className="p-5 bg-primary/5 border border-primary/20 rounded-2xl relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                          <Wallet className="w-12 h-12 text-primary" />
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Total BRL to pay with PIX icon */}
+                      <div className="bg-primary/10 rounded-xl p-4 border border-primary/30 flex flex-col">
+                        <div className="flex items-center gap-2 mb-2">
+                          <QrCode className="w-4 h-4 text-primary" />
+                          <div className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
+                            {language === "pt"
+                              ? "Total a pagar via PIX:"
+                              : "Total to pay via PIX:"}
+                          </div>
                         </div>
-                        
-                        <div className="flex flex-col sm:flex-row items-center gap-6">
-                          <div className="bg-white p-2 rounded-xl shadow-inner shrink-0 min-w-[120px] min-h-[120px] flex items-center justify-center">
-                            {cryptoQrCode ? (
-                              <Image
-                                src={cryptoQrCode}
-                                alt="QR Code"
-                                width={150}
-                                height={150}
-                                className="w-[120px] h-[120px] sm:w-[150px] sm:h-[150px] animate-in fade-in zoom-in-50 duration-500"
-                                unoptimized
-                              />
-                            ) : (
-                              <div className="w-[120px] h-[120px] sm:w-[150px] sm:h-[150px] bg-muted animate-pulse rounded-lg" />
-                            )}
-                          </div>
-                          
-                          <div className="flex-1 space-y-3 w-full">
-                            <label className="block text-[10px] font-bold text-primary uppercase tracking-widest mb-1.5">
-                              {language === "pt"
-                                ? `Endereço ${cryptoCurrency} (${cryptoNetwork}):`
-                                : `${cryptoCurrency} Address (${cryptoNetwork}):`}
-                            </label>
-                            
-                            <div className="flex items-center gap-2">
-                              <code className="flex-1 font-mono text-xs sm:text-sm break-all font-semibold text-foreground bg-black/20 p-3 rounded-lg border border-white/5">
-                                {cryptoAddress}
-                              </code>
-                              <Button 
-                                size="icon" 
-                                variant="ghost" 
-                                className="shrink-0 hover:bg-primary/20 text-primary h-10 w-10 rounded-xl"
-                                onClick={() => copyAddress(cryptoAddress)}
-                              >
-                                <Copy className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
+                        <div className="text-xl sm:text-2xl font-bold text-primary flex items-baseline gap-1.5">
+                          {formatBRL(buyTotalBRL)}
+                          <span className="text-[10px] font-bold text-muted-foreground">
+                            BRL
+                          </span>
                         </div>
                       </div>
 
-                      <div className="space-y-3 pt-2 border-t border-border/50">
-                        <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                      <div className="bg-primary/10 rounded-xl p-4 border border-primary/30 flex flex-col justify-between">
+                        <div>
+                          <div className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2">
+                            {language === "pt"
+                              ? "Você receberá:"
+                              : "You will receive:"}
+                          </div>
+                          <div className="text-2xl sm:text-3xl font-bold text-primary">
+                            {formatUSDT(buyUSDTAmount)}{" "}
+                            <span className="text-sm">USDT</span>
+                          </div>
+                        </div>
+                        <div className="mt-4 pt-3 border-t border-border/50 space-y-1">
+                          <div className="flex justify-between text-[11px] text-muted-foreground">
+                            <span>{language === "pt" ? "Base:" : "Base:"}</span>
+                            <span className="text-foreground font-medium">
+                              {formatBRL(buyBaseBRL)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-[11px] text-muted-foreground">
+                            <span>
+                              {language === "pt" ? "Taxa (3%):" : "Fee (3%):"}
+                            </span>
+                            <span className="text-destructive font-medium">
+                              {formatBRL(buyFeeBRL)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {buyUSDTAmount > userDailyLimit ? (
+                      <div className="space-y-3">
+                        <p className="text-sm text-warning text-center">
                           {language === "pt"
-                            ? `Valor enviado em ${cryptoCurrency}:`
-                            : `${cryptoCurrency} amount sent:`}
-                        </label>
-                        <input
-                          type="text"
-                          value={cryptoAmount}
-                          onChange={(e) => setCryptoAmount(formatUSDTInput(e.target.value))}
-                          placeholder="0,00"
-                          inputMode="decimal"
-                          className="w-full px-4 py-3 bg-muted/50 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all"
-                        />
+                            ? `O seu limite diário é ${userDailyLimit.toLocaleString(
+                                "pt-BR",
+                              )} USDT. Para valores maiores, entre em contato conosco via WhatsApp.`
+                            : `Your daily limit is ${userDailyLimit.toLocaleString()} USDT. For larger amounts, please contact us via WhatsApp.`}
+                        </p>
+                        <Button
+                          asChild
+                          className="w-full h-12 sm:h-14 font-semibold rounded-xl text-base sm:text-lg flex items-center justify-center gap-2"
+                        >
+                          <a
+                            href={getWhatsAppUrlForLargeDeposit(
+                              buyUSDTAmount,
+                              language,
+                            )}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <MessageCircle className="w-5 h-5" />
+                            {language === "pt"
+                              ? "Falar no WhatsApp"
+                              : "Contact via WhatsApp"}
+                          </a>
+                        </Button>
                       </div>
-
-                      {/* Transaction Hash Input */}
-                      <div className="space-y-3 pt-2 border-t border-border/50">
-                        <div className="flex flex-col gap-2">
-                          <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                            {language === "pt" ? "Já enviou? Informe o Hash da Transação:" : "Sent it? Enter Transaction Hash:"}
-                          </label>
-                          <div className="flex gap-2">
-                            <Input
-                              value={cryptoHash}
-                              onChange={(e) => setCryptoHash(e.target.value)}
-                              placeholder="0x..."
-                              className="flex-1 bg-black/20 border-border h-11 rounded-xl"
-                            />
-                            <Button 
-                              onClick={handleCryptoHashSubmit}
-                              disabled={
-                                !cryptoHash.trim() ||
-                                !cryptoAmount ||
-                                parseUSDTInput(cryptoAmount) <= 0 ||
-                                isSubmittingHash ||
-                                !cryptoAddress
+                    ) : buyUSDTAmount > maxDepositUsdt ? (
+                      <div className="space-y-3">
+                        <p className="text-sm text-warning text-center">
+                          {language === "pt"
+                            ? `Para depósitos acima de ${maxDepositUsdt} USDT, entre em contato conosco via WhatsApp.`
+                            : `For deposits above ${maxDepositUsdt} USDT, please contact us via WhatsApp.`}
+                        </p>
+                        <Button
+                          asChild
+                          className="w-full h-12 sm:h-14 font-semibold rounded-xl text-base sm:text-lg flex items-center justify-center gap-2"
+                        >
+                          <a
+                            href={WHATSAPP_SUPPORT_URL}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <MessageCircle className="w-5 h-5" />
+                            {language === "pt"
+                              ? "Falar no WhatsApp"
+                              : "Contact via WhatsApp"}
+                          </a>
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        onClick={handleBuyConfirm}
+                        disabled={
+                          buyUSDTAmount <= 0 || loading || moneyDisabled
+                        }
+                        className="w-full h-12 sm:h-14 font-semibold rounded-xl text-base sm:text-lg"
+                      >
+                        {loading ? (
+                          <ButtonLoader
+                            label={
+                              language === "pt"
+                                ? "Processando..."
+                                : "Processing..."
+                            }
+                            size="default"
+                            className="text-primary-foreground"
+                          />
+                        ) : (
+                          t("confirmPurchase")
+                        )}
+                      </Button>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="space-y-6">
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-3">
+                          {language === "pt"
+                            ? "Selecione a moeda:"
+                            : "Select currency:"}
+                        </label>
+                        <div className="grid grid-cols-2 gap-2 mb-4">
+                          {CRYPTO_CURRENCIES.map((currency) => (
+                            <button
+                              key={currency}
+                              type="button"
+                              onClick={() =>
+                                handleCryptoCurrencyChange(currency)
                               }
-                              className="h-11 px-6 rounded-xl font-bold whitespace-nowrap"
+                              className={`px-3 py-2.5 rounded-xl border text-xs font-semibold transition-all ${
+                                cryptoCurrency === currency
+                                  ? "bg-primary/20 border-primary text-primary"
+                                  : "bg-muted/50 border-border text-muted-foreground hover:border-primary/50"
+                              }`}
                             >
-                              {isSubmittingHash ? (
-                                <Spinner size="sm" />
-                              ) : (
-                                language === "pt" ? "Enviar Hash" : "Submit Hash"
-                              )}
-                            </Button>
-                          </div>
-                          <p className="text-[10px] text-muted-foreground italic">
-                            {language === "pt" 
-                              ? "O hash nos ajuda a identificar e aprovar seu depósito mais rapidamente." 
-                              : "The hash helps us identify and approve your deposit faster."}
-                          </p>
+                              {currency}
+                            </button>
+                          ))}
+                        </div>
+
+                        <label className="block text-sm font-medium text-foreground mb-2">
+                          {language === "pt"
+                            ? "Selecione a Rede (Network):"
+                            : "Select Network:"}
+                        </label>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          {getCryptoNetworks(cryptoCurrency).map((network) => (
+                            <button
+                              key={network}
+                              onClick={() => handleCryptoNetworkChange(network)}
+                              className={`px-3 py-2.5 rounded-xl border text-xs font-semibold transition-all ${
+                                cryptoNetwork === network
+                                  ? "bg-primary/20 border-primary text-primary"
+                                  : "bg-muted/50 border-border text-muted-foreground hover:border-primary/50"
+                              }`}
+                            >
+                              {CRYPTO_NETWORK_LABELS[network]}
+                            </button>
+                          ))}
                         </div>
                       </div>
 
-                      {/* Simulation Button (Development Only) */}
-                      {process.env.NODE_ENV === "development" && (
+                      {!cryptoAddress && !cryptoAddressLoading && (
                         <Button
-                          onClick={handleSimulatePayment}
-                          disabled={isSimulating}
-                          variant="secondary"
-                          className="w-full h-12 bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/20 rounded-xl gap-2 font-bold shadow-sm mt-2"
+                          onClick={handleCryptoDepositConfirm}
+                          disabled={moneyDisabled}
+                          className="w-full h-12 sm:h-14 font-semibold rounded-xl text-base sm:text-lg"
                         >
-                          {isSimulating ? (
-                            <>
-                              <Spinner size="sm" />
-                              Simulando...
-                            </>
-                          ) : (
-                            <>
-                              <Check className="w-4 h-4" />
-                              Simular Pagamento (Dev Mode)
-                            </>
-                          )}
+                          {language === "pt"
+                            ? "Gerar QR Code de Depósito"
+                            : "Generate Deposit QR Code"}
                         </Button>
                       )}
 
-                      <div className="p-4 bg-muted/30 border border-border rounded-xl space-y-3">
-                        <div className="flex items-start gap-3">
-                          <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-0.5">
-                            <span className="text-[10px] font-bold text-primary">!</span>
-                          </div>
-                          <p className="text-xs text-muted-foreground leading-relaxed">
-                            {language === "pt" 
-                              ? `Certifique-se de enviar exatamente ${cryptoAmount} ${cryptoCurrency} via rede ${cryptoNetwork}. O envio de qualquer outra moeda ou rede resultará em perda permanente.` 
-                              : `Make sure to only send exactly ${cryptoAmount} ${cryptoCurrency} via the ${cryptoNetwork} network. Sending any other currency or network will result in permanent loss.`}
-                          </p>
-                        </div>
-                        <div className="flex items-start gap-3">
-                          <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-0.5">
-                            <span className="text-[10px] font-bold text-primary">?</span>
-                          </div>
-                          <p className="text-xs text-muted-foreground leading-relaxed">
+                      {cryptoAddressLoading ? (
+                        <div className="py-12 flex flex-col items-center gap-3">
+                          <Spinner size="lg" className="text-primary" />
+                          <p className="text-sm text-muted-foreground animate-pulse">
                             {language === "pt"
-                              ? "O crédito será automático após aprovação manual (geralmente 5-30 minutos)."
-                              : "Credit will be automatic after manual approval (usually 5-30 minutes)."}
+                              ? "Gerando endereço..."
+                              : "Generating address..."}
                           </p>
                         </div>
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+                      ) : cryptoAddress ? (
+                        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                          <div className="p-5 bg-primary/5 border border-primary/20 rounded-2xl relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                              <Wallet className="w-12 h-12 text-primary" />
+                            </div>
 
-        {/* Transaction History */}
-        <Card className="rounded-xl sm:rounded-2xl border-border bg-card shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg sm:text-xl text-foreground flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <Clock className="w-5 h-5 text-primary" />
-                {t("purchaseHistory")}
-              </div>
-              <div className="flex items-center gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-8 gap-2">
-                      <Download className="w-4 h-4" />
-                      {language === "pt" ? "Exportar" : "Export"}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-card border-border">
-                    <DropdownMenuItem 
-                      onClick={() => exportHistory(7)}
-                      className="text-foreground hover:bg-primary/10 transition-colors"
-                    >
-                      {language === "pt" ? "Últimos 7 dias" : "Last 7 days"}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => exportHistory(15)}
-                      className="text-foreground hover:bg-primary/10 transition-colors"
-                    >
-                      {language === "pt" ? "Últimos 15 dias" : "Last 15 days"}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => exportHistory(30)}
-                      className="text-foreground hover:bg-primary/10 transition-colors"
-                    >
-                      {language === "pt" ? "Últimos 30 dias" : "Last 30 days"}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => exportHistory(365)}
-                      className="text-foreground hover:bg-primary/10 transition-colors"
-                    >
-                      {language === "pt" ? "Tudo" : "All"}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </CardTitle>
+                            <div className="flex flex-col sm:flex-row items-center gap-6">
+                              <div className="bg-white p-2 rounded-xl shadow-inner shrink-0 min-w-[120px] min-h-[120px] flex items-center justify-center">
+                                {cryptoQrCode ? (
+                                  <Image
+                                    src={cryptoQrCode}
+                                    alt="QR Code"
+                                    width={150}
+                                    height={150}
+                                    className="w-[120px] h-[120px] sm:w-[150px] sm:h-[150px] animate-in fade-in zoom-in-50 duration-500"
+                                    unoptimized
+                                  />
+                                ) : (
+                                  <div className="w-[120px] h-[120px] sm:w-[150px] sm:h-[150px] bg-muted animate-pulse rounded-lg" />
+                                )}
+                              </div>
 
-          </CardHeader>
-          <CardContent>
-            {transactionHistory.length === 0 ? (
-              <div className="text-center py-12">
-                <TrendingUp className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
-                <p className="text-muted-foreground mb-1">{t("noPurchases")}</p>
-                <p className="text-sm text-muted-foreground">
-                  {t("purchasesWillAppear")}
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {transactionHistory.map((transaction) => {
-                  const hasPixData = storedPixData.has(transaction.id);
-                  const isPending = transaction.status === "PENDING";
-                  const isCompleted = transaction.status === "COMPLETED";
-                  const isLoading = loadingTransactions.has(transaction.id);
+                              <div className="flex-1 space-y-3 w-full">
+                                <label className="block text-[10px] font-bold text-primary uppercase tracking-widest mb-1.5">
+                                  {language === "pt"
+                                    ? `Endereço ${cryptoCurrency} (${cryptoNetwork}):`
+                                    : `${cryptoCurrency} Address (${cryptoNetwork}):`}
+                                </label>
 
-                  return (
-                    <div
-                      key={transaction.id}
-                      onClick={() => router.push(`/transaction/${transaction.id}`)}
-                      className={`p-4 rounded-xl bg-muted/30 border border-border transition-colors hover:bg-muted/50 cursor-pointer hover:border-primary/30`}
-                    >
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            {isLoading ? (
-                              <Badge className="bg-primary/20 text-primary border-primary/30 flex items-center gap-1.5">
-                                <Spinner size="sm" />
-                                {language === "pt"
-                                  ? "Verificando..."
-                                  : "Checking..."}
-                              </Badge>
-                            ) : (
-                              <Badge
-                                className={
-                                  transaction.status === "COMPLETED"
-                                    ? "bg-primary/20 text-primary border-primary/30"
-                                    : transaction.status === "PENDING"
-                                    ? "bg-warning/20 text-warning border-warning/30"
-                                    : "bg-destructive/20 text-destructive border-destructive/30"
-                                }
-                              >
-                                {transaction.status === "COMPLETED"
-                                  ? t("completed")
-                                  : transaction.status === "PENDING"
-                                  ? (language === "pt" ? "Em andamento" : "In progress")
-                                  : t("failed")}
-                              </Badge>
-                            )}
-                            <span className="text-xs text-muted-foreground">
-                              {transaction.date.toLocaleDateString(
-                                language === "pt" ? "pt-BR" : "en-US"
-                              )}{" "}
-                              {language === "pt" ? "às" : "at"}{" "}
-                              {transaction.date.toLocaleTimeString(
-                                language === "pt" ? "pt-BR" : "en-US",
-                                {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                }
-                              )}
-                            </span>
-                            {isPending && hasPixData && (
-                              <span className="text-xs text-warning/80 flex items-center gap-1">
-                                <QrCode className="w-3 h-3" />
-                                {t("clickToSeeQRCode")}
-                              </span>
-                            )}
-                            {isCompleted && (
-                              <span className="text-xs text-primary/80 flex items-center gap-1">
-                                <FileText className="w-3 h-3" />
-                                {language === "pt" ? "Ver Comprovante" : "View Receipt"}
-                              </span>
-                            )}
+                                <div className="flex items-center gap-2">
+                                  <code className="flex-1 font-mono text-xs sm:text-sm break-all font-semibold text-foreground bg-black/20 p-3 rounded-lg border border-white/5">
+                                    {cryptoAddress}
+                                  </code>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="shrink-0 hover:bg-primary/20 text-primary h-10 w-10 rounded-xl"
+                                    onClick={() => copyAddress(cryptoAddress)}
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
                           </div>
 
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
-                            <div>
-                              <p className="text-gray-400 text-xs">
-                                {t("amountPaid")}
-                              </p>
-                              <p className="text-foreground font-medium">
-                                {formatBRL(transaction.amount)}
+                          <div className="space-y-3 pt-2 border-t border-border/50">
+                            <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                              {language === "pt"
+                                ? `Valor enviado em ${cryptoCurrency}:`
+                                : `${cryptoCurrency} amount sent:`}
+                            </label>
+                            <input
+                              type="text"
+                              value={cryptoAmount}
+                              onChange={(e) =>
+                                setCryptoAmount(formatUSDTInput(e.target.value))
+                              }
+                              placeholder="0,00"
+                              inputMode="decimal"
+                              className="w-full px-4 py-3 bg-muted/50 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+                            />
+                          </div>
+
+                          {/* Transaction Hash Input */}
+                          <div className="space-y-3 pt-2 border-t border-border/50">
+                            <div className="flex flex-col gap-2">
+                              <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                                {language === "pt"
+                                  ? "Já enviou? Informe o Hash da Transação:"
+                                  : "Sent it? Enter Transaction Hash:"}
+                              </label>
+                              <div className="flex gap-2">
+                                <Input
+                                  value={cryptoHash}
+                                  onChange={(e) =>
+                                    setCryptoHash(e.target.value)
+                                  }
+                                  placeholder="0x..."
+                                  className="flex-1 bg-black/20 border-border h-11 rounded-xl"
+                                />
+                                <Button
+                                  onClick={handleCryptoHashSubmit}
+                                  disabled={
+                                    !cryptoHash.trim() ||
+                                    !cryptoAmount ||
+                                    parseUSDTInput(cryptoAmount) <= 0 ||
+                                    isSubmittingHash ||
+                                    !cryptoAddress
+                                  }
+                                  className="h-11 px-6 rounded-xl font-bold whitespace-nowrap"
+                                >
+                                  {isSubmittingHash ? (
+                                    <Spinner size="sm" />
+                                  ) : language === "pt" ? (
+                                    "Enviar Hash"
+                                  ) : (
+                                    "Submit Hash"
+                                  )}
+                                </Button>
+                              </div>
+                              <p className="text-[10px] text-muted-foreground italic">
+                                {language === "pt"
+                                  ? "O hash nos ajuda a identificar e aprovar seu depósito mais rapidamente."
+                                  : "The hash helps us identify and approve your deposit faster."}
                               </p>
                             </div>
-                            <div>
-                              <p className="text-muted-foreground text-xs">
-                                {t("received")}
-                              </p>
-                              <p className="text-primary font-semibold">
-                                {formatUSDT(transaction.received)} USDT
+                          </div>
+
+                          {/* Simulation Button (Development Only) */}
+                          {process.env.NODE_ENV === "development" && (
+                            <Button
+                              onClick={handleSimulatePayment}
+                              disabled={isSimulating}
+                              variant="secondary"
+                              className="w-full h-12 bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/20 rounded-xl gap-2 font-bold shadow-sm mt-2"
+                            >
+                              {isSimulating ? (
+                                <>
+                                  <Spinner size="sm" />
+                                  Simulando...
+                                </>
+                              ) : (
+                                <>
+                                  <Check className="w-4 h-4" />
+                                  Simular Pagamento (Dev Mode)
+                                </>
+                              )}
+                            </Button>
+                          )}
+
+                          <div className="p-4 bg-muted/30 border border-border rounded-xl space-y-3">
+                            <div className="flex items-start gap-3">
+                              <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+                                <span className="text-[10px] font-bold text-primary">
+                                  !
+                                </span>
+                              </div>
+                              <p className="text-xs text-muted-foreground leading-relaxed">
+                                {language === "pt"
+                                  ? `Certifique-se de enviar exatamente ${cryptoAmount} ${cryptoCurrency} via rede ${cryptoNetwork}. O envio de qualquer outra moeda ou rede resultará em perda permanente.`
+                                  : `Make sure to only send exactly ${cryptoAmount} ${cryptoCurrency} via the ${cryptoNetwork} network. Sending any other currency or network will result in permanent loss.`}
                               </p>
                             </div>
-                            <div>
-                              <p className="text-muted-foreground text-xs">
-                                {t("feeAmount")}
-                              </p>
-                              <p className="text-foreground">
-                                {formatBRL(transaction.fee)}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-muted-foreground text-xs">
-                                {t("feeAmount")}
-                              </p>
-                              <p className="text-foreground">
-                                @ {formatBRL(transaction.rate)}
+                            <div className="flex items-start gap-3">
+                              <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+                                <span className="text-[10px] font-bold text-primary">
+                                  ?
+                                </span>
+                              </div>
+                              <p className="text-xs text-muted-foreground leading-relaxed">
+                                {language === "pt"
+                                  ? "O crédito será automático após aprovação manual (geralmente 5-30 minutos)."
+                                  : "Credit will be automatic after manual approval (usually 5-30 minutes)."}
                               </p>
                             </div>
                           </div>
                         </div>
-                      </div>
+                      ) : null}
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
-        {/* Additional Info */}
-        <div className="mt-6 text-center">
-          <p className="text-xs sm:text-sm text-muted-foreground">
-            • {t("quotesUpdated")}
-            <br />• {t("feeApplied")}
-            <br />• {t("pixPayment")}
-          </p>
+          {/* Transaction History */}
+          <div className="min-w-0 lg:sticky lg:top-4 lg:z-0 lg:max-h-[calc(100dvh-5rem)] lg:self-start lg:overflow-y-auto">
+            <Card className="rounded-xl sm:rounded-2xl border-border bg-card shadow-sm lg:mt-0">
+              <CardHeader>
+                <CardTitle className="text-lg sm:text-xl text-foreground flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-primary" />
+                    {t("purchaseHistory")}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 gap-2"
+                        >
+                          <Download className="w-4 h-4" />
+                          {language === "pt" ? "Exportar" : "Export"}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        align="end"
+                        className="bg-card border-border"
+                      >
+                        <DropdownMenuItem
+                          onClick={() => exportHistory(7)}
+                          className="text-foreground hover:bg-primary/10 transition-colors"
+                        >
+                          {language === "pt" ? "Últimos 7 dias" : "Last 7 days"}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => exportHistory(15)}
+                          className="text-foreground hover:bg-primary/10 transition-colors"
+                        >
+                          {language === "pt"
+                            ? "Últimos 15 dias"
+                            : "Last 15 days"}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => exportHistory(30)}
+                          className="text-foreground hover:bg-primary/10 transition-colors"
+                        >
+                          {language === "pt"
+                            ? "Últimos 30 dias"
+                            : "Last 30 days"}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => exportHistory(365)}
+                          className="text-foreground hover:bg-primary/10 transition-colors"
+                        >
+                          {language === "pt" ? "Tudo" : "All"}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {transactionHistory.length === 0 ? (
+                  <div className="text-center py-12">
+                    <TrendingUp className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+                    <p className="text-muted-foreground mb-1">
+                      {t("noPurchases")}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {t("purchasesWillAppear")}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {transactionHistory.map((transaction) => {
+                      const hasPixData = storedPixData.has(transaction.id);
+                      const isPending = transaction.status === "PENDING";
+                      const isCompleted = transaction.status === "COMPLETED";
+                      const isLoading = loadingTransactions.has(transaction.id);
+
+                      return (
+                        <div
+                          key={transaction.id}
+                          onClick={() =>
+                            router.push(`/transaction/${transaction.id}`)
+                          }
+                          className={`p-4 rounded-xl bg-muted/30 border border-border transition-colors hover:bg-muted/50 cursor-pointer hover:border-primary/30`}
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                {isLoading ? (
+                                  <Badge className="bg-primary/20 text-primary border-primary/30 flex items-center gap-1.5">
+                                    <Spinner size="sm" />
+                                    {language === "pt"
+                                      ? "Verificando..."
+                                      : "Checking..."}
+                                  </Badge>
+                                ) : (
+                                  <Badge
+                                    className={
+                                      transaction.status === "COMPLETED"
+                                        ? "bg-primary/20 text-primary border-primary/30"
+                                        : transaction.status === "PENDING"
+                                          ? "bg-warning/20 text-warning border-warning/30"
+                                          : "bg-destructive/20 text-destructive border-destructive/30"
+                                    }
+                                  >
+                                    {transaction.status === "COMPLETED"
+                                      ? t("completed")
+                                      : transaction.status === "PENDING"
+                                        ? language === "pt"
+                                          ? "Em andamento"
+                                          : "In progress"
+                                        : t("failed")}
+                                  </Badge>
+                                )}
+                                <span className="text-xs text-muted-foreground">
+                                  {transaction.date.toLocaleDateString(
+                                    language === "pt" ? "pt-BR" : "en-US",
+                                  )}{" "}
+                                  {language === "pt" ? "às" : "at"}{" "}
+                                  {transaction.date.toLocaleTimeString(
+                                    language === "pt" ? "pt-BR" : "en-US",
+                                    {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    },
+                                  )}
+                                </span>
+                                {isPending && hasPixData && (
+                                  <span className="text-xs text-warning/80 flex items-center gap-1">
+                                    <QrCode className="w-3 h-3" />
+                                    {t("clickToSeeQRCode")}
+                                  </span>
+                                )}
+                                {isCompleted && (
+                                  <span className="text-xs text-primary/80 flex items-center gap-1">
+                                    <FileText className="w-3 h-3" />
+                                    {language === "pt"
+                                      ? "Ver Comprovante"
+                                      : "View Receipt"}
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
+                                {transaction.source === "crypto" ? (
+                                  <>
+                                    <div>
+                                      <p className="text-gray-400 text-xs">
+                                        {language === "pt"
+                                          ? "Método"
+                                          : "Method"}
+                                      </p>
+                                      <p className="text-foreground font-medium">
+                                        {language === "pt"
+                                          ? "Depósito cripto"
+                                          : "Crypto deposit"}
+                                        {transaction.network ? (
+                                          <span className="block text-[11px] font-normal text-muted-foreground">
+                                            {CRYPTO_NETWORK_LABELS[
+                                              transaction.network as CryptoNetwork
+                                            ] ?? transaction.network}
+                                          </span>
+                                        ) : null}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <p className="text-muted-foreground text-xs">
+                                        {t("received")}
+                                      </p>
+                                      <p className="text-primary font-semibold">
+                                        {formatUSDT(transaction.received)}{" "}
+                                        {transaction.cryptoCurrency ?? "USDT"}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <p className="text-muted-foreground text-xs">
+                                        {t("feeAmount")}
+                                      </p>
+                                      <p className="text-foreground">—</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-muted-foreground text-xs">
+                                        {language === "pt" ? "Cotação" : "Rate"}
+                                      </p>
+                                      <p className="text-foreground">—</p>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <>
+                                    <div>
+                                      <p className="text-gray-400 text-xs">
+                                        {t("amountPaid")}
+                                      </p>
+                                      <p className="text-foreground font-medium">
+                                        {formatBRL(transaction.amount)}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <p className="text-muted-foreground text-xs">
+                                        {t("received")}
+                                      </p>
+                                      <p className="text-primary font-semibold">
+                                        {formatUSDT(transaction.received)} USDT
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <p className="text-muted-foreground text-xs">
+                                        {t("feeAmount")}
+                                      </p>
+                                      <p className="text-foreground">
+                                        {formatBRL(transaction.fee)}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <p className="text-muted-foreground text-xs">
+                                        {t("feeAmount")}
+                                      </p>
+                                      <p className="text-foreground">
+                                        @ {formatBRL(transaction.rate)}
+                                      </p>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
+
       </div>
 
       {/* PIX QR Code Modal */}
@@ -1774,22 +2002,28 @@ const TradePage = () => {
 
       {/* Receipt Modal */}
       <Dialog open={showReceipt} onOpenChange={setShowReceipt}>
-        <DialogContent hideClose className="bg-transparent border-none p-0 max-w-md shadow-none outline-none ring-0 max-h-[92dvh] overflow-y-auto overscroll-y-contain w-[calc(100vw-1.5rem)] sm:w-full pb-[env(safe-area-inset-bottom,0px)]">
+        <DialogContent
+          hideClose
+          className="left-1/2 top-[max(0.5rem,env(safe-area-inset-top))] max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top)-0.5rem))] w-[calc(100vw-1.5rem)] max-w-full sm:max-w-2xl -translate-x-1/2 translate-y-0 overflow-y-auto overscroll-y-contain border-none bg-transparent p-0 pb-[env(safe-area-inset-bottom,0px)] shadow-none outline-none ring-0 sm:top-1/2 sm:max-h-[92dvh] sm:-translate-y-1/2 sm:w-full"
+        >
           <DialogHeader className="sr-only">
             <DialogTitle>Recibo da Transação</DialogTitle>
           </DialogHeader>
           {receiptData && (
-            <TransactionReceipt 
+            <TransactionReceipt
               transaction={{
                 id: receiptData.transactionId,
                 amount: receiptData.amount,
                 usdtAmount: receiptData.usdtAmount,
                 date: receiptData.date,
-                status: transactionHistory.find(t => t.id === receiptData.transactionId)?.status || "PENDING",
+                status:
+                  transactionHistory.find(
+                    (t) => t.id === receiptData.transactionId,
+                  )?.status || "PENDING",
                 type: receiptData.type,
                 currency: receiptData.currency,
                 network: cryptoNetwork,
-                address: cryptoAddress
+                address: cryptoAddress,
               }}
               onClose={() => setShowReceipt(false)}
               language={language}

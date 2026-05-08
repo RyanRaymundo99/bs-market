@@ -23,7 +23,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -40,12 +39,17 @@ import {
   Plus,
   Minus,
 } from "lucide-react";
-import NavbarNew from "@/components/ui/navbar-new";
+import NavbarNew, { DESKTOP_SHELL_PL } from "@/components/ui/navbar-new";
 import { PageLoader, ButtonLoader } from "@/components/ui/loading";
 import { GlobalKYCBanner } from "@/components/GlobalKYCBanner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useMobileMenuOpen } from "@/hooks/useMobileMenuOpen";
 import { formatCurrency, formatBRL } from "@/lib/format-currency";
+import {
+  DigitalReceipt,
+  type DigitalReceiptHeaderTone,
+  type DigitalReceiptStatusBadgeTone,
+} from "@/components/TransactionReceipt";
 import {
   CRYPTO_CURRENCIES,
   CRYPTO_NETWORK_LABELS,
@@ -134,6 +138,23 @@ const parseBRLInput = (value: string) => {
 
   return Number.isFinite(amount) ? amount : 0;
 };
+
+function withdrawReceiptHeaderTone(status: string): DigitalReceiptHeaderTone {
+  const u = status.toUpperCase();
+  if (u === "COMPLETED") return "success";
+  if (u === "REJECTED" || u === "FAILED" || u === "CANCELLED") return "danger";
+  return "pending";
+}
+
+function withdrawReceiptBadgeTone(
+  status: string
+): DigitalReceiptStatusBadgeTone {
+  const u = status.toUpperCase();
+  if (u === "COMPLETED") return "success";
+  if (u === "PENDING" || u === "PROCESSING") return "info";
+  if (u === "REJECTED" || u === "FAILED") return "destructive";
+  return "secondary";
+}
 
 export default function WithdrawPage() {
   const router = useRouter();
@@ -479,7 +500,11 @@ export default function WithdrawPage() {
           ),
           fee: Number(data.data.fee ?? getNetworkFee()),
           status: String(data.data.status || "PENDING").toUpperCase(),
-          walletAddress,
+          walletAddress:
+            typeof data.data.recipient_address === "string" &&
+            data.data.recipient_address.trim()
+              ? data.data.recipient_address.trim()
+              : walletAddress.trim(),
           network: selectedNetwork,
           transactionHash: data.data.transaction_id || null,
           createdAt: data.data.created_at || new Date().toISOString(),
@@ -816,7 +841,7 @@ export default function WithdrawPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className={`min-h-screen bg-background ${DESKTOP_SHELL_PL}`}>
         <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
         <GlobalKYCBanner />
         <div className="container mx-auto px-4 py-8">
@@ -833,11 +858,11 @@ export default function WithdrawPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className={`min-h-screen bg-background ${DESKTOP_SHELL_PL}`}>
       <NavbarNew isLoggingOut={false} handleLogout={() => {}} />
       <GlobalKYCBanner />
       <div
-        className={`container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl ${
+        className={`mx-auto w-full max-w-[1800px] px-3 sm:px-5 xl:px-8 py-4 sm:py-6 ${
           isMobile ? "pb-16" : ""
         }`}
         style={
@@ -846,16 +871,16 @@ export default function WithdrawPage() {
             : undefined
         }
       >
-        <div className="max-w-4xl mx-auto">
-          {/* Main Withdrawal Form */}
-          <div>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,28rem)_minmax(0,1fr)] lg:items-start lg:gap-6 xl:grid-cols-[minmax(0,32rem)_minmax(0,1fr)] xl:gap-10">
+          {/* Withdrawal form */}
+          <div className="min-w-0">
             <Card className="rounded-xl sm:rounded-2xl border-border bg-card shadow-sm">
               <CardHeader>
-                <div className="text-center mb-6">
-                  <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
+                <div className="mb-4 text-left sm:mb-6">
+                  <h1 className="mb-2 text-2xl font-bold text-foreground sm:text-3xl">
                     {language === "pt" ? "Sacar" : "Withdraw"}
                   </h1>
-                  <p className="text-muted-foreground text-sm sm:text-base">
+                  <p className="text-sm text-muted-foreground sm:text-base">
                     {t("chooseWithdrawalMethod")}
                   </p>
                 </div>
@@ -876,7 +901,7 @@ export default function WithdrawPage() {
                   </div>
                 ) : null}
 
-                <div className="mb-4 flex justify-center">
+                <div className="mb-4 flex justify-start sm:justify-center">
                   <div className="relative inline-flex items-center bg-muted/60 border border-border rounded-xl p-1">
                     <button
                       onClick={() => setWithdrawalType("CRYPTO")}
@@ -1265,9 +1290,10 @@ export default function WithdrawPage() {
               </CardContent>
             </Card>
           </div>
-        </div>
 
-        <Card className="mt-6 sm:mt-8 rounded-xl sm:rounded-2xl border-border bg-card shadow-sm">
+          {/* Withdrawal history — right column on desktop */}
+          <div className="min-w-0 lg:sticky lg:top-4 lg:z-0 lg:max-h-[calc(100dvh-5rem)] lg:self-start lg:overflow-y-auto">
+        <Card className="mt-6 rounded-xl border-border bg-card shadow-sm sm:mt-8 lg:mt-0 sm:rounded-2xl">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-foreground">
               <History className="h-5 w-5 text-primary" />
@@ -1279,15 +1305,30 @@ export default function WithdrawPage() {
           </CardHeader>
           <CardContent>
             {withdrawalHistory.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+              <div className="overflow-x-auto lg:overflow-x-visible">
+                <table className="w-full min-w-0 table-fixed text-sm">
+                  <colgroup>
+                    <col className="w-[22%]" />
+                    <col className="w-[12%]" />
+                    <col className="w-[18%]" />
+                    <col className="w-[20%]" />
+                    <col className="min-w-0 w-[28%]" />
+                  </colgroup>
                   <thead>
                     <tr className="border-b">
-                      <th className="text-left py-3 px-4">{t("date")}</th>
-                      <th className="text-left py-3 px-4">{t("type")}</th>
-                      <th className="text-left py-3 px-4">{t("value")}</th>
-                      <th className="text-left py-3 px-4">{t("status")}</th>
-                      <th className="text-left py-3 px-4">
+                      <th className="text-left py-2.5 px-2 lg:py-3 lg:px-3">
+                        {t("date")}
+                      </th>
+                      <th className="text-left py-2.5 px-2 lg:py-3 lg:px-3">
+                        {t("type")}
+                      </th>
+                      <th className="text-left py-2.5 px-2 lg:py-3 lg:px-3">
+                        {t("value")}
+                      </th>
+                      <th className="text-left py-2.5 px-2 lg:py-3 lg:px-3">
+                        {t("status")}
+                      </th>
+                      <th className="min-w-0 text-left py-2.5 px-2 lg:py-3 lg:px-3">
                         {t("hashProtocol")}
                       </th>
                     </tr>
@@ -1299,7 +1340,7 @@ export default function WithdrawPage() {
                         className="border-b hover:bg-muted/50 cursor-pointer"
                         onClick={() => router.push(`/transaction/${withdrawal.id}`)}
                       >
-                        <td className="py-3 px-4">
+                        <td className="py-2.5 px-2 align-middle lg:py-3 lg:px-3">
                           {new Date(withdrawal.createdAt).toLocaleDateString(
                             language === "pt" ? "pt-BR" : "en-US",
                             {
@@ -1311,7 +1352,7 @@ export default function WithdrawPage() {
                             }
                           )}
                         </td>
-                        <td className="py-3 px-4">
+                        <td className="py-2.5 px-2 align-middle lg:py-3 lg:px-3">
                           <Badge
                             variant="secondary"
                             className="bg-primary/20 text-primary border-primary/30"
@@ -1321,7 +1362,7 @@ export default function WithdrawPage() {
                               : withdrawal.currency || withdrawal.type}
                           </Badge>
                         </td>
-                        <td className="py-3 px-4 font-medium text-foreground">
+                        <td className="py-2.5 px-2 align-middle font-medium text-foreground lg:py-3 lg:px-3">
                           {withdrawal.type === "PIX"
                             ? formatBRL(withdrawal.amount)
                             : formatCurrency(
@@ -1330,23 +1371,29 @@ export default function WithdrawPage() {
                                 { maxDecimals: 4 }
                               )}
                         </td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-2">
+                        <td className="py-2.5 px-2 align-middle lg:py-3 lg:px-3">
+                          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                             {getStatusIcon(withdrawal.status)}
                             {getStatusBadge(withdrawal.status)}
                           </div>
                         </td>
-                        <td className="py-3 px-4">
+                        <td className="min-w-0 py-2.5 px-2 align-middle lg:py-3 lg:px-3">
                           {withdrawal.type === "PIX" && withdrawal.protocol ? (
-                            <code className="text-xs bg-muted px-2 py-1 rounded text-foreground">
+                            <code
+                              className="block max-w-full truncate rounded bg-muted px-2 py-1 text-left text-xs text-foreground"
+                              title={withdrawal.protocol}
+                            >
                               {withdrawal.protocol}
                             </code>
                           ) : withdrawal.hash ? (
-                            <div className="flex items-center gap-2">
-                              <code className="text-xs bg-muted px-2 py-1 rounded text-foreground">
-                                {withdrawal.hash.slice(0, 8)}...
+                            <div className="flex min-w-0 items-center gap-1.5">
+                              <code
+                                className="min-w-0 flex-1 truncate rounded bg-muted px-2 py-1 text-xs text-foreground"
+                                title={withdrawal.hash}
+                              >
+                                {withdrawal.hash}
                               </code>
-                              <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                              <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground" />
                             </div>
                           ) : (
                             <span className="text-muted-foreground">-</span>
@@ -1364,167 +1411,210 @@ export default function WithdrawPage() {
             )}
           </CardContent>
         </Card>
+          </div>
+        </div>
       </div>
 
-      {/* Success Modal */}
+      {/* Success — digital receipt (same style as trade / deposits) */}
       <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/15">
-                <CheckCircle className="h-5 w-5 text-primary" />
-              </span>
-              <span>
-                {language === "pt" ? "Comprovante de Saque" : "Withdrawal Receipt"}
-              </span>
+        <DialogContent
+          hideClose
+          className="z-[100] left-1/2 top-[max(0.5rem,env(safe-area-inset-top))] max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top)-0.5rem))] w-[calc(100vw-1.5rem)] max-w-full sm:max-w-2xl -translate-x-1/2 translate-y-0 overflow-y-auto overscroll-y-contain border-none bg-transparent p-0 pb-[env(safe-area-inset-bottom,0px)] shadow-none outline-none ring-0 sm:top-1/2 sm:max-h-[min(98dvh,calc(100dvh-0.75rem))] sm:-translate-y-1/2 sm:w-full"
+        >
+          <DialogHeader className="sr-only">
+            <DialogTitle>
+              {language === "pt"
+                ? "Comprovante de saque"
+                : "Withdrawal receipt"}
             </DialogTitle>
-            <DialogDescription>{successMessage}</DialogDescription>
           </DialogHeader>
 
           {successDetails ? (
-            <div className="space-y-4">
-              <div className="rounded-2xl border border-primary/25 bg-primary/10 p-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {language === "pt" ? "Valor solicitado" : "Requested amount"}
-                </p>
-                <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
-                  <p className="text-3xl font-bold text-primary">
-                    {successDetails.type === "PIX"
-                      ? formatBRL(successDetails.amount)
-                      : formatCurrency(
-                          successDetails.amount,
-                          successDetails.currency || successDetails.type,
-                          { maxDecimals: 4 }
-                        )}
-                  </p>
-                  <Badge className="bg-primary text-primary-foreground">
-                    {getReceiptStatusLabel(successDetails.status)}
-                  </Badge>
-                </div>
-              </div>
+            <DigitalReceipt
+              language={language}
+              onClose={() => setShowSuccessModal(false)}
+              headerTone={withdrawReceiptHeaderTone(successDetails.status)}
+              title={(() => {
+                const st = successDetails.status.toUpperCase();
+                if (st === "COMPLETED")
+                  return language === "pt"
+                    ? "Saque concluído!"
+                    : "Withdrawal completed!";
+                if (st === "REJECTED" || st === "FAILED")
+                  return language === "pt"
+                    ? "Saque não aprovado"
+                    : "Withdrawal not approved";
+                return language === "pt"
+                  ? "Solicitação registrada"
+                  : "Request submitted";
+              })()}
+              headerSubtitle={successMessage || null}
+              amountSectionLabel={
+                language === "pt" ? "Valor solicitado" : "Requested amount"
+              }
+              amountNumeric={
+                successDetails.type === "PIX"
+                  ? formatCurrency(successDetails.amount, "BRL", {
+                      minDecimals: 2,
+                      maxDecimals: 2,
+                      showCurrency: false,
+                    })
+                  : formatCurrency(
+                      successDetails.amount,
+                      successDetails.currency || successDetails.type,
+                      { maxDecimals: 4, showCurrency: false }
+                    )
+              }
+              amountCurrency={
+                successDetails.type === "PIX"
+                  ? "BRL"
+                  : successDetails.currency || successDetails.type
+              }
+              footnote={
+                successDetails.type === "PIX"
+                  ? `${language === "pt" ? "Valor líquido (após taxa)" : "Net amount (after fee)"}: ${formatBRL(
+                      Number(
+                        successDetails.netAmount ?? successDetails.amount
+                      )
+                    )}`
+                  : `${language === "pt" ? "Líquido (após taxa de rede)" : "Net (after network fee)"}: ${formatCurrency(
+                      Number(
+                        successDetails.netAmount ?? successDetails.amount
+                      ),
+                      successDetails.currency || successDetails.type,
+                      { maxDecimals: 4, showCurrency: true }
+                    )}`
+              }
+              statusFieldLabel={
+                language === "pt" ? "Status" : "Status"
+              }
+              statusDisplay={getReceiptStatusLabel(successDetails.status)}
+              statusBadgeTone={withdrawReceiptBadgeTone(
+                successDetails.status
+              )}
+              dateLabel={
+                language === "pt" ? "Data da solicitação" : "Requested at"
+              }
+              dateFormatted={new Date(
+                successDetails.createdAt
+              ).toLocaleString(
+                language === "pt" ? "pt-BR" : "en-US",
+                {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }
+              )}
+              transactionId={newTransactionId ?? successDetails.id}
+              detailsSlot={
+                <div className="space-y-4">
+                  <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
+                    <div className="min-w-0 rounded-xl border border-border bg-muted/30 p-4">
+                      <p className="text-sm text-muted-foreground sm:text-base">
+                        {language === "pt" ? "Método" : "Method"}
+                      </p>
+                      <p className="mt-1 text-base font-semibold leading-snug text-foreground sm:text-lg">
+                        {successDetails.type === "PIX"
+                          ? "PIX"
+                          : `${successDetails.network ?? "—"} · ${
+                              successDetails.currency || successDetails.type
+                            }`}
+                      </p>
+                    </div>
+                    <div className="min-w-0 rounded-xl border border-border bg-muted/30 p-4">
+                      <p className="text-sm text-muted-foreground sm:text-base">
+                        {successDetails.type === "PIX"
+                          ? language === "pt"
+                            ? "Chave PIX"
+                            : "PIX key"
+                          : language === "pt"
+                          ? "Carteira destino"
+                          : "Destination wallet"}
+                      </p>
+                      <p
+                        className="mt-1 break-all font-mono text-sm font-semibold leading-snug text-foreground sm:text-base"
+                        title={
+                          successDetails.type === "PIX"
+                            ? maskPixKey(successDetails.pixKey)
+                            : successDetails.walletAddress || ""
+                        }
+                      >
+                        {successDetails.type === "PIX"
+                          ? maskPixKey(successDetails.pixKey)
+                          : successDetails.walletAddress || "—"}
+                      </p>
+                    </div>
+                    <div className="min-w-0 rounded-xl border border-border bg-muted/30 p-4 sm:col-span-2">
+                      <p className="text-sm text-muted-foreground sm:text-base">
+                        {successDetails.type === "PIX"
+                          ? language === "pt"
+                            ? "Protocolo"
+                            : "Protocol"
+                          : language === "pt"
+                          ? "Hash / ID"
+                          : "Hash / ID"}
+                      </p>
+                      <p
+                        className="mt-1 break-all font-mono text-sm font-semibold leading-snug text-foreground sm:text-base"
+                        title={
+                          successDetails.protocol ||
+                          successDetails.transactionHash ||
+                          successDetails.id
+                        }
+                      >
+                        {successDetails.protocol ||
+                          successDetails.transactionHash ||
+                          successDetails.id}
+                      </p>
+                    </div>
+                  </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-xl border border-border bg-muted/30 p-4">
-                  <p className="text-xs text-muted-foreground">
-                    {language === "pt" ? "Método" : "Method"}
-                  </p>
-                  <p className="mt-1 font-semibold text-foreground">
+                  <div className="rounded-xl border border-border bg-card p-4">
+                    <div className="flex items-center justify-between text-base sm:text-lg">
+                      <span className="text-muted-foreground">
+                        {language === "pt" ? "Taxa" : "Fee"}
+                      </span>
+                      <span className="font-semibold text-foreground">
+                        {successDetails.type === "PIX"
+                          ? formatBRL(Number(successDetails.fee || 0))
+                          : formatCurrency(
+                              Number(successDetails.fee || 0),
+                              successDetails.currency || successDetails.type,
+                              { maxDecimals: 4 }
+                            )}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-warning/30 bg-warning/10 p-4 text-sm leading-relaxed text-warning sm:p-5 sm:text-base">
                     {successDetails.type === "PIX"
-                      ? "PIX"
-                      : `${successDetails.network || selectedNetwork} ${
+                      ? language === "pt"
+                        ? "Seu saque PIX foi registrado e será processado manualmente. Prazo estimado: até 24 horas úteis."
+                        : "Your PIX withdrawal was registered and will be processed manually. Estimated time: up to 24 business hours."
+                      : language === "pt"
+                      ? `Seu saque ${
                           successDetails.currency || successDetails.type
-                        }`}
-                  </p>
+                        } foi enviado para processamento. A confirmação pode depender da rede.`
+                      : `Your ${
+                          successDetails.currency || successDetails.type
+                        } withdrawal was sent for processing. Confirmation depends on the network.`}
+                  </div>
                 </div>
-                <div className="rounded-xl border border-border bg-muted/30 p-4">
-                  <p className="text-xs text-muted-foreground">
-                    {language === "pt" ? "Data da solicitação" : "Requested at"}
-                  </p>
-                  <p className="mt-1 font-semibold text-foreground">
-                    {new Date(successDetails.createdAt).toLocaleString(
-                      language === "pt" ? "pt-BR" : "en-US",
-                      {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      }
-                    )}
-                  </p>
-                </div>
-                <div className="rounded-xl border border-border bg-muted/30 p-4">
-                  <p className="text-xs text-muted-foreground">
-                    {successDetails.type === "PIX"
-                      ? language === "pt"
-                        ? "Chave PIX"
-                        : "PIX key"
-                      : language === "pt"
-                      ? "Carteira destino"
-                      : "Destination wallet"}
-                  </p>
-                  <p className="mt-1 break-all font-semibold text-foreground">
-                    {successDetails.type === "PIX"
-                      ? maskPixKey(successDetails.pixKey)
-                      : successDetails.walletAddress || "-"}
-                  </p>
-                </div>
-                <div className="rounded-xl border border-border bg-muted/30 p-4">
-                  <p className="text-xs text-muted-foreground">
-                    {successDetails.type === "PIX"
-                      ? language === "pt"
-                        ? "Protocolo PIX"
-                        : "PIX Protocol"
-                      : language === "pt"
-                      ? "Hash da transação"
-                      : "Transaction Hash"}
-                  </p>
-                  <p className="mt-1 break-all font-mono text-sm font-semibold text-foreground">
-                    {successDetails.protocol ||
-                      successDetails.transactionHash ||
-                      successDetails.id}
-                  </p>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-border bg-card p-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">
-                    {language === "pt" ? "Taxa" : "Fee"}
-                  </span>
-                  <span className="font-medium text-foreground">
-                    {successDetails.type === "PIX"
-                      ? formatBRL(Number(successDetails.fee || 0))
-                      : formatCurrency(
-                          Number(successDetails.fee || 0),
-                          successDetails.currency || successDetails.type,
-                          { maxDecimals: 4 }
-                        )}
-                  </span>
-                </div>
-                <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-sm">
-                  <span className="text-muted-foreground">
-                    {language === "pt" ? "Valor líquido" : "Net amount"}
-                  </span>
-                  <span className="font-semibold text-primary">
-                    {successDetails.type === "PIX"
-                      ? formatBRL(
-                          Number(successDetails.netAmount ?? successDetails.amount)
-                        )
-                      : formatCurrency(
-                          Number(successDetails.netAmount ?? successDetails.amount),
-                          successDetails.currency || successDetails.type,
-                          { maxDecimals: 4 }
-                        )}
-                  </span>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-warning/30 bg-warning/10 p-4 text-sm text-warning">
-                {successDetails.type === "PIX"
-                  ? language === "pt"
-                    ? "Seu saque PIX foi registrado e será processado manualmente. Prazo estimado: até 24 horas úteis."
-                    : "Your PIX withdrawal was registered and will be processed manually. Estimated time: up to 24 business hours."
-                  : language === "pt"
-                  ? `Seu saque ${successDetails.currency || successDetails.type} foi enviado para processamento. A confirmação pode depender da rede selecionada.`
-                  : `Your ${successDetails.currency || successDetails.type} withdrawal was sent for processing. Confirmation can depend on the selected network.`}
-              </div>
-            </div>
+              }
+              secondaryAction={
+                newTransactionId
+                  ? {
+                      label:
+                        language === "pt" ? "Ver detalhes" : "View details",
+                      onClick: () =>
+                        router.push(`/transaction/${newTransactionId}`),
+                    }
+                  : undefined
+              }
+            />
           ) : null}
-
-          <div className="flex justify-end gap-3">
-            {newTransactionId && (
-              <Button
-                variant="outline"
-                onClick={() => router.push(`/transaction/${newTransactionId}`)}
-              >
-                {language === "pt" ? "Ver Detalhes" : "View Details"}
-              </Button>
-            )}
-            <Button onClick={() => setShowSuccessModal(false)}>
-              {t("close")}
-            </Button>
-          </div>
         </DialogContent>
       </Dialog>
 

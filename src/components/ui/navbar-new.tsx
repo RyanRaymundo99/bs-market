@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import {
   LogOut,
   Menu,
@@ -17,6 +18,10 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { FlagBR } from "@/components/icons/FlagBR";
 import { FlagUS } from "@/components/icons/FlagUS";
 import { syncMobileMenuToBody } from "@/hooks/useMobileMenuOpen";
+import { cn } from "@/lib/utils";
+
+/** Left padding for main page wrappers so content clears the fixed desktop sidebar (`w-56`). */
+export const DESKTOP_SHELL_PL = "md:pl-56";
 
 const NAV_LINKS_KEYS = [
   { key: "dashboard", href: "/dashboard", icon: Home },
@@ -35,7 +40,15 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
   const [mounted, setMounted] = useState(false);
   const [moneyDisabled, setMoneyDisabled] = useState(false);
   const [moneyDisabledMessage, setMoneyDisabledMessage] = useState<string>("");
+  const pathname = usePathname();
   const { language, setLanguage, t } = useLanguage();
+
+  const navItemActive = (href: string) => {
+    if (!pathname) return false;
+    if (pathname === href) return true;
+    if (href === "/trade" && pathname === "/deposit") return true;
+    return false;
+  };
 
   // Prevent hydration mismatch by only rendering translated content after mount
   useEffect(() => {
@@ -103,71 +116,99 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
 
   return (
     <>
-      {/* Desktop Header */}
-      <header className="w-full bg-black/60 border-b border-white/10 backdrop-blur-[20px] items-center justify-between px-4 md:px-6 sticky top-0 z-50 hidden md:flex">
-        <div className="flex items-center gap-6">
-          {/* Logo */}
-          <div
-            className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
-            onClick={() => handleNavigation("/dashboard")}
-          >
-            <Image
-              src="/shortname-logo.svg"
-              alt="Build Strategy"
-              width={100}
-              height={50}
-              className="h-auto"
-              priority
-            />
+      {/* Desktop: fixed sidebar */}
+      <aside
+        aria-label={mounted ? t("menu") : "Menu"}
+        className="fixed left-0 top-0 z-50 hidden h-dvh w-56 flex-col border-r border-white/10 bg-black/95 backdrop-blur-xl print:hidden md:flex"
+      >
+        <div className="flex min-h-0 flex-1 flex-col gap-1 px-2 pt-3">
+          <div className="mb-3 flex w-full shrink-0 items-center gap-1.5 px-0.5">
+            <div
+              className="min-w-0 flex-1 cursor-pointer py-0.5 transition-opacity hover:opacity-80"
+              onClick={() => handleNavigation("/dashboard")}
+            >
+              <Image
+                src="/shortname-logo.svg"
+                alt="Build Strategy"
+                width={560}
+                height={224}
+                className="block h-14 w-auto max-w-full origin-left scale-[1.8] object-contain object-left"
+                priority
+              />
+            </div>
+            <div
+              className="shrink-0"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {mounted ? (
+                <UserNotificationBell
+                  triggerClassName="h-11 w-11 rounded-xl"
+                  iconClassName="h-6 w-6"
+                />
+              ) : (
+                <div
+                  className="h-11 w-11 shrink-0 rounded-xl"
+                  aria-hidden
+                />
+              )}
+            </div>
           </div>
-          {/* Desktop Navigation */}
-          <nav className="flex gap-6 relative">
+
+          <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pb-2 pr-0.5">
             {NAV_LINKS_KEYS.map((link) => {
               const IconComponent = link.icon;
+              const active = navItemActive(link.href);
               return (
                 <button
                   key={link.key}
+                  type="button"
                   onClick={() => handleNavigation(link.href)}
-                  className="text-foreground/80 hover:text-primary font-medium transition-colors flex items-center gap-2 group cursor-pointer"
+                  className={cn(
+                    "flex w-full items-center gap-3 rounded-xl px-2.5 py-3 text-left text-base font-medium transition-colors",
+                    active
+                      ? "bg-primary/15 text-primary shadow-[inset_0_0_0_1px_rgba(34,197,94,0.2)]"
+                      : "text-foreground/85 hover:bg-white/5 hover:text-primary"
+                  )}
                 >
-                  <IconComponent className="w-4 h-4 group-hover:text-primary transition-colors" />
+                  <IconComponent
+                    className={cn(
+                      "h-6 w-6 shrink-0",
+                      active ? "text-primary" : "opacity-90"
+                    )}
+                  />
                   {mounted
                     ? t(link.key)
                     : link.key === "trade"
-                    ? "Depositar"
-                    : link.key === "dashboard"
-                    ? "Dashboard"
-                    : link.key === "withdraw"
-                    ? "Sacar"
-                    : link.key === "profile"
-                    ? "Perfil"
-                    : link.key}
+                      ? "Depositar"
+                      : link.key === "dashboard"
+                        ? "Dashboard"
+                        : link.key === "withdraw"
+                          ? "Sacar"
+                          : link.key === "profile"
+                            ? "Perfil"
+                            : link.key}
                 </button>
               );
             })}
           </nav>
         </div>
-        {/* Header Actions - all pills match balance style (gradient, green border on hover) */}
-        <div className="flex items-center gap-2">
-          <BalanceDisplay />
-          {mounted ? (
-            <UserNotificationBell />
-          ) : (
-            <div className="h-10 w-10 rounded-xl shrink-0" aria-hidden />
-          )}
+
+        <div className="shrink-0 space-y-2 border-t border-white/10 p-2">
+          <BalanceDisplay className="w-full [&>div]:w-full [&>div]:justify-center" />
           <div
-            className="flex items-center h-10 rounded-xl bg-muted/50 border border-border hover:border-primary/30 p-0.5 transition-colors"
+            className="flex h-10 items-center rounded-xl border border-border bg-muted/50 p-0.5 transition-colors hover:border-primary/30"
             role="group"
             aria-label="Idioma"
           >
             <button
               type="button"
               onClick={() => setLanguage("pt")}
-              className={`h-full rounded-lg px-2.5 flex items-center justify-center transition-all duration-200 ${
+              className={cn(
+                "flex h-full flex-1 items-center justify-center rounded-lg transition-all duration-200",
                 language === "pt"
                   ? "bg-primary/15 text-primary"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
-              }`}
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
               title="Português"
             >
               <FlagBR size={18} className="rounded-sm" />
@@ -175,11 +216,12 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
             <button
               type="button"
               onClick={() => setLanguage("en")}
-              className={`h-full rounded-lg px-2.5 flex items-center justify-center transition-all duration-200 ${
+              className={cn(
+                "flex h-full flex-1 items-center justify-center rounded-lg transition-all duration-200",
                 language === "en"
                   ? "bg-primary/15 text-primary"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
-              }`}
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
               title="English"
             >
               <FlagUS size={18} className="rounded-sm" />
@@ -191,7 +233,7 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
             size="sm"
             onClick={handleLogout}
             disabled={isLoggingOut}
-            className="h-10 rounded-xl gap-2 text-foreground/80 hover:text-primary hover:border-primary/30 border border-border bg-muted/50 hover:bg-muted px-3 text-sm font-medium transition-all duration-200"
+            className="h-11 w-full gap-2 rounded-xl border border-border bg-muted/50 text-foreground/90 hover:border-primary/30 hover:bg-muted hover:text-primary"
           >
             <LogOut className="h-4 w-4 shrink-0" />
             {mounted
@@ -199,16 +241,16 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
                 ? t("loggingOut")
                 : t("logout")
               : isLoggingOut
-              ? "Saindo..."
-              : "Sair"}
+                ? "Saindo..."
+                : "Sair"}
           </Button>
         </div>
-      </header>
+      </aside>
 
       {/* Mobile Header with Logo, Sign Out, and Hamburger */}
-      <header className="w-full bg-black/60 border-b border-white/10 backdrop-blur-[20px] items-center justify-between px-4 py-3 sticky top-0 z-50 flex md:hidden">
+      <header className="sticky top-0 z-50 flex w-full items-center justify-between border-b border-white/10 bg-black/60 px-4 py-3 backdrop-blur-[20px] md:hidden print:hidden">
         <div
-          className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+          className="flex cursor-pointer items-center gap-2 transition-opacity hover:opacity-80"
           onClick={() => handleNavigation("/dashboard")}
         >
           <Image
@@ -226,28 +268,33 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
             size="sm"
             onClick={handleLogout}
             disabled={isLoggingOut}
-            className="text-foreground hover:text-primary hover:bg-muted p-2"
+            className="p-2 text-foreground hover:bg-muted hover:text-primary"
             title={mounted ? t("logout") : "Sair"}
           >
-            <LogOut className="w-5 h-5" />
+            <LogOut className="h-5 w-5" />
           </Button>
           <Button
             variant="ghost"
             size="sm"
             onClick={toggleMobileMenu}
-            className="bg-card/60 backdrop-blur-[20px] border border-border text-foreground hover:text-primary hover:bg-muted p-2 rounded-lg"
+            className="rounded-lg border border-border bg-card/60 p-2 text-foreground backdrop-blur-[20px] hover:bg-muted hover:text-primary"
           >
             {isMobileMenuOpen ? (
-              <X className="w-5 h-5" />
+              <X className="h-5 w-5" />
             ) : (
-              <Menu className="w-5 h-5" />
+              <Menu className="h-5 w-5" />
             )}
           </Button>
         </div>
       </header>
 
       {moneyDisabled ? (
-        <div className="w-full border-b border-warning/30 bg-warning/10 px-4 py-2">
+        <div
+          className={cn(
+            "w-full border-b border-warning/30 bg-warning/10 px-4 py-2",
+            DESKTOP_SHELL_PL
+          )}
+        >
           <p className="text-xs text-warning">
             {moneyDisabledMessage ||
               (mounted
@@ -261,19 +308,19 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 md:hidden">
+        <div className="fixed inset-0 z-40 bg-black/80 backdrop-blur-sm md:hidden">
           <div className="absolute inset-0" onClick={toggleMobileMenu}></div>
         </div>
       )}
 
       {/* Mobile Menu */}
       <div
-        className={`fixed top-0 right-0 h-full w-72 md:w-80 bg-black/95 border-l border-white/10 backdrop-blur-[20px] z-50 transform transition-transform duration-200 ease-out md:hidden ${
+        className={`fixed right-0 top-0 z-50 h-full w-72 transform border-l border-white/10 bg-black/95 backdrop-blur-[20px] transition-transform duration-200 ease-out md:hidden ${
           isMobileMenuOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
         {/* Mobile Menu Header */}
-        <div className="flex items-center justify-between p-6 border-b border-white/10">
+        <div className="flex items-center justify-between border-b border-white/10 p-6">
           <span className="text-lg font-bold text-white">
             {mounted ? t("menu") : "Menu"}
           </span>
@@ -281,15 +328,15 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
             variant="ghost"
             size="sm"
             onClick={toggleMobileMenu}
-            className="text-foreground hover:text-primary hover:bg-muted p-2"
+            className="p-2 text-foreground hover:bg-muted hover:text-primary"
           >
-            <X className="w-6 h-6" />
+            <X className="h-6 w-6" />
           </Button>
         </div>
 
         {/* Mobile Menu Content */}
-        <div className="flex flex-col h-full">
-          <nav className="flex-1 p-6 space-y-2">
+        <div className="flex h-full flex-col">
+          <nav className="flex-1 space-y-2 p-6">
             {/* Main Navigation Items */}
             <div className="space-y-1">
               {NAV_LINKS_KEYS.map((link) => {
@@ -298,21 +345,21 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
                   <button
                     key={link.key}
                     onClick={() => handleMobileNavigation(link.href)}
-                    className="w-full flex items-center gap-3 p-3 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 group"
+                    className="group flex w-full items-center gap-3 rounded-lg p-3 text-white/80 transition-all duration-200 hover:bg-white/10 hover:text-white"
                   >
-                    <IconComponent className="w-5 h-5 group-hover:text-brand-300 transition-colors" />
+                    <IconComponent className="h-5 w-5 transition-colors group-hover:text-brand-300" />
                     <span className="font-medium">
                       {mounted
                         ? t(link.key)
                         : link.key === "trade"
-                        ? "Depositar"
-                        : link.key === "dashboard"
-                        ? "Dashboard"
-                        : link.key === "withdraw"
-                        ? "Sacar"
-                        : link.key === "profile"
-                        ? "Perfil"
-                        : link.key}
+                          ? "Depositar"
+                          : link.key === "dashboard"
+                            ? "Dashboard"
+                            : link.key === "withdraw"
+                              ? "Sacar"
+                              : link.key === "profile"
+                                ? "Perfil"
+                                : link.key}
                     </span>
                   </button>
                 );
@@ -321,25 +368,25 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
           </nav>
 
           {/* Mobile Menu Footer */}
-          <div className="p-6 border-t border-white/10">
+          <div className="border-t border-white/10 p-6">
             {/* Notifications + Balance for Mobile */}
             <div className="mb-4 flex items-center justify-center gap-3">
               {mounted ? (
                 <UserNotificationBell />
               ) : (
-                <div className="h-10 w-10 rounded-xl shrink-0" aria-hidden />
+                <div className="h-10 w-10 shrink-0 rounded-xl" aria-hidden />
               )}
               <BalanceDisplay className="flex-1 justify-center" />
             </div>
 
             {/* Language Switcher for Mobile */}
-            <div className="mb-4 flex items-center justify-center gap-1 bg-white/5 rounded-lg p-1 border border-white/10">
+            <div className="mb-4 flex items-center justify-center gap-1 rounded-lg border border-white/10 bg-white/5 p-1">
               <button
                 onClick={() => setLanguage("pt")}
-                className={`px-3 py-2 rounded text-sm transition-all flex items-center justify-center ${
+                className={`flex items-center justify-center rounded px-3 py-2 text-sm transition-all ${
                   language === "pt"
                     ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
                 title="Português"
               >
@@ -347,10 +394,10 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
               </button>
               <button
                 onClick={() => setLanguage("en")}
-                className={`px-3 py-2 rounded text-sm transition-all flex items-center justify-center ${
+                className={`flex items-center justify-center rounded px-3 py-2 text-sm transition-all ${
                   language === "en"
                     ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 }`}
                 title="English"
               >
@@ -362,17 +409,17 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
               <button
                 onClick={handleLogout}
                 disabled={isLoggingOut}
-                className="w-full flex items-center justify-center gap-2 p-3 rounded-lg text-destructive hover:bg-destructive/10 transition-all duration-200 group"
+                className="group flex w-full items-center justify-center gap-2 rounded-lg p-3 text-destructive transition-all duration-200 hover:bg-destructive/10"
               >
-                <LogOut className="w-5 h-5" />
+                <LogOut className="h-5 w-5" />
                 <span className="font-medium">
                   {mounted
                     ? isLoggingOut
                       ? t("loggingOut")
                       : t("logout")
                     : isLoggingOut
-                    ? "Saindo..."
-                    : "Sair"}
+                      ? "Saindo..."
+                      : "Sair"}
                 </span>
               </button>
             </div>

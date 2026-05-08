@@ -5,16 +5,326 @@ import {
   CheckCircle2,
   Clock,
   Download,
-  Wallet,
   Receipt,
   ShieldCheck,
   X,
+  XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-interface ReceiptProps {
+export type DigitalReceiptHeaderTone = "success" | "pending" | "danger";
+
+export type DigitalReceiptStatusBadgeTone =
+  | "success"
+  | "info"
+  | "warning"
+  | "destructive"
+  | "secondary";
+
+export interface DigitalReceiptProps {
+  language: string;
+  onClose: () => void;
+  headerTone: DigitalReceiptHeaderTone;
+  title: string;
+  headerSubtitle?: string | null;
+  amountSectionLabel: string;
+  /** Main numeric display (already localized, e.g. "33,00") */
+  amountNumeric: string;
+  /** Shown in primary color next to the amount (e.g. USDT, BRL) */
+  amountCurrency: string;
+  /** Small line under amount (optional) */
+  footnote?: string | null;
+  statusFieldLabel: string;
+  statusDisplay: string;
+  statusBadgeTone: DigitalReceiptStatusBadgeTone;
+  dateLabel: string;
+  dateFormatted: string;
+  transactionId: string;
+  /** Extra rows, fee tables, warnings — inserted before the security callout */
+  detailsSlot?: React.ReactNode;
+  /** Optional “Ver detalhes” style action beside Download */
+  secondaryAction?: { label: string; onClick: () => void };
+  onPrint?: () => void;
+  showPrint?: boolean;
+}
+
+function badgeClass(tone: DigitalReceiptStatusBadgeTone): string {
+  switch (tone) {
+    case "success":
+      return "bg-emerald-500/20 text-emerald-500 border-emerald-500/30";
+    case "info":
+      return "bg-blue-500/20 text-blue-500 border-blue-500/30";
+    case "warning":
+      return "bg-amber-500/20 text-amber-600 border-amber-500/30";
+    case "destructive":
+      return "bg-destructive/20 text-destructive border-destructive/30";
+    default:
+      return "bg-muted text-muted-foreground border-border";
+  }
+}
+
+function headerGradient(tone: DigitalReceiptHeaderTone): string {
+  switch (tone) {
+    case "success":
+      return "bg-gradient-to-br from-emerald-500 to-emerald-700";
+    case "danger":
+      return "bg-gradient-to-br from-red-500 to-red-700";
+    default:
+      return "bg-gradient-to-br from-blue-500 to-blue-700";
+  }
+}
+
+function receiptNumberFromId(id: string): string {
+  const compact = id.replace(/[^a-zA-Z0-9]/g, "");
+  const tail = (compact || id).slice(-8).toUpperCase();
+  return `BSM-${tail}`;
+}
+
+export function DigitalReceipt({
+  language,
+  onClose,
+  headerTone,
+  title,
+  headerSubtitle,
+  amountSectionLabel,
+  amountNumeric,
+  amountCurrency,
+  footnote,
+  statusFieldLabel,
+  statusDisplay,
+  statusBadgeTone,
+  dateLabel,
+  dateFormatted,
+  transactionId,
+  detailsSlot,
+  secondaryAction,
+  onPrint,
+  showPrint = true,
+}: DigitalReceiptProps) {
+  const isSuccessHeader = headerTone === "success";
+  const issuedAt = dateFormatted;
+  const receiptNumber = receiptNumberFromId(transactionId);
+
+  const handlePrint = () => {
+    if (onPrint) onPrint();
+    else window.print();
+  };
+
+  return (
+    <div className="mx-auto flex w-full max-w-full flex-col items-center duration-300 animate-in fade-in zoom-in-95 sm:max-w-xl md:max-w-2xl">
+      <div
+        className={cn(
+          "relative flex min-h-[5.75rem] w-full flex-col items-center justify-center overflow-hidden rounded-t-2xl py-4 sm:min-h-[6.25rem] sm:rounded-t-3xl sm:py-5",
+          headerGradient(headerTone)
+        )}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-2 top-2 z-30 flex h-10 w-10 min-h-[40px] min-w-[40px] touch-manipulation items-center justify-center rounded-full border border-white/25 bg-black/40 text-white shadow-lg backdrop-blur-sm active:scale-95 sm:right-3 sm:top-3 sm:h-11 sm:w-11 sm:min-h-[44px] sm:min-w-[44px]"
+          aria-label={
+            language === "pt" ? "Fechar comprovante" : "Close receipt"
+          }
+        >
+          <X className="h-5 w-5 sm:h-5 sm:w-5" strokeWidth={2.5} aria-hidden />
+        </button>
+
+        <div className="absolute right-0 top-0 p-2 opacity-[0.08] sm:p-4" aria-hidden>
+          <Receipt className="h-16 w-16 text-white sm:h-20 sm:w-20" />
+        </div>
+
+        <div className="mb-2 rounded-full bg-white/20 p-2 shadow-inner backdrop-blur-md sm:p-2.5">
+          {isSuccessHeader ? (
+            <CheckCircle2 className="h-7 w-7 text-white sm:h-8 sm:w-8" />
+          ) : headerTone === "danger" ? (
+            <XCircle className="h-7 w-7 text-white sm:h-8 sm:w-8" />
+          ) : (
+            <Clock className="h-7 w-7 animate-pulse text-white sm:h-8 sm:w-8" />
+          )}
+        </div>
+
+        <h2 className="max-w-[18rem] px-4 text-center text-lg font-bold tracking-tight text-white sm:max-w-[26rem] sm:text-xl md:text-2xl md:leading-snug">
+          {title}
+        </h2>
+        {headerSubtitle ? (
+          <p className="mt-1 max-w-[18rem] px-4 text-center text-xs leading-snug text-white/90 sm:max-w-[28rem] sm:text-sm sm:leading-relaxed">
+            {headerSubtitle}
+          </p>
+        ) : null}
+      </div>
+
+      <div className="relative w-full rounded-b-2xl border border-t-0 border-border bg-card p-4 shadow-2xl sm:rounded-b-3xl sm:p-6 md:p-7">
+        <div className="space-y-3 sm:space-y-4">
+          <div className="space-y-1 py-2 text-center sm:py-2">
+            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground sm:text-sm sm:tracking-widest">
+              {amountSectionLabel}
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <span className="text-4xl font-black tabular-nums leading-none text-foreground sm:text-5xl md:text-[3.25rem]">
+                {amountNumeric}
+              </span>
+              <span className="text-xl font-bold leading-none text-primary sm:text-2xl md:text-3xl">
+                {amountCurrency}
+              </span>
+            </div>
+            {footnote ? (
+              <p className="text-xs leading-snug text-muted-foreground sm:text-sm">
+                {footnote}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+
+          <div className="grid gap-3 text-sm sm:gap-3 sm:text-base">
+            <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+              <div className="min-w-0 space-y-1.5">
+                <span className="block text-xs font-medium text-muted-foreground sm:text-sm">
+                  {statusFieldLabel}
+                </span>
+                <Badge
+                  className={cn(
+                    "border px-2.5 py-1 text-xs font-bold uppercase sm:px-3 sm:py-1 sm:text-sm",
+                    badgeClass(statusBadgeTone)
+                  )}
+                >
+                  {statusDisplay}
+                </Badge>
+              </div>
+              <div className="min-w-0 space-y-1.5 text-right">
+                <span className="block text-xs font-medium text-muted-foreground sm:text-sm">
+                  {dateLabel}
+                </span>
+                <span className="block text-sm font-medium leading-snug text-foreground sm:text-base">
+                  {dateFormatted}
+                </span>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <span className="block text-xs font-medium text-muted-foreground sm:text-sm">
+                {language === "pt" ? "ID da transação" : "Transaction ID"}
+              </span>
+              <span
+                className="block break-all rounded-md bg-muted px-3 py-2 text-left font-mono text-xs leading-snug text-foreground sm:text-sm"
+                title={transactionId}
+              >
+                {transactionId}
+              </span>
+            </div>
+          </div>
+
+          {detailsSlot ? (
+            <div className="space-y-3 sm:space-y-3">{detailsSlot}</div>
+          ) : null}
+
+          <div className="flex gap-3 rounded-xl border border-border/50 bg-muted/30 p-3 sm:gap-3 sm:rounded-2xl sm:p-4">
+            <div className="shrink-0 rounded-lg bg-primary/10 p-2 sm:rounded-xl sm:p-2.5">
+              <ShieldCheck className="h-5 w-5 shrink-0 text-primary sm:h-6 sm:w-6" />
+            </div>
+            <div className="min-w-0 space-y-1">
+              <p className="text-sm font-bold text-foreground sm:text-base">
+                {language === "pt"
+                  ? "Comprovante emitido com segurança"
+                  : "Secure receipt issued"}
+              </p>
+              <p className="text-xs leading-relaxed text-muted-foreground sm:text-sm">
+                {language === "pt"
+                  ? "Guarde até a compensação. Para suporte: nº do recibo e ID da transação."
+                  : "Keep until settlement. For support: receipt no. and transaction ID."}
+              </p>
+            </div>
+          </div>
+
+          <div className="relative py-1 sm:py-0.5">
+            <div
+              className="mx-3 border-t border-dashed border-border sm:mx-4"
+              aria-hidden
+            />
+            <div
+              className="absolute left-0 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-border bg-background sm:h-6 sm:w-6"
+              aria-hidden
+            />
+            <div
+              className="absolute right-0 top-1/2 h-5 w-5 translate-x-1/2 -translate-y-1/2 rounded-full border border-border bg-background sm:h-6 sm:w-6"
+              aria-hidden
+            />
+          </div>
+
+          <div className="space-y-3 rounded-xl border border-border/50 bg-background/40 p-3 sm:rounded-2xl sm:p-4">
+            <div className="flex items-start justify-between gap-4 text-sm sm:text-base">
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground sm:text-sm">
+                  {language === "pt" ? "Nº do recibo" : "Receipt no."}
+                </p>
+                <p className="font-mono text-base font-bold text-foreground sm:text-lg">
+                  {receiptNumber}
+                </p>
+              </div>
+              <div className="min-w-0 text-right">
+                <p className="text-xs text-muted-foreground sm:text-sm">
+                  {language === "pt" ? "Emitido em" : "Issued at"}
+                </p>
+                <p className="text-sm font-medium leading-snug text-foreground sm:text-base">
+                  {issuedAt}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center justify-center gap-2 rounded-lg bg-muted/40 px-3 py-2 sm:rounded-xl sm:py-2.5">
+              <Receipt className="h-4 w-4 shrink-0 text-primary sm:h-5 sm:w-5" />
+              <p className="text-center text-[11px] font-semibold uppercase tracking-wide text-muted-foreground sm:text-xs sm:tracking-[0.15em]">
+                {language === "pt"
+                  ? "BS Market — Comprovante digital"
+                  : "BS Market — Digital receipt"}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3 pt-1 sm:gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3">
+              {showPrint ? (
+                <Button
+                  variant="outline"
+                  onClick={handlePrint}
+                  className="h-12 min-h-[44px] gap-2 rounded-xl border-border text-base font-bold transition-all hover:bg-muted sm:h-14 sm:rounded-2xl sm:text-lg"
+                >
+                  <Download className="h-5 w-5" />
+                  {language === "pt" ? "Baixar recibo" : "Download"}
+                </Button>
+              ) : null}
+              {secondaryAction ? (
+                <Button
+                  variant="outline"
+                  onClick={secondaryAction.onClick}
+                  className="h-12 min-h-[44px] rounded-xl text-base font-bold sm:h-14 sm:rounded-2xl sm:text-lg"
+                >
+                  {secondaryAction.label}
+                </Button>
+              ) : null}
+            </div>
+            <Button
+              onClick={onClose}
+              className="h-12 min-h-[44px] w-full rounded-xl bg-primary text-base font-bold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 sm:h-14 sm:rounded-2xl sm:text-lg"
+            >
+              {language === "pt" ? "Fechar" : "Close"}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-3 hidden text-center opacity-60 sm:block sm:transition-opacity sm:hover:opacity-100">
+        <p className="text-[11px] font-black uppercase tracking-widest text-muted-foreground sm:text-xs">
+          {language === "pt"
+            ? "Documento gerado automaticamente"
+            : "Automatically generated document"}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+interface LegacyDepositReceiptProps {
   transaction: {
     id: string;
     amount: number;
@@ -30,218 +340,130 @@ interface ReceiptProps {
   language: string;
 }
 
-export const TransactionReceipt: React.FC<ReceiptProps> = ({
+function depositStatusBadgeTone(
+  status: string
+): DigitalReceiptStatusBadgeTone {
+  const s = status.toUpperCase();
+  if (
+    s === "COMPLETED" ||
+    s === "APPROVED" ||
+    s === "CONFIRMED"
+  ) {
+    return "success";
+  }
+  if (s === "FAILED" || s === "REJECTED") return "destructive";
+  return "info";
+}
+
+export const TransactionReceipt: React.FC<LegacyDepositReceiptProps> = ({
   transaction,
   onClose,
   language,
 }) => {
-  const isCompleted = transaction.status === "COMPLETED" || transaction.status === "APPROVED" || transaction.status === "CONFIRMED";
+  const s = transaction.status.toUpperCase();
+  const isCompleted =
+    s === "COMPLETED" || s === "APPROVED" || s === "CONFIRMED";
   const isCryptoDeposit = transaction.type === "CRYPTO";
   const creditedCurrency = transaction.currency || "USDT";
-  const receiptNumber = `BSM-${transaction.id.slice(-8).toUpperCase()}`;
-  const issuedAt = transaction.date.toLocaleString(language === "pt" ? "pt-BR" : "en-US");
 
-  const formatBRL = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
+  const formatBRL = (value: number) =>
+    new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: "BRL",
     }).format(value);
-  };
 
-  const formatUSDT = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
+  const formatCrypto = (value: number) =>
+    new Intl.NumberFormat(language === "pt" ? "pt-BR" : "en-US", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 4,
     }).format(value);
-  };
 
-  const handlePrint = () => {
-    window.print();
-  };
+  const headerTone: DigitalReceiptHeaderTone = isCompleted
+    ? "success"
+    : s === "FAILED" || s === "REJECTED"
+    ? "danger"
+    : "pending";
+
+  const title = isCompleted
+    ? language === "pt"
+      ? "Pagamento confirmado!"
+      : "Payment confirmed!"
+    : language === "pt"
+    ? "Depósito em processamento"
+    : "Deposit processing";
+
+  const statusLabelUi =
+    isCompleted
+      ? language === "pt"
+        ? "Concluído"
+        : "Completed"
+      : s === "FAILED" || s === "REJECTED"
+      ? language === "pt"
+        ? "Não aprovado"
+        : "Not approved"
+      : language === "pt"
+      ? "Em processamento"
+      : "Processing";
+
+  const cryptoExtras =
+    transaction.type === "CRYPTO" ? (
+      <>
+        {transaction.network ? (
+          <div className="flex items-center justify-between gap-3 text-sm sm:text-base">
+            <span className="font-medium text-muted-foreground">
+              {language === "pt" ? "Rede" : "Network"}
+            </span>
+            <Badge
+              variant="outline"
+              className="shrink-0 text-sm font-bold sm:text-base"
+            >
+              {transaction.network}
+            </Badge>
+          </div>
+        ) : null}
+        {transaction.address ? (
+          <div className="space-y-2 pt-1">
+            <span className="block text-sm font-medium text-muted-foreground sm:text-base">
+              {language === "pt" ? "Endereço de depósito" : "Deposit address"}
+            </span>
+            <span
+              className="block break-all rounded-md border border-border bg-muted px-3 py-2 font-mono text-xs leading-relaxed text-foreground sm:text-sm"
+              title={transaction.address}
+            >
+              {transaction.address}
+            </span>
+          </div>
+        ) : null}
+      </>
+    ) : null;
 
   return (
-    <div className="flex flex-col items-center w-full max-w-md mx-auto animate-in fade-in zoom-in-95 duration-300">
-      {/* Premium Header with Gradient */}
-      <div className={cn(
-        "w-full h-32 rounded-t-3xl flex flex-col items-center justify-center relative overflow-hidden",
-        isCompleted ? "bg-gradient-to-br from-emerald-500 to-emerald-700" : "bg-gradient-to-br from-blue-500 to-blue-700"
-      )}>
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute top-3 right-3 z-30 flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm border border-white/25 shadow-lg active:scale-95 touch-manipulation"
-          aria-label={
-            language === "pt" ? "Fechar comprovante" : "Close receipt"
-          }
-        >
-          <X className="h-5 w-5" strokeWidth={2.5} aria-hidden />
-        </button>
-
-        <div className="absolute top-0 right-0 p-4 opacity-10">
-          <Receipt className="w-24 h-24 text-white" />
-        </div>
-        
-        <div className="bg-white/20 backdrop-blur-md rounded-full p-3 mb-2 shadow-inner">
-          {isCompleted ? (
-            <CheckCircle2 className="w-8 h-8 text-white" />
-          ) : (
-            <Clock className="w-8 h-8 text-white animate-pulse" />
-          )}
-        </div>
-        
-        <h2 className="text-white font-bold text-xl tracking-tight">
-          {isCompleted 
-            ? (language === "pt" ? "Pagamento Confirmado!" : "Payment Confirmed!") 
-            : (language === "pt" ? "Depósito em Processamento" : "Deposit Processing")}
-        </h2>
-      </div>
-
-      {/* Receipt Body - Voucher Style */}
-      <div className="w-full bg-card border-x border-b border-border rounded-b-3xl p-6 shadow-2xl relative">
-        {/* Decorative Scalloped Bottom Effect */}
-        <div className="absolute -bottom-1 left-0 right-0 h-2 flex overflow-hidden" aria-hidden="true">
-          {Array.from({ length: 20 }).map((_, i) => (
-            <div key={i} className="w-full h-4 bg-background rounded-full -mt-2 mx-0.5 border border-border" />
-          ))}
-        </div>
-
-        <div className="space-y-6">
-          {/* Main Values */}
-          <div className="text-center py-4 space-y-1">
-            <p className="text-xs text-muted-foreground uppercase font-bold tracking-widest">
-              {language === "pt" ? "Valor Creditado" : "Credited Amount"}
-            </p>
-            <div className="flex items-center justify-center gap-2">
-              <span className="text-4xl font-black text-foreground">{formatUSDT(transaction.usdtAmount)}</span>
-              <span className="text-xl font-bold text-primary">
-                {creditedCurrency}
-              </span>
-            </div>
-            {!isCryptoDeposit && transaction.amount > 0 && (
-              <p className="text-sm text-muted-foreground">
-                {language === "pt" ? "Custo total:" : "Total cost:"} {formatBRL(transaction.amount)}
-              </p>
-            )}
-          </div>
-
-          <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-
-          {/* Details Grid */}
-          <div className="grid grid-cols-1 gap-4 text-sm">
-            <div className="flex justify-between items-center group">
-              <span className="text-muted-foreground">{language === "pt" ? "Status:" : "Status:"}</span>
-              <Badge className={cn(
-                "font-bold uppercase text-[10px] px-2 py-0.5",
-                isCompleted ? "bg-emerald-500/20 text-emerald-500 border-emerald-500/30" : "bg-blue-500/20 text-blue-500 border-blue-500/30"
-              )}>
-                {isCompleted 
-                  ? (language === "pt" ? "Concluído" : "Completed") 
-                  : (language === "pt" ? "Em processamento" : "Processing")}
-              </Badge>
-            </div>
-
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">{language === "pt" ? "Data:" : "Date:"}</span>
-              <span className="font-medium text-foreground">{transaction.date.toLocaleString(language === "pt" ? "pt-BR" : "en-US")}</span>
-            </div>
-
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">{language === "pt" ? "ID da Transação:" : "Transaction ID:"}</span>
-              <span className="font-mono text-[10px] text-foreground bg-muted px-2 py-1 rounded truncate max-w-[180px]">
-                {transaction.id}
-              </span>
-            </div>
-
-            {transaction.type === "CRYPTO" && (
-              <>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">{language === "pt" ? "Rede:" : "Network:"}</span>
-                  <Badge variant="outline" className="font-bold">{transaction.network}</Badge>
-                </div>
-                {transaction.address && (
-                  <div className="flex flex-col gap-1 pt-2">
-                    <span className="text-muted-foreground text-xs">{language === "pt" ? "Endereço de Depósito:" : "Deposit Address:"}</span>
-                    <span className="font-mono text-[10px] break-all p-2 bg-muted rounded border border-border">
-                      {transaction.address}
-                    </span>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-
-          {/* Security Note */}
-          <div className="bg-muted/30 rounded-2xl p-4 flex gap-3 items-start border border-border/50">
-            <div className="bg-primary/10 p-2 rounded-xl">
-              <ShieldCheck className="w-4 h-4 text-primary" />
-            </div>
-            <div className="space-y-1">
-              <p className="text-[11px] font-bold text-foreground">
-                {language === "pt" ? "Comprovante emitido com segurança" : "Secure receipt issued"}
-              </p>
-              <p className="text-[10px] text-muted-foreground leading-relaxed">
-                {language === "pt" 
-                  ? "Guarde este comprovante até a compensação final. Em caso de suporte, informe o número do recibo e o ID da transação." 
-                  : "Keep this receipt until final settlement. For support, provide the receipt number and transaction ID."}
-              </p>
-            </div>
-          </div>
-
-          <div className="relative py-2">
-            <div className="border-t border-dashed border-border" />
-            <div className="absolute -left-8 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-background border border-border" />
-            <div className="absolute -right-8 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-background border border-border" />
-          </div>
-
-          {/* Receipt Footer */}
-          <div className="rounded-2xl border border-border/50 bg-background/40 p-4 space-y-3">
-            <div className="flex items-center justify-between gap-4 text-xs">
-              <div>
-                <p className="text-muted-foreground">{language === "pt" ? "Nº do recibo" : "Receipt no."}</p>
-                <p className="font-mono font-bold text-foreground">{receiptNumber}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-muted-foreground">{language === "pt" ? "Emitido em" : "Issued at"}</p>
-                <p className="font-medium text-foreground">{issuedAt}</p>
-              </div>
-            </div>
-            <div className="flex items-center justify-center gap-2 rounded-xl bg-muted/40 px-3 py-2">
-              <Wallet className="h-3.5 w-3.5 text-primary" />
-              <p className="text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                {language === "pt" ? "BS Market - Comprovante digital" : "BS Market - Digital receipt"}
-              </p>
-            </div>
-          </div>
-
-          {/* Actions */}
-      <div className="grid grid-cols-1 gap-3 pt-1 sm:grid-cols-2 sm:gap-3">
-            <Button
-              variant="outline"
-              onClick={handlePrint}
-              className="h-12 min-h-[44px] rounded-2xl gap-2 border-border hover:bg-muted font-bold transition-all"
-            >
-              <Download className="w-4 h-4" />
-              {language === "pt" ? "Baixar recibo" : "Download"}
-            </Button>
-            <Button
-              onClick={onClose}
-              className="h-12 min-h-[44px] rounded-2xl font-bold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all"
-            >
-              {language === "pt" ? "Fechar" : "Close"}
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Footer Branding */}
-      <div className="mt-7 text-center opacity-60 transition-opacity hover:opacity-100">
-        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-          {language === "pt" ? "Recibo oficial BS Market" : "BS Market Official Receipt"}
-        </p>
-        <p className="mt-1 text-[10px] text-muted-foreground">
-          {language === "pt" ? "Documento gerado automaticamente" : "Automatically generated document"}
-        </p>
-      </div>
-    </div>
+    <DigitalReceipt
+      language={language}
+      onClose={onClose}
+      headerTone={headerTone}
+      title={title}
+      amountSectionLabel={
+        language === "pt" ? "Valor creditado" : "Credited amount"
+      }
+      amountNumeric={formatCrypto(transaction.usdtAmount)}
+      amountCurrency={creditedCurrency}
+      footnote={
+        !isCryptoDeposit && transaction.amount > 0
+          ? `${language === "pt" ? "Custo total:" : "Total cost:"} ${formatBRL(
+              transaction.amount
+            )}`
+          : null
+      }
+      statusFieldLabel={language === "pt" ? "Status" : "Status"}
+      statusDisplay={statusLabelUi}
+      statusBadgeTone={depositStatusBadgeTone(transaction.status)}
+      dateLabel={language === "pt" ? "Data" : "Date"}
+      dateFormatted={transaction.date.toLocaleString(
+        language === "pt" ? "pt-BR" : "en-US"
+      )}
+      transactionId={transaction.id}
+      detailsSlot={cryptoExtras ? <>{cryptoExtras}</> : null}
+    />
   );
 };

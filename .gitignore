@@ -122,14 +122,8 @@ public/uploads/*
 dist/
 build/
 
-# Test files
-**/*.test.ts
-**/*.test.tsx
-**/*.spec.ts
-**/*.spec.tsx
-test/
-tests/
-__tests__/
+# Vitest / coverage output (keep test sources under src/**/*.test.ts tracked)
+coverage/
 
 # Documentation (keep important ones)
 docs/

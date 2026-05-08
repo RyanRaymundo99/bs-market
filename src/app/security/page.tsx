@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback } from "react";
 import { TwoFactorManagement } from "@/components/Auth/TwoFactorManagement";
-import NavbarNew from "@/components/ui/navbar-new";
+import NavbarNew, { DESKTOP_SHELL_PL } from "@/components/ui/navbar-new";
 import { GlobalKYCBanner } from "@/components/GlobalKYCBanner";
 import { Shield } from "lucide-react";
 
@@ -39,7 +39,7 @@ export default function SecurityPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className={`min-h-screen bg-background ${DESKTOP_SHELL_PL}`}>
       <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
       <GlobalKYCBanner />
       <div className="container mx-auto px-4 py-8">

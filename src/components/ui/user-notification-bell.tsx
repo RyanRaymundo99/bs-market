@@ -26,6 +26,7 @@ import { Spinner } from "@/components/ui/loading";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { formatUSDT, formatBRL } from "@/lib/format-currency";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 interface ActivitySummary {
   pendingTransactionsCount: number;
@@ -60,7 +61,15 @@ function getNotificationMetadata(
   return metadata as Record<string, unknown>;
 }
 
-export function UserNotificationBell() {
+export type UserNotificationBellProps = {
+  triggerClassName?: string;
+  iconClassName?: string;
+};
+
+export function UserNotificationBell({
+  triggerClassName,
+  iconClassName,
+}: UserNotificationBellProps) {
   const router = useRouter();
   const { t, language } = useLanguage();
   const { toast } = useToast();
@@ -200,10 +209,13 @@ export function UserNotificationBell() {
         <Button
           variant="ghost"
           size="icon"
-          className="relative h-10 w-10 rounded-xl text-foreground/80 hover:text-primary hover:bg-muted"
+          className={cn(
+            "relative h-10 w-10 shrink-0 rounded-xl text-foreground/80 hover:bg-muted hover:text-primary",
+            triggerClassName
+          )}
           aria-label={t("activityNotifications")}
         >
-          <Bell className="h-5 w-5" />
+          <Bell className={cn("h-5 w-5", iconClassName)} />
           {unreadBadge > 0 && (
             <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
               {unreadBadge > 99 ? "99+" : unreadBadge}

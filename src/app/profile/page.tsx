@@ -8,12 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import NavbarNew from "@/components/ui/navbar-new";
+import NavbarNew, { DESKTOP_SHELL_PL } from "@/components/ui/navbar-new";
 import { GlobalKYCBanner } from "@/components/GlobalKYCBanner";
 import Breadcrumb from "@/components/ui/breadcrumb";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getKycImageSrc } from "@/lib/kyc-image-src";
 import { formatUSDT } from "@/lib/format-currency";
+import { TransactionReceipt } from "@/components/TransactionReceipt";
 import {
   Dialog,
   DialogContent,
@@ -544,7 +545,7 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background text-foreground">
+      <div className={`min-h-screen bg-background text-foreground ${DESKTOP_SHELL_PL}`}>
         <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
         <GlobalKYCBanner />
         <div className="container mx-auto px-4 py-6">
@@ -560,7 +561,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className={`min-h-screen bg-background text-foreground ${DESKTOP_SHELL_PL}`}>
       <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
       <GlobalKYCBanner />
       <div className="container mx-auto px-4 py-6">
@@ -1575,70 +1576,33 @@ export default function ProfilePage() {
 
         {/* Receipt Modal */}
         <Dialog open={showReceipt} onOpenChange={setShowReceipt}>
-          <DialogContent className="bg-card border-border text-foreground max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-foreground flex items-center gap-2">
-                <CheckCircle className="w-6 h-6 text-primary" />
-                Comprovante de Pagamento
+          <DialogContent
+            hideClose
+            className="z-[100] left-1/2 top-[max(0.5rem,env(safe-area-inset-top))] max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top)-0.5rem))] w-[calc(100vw-1.5rem)] max-w-full sm:max-w-2xl -translate-x-1/2 translate-y-0 overflow-y-auto overscroll-y-contain border-none bg-transparent p-0 pb-[env(safe-area-inset-bottom,0px)] shadow-none outline-none ring-0 sm:top-1/2 sm:max-h-[92dvh] sm:-translate-y-1/2 sm:w-full"
+          >
+            <DialogHeader className="sr-only">
+              <DialogTitle>
+                {language === "pt"
+                  ? "Comprovante de pagamento"
+                  : "Payment receipt"}
               </DialogTitle>
-              <DialogDescription className="text-muted-foreground">
-                Detalhes da sua transação processada
-              </DialogDescription>
             </DialogHeader>
             {receiptData && (
-              <div className="space-y-4">
-                <div className="bg-muted/50 rounded-lg p-6 space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Valor pago:</span>
-                    <span className="text-xl font-bold text-foreground">
-                      {formatBRL(receiptData.amount)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">USDT recebido:</span>
-                    <span className="text-xl font-bold text-primary">
-                      {formatUSDT(receiptData.usdtAmount)} USDT
-                    </span>
-                  </div>
-                  <div className="border-t border-border pt-4">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm text-muted-foreground">
-                        ID da transação:
-                      </span>
-                      <span className="text-xs font-mono text-foreground">
-                        {receiptData.transactionId.substring(0, 20)}...
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Data:</span>
-                      <span className="text-sm text-foreground">
-                        {receiptData.date.toLocaleString("pt-BR")}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      window.print();
-                    }}
-                    className="flex-1 py-3 flex items-center justify-center gap-2"
-                  >
-                    <Download className="w-4 h-4" />
-                    PDF
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      setShowReceipt(false);
-                      setReceiptData(null);
-                    }}
-                    className="flex-[2] py-3"
-                  >
-                    Fechar
-                  </Button>
-                </div>
-              </div>
+              <TransactionReceipt
+                transaction={{
+                  id: receiptData.transactionId,
+                  amount: receiptData.amount,
+                  usdtAmount: receiptData.usdtAmount,
+                  date: receiptData.date,
+                  status: "COMPLETED",
+                  type: "PIX",
+                }}
+                onClose={() => {
+                  setShowReceipt(false);
+                  setReceiptData(null);
+                }}
+                language={language}
+              />
             )}
           </DialogContent>
         </Dialog>

@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { jsonValidationError } from "@/lib/api-response";
 import { sendWithdrawalReceipt } from "@/lib/receipt-email";
 import { getMoneyControls } from "@/lib/money-controls";
-import {
-  isCryptoCurrency,
-  isCryptoNetworkForCurrency,
-} from "@/lib/crypto-assets";
+import { validateSession } from "@/lib/session";
+import { withdrawEligibilityResponse } from "@/lib/user-gates";
+import { withdrawCryptoBodySchema } from "@/schemas/withdraw";
 import {
   computeStablecoinLedgerDebits,
   getUsdtDebitedPerUnitWithdrawnServer,
@@ -30,57 +30,16 @@ function getNetworkFee(network: string) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Get the session cookie
-    const sessionCookie = request.cookies.get("better-auth.session");
-
-    if (!sessionCookie?.value) {
+    const authSession = await validateSession(request);
+    if (!authSession) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Find the session in the database
-    const session = await prisma.session.findUnique({
-      where: { token: sessionCookie.value },
-      include: { user: true },
-    });
+    const eligibility = withdrawEligibilityResponse(authSession.user);
+    if (eligibility) return eligibility;
 
-    if (!session || session.expiresAt <= new Date()) {
-      return NextResponse.json(
-        { error: "Invalid or expired session" },
-        { status: 401 }
-      );
-    }
+    const user = authSession.user;
 
-    const user = session.user;
-
-    // Check if user is approved
-    if (user.approvalStatus === "REJECTED") {
-      return NextResponse.json(
-        { error: "Sua conta foi rejeitada. Entre em contato com o suporte." },
-        { status: 403 }
-      );
-    }
-
-    // Check if user is pending
-    if (user.approvalStatus === "PENDING") {
-      return NextResponse.json(
-        {
-          error:
-            "Sua conta está pendente de aprovação. Complete seu cadastro e aguarde a aprovação.",
-        },
-        { status: 403 }
-      );
-    }
-
-    // Check if KYC is pending
-    if (user.kycStatus === "PENDING") {
-      return NextResponse.json(
-        {
-          error:
-            "Sua verificação KYC está pendente. Complete o upload dos documentos KYC para realizar saques.",
-        },
-        { status: 403 }
-      );
-    }
 
     // Admin-controlled switch to disable withdrawals
     const moneyControls = await getMoneyControls();
@@ -94,34 +53,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Parse request body
-    const { amount, currency = "USDT", walletAddress, network } = await request.json();
-
-    // Validate input
-    if (!amount || amount <= 0) {
-      return NextResponse.json(
-        { error: "Amount must be greater than 0" },
-        { status: 400 }
-      );
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    if (!walletAddress || !network) {
-      return NextResponse.json(
-        { error: "Wallet address and network are required" },
-        { status: 400 }
-      );
+    const parsedBody = withdrawCryptoBodySchema.safeParse(rawBody);
+    if (!parsedBody.success) {
+      return jsonValidationError(parsedBody.error);
     }
 
-    // Validate currency/network
-    if (
-      !isCryptoCurrency(currency) ||
-      !isCryptoNetworkForCurrency(currency, network)
-    ) {
-      return NextResponse.json(
-        { error: "Invalid currency/network combination" },
-        { status: 400 }
-      );
-    }
+    const { amount, currency, walletAddress, network } = parsedBody.data;
 
     const rate = getUsdtDebitedPerUnitWithdrawnServer(currency);
 

@@ -2,8 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { validateAdminSession } from "@/lib/admin-session";
 
+function debugWebhooksAllowed(request: NextRequest): boolean {
+  if (process.env.NODE_ENV !== "production") return true;
+  const secret = process.env.DEBUG_WEBHOOKS_ENDPOINT_SECRET;
+  if (!secret) return false;
+  return request.headers.get("x-debug-webhooks-secret") === secret;
+}
+
 export async function GET(request: NextRequest) {
   try {
+    if (!debugWebhooksAllowed(request)) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
     // Validate admin session
     const adminSession = await validateAdminSession(request);
 

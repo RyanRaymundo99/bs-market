@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import {
   TrendingDown,
@@ -21,13 +22,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useMobileMenuOpen } from "@/hooks/useMobileMenuOpen";
-import NavbarNew from "@/components/ui/navbar-new";
+import NavbarNew, { DESKTOP_SHELL_PL } from "@/components/ui/navbar-new";
 import { GlobalKYCBanner } from "@/components/GlobalKYCBanner";
 import { WelcomeTutorial } from "@/components/ui/welcome-tutorial";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePrimaryColor } from "@/hooks/use-primary-color";
 import { formatUSDT } from "../../lib/format-currency";
 import { handleLogout as performLogout } from "../../lib/auth-utils";
+import {
+  buildUsdtBalanceSeries,
+  getUsdtChartDaySpan,
+} from "@/lib/dashboard-balance-series";
 
 const DashboardChart = dynamic(
   () =>
@@ -84,7 +89,7 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [userStatus, setUserStatus] = useState<UserStatus | null>(null);
   const [chartData, setChartData] = useState<
-    Array<{ date: string; BRL: number; USDT: number }>
+    Array<{ date: string; BRL: number; USDT: number; timestamp: number }>
   >([]);
 
   const [isMobile, setIsMobile] = useState(false);
@@ -217,7 +222,7 @@ export default function Dashboard() {
         await Promise.all([
           fetch("/api/user/status", { cache: "no-store" }),
           fetch("/api/balance", { cache: "no-store" }),
-          fetch("/api/transactions?limit=50", { cache: "no-store" }),
+          fetch("/api/transactions?limit=300", { cache: "no-store" }),
         ]);
 
       // Process user status
@@ -250,96 +255,16 @@ export default function Dashboard() {
       }
 
 
-      // Generate chart data from previous balance to current balance
       const today = new Date();
       today.setHours(23, 59, 59, 999);
-      const sixDaysAgo = new Date(today);
-      sixDaysAgo.setDate(sixDaysAgo.getDate() - 6);
-      sixDaysAgo.setHours(0, 0, 0, 0);
 
-      // Helper function to format date as DD/MM
-      const formatDate = (date: Date): string => {
-        const day = String(date.getDate()).padStart(2, "0");
-        const month = String(date.getMonth() + 1).padStart(2, "0");
-        return `${day}/${month}`;
-      };
-
-      // Filter transactions from last 7 days
-      const relevantTransactions = allTransactions.filter(
-        (t: Transaction) => {
-          const transactionDate = new Date(t.createdAt);
-          return transactionDate >= sixDaysAgo && transactionDate <= today;
-        }
+      const spanDays = getUsdtChartDaySpan(allTransactions);
+      const chartDataArray = buildUsdtBalanceSeries(
+        allTransactions,
+        currentUsdtBalance,
+        today,
+        spanDays
       );
-
-      // Calculate previous balance (6 days ago) by reversing all transactions
-      let previousUsdtBalance = currentUsdtBalance;
-      relevantTransactions.forEach((t: Transaction) => {
-        if (t.currency === "USDT" || !t.currency) {
-          // Reverse the transaction to get the balance before it
-          if (t.type === "DEPOSIT" || t.type === "BUY_CRYPTO") {
-            previousUsdtBalance -= Number(t.amount);
-          } else if (
-            t.type === "WITHDRAWAL" ||
-            t.type === "WITHDRAW" ||
-            t.type === "SELL"
-          ) {
-            previousUsdtBalance += Number(t.amount);
-          }
-        }
-      });
-      previousUsdtBalance = Math.max(0, previousUsdtBalance);
-
-      // Group transactions by day
-      const transactionsByDay: { [key: string]: Transaction[] } = {};
-      relevantTransactions.forEach((t: Transaction) => {
-        const transactionDate = new Date(t.createdAt);
-        const dayKey = formatDate(transactionDate);
-        if (!transactionsByDay[dayKey]) {
-          transactionsByDay[dayKey] = [];
-        }
-        transactionsByDay[dayKey].push(t);
-      });
-
-      // Build chart data from previous balance to current balance
-      const chartDataArray = [];
-      let runningBalance = previousUsdtBalance;
-
-      for (let i = 6; i >= 0; i--) {
-        const date = new Date(today);
-        date.setDate(date.getDate() - i);
-        const dateStr = formatDate(date);
-
-        // Apply transactions for this day
-        if (transactionsByDay[dateStr]) {
-          transactionsByDay[dateStr].forEach((t: Transaction) => {
-            if (t.currency === "USDT" || !t.currency) {
-              if (t.type === "DEPOSIT" || t.type === "BUY_CRYPTO") {
-                runningBalance += Number(t.amount);
-              } else if (
-                t.type === "WITHDRAWAL" ||
-                t.type === "WITHDRAW" ||
-                t.type === "SELL"
-              ) {
-                runningBalance -= Number(t.amount);
-              }
-            }
-          });
-        }
-
-        // For the last day (today), ensure we use the actual current balance
-        if (i === 0) {
-          runningBalance = currentUsdtBalance;
-        }
-
-        const balanceValue = Math.max(0, runningBalance);
-
-        chartDataArray.push({
-          date: dateStr,
-          BRL: 0,
-          USDT: balanceValue,
-        });
-      }
 
       setChartData(chartDataArray);
 
@@ -386,7 +311,9 @@ export default function Dashboard() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background text-foreground">
+      <div
+        className={`min-h-screen bg-background text-foreground ${DESKTOP_SHELL_PL}`}
+      >
         <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
         <GlobalKYCBanner />
         <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl">
@@ -463,7 +390,9 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div
+      className={`min-h-screen bg-background text-foreground ${DESKTOP_SHELL_PL}`}
+    >
       <WelcomeTutorial
         isOpen={showWelcomeTutorial}
         onClose={handleWelcomeTutorialClose}
@@ -541,7 +470,12 @@ export default function Dashboard() {
         {chartData.length > 0 && (
           <Card className="mb-6 sm:mb-8 rounded-2xl sm:rounded-3xl border-gray-800 bg-black/40 backdrop-blur-sm shadow-xl overflow-hidden">
             <CardContent className="p-6 sm:p-8">
-              <DashboardChart data={chartData} primaryHex={primaryHex} />
+              <DashboardChart
+                data={chartData}
+                primaryHex={primaryHex}
+                t={t}
+                language={language}
+              />
             </CardContent>
           </Card>
         )}
@@ -664,9 +598,12 @@ export default function Dashboard() {
                   variant="ghost"
                   size="sm"
                   className="text-muted-foreground hover:text-foreground text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3"
+                  asChild
                 >
-                  {t("seeAll")} →
-                  <ArrowRight className="w-3 h-3 ml-1" />
+                  <Link href="/activity">
+                    {t("seeAll")} →
+                    <ArrowRight className="w-3 h-3 ml-1" />
+                  </Link>
                 </Button>
               )}
             </div>
@@ -740,11 +677,11 @@ export default function Dashboard() {
                     title = transaction.type;
                   }
 
-                  return (
-                    <div
-                      key={transaction.id || index}
-                      className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors active:bg-muted/60"
-                    >
+                  const rowClass =
+                    "flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors active:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background text-foreground no-underline [color:inherit]";
+
+                  const rowInner = (
+                    <>
                       <div
                         className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl ${bgColor} flex items-center justify-center flex-shrink-0`}
                       >
@@ -803,6 +740,21 @@ export default function Dashboard() {
                           )}
                         </div>
                       </div>
+                    </>
+                  );
+
+                  return transaction.id ? (
+                    <Link
+                      key={transaction.id}
+                      href={`/transaction/${transaction.id}`}
+                      prefetch
+                      className={rowClass}
+                    >
+                      {rowInner}
+                    </Link>
+                  ) : (
+                    <div key={index} className={rowClass}>
+                      {rowInner}
                     </div>
                   );
                 })}

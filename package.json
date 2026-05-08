@@ -17,7 +17,10 @@
     "vercel-build": "prisma generate && next build",
     "deploy:vercel": "vercel --prod",
     "deploy:preview": "vercel",
-    "deploy:check": "npm run type-check && npm run lint && npm run build",
+    "deploy:check": "pnpm run type-check && pnpm run lint && pnpm run check:large-files && pnpm run test && pnpm run build",
+    "check:large-files": "node scripts/check-large-files.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "clean": "rm -rf .next && rm -rf node_modules/.cache",
     "clean:install": "npm run clean && npm install",
     "preview": "npm run build && npm run start"

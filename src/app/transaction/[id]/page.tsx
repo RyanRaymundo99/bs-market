@@ -30,7 +30,7 @@ import {
   MessageSquare,
   ShieldCheck,
 } from "lucide-react";
-import NavbarNew from "@/components/ui/navbar-new";
+import NavbarNew, { DESKTOP_SHELL_PL } from "@/components/ui/navbar-new";
 import { PageLoader, Spinner } from "@/components/ui/loading";
 import { GlobalKYCBanner } from "@/components/GlobalKYCBanner";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -177,7 +177,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className={`min-h-screen bg-background ${DESKTOP_SHELL_PL}`}>
         <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
         <GlobalKYCBanner />
         <div className="container mx-auto px-4 py-8">
@@ -189,7 +189,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
 
   if (error || !transaction) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className={`min-h-screen bg-background ${DESKTOP_SHELL_PL}`}>
         <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
         <div className="container mx-auto px-4 py-16 flex flex-col items-center">
           <div className="p-4 rounded-full bg-destructive/10 text-destructive mb-4">
@@ -241,7 +241,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
   }[transaction.status] || transaction.status;
 
   return (
-    <div className="min-h-screen bg-background selection:bg-primary/20">
+    <div className={`min-h-screen bg-background selection:bg-primary/20 ${DESKTOP_SHELL_PL}`}>
       <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
       <GlobalKYCBanner />
       
