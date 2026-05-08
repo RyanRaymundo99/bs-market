@@ -1,7 +1,15 @@
 "use client";
 
 import React from "react";
-import { CheckCircle2, Clock, Download, Wallet, Receipt, ShieldCheck } from "lucide-react";
+import {
+  CheckCircle2,
+  Clock,
+  Download,
+  Wallet,
+  Receipt,
+  ShieldCheck,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -58,6 +66,17 @@ export const TransactionReceipt: React.FC<ReceiptProps> = ({
         "w-full h-32 rounded-t-3xl flex flex-col items-center justify-center relative overflow-hidden",
         isCompleted ? "bg-gradient-to-br from-emerald-500 to-emerald-700" : "bg-gradient-to-br from-blue-500 to-blue-700"
       )}>
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute top-3 right-3 z-30 flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm border border-white/25 shadow-lg active:scale-95 touch-manipulation"
+          aria-label={
+            language === "pt" ? "Fechar comprovante" : "Close receipt"
+          }
+        >
+          <X className="h-5 w-5" strokeWidth={2.5} aria-hidden />
+        </button>
+
         <div className="absolute top-0 right-0 p-4 opacity-10">
           <Receipt className="w-24 h-24 text-white" />
         </div>
@@ -195,18 +214,18 @@ export const TransactionReceipt: React.FC<ReceiptProps> = ({
           </div>
 
           {/* Actions */}
-          <div className="grid grid-cols-2 gap-3 pt-1">
+      <div className="grid grid-cols-1 gap-3 pt-1 sm:grid-cols-2 sm:gap-3">
             <Button
               variant="outline"
               onClick={handlePrint}
-              className="h-12 rounded-2xl gap-2 border-border hover:bg-muted font-bold transition-all"
+              className="h-12 min-h-[44px] rounded-2xl gap-2 border-border hover:bg-muted font-bold transition-all"
             >
               <Download className="w-4 h-4" />
               {language === "pt" ? "Baixar recibo" : "Download"}
             </Button>
             <Button
               onClick={onClose}
-              className="h-12 rounded-2xl font-bold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all"
+              className="h-12 min-h-[44px] rounded-2xl font-bold bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all"
             >
               {language === "pt" ? "Fechar" : "Close"}
             </Button>

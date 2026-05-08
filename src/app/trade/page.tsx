@@ -1774,7 +1774,7 @@ const TradePage = () => {
 
       {/* Receipt Modal */}
       <Dialog open={showReceipt} onOpenChange={setShowReceipt}>
-        <DialogContent className="bg-transparent border-none p-0 max-w-md shadow-none outline-none ring-0">
+        <DialogContent hideClose className="bg-transparent border-none p-0 max-w-md shadow-none outline-none ring-0 max-h-[92dvh] overflow-y-auto overscroll-y-contain w-[calc(100vw-1.5rem)] sm:w-full pb-[env(safe-area-inset-bottom,0px)]">
           <DialogHeader className="sr-only">
             <DialogTitle>Recibo da Transação</DialogTitle>
           </DialogHeader>
