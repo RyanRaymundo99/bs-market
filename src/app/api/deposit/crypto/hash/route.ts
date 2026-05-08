@@ -5,27 +5,16 @@ import {
   isCryptoCurrency,
   isCryptoNetworkForCurrency,
 } from "@/lib/crypto-assets";
+import { validateSession } from "@/lib/session";
 
 export async function POST(req: NextRequest) {
   try {
-    const sessionCookie = req.cookies.get("better-auth.session");
-    if (!sessionCookie?.value) {
+    const authSession = await validateSession(req);
+    if (!authSession) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const session = await prisma.session.findUnique({
-      where: { token: sessionCookie.value },
-      include: { user: true },
-    });
-
-    if (!session || session.expiresAt <= new Date()) {
-      return NextResponse.json(
-        { error: "Invalid or expired session" },
-        { status: 401 }
-      );
-    }
-
-    const userEmail = session.user.email;
+    const userEmail = authSession.user.email;
 
     const body = await req.json();
     const {
@@ -87,12 +76,12 @@ export async function POST(req: NextRequest) {
       }
 
       const result = await prisma.$transaction(async (tx) => {
-        const externalId = `deposit_${session.user.id}_${currency}_${network}_${Date.now()}`;
+        const externalId = `deposit_${authSession.user.id}_${currency}_${network}_${Date.now()}`;
         const depositAddress = address.trim();
 
         const deposit = await tx.deposit.create({
           data: {
-            userId: session.user.id,
+            userId: authSession.user.id,
             amount: requestedAmount,
             currency,
             status: "PENDING",
@@ -105,13 +94,13 @@ export async function POST(req: NextRequest) {
 
         const balance = await tx.balance.findUnique({
           where: {
-            userId_currency: { userId: session.user.id, currency },
+            userId_currency: { userId: authSession.user.id, currency },
           },
         });
 
         const transaction = await tx.transaction.create({
           data: {
-            userId: session.user.id,
+            userId: authSession.user.id,
             type: "DEPOSIT",
             amount: requestedAmount,
             currency,
@@ -144,7 +133,7 @@ export async function POST(req: NextRequest) {
               settings,
               `Novo depósito ${currency} (cripto) recebido`,
               [
-                `Usuário: ${session.user.name} (${session.user.email})`,
+                `Usuário: ${authSession.user.name} (${authSession.user.email})`,
                 `ID depósito: ${result.deposit.id}`,
                 `Valor: ${requestedAmount.toNumber()} ${currency}`,
                 `Rede: ${network}`,

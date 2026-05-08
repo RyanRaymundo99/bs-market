@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { InputField, CheckboxField } from "@/components/Auth/FormFields";
 import { EmailField } from "@/components/Auth/EmailField";
@@ -35,6 +36,7 @@ const REMEMBER_EMAIL_KEY = "remembered-email";
 const REMEMBER_PASSWORD_KEY = "remembered-password";
 
 const Login = () => {
+  const router = useRouter();
   const [pending, setPending] = useState(false);
   const [remainingAttempts, setRemainingAttempts] = useState<number | null>(
     null
@@ -165,9 +167,9 @@ const Login = () => {
           // Reset remaining attempts on success
           setRemainingAttempts(null);
 
-          // Redirect to dashboard after a brief delay for better UX
           setTimeout(() => {
-            window.location.href = "/dashboard";
+            router.replace("/dashboard");
+            router.refresh();
           }, 500);
         } else {
           // Handle rate limiting
@@ -208,7 +210,7 @@ const Login = () => {
         setPending(false);
       }
     },
-    [toast]
+    [toast, router]
   );
 
   return (

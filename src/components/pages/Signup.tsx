@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { InputField } from "@/components/Auth/FormFields";
 import { DocumentField } from "@/components/Auth/DocumentField";
@@ -16,6 +17,7 @@ import { AuthLayout } from "@/components/ui/auth-layout";
 import { PasswordStrengthGuide } from "@/components/ui/password-strength-guide";
 
 const Signup = () => {
+  const router = useRouter();
   const [signupsDisabled, setSignupsDisabled] = useState(false);
   useEffect(() => {
     fetch("/api/site-status")
@@ -70,7 +72,8 @@ const Signup = () => {
             title: "Conta criada com sucesso!",
             description: "Bem-vindo ao BS Market! Redirecionando...",
           });
-          window.location.href = "/dashboard";
+          router.replace("/dashboard");
+          router.refresh();
           return;
         } else {
           toast({
@@ -90,7 +93,7 @@ const Signup = () => {
         setPending(false);
       }
     },
-    [toast]
+    [toast, router]
   );
 
   return (

@@ -9,60 +9,35 @@ import {
   getAdminAlertSettings,
   sendAdminAlertToAll,
 } from "@/lib/admin-alert-email";
+import { validateSession } from "@/lib/session";
+import { depositFullEligibilityResponse } from "@/lib/deposit-gates";
 
 export async function POST(request: NextRequest) {
   try {
-    // Get the session cookie
-    const sessionCookie = request.cookies.get("better-auth.session");
-
-    if (!sessionCookie?.value) {
+    const authSession = await validateSession(request);
+    if (!authSession) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Find the session in the database
-    const session = await prisma.session.findUnique({
-      where: { token: sessionCookie.value },
-      include: { user: true },
+    const user = await prisma.user.findUnique({
+      where: { id: authSession.userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        cpf: true,
+        documentNumber: true,
+        approvalStatus: true,
+        kycStatus: true,
+      },
     });
 
-    if (!session || session.expiresAt <= new Date()) {
-      return NextResponse.json(
-        { error: "Invalid or expired session" },
-        { status: 401 }
-      );
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const user = session.user;
-
-    // Check if user is approved
-    if (user.approvalStatus === "REJECTED") {
-      return NextResponse.json(
-        { error: "Sua conta foi rejeitada. Entre em contato com o suporte." },
-        { status: 403 }
-      );
-    }
-
-    // Check if user is pending
-    if (user.approvalStatus === "PENDING") {
-      return NextResponse.json(
-        {
-          error:
-            "Sua conta está pendente de aprovação. Complete seu cadastro e aguarde a aprovação.",
-        },
-        { status: 403 }
-      );
-    }
-
-    // Check if KYC is pending
-    if (user.kycStatus === "PENDING") {
-      return NextResponse.json(
-        {
-          error:
-            "Sua verificação KYC está pendente. Complete o upload dos documentos KYC para realizar depósitos.",
-        },
-        { status: 403 }
-      );
-    }
+    const eligibility = depositFullEligibilityResponse(user);
+    if (eligibility) return eligibility;
 
     // Admin-controlled switch and limits
     const moneyControls = await getMoneyControls();

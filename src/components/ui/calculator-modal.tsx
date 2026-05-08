@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -19,6 +20,7 @@ export default function CalculatorModal({
   isOpen,
   onClose,
 }: CalculatorModalProps) {
+  const router = useRouter();
   const [fromCurrency, setFromCurrency] = useState<"BRL" | "BTC">("BRL");
   const [toCurrency, setToCurrency] = useState<"BRL" | "BTC">("BTC");
   const [quantity, setQuantity] = useState("");
@@ -60,14 +62,14 @@ export default function CalculatorModal({
   }, [fromCurrency, toCurrency, quantity, receivedAmount]);
 
   const handleTrade = useCallback(() => {
-    // Navigate to trading page with pre-filled values
     const params = new URLSearchParams({
       from: fromCurrency,
       to: toCurrency,
       amount: quantity,
     });
-    window.location.href = `/wallet?${params.toString()}`;
-  }, [fromCurrency, toCurrency, quantity]);
+    onClose();
+    router.push(`/trade?${params.toString()}`);
+  }, [fromCurrency, toCurrency, quantity, onClose, router]);
 
   const handleFromCurrencyChange = useCallback((currency: "BRL" | "BTC") => {
     setFromCurrency(currency);

@@ -7,10 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { AuthLayout } from "@/components/ui/auth-layout";
 
 const ForgotPasswordWithPhone = () => {
+  const router = useRouter();
   const [identifier, setIdentifier] = useState("");
   const [code, setCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -166,9 +168,9 @@ const ForgotPasswordWithPhone = () => {
           description: "Password reset successfully",
         });
 
-        // Redirect to login after short delay
         setTimeout(() => {
-          window.location.href = "/login";
+          router.replace("/login");
+          router.refresh();
         }, 2000);
       } else {
         toast({

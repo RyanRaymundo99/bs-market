@@ -1,4 +1,6 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import type { ApiErrorBody } from "./api-response";
+import { jsonError } from "./api-response";
 import prisma from "./prisma";
 
 export interface ValidatedSession {
@@ -11,6 +13,27 @@ export interface ValidatedSession {
     kycStatus: string;
   };
   sessionId: string;
+  expiresAt: Date;
+}
+
+export type RequireSessionResult =
+  | { ok: true; session: ValidatedSession }
+  | { ok: false; response: NextResponse<ApiErrorBody> };
+
+/**
+ * Resolve the current user session or a consistent 401 JSON response.
+ */
+export async function requireSession(
+  request: NextRequest
+): Promise<RequireSessionResult> {
+  const session = await validateSession(request);
+  if (!session) {
+    return {
+      ok: false,
+      response: jsonError(401, "Unauthorized", "UNAUTHORIZED"),
+    };
+  }
+  return { ok: true, session };
 }
 
 export async function validateSession(
@@ -61,6 +84,7 @@ export async function validateSession(
       userId: session.user.id,
       user: session.user,
       sessionId: session.id,
+      expiresAt: session.expiresAt,
     };
   } catch (error) {
     console.error("Session validation error:", error);

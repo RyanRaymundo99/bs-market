@@ -17,9 +17,8 @@ import {
   ArrowUpRight,
   ArrowDownRight,
 } from "lucide-react";
-import NavbarNew, { DESKTOP_SHELL_PL } from "@/components/ui/navbar-new";
+import { DESKTOP_SHELL_PL } from "@/constants/layout-shell";
 import { PageLoader, Spinner } from "@/components/ui/loading";
-import { GlobalKYCBanner } from "@/components/GlobalKYCBanner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useMobileMenuOpen } from "@/hooks/useMobileMenuOpen";
 import { formatUSDT, formatBRL } from "@/lib/format-currency";
@@ -49,32 +48,10 @@ export default function ActivityPage() {
   const router = useRouter();
   const { t, language } = useLanguage();
   const mobileMenuOpen = useMobileMenuOpen();
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [summary, setSummary] = useState<ActivitySummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [markingRead, setMarkingRead] = useState(false);
-
-  const handleLogout = useCallback(async () => {
-    setIsLoggingOut(true);
-    try {
-      await fetch("/api/auth/logout", {
-        method: "POST",
-        credentials: "include",
-      });
-      localStorage.removeItem("auth-session");
-      localStorage.removeItem("user");
-      sessionStorage.clear();
-      window.location.href = "/";
-    } catch {
-      localStorage.removeItem("auth-session");
-      localStorage.removeItem("user");
-      sessionStorage.clear();
-      window.location.href = "/";
-    } finally {
-      setIsLoggingOut(false);
-    }
-  }, []);
 
   const fetchSummary = useCallback(async () => {
     setLoading(true);
@@ -141,8 +118,6 @@ export default function ActivityPage() {
   if (loading && !summary) {
     return (
       <div className={`min-h-screen bg-background ${DESKTOP_SHELL_PL}`}>
-        <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
-        <GlobalKYCBanner />
         <div className="container mx-auto px-4 py-8">
           <PageLoader
             message={
@@ -158,8 +133,6 @@ export default function ActivityPage() {
 
   return (
     <div className={`min-h-screen bg-background ${DESKTOP_SHELL_PL}`}>
-      <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
-      <GlobalKYCBanner />
       <div
         className={`container mx-auto max-w-3xl px-3 sm:px-4 py-4 sm:py-6 ${
           mobileMenuOpen ? "pb-8" : ""

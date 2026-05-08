@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { paymentService } from "@/lib/payment";
+import { validateSession } from "@/lib/session";
 
 /**
  * Manual sync endpoint to force check and update order status
@@ -9,24 +10,9 @@ import { paymentService } from "@/lib/payment";
  */
 export async function POST(request: NextRequest) {
   try {
-    // Get the session cookie
-    const sessionCookie = request.cookies.get("better-auth.session");
-
-    if (!sessionCookie?.value) {
+    const authSession = await validateSession(request);
+    if (!authSession) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Find the session in the database
-    const session = await prisma.session.findUnique({
-      where: { token: sessionCookie.value },
-      include: { user: true },
-    });
-
-    if (!session || session.expiresAt <= new Date()) {
-      return NextResponse.json(
-        { error: "Invalid or expired session" },
-        { status: 401 }
-      );
     }
 
     const body = await request.json();
@@ -46,7 +32,7 @@ export async function POST(request: NextRequest) {
           orderId ? { id: orderId } : {},
           transactionId ? { externalOrderId: transactionId } : {},
         ],
-        userId: session.user.id,
+        userId: authSession.user.id,
       },
     });
 

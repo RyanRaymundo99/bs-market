@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, afterEach } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   computeStablecoinLedgerDebits,
   getUsdtDebitedPerUnitWithdrawnServer,
@@ -16,7 +16,7 @@ describe("getUsdtDebitedPerUnitWithdrawnServer", () => {
 
   it("reads STABLECOIN_USDC_DEBIT_USDT_PER_USDC for USDC", () => {
     vi.stubEnv("STABLECOIN_USDC_DEBIT_USDT_PER_USDC", "1.02");
-    expect(getUsdtDebitedPerUnitWithdrawnServer("USDC")).toBe(1.02);
+    expect(getUsdtDebitedPerUnitWithdrawnServer("USDC")).toBeCloseTo(1.02);
   });
 
   it("falls back to 1 for invalid env", () => {
@@ -33,7 +33,7 @@ describe("usdcWithdrawalCapacityUsdt", () => {
 
 describe("computeStablecoinLedgerDebits", () => {
   it("debits USDT only for USDT withdrawal", () => {
-    const r = computeStablecoinLedgerDebits("USDT", 10, 100, 50, 1);
+    const r = computeStablecoinLedgerDebits("USDT", 10, 100, 100, 1.2);
     expect(r).toEqual({
       dUsdt: 10,
       dUsdc: 0,
@@ -41,10 +41,17 @@ describe("computeStablecoinLedgerDebits", () => {
     });
   });
 
-  it("splits USDC debit across USDT then USDC balances", () => {
+  it("uses only USDT when balance covers USDC-equivalent need", () => {
+    const r = computeStablecoinLedgerDebits("USDC", 10, 20, 100, 2);
+    expect(r.usdtNeeded).toBeCloseTo(20);
+    expect(r.dUsdt).toBeCloseTo(20);
+    expect(r.dUsdc).toBeCloseTo(0);
+  });
+
+  it("uses USDC when USDT balance is insufficient", () => {
     const r = computeStablecoinLedgerDebits("USDC", 10, 5, 100, 2);
-    expect(r.usdtNeeded).toBe(20);
-    expect(r.dUsdt).toBe(5);
-    expect(r.dUsdc).toBeCloseTo(7.5, 5);
+    expect(r.dUsdt).toBeCloseTo(5);
+    expect(r.dUsdc).toBeCloseTo(7.5);
+    expect(r.usdtNeeded).toBeCloseTo(20);
   });
 });

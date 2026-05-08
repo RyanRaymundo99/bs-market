@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -18,6 +19,7 @@ interface GoogleSignupProps {
 }
 
 const GoogleSignup = ({}: GoogleSignupProps) => {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [currentStep] = useState<"signup" | "success">("signup");
   const { toast } = useToast();
@@ -52,7 +54,10 @@ const GoogleSignup = ({}: GoogleSignupProps) => {
         </CardHeader>
         <CardContent>
           <Button
-            onClick={() => (window.location.href = "/dashboard")}
+            onClick={() => {
+              router.replace("/dashboard");
+              router.refresh();
+            }}
             className="w-full"
           >
             Go to Dashboard

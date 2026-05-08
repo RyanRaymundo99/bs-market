@@ -1,34 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { validateSession } from "@/lib/session";
 
 export async function GET(request: NextRequest) {
   try {
-    // Get the session cookie
-    const sessionCookie = request.cookies.get("better-auth.session");
-
-    if (!sessionCookie?.value) {
-      return NextResponse.json(
-        { error: "No session cookie found" },
-        { status: 401 }
-      );
-    }
-
-    // Find the session in the database
-    const session = await prisma.session.findUnique({
-      where: { token: sessionCookie.value },
-      include: { user: true },
-    });
-
-    if (!session || session.expiresAt <= new Date()) {
-      return NextResponse.json(
-        { error: "Invalid or expired session" },
-        { status: 401 }
-      );
+    const authSession = await validateSession(request);
+    if (!authSession) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Get all user balances
     const balances = await prisma.balance.findMany({
-      where: { userId: session.user.id },
+      where: { userId: authSession.user.id },
       orderBy: { amount: "desc" },
     });
 
@@ -46,7 +29,7 @@ export async function GET(request: NextRequest) {
 
     // Get recent transactions
     const recentTransactions = await prisma.transaction.findMany({
-      where: { userId: session.user.id },
+      where: { userId: authSession.user.id },
       orderBy: { createdAt: "desc" },
       take: 10,
       include: {
@@ -59,7 +42,7 @@ export async function GET(request: NextRequest) {
     // Get open orders
     const openOrders = await prisma.order.findMany({
       where: {
-        userId: session.user.id,
+        userId: authSession.user.id,
         status: "PENDING",
       },
       orderBy: { createdAt: "desc" },

@@ -1,4 +1,6 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import type { ApiErrorBody } from "@/lib/api-response";
+import { jsonError } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
 
 export interface AdminSession {
@@ -9,6 +11,26 @@ export interface AdminSession {
     email: string;
   };
   sessionId: string;
+}
+
+export type RequireAdminSessionResult =
+  | { ok: true; session: AdminSession }
+  | { ok: false; response: NextResponse<ApiErrorBody> };
+
+/**
+ * Resolve an admin session or a consistent 401 JSON response.
+ */
+export async function requireAdminSession(
+  request: NextRequest
+): Promise<RequireAdminSessionResult> {
+  const session = await validateAdminSession(request);
+  if (!session) {
+    return {
+      ok: false,
+      response: jsonError(401, "Unauthorized", "UNAUTHORIZED"),
+    };
+  }
+  return { ok: true, session };
 }
 
 /**

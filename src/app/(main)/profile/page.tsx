@@ -8,8 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import NavbarNew, { DESKTOP_SHELL_PL } from "@/components/ui/navbar-new";
-import { GlobalKYCBanner } from "@/components/GlobalKYCBanner";
+import { DESKTOP_SHELL_PL } from "@/constants/layout-shell";
 import Breadcrumb from "@/components/ui/breadcrumb";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getKycImageSrc } from "@/lib/kyc-image-src";
@@ -82,8 +81,7 @@ interface Transaction {
 export default function ProfilePage() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [kycDocuments, setKycDocuments] = useState<KYCDocuments | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [profileReady, setProfileReady] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -119,37 +117,6 @@ export default function ProfilePage() {
 
   const { toast } = useToast();
   const { t, language } = useLanguage();
-
-  const handleLogout = useCallback(async () => {
-    setIsLoggingOut(true);
-    try {
-      // Call logout API to clear session
-      await fetch("/api/auth/logout", {
-        method: "POST",
-        credentials: "include",
-      });
-
-      // Clear local storage
-      localStorage.removeItem("auth-session");
-      localStorage.removeItem("user");
-      sessionStorage.clear();
-
-      // Force redirect to home page using window.location for reliability
-      window.location.href = "/";
-    } catch (error) {
-      console.error("Logout error:", error);
-      // Even if API fails, clear local storage and redirect
-      localStorage.removeItem("auth-session");
-      localStorage.removeItem("user");
-      sessionStorage.clear();
-      // Force redirect using window.location
-      window.location.href = "/";
-    } finally {
-      setIsLoggingOut(false);
-    }
-  }, []);
-
-
 
   // Auto-enable editing mode when user is PENDING
   useEffect(() => {
@@ -207,8 +174,6 @@ export default function ProfilePage() {
         title: t("error"),
         description: t("failedToLoadProfile"),
       });
-    } finally {
-      setLoading(false);
     }
   }, [t, toast]);
 
@@ -282,18 +247,23 @@ export default function ProfilePage() {
     }
   };
 
-  // Fetch all data in parallel for faster loading
+  // Initial load — single completion flag for inline skeletons (no full-page block)
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      await Promise.all([
-        fetchUserProfile(),
-        fetchKycDocuments(),
-        fetchTransactions(),
-      ]);
-      setLoading(false);
+    let cancelled = false;
+    void (async () => {
+      try {
+        await Promise.all([
+          fetchUserProfile(),
+          fetchKycDocuments(),
+          fetchTransactions(),
+        ]);
+      } finally {
+        if (!cancelled) setProfileReady(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
     };
-    loadData();
   }, [fetchUserProfile, fetchKycDocuments, fetchTransactions]);
 
   const handleEdit = () => {
@@ -542,27 +512,8 @@ export default function ProfilePage() {
     !!kycDocuments?.documentBack &&
     !!kycDocuments?.documentSelfie;
 
-  if (loading) {
-    return (
-      <div className={`min-h-screen bg-background text-foreground ${DESKTOP_SHELL_PL}`}>
-        <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
-        <GlobalKYCBanner />
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-center h-64">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-              <p>{t("loadingProfile")}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className={`min-h-screen bg-background text-foreground ${DESKTOP_SHELL_PL}`}>
-      <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
-      <GlobalKYCBanner />
       <div className="container mx-auto px-4 py-6">
         <Breadcrumb
           items={[
@@ -642,6 +593,23 @@ export default function ProfilePage() {
           )}
         </div>
 
+        {!profileReady ? (
+          <div
+            className="space-y-6 mt-2"
+            role="status"
+            aria-busy
+            aria-label={t("loadingProfile")}
+          >
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="min-h-[22rem] rounded-xl border border-border bg-muted/40 animate-pulse" />
+              <div className="min-h-[22rem] rounded-xl border border-border bg-muted/40 animate-pulse" />
+            </div>
+            <div className="min-h-[20rem] rounded-xl border border-border bg-muted/40 animate-pulse" />
+            <div className="min-h-[14rem] rounded-xl border border-border bg-muted/40 animate-pulse" />
+            <div className="min-h-[10rem] rounded-xl border border-border bg-muted/40 animate-pulse" />
+          </div>
+        ) : (
+          <>
         <div className="grid gap-6 md:grid-cols-2">
           {/* Personal Information */}
           <Card>
@@ -1572,6 +1540,9 @@ export default function ProfilePage() {
             </Button>
           </CardContent>
         </Card>
+
+        </>
+        )}
 
         {/* Receipt Modal */}
         <Dialog open={showReceipt} onOpenChange={setShowReceipt}>

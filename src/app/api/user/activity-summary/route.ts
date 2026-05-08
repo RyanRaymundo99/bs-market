@@ -1,27 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { Prisma } from "../../../../../prisma/generated/client";
 import prisma from "@/lib/prisma";
+import { validateSession } from "@/lib/session";
 
 export async function GET(request: NextRequest) {
   try {
-    const sessionCookie = request.cookies.get("better-auth.session");
-    if (!sessionCookie?.value) {
+    const authSession = await validateSession(request);
+    if (!authSession) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const session = await prisma.session.findUnique({
-      where: { token: sessionCookie.value },
-      include: { user: true },
-    });
-
-    if (!session || session.expiresAt <= new Date()) {
-      return NextResponse.json(
-        { error: "Invalid or expired session" },
-        { status: 401 }
-      );
-    }
-
-    const userId = session.userId;
+    const userId = authSession.userId;
 
     const { searchParams } = new URL(request.url);
     const pendingLimit = Math.min(

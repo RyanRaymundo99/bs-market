@@ -1,61 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getMoneyControls } from "@/lib/money-controls";
+import { validateSession } from "@/lib/session";
+import { withdrawEligibilityResponse } from "@/lib/user-gates";
 
 export async function POST(request: NextRequest) {
   try {
-    // Get the session cookie
-    const sessionCookie = request.cookies.get("better-auth.session");
-
-    if (!sessionCookie?.value) {
-      return NextResponse.json(
-        { error: "No session cookie found" },
-        { status: 401 }
-      );
+    const authSession = await validateSession(request);
+    if (!authSession) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Find the session in the database
-    const session = await prisma.session.findUnique({
-      where: { token: sessionCookie.value },
-      include: { user: true },
-    });
+    const eligibility = withdrawEligibilityResponse(authSession.user);
+    if (eligibility) return eligibility;
 
-    if (!session || session.expiresAt <= new Date()) {
-      return NextResponse.json(
-        { error: "Invalid or expired session" },
-        { status: 401 }
-      );
-    }
-
-    // Check if user is approved
-    if (session.user.approvalStatus === "REJECTED") {
-      return NextResponse.json(
-        { error: "Sua conta foi rejeitada. Entre em contato com o suporte." },
-        { status: 403 }
-      );
-    }
-
-    // Check if user is pending
-    if (session.user.approvalStatus === "PENDING") {
-      return NextResponse.json(
-        {
-          error:
-            "Sua conta está pendente de aprovação. Complete seu cadastro e aguarde a aprovação.",
-        },
-        { status: 403 }
-      );
-    }
-
-    // Check if KYC is pending
-    if (session.user.kycStatus === "PENDING") {
-      return NextResponse.json(
-        {
-          error:
-            "Sua verificação KYC está pendente. Complete o upload dos documentos KYC para realizar saques.",
-        },
-        { status: 403 }
-      );
-    }
+    const user = authSession.user;
 
     // Admin-controlled switch to disable withdrawals
     const moneyControls = await getMoneyControls();
@@ -89,7 +48,7 @@ export async function POST(request: NextRequest) {
     // Check if user has sufficient balance
     const userBalance = await prisma.balance.findFirst({
       where: {
-        userId: session.user.id,
+        userId: user.id,
         currency: "BRL",
       },
     });
@@ -104,7 +63,7 @@ export async function POST(request: NextRequest) {
     // Create withdrawal record
     const withdrawal = await prisma.withdrawal.create({
       data: {
-        userId: session.user.id,
+        userId: user.id,
         amount,
         currency: "BRL",
         status: "PENDING",
@@ -118,7 +77,7 @@ export async function POST(request: NextRequest) {
     // Create transaction record
     const transaction = await prisma.transaction.create({
       data: {
-        userId: session.user.id,
+        userId: user.id,
         type: "WITHDRAWAL",
         amount: -amount, // Negative for withdrawals
         currency: "BRL",
@@ -164,30 +123,12 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    // Get the session cookie
-    const sessionCookie = request.cookies.get("better-auth.session");
-
-    if (!sessionCookie?.value) {
-      return NextResponse.json(
-        { error: "No session cookie found" },
-        { status: 401 }
-      );
+    const authSession = await validateSession(request);
+    if (!authSession) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Find the session in the database
-    const session = await prisma.session.findUnique({
-      where: { token: sessionCookie.value },
-      include: { user: true },
-    });
-
-    if (!session || session.expiresAt <= new Date()) {
-      return NextResponse.json(
-        { error: "Invalid or expired session" },
-        { status: 401 }
-      );
-    }
-
-    const userId = session.user.id;
+    const userId = authSession.user.id;
 
     const withdrawals = await prisma.withdrawal.findMany({
       where: {

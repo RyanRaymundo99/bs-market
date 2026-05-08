@@ -39,9 +39,8 @@ import {
   Plus,
   Minus,
 } from "lucide-react";
-import NavbarNew, { DESKTOP_SHELL_PL } from "@/components/ui/navbar-new";
-import { PageLoader, ButtonLoader } from "@/components/ui/loading";
-import { GlobalKYCBanner } from "@/components/GlobalKYCBanner";
+import { DESKTOP_SHELL_PL } from "@/constants/layout-shell";
+import { ButtonLoader } from "@/components/ui/loading";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useMobileMenuOpen } from "@/hooks/useMobileMenuOpen";
 import { formatCurrency, formatBRL } from "@/lib/format-currency";
@@ -160,8 +159,7 @@ export default function WithdrawPage() {
   const router = useRouter();
   const pathname = usePathname();
   const [walletData, setWalletData] = useState<WalletData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(true);
 
   // Admin-controlled switch to disable withdrawals
   const [withdrawalsDisabled, setWithdrawalsDisabled] = useState(false);
@@ -276,35 +274,6 @@ export default function WithdrawPage() {
     loadMoneyStatus();
   }, []);
 
-  const handleLogout = useCallback(async () => {
-    setIsLoggingOut(true);
-    try {
-      // Call logout API to clear session
-      await fetch("/api/auth/logout", {
-        method: "POST",
-        credentials: "include",
-      });
-
-      // Clear local storage
-      localStorage.removeItem("auth-session");
-      localStorage.removeItem("user");
-      sessionStorage.clear();
-
-      // Force redirect to home page using window.location for reliability
-      window.location.href = "/";
-    } catch (error) {
-      console.error("Logout error:", error);
-      // Even if API fails, clear local storage and redirect
-      localStorage.removeItem("auth-session");
-      localStorage.removeItem("user");
-      sessionStorage.clear();
-      // Force redirect using window.location
-      window.location.href = "/";
-    } finally {
-      setIsLoggingOut(false);
-    }
-  }, []);
-
   // Check user approval status on mount and logout if rejected
   useEffect(() => {
     const checkUserStatus = async () => {
@@ -363,7 +332,7 @@ export default function WithdrawPage() {
                     : "Your account is pending approval. Complete your profile before withdrawing.",
                 variant: "destructive",
               });
-              window.location.href = "/profile";
+              router.replace("/profile");
               return;
             }
           }
@@ -373,7 +342,7 @@ export default function WithdrawPage() {
       }
     };
     checkUserStatus();
-  }, [language, toast]);
+  }, [language, toast, router]);
 
   // Fetch wallet data and exchange rate
   const fetchWalletData = useCallback(async () => {
@@ -401,6 +370,7 @@ export default function WithdrawPage() {
         description: "Failed to load wallet data",
         variant: "destructive",
       });
+      setWalletData((prev) => prev ?? { balances: [], lastUpdated: new Date().toISOString() });
     }
   }, [toast]);
 
@@ -414,6 +384,8 @@ export default function WithdrawPage() {
       }
     } catch (error) {
       console.error("Error fetching withdrawal history:", error);
+    } finally {
+      setHistoryLoading(false);
     }
   }, []);
 
@@ -813,12 +785,7 @@ export default function WithdrawPage() {
   };
 
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      await Promise.all([fetchWalletData(), fetchWithdrawalHistory()]);
-      setLoading(false);
-    };
-    loadData();
+    void Promise.all([fetchWalletData(), fetchWithdrawalHistory()]);
 
     // Set up polling for balance and history
     const interval = setInterval(() => {
@@ -839,28 +806,8 @@ export default function WithdrawPage() {
     };
   }, [fetchWalletData, fetchWithdrawalHistory]);
 
-  if (loading) {
-    return (
-      <div className={`min-h-screen bg-background ${DESKTOP_SHELL_PL}`}>
-        <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
-        <GlobalKYCBanner />
-        <div className="container mx-auto px-4 py-8">
-          <PageLoader
-            message={
-              language === "pt"
-                ? "Carregando página de saque..."
-                : "Loading withdrawal page..."
-            }
-          />
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className={`min-h-screen bg-background ${DESKTOP_SHELL_PL}`}>
-      <NavbarNew isLoggingOut={false} handleLogout={() => {}} />
-      <GlobalKYCBanner />
       <div
         className={`mx-auto w-full max-w-[1800px] px-3 sm:px-5 xl:px-8 py-4 sm:py-6 ${
           isMobile ? "pb-16" : ""
@@ -967,14 +914,26 @@ export default function WithdrawPage() {
                           {t("availableBalance")}
                         </span>
                       </div>
-                      <p className="text-2xl sm:text-3xl font-bold text-primary">
-                        {formatCurrency(
-                          maxCryptoWithdrawGross,
-                          selectedCurrency,
-                          { maxDecimals: 4 }
+                      <p className="text-2xl sm:text-3xl font-bold text-primary tabular-nums">
+                        {!walletData ? (
+                          <span
+                            className="inline-block h-9 min-w-[10rem] max-w-[16rem] rounded-lg bg-muted animate-pulse"
+                            aria-busy="true"
+                            aria-label={
+                              language === "pt"
+                                ? "Carregando saldo"
+                                : "Loading balance"
+                            }
+                          />
+                        ) : (
+                          formatCurrency(
+                            maxCryptoWithdrawGross,
+                            selectedCurrency,
+                            { maxDecimals: 4 }
+                          )
                         )}
                       </p>
-                      {selectedCurrency === "USDC" ? (
+                      {selectedCurrency === "USDC" && walletData ? (
                         <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
                           {language === "pt"
                             ? `Saldo em USDT: ${formatCurrency(
@@ -1124,6 +1083,7 @@ export default function WithdrawPage() {
                         disabled={
                           withdrawalsDisabled ||
                           processing ||
+                          walletData === null ||
                           !usdtAmount ||
                           !walletAddress ||
                           parseFloat(usdtAmount) <= 0 ||
@@ -1156,18 +1116,30 @@ export default function WithdrawPage() {
                             : "Available balance for PIX"}
                         </span>
                       </div>
-                      <p className="text-2xl sm:text-3xl font-bold text-primary">
-                        {brlAvailableForPix != null
-                          ? formatBRL(brlAvailableForPix)
-                          : "—"}
+                      <p className="text-2xl sm:text-3xl font-bold text-primary tabular-nums">
+                        {!walletData ? (
+                          <span
+                            className="inline-block h-9 min-w-[9rem] rounded-lg bg-muted animate-pulse"
+                            aria-busy="true"
+                            aria-label={
+                              language === "pt"
+                                ? "Carregando saldo"
+                                : "Loading balance"
+                            }
+                          />
+                        ) : brlAvailableForPix != null ? (
+                          formatBRL(brlAvailableForPix)
+                        ) : (
+                          "—"
+                        )}
                       </p>
-                      {brlAvailableForPix == null && (
+                      {(walletData && brlAvailableForPix == null) ? (
                         <p className="text-xs text-muted-foreground mt-1">
                           {language === "pt"
                             ? "Carregando cotação…"
                             : "Loading exchange rate…"}
                         </p>
-                      )}
+                      ) : null}
                     </div>
 
                     <div className="space-y-4">
@@ -1256,6 +1228,7 @@ export default function WithdrawPage() {
                         disabled={
                           withdrawalsDisabled ||
                           processingPix ||
+                          walletData === null ||
                           !pixAmount ||
                           !pixKey ||
                           !pixCPF ||
@@ -1304,7 +1277,21 @@ export default function WithdrawPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {withdrawalHistory.length > 0 ? (
+            {historyLoading ? (
+              <div
+                className="space-y-3 py-2"
+                role="status"
+                aria-busy
+                aria-label={language === "pt" ? "Carregando histórico" : "Loading history"}
+              >
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-14 w-full rounded-lg bg-muted/80 animate-pulse"
+                  />
+                ))}
+              </div>
+            ) : withdrawalHistory.length > 0 ? (
               <div className="overflow-x-auto lg:overflow-x-visible">
                 <table className="w-full min-w-0 table-fixed text-sm">
                   <colgroup>

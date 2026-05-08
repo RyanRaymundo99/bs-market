@@ -1,29 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ledgerService } from "@/lib/ledger";
 import prisma from "@/lib/prisma";
+import { validateSession } from "@/lib/session";
 import { Decimal } from "@prisma/client/runtime/library";
 
 export async function POST(request: NextRequest) {
   try {
-    // Get the session cookie
-    const sessionCookie = request.cookies.get("better-auth.session");
-
-    if (!sessionCookie?.value) {
+    const authSession = await validateSession(request);
+    if (!authSession) {
       return NextResponse.json(
         { error: "No session cookie found" },
-        { status: 401 }
-      );
-    }
-
-    // Find the session in the database
-    const session = await prisma.session.findUnique({
-      where: { token: sessionCookie.value },
-      include: { user: true },
-    });
-
-    if (!session || session.expiresAt <= new Date()) {
-      return NextResponse.json(
-        { error: "Invalid or expired session" },
         { status: 401 }
       );
     }
@@ -39,7 +25,7 @@ export async function POST(request: NextRequest) {
 
     // Check user's USDT balance
     const usdtBalance = await ledgerService.getUserBalance(
-      session.user.id,
+      authSession.user.id,
       "USDT"
     );
     if (usdtBalance.amount.lessThan(usdtAmount)) {
@@ -64,7 +50,7 @@ export async function POST(request: NextRequest) {
     // Create order record
     const order = await prisma.order.create({
       data: {
-        userId: session.user.id,
+        userId: authSession.user.id,
         type: "SELL",
         baseCurrency: "USDT",
         quoteCurrency: "BRL",
@@ -91,14 +77,14 @@ export async function POST(request: NextRequest) {
 
       // Update balances
       await ledgerService.updateBalance(
-        session.user.id,
+        authSession.user.id,
         "USDT",
         new Decimal(usdtAmount),
         "SUBTRACT"
       );
 
       await ledgerService.updateBalance(
-        session.user.id,
+        authSession.user.id,
         "BRL",
         new Decimal(brlAmount),
         "ADD"
@@ -106,7 +92,7 @@ export async function POST(request: NextRequest) {
 
       // Create transaction records
       await ledgerService.createTransaction({
-        userId: session.user.id,
+        userId: authSession.user.id,
         type: "SELL_CRYPTO",
         amount: new Decimal(usdtAmount),
         currency: "USDT",
@@ -119,7 +105,7 @@ export async function POST(request: NextRequest) {
       });
 
       await ledgerService.createTransaction({
-        userId: session.user.id,
+        userId: authSession.user.id,
         type: "SELL_CRYPTO",
         amount: new Decimal(brlAmount),
         currency: "BRL",

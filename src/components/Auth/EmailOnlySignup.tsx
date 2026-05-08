@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
 import { Loader2, Mail, CheckCircle } from "lucide-react";
 
 interface EmailOnlySignupProps {
@@ -41,6 +42,7 @@ const EmailOnlySignup = ({ onSuccess }: EmailOnlySignupProps) => {
   );
   const [verifying, setVerifying] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -192,7 +194,10 @@ const EmailOnlySignup = ({ onSuccess }: EmailOnlySignupProps) => {
         </CardHeader>
         <CardContent>
           <Button
-            onClick={() => (window.location.href = "/dashboard")}
+            onClick={() => {
+              router.replace("/dashboard");
+              router.refresh();
+            }}
             className="w-full"
           >
             Go to Dashboard

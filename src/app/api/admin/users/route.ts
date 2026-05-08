@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { validateAdminSession } from "@/lib/admin-session";
+import { requireAdminSession } from "@/lib/admin-session";
 
 type UserTagRow = { userId: string; tag: string };
 type PrismaWithUserTag = typeof prisma & {
@@ -11,12 +11,8 @@ type PrismaWithUserTag = typeof prisma & {
 
 export async function GET(request: NextRequest) {
   try {
-    // Validate admin session
-    const adminSession = await validateAdminSession(request);
-
-    if (!adminSession) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const admin = await requireAdminSession(request);
+    if (!admin.ok) return admin.response;
 
     // Get query parameters for filtering
     const { searchParams } = new URL(request.url);

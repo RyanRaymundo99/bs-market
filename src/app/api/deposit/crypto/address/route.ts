@@ -8,48 +8,20 @@ import {
   isCryptoCurrency,
   isCryptoNetworkForCurrency,
 } from "@/lib/crypto-assets";
+import { validateSession } from "@/lib/session";
+import { depositApprovalResponse } from "@/lib/deposit-gates";
 
 export async function POST(request: NextRequest) {
   try {
-    // Get the session cookie
-    const sessionCookie = request.cookies.get("better-auth.session");
-
-    if (!sessionCookie?.value) {
+    const authSession = await validateSession(request);
+    if (!authSession) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Find the session in the database
-    const session = await prisma.session.findUnique({
-      where: { token: sessionCookie.value },
-      include: { user: true },
-    });
+    const user = authSession.user;
 
-    if (!session || session.expiresAt <= new Date()) {
-      return NextResponse.json(
-        { error: "Invalid or expired session" },
-        { status: 401 }
-      );
-    }
-
-    const user = session.user;
-
-    // Check if user is approved
-    if (user.approvalStatus === "REJECTED") {
-      return NextResponse.json(
-        { error: "Sua conta foi rejeitada. Entre em contato com o suporte." },
-        { status: 403 }
-      );
-    }
-
-    if (user.approvalStatus === "PENDING") {
-      return NextResponse.json(
-        {
-          error:
-            "Sua conta está pendente de aprovação. Complete seu cadastro e aguarde a aprovação.",
-        },
-        { status: 403 }
-      );
-    }
+    const approvalGate = depositApprovalResponse(user);
+    if (approvalGate) return approvalGate;
 
     // Admin-controlled switch to disable deposits
     const moneyControls = await getMoneyControls();

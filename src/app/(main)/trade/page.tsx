@@ -2,8 +2,7 @@
 
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import NavbarNew, { DESKTOP_SHELL_PL } from "@/components/ui/navbar-new";
-import { GlobalKYCBanner } from "@/components/GlobalKYCBanner";
+import { DESKTOP_SHELL_PL } from "@/constants/layout-shell";
 import Image from "next/image";
 import {
   Dialog,
@@ -54,14 +53,14 @@ import {
   isCryptoCurrency,
 } from "@/lib/crypto-assets";
 
-import { handleLogout as performLogout } from "../../lib/auth-utils";
+import { handleLogout as performLogout } from "@/lib/auth-utils";
 import {
   formatUSDTInput,
   parseUSDTInput,
   formatBRL,
   formatUSDT,
   getWhatsAppUrlForLargeDeposit,
-} from "../../lib/trade-utils";
+} from "@/lib/trade-utils";
 const WHATSAPP_SUPPORT_URL = `https://wa.me/${
   process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "5511984284867"
 }`;
@@ -69,7 +68,6 @@ const WHATSAPP_SUPPORT_URL = `https://wa.me/${
 const TradePage = () => {
   const router = useRouter();
   const pathname = usePathname();
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { toast } = useToast();
   const { t, language } = useLanguage();
 
@@ -125,12 +123,6 @@ const TradePage = () => {
       }
     };
     loadMoneyStatus();
-  }, []);
-
-  const handleLogout = useCallback(async () => {
-    setIsLoggingOut(true);
-    await performLogout();
-    // The page will redirect, so no need to setIsLoggingOut(false)
   }, []);
 
   // Track previous history to detect completed payments
@@ -305,7 +297,7 @@ const TradePage = () => {
                     : "Your account is pending approval. Complete your profile before purchasing.",
                 variant: "destructive",
               });
-              window.location.href = "/profile";
+              router.replace("/profile");
               return;
             }
           }
@@ -1226,8 +1218,6 @@ const TradePage = () => {
     <div
       className={`min-h-screen bg-background text-foreground ${DESKTOP_SHELL_PL}`}
     >
-      <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
-      <GlobalKYCBanner />
       <div
         className={`mx-auto w-full max-w-[1800px] px-3 sm:px-5 xl:px-8 py-4 sm:py-6 ${
           isMobile ? "pb-16" : ""

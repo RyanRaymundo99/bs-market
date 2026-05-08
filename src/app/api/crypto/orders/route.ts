@@ -1,32 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { validateSession } from "@/lib/session";
 
 export async function GET(request: NextRequest) {
   try {
-    // Get the session cookie
-    const sessionCookie = request.cookies.get("better-auth.session");
-
-    if (!sessionCookie?.value) {
+    const authSession = await validateSession(request);
+    if (!authSession) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Find the session in the database
-    const session = await prisma.session.findUnique({
-      where: { token: sessionCookie.value },
-      include: { user: true },
-    });
-
-    if (!session || session.expiresAt <= new Date()) {
-      return NextResponse.json(
-        { error: "Invalid or expired session" },
-        { status: 401 }
-      );
     }
 
     // Get user's orders
     const orders = await prisma.order.findMany({
       where: {
-        userId: session.user.id,
+        userId: authSession.user.id,
       },
       orderBy: { createdAt: "desc" },
       take: 50,
@@ -82,7 +68,7 @@ export async function GET(request: NextRequest) {
     // Get transaction records for these orders to check if payment actually succeeded
     const transactions = await prisma.transaction.findMany({
       where: {
-        userId: session.user.id,
+        userId: authSession.user.id,
         type: "BUY_CRYPTO",
         OR: orderIds.map((orderId) => ({
           metadata: {
@@ -256,7 +242,7 @@ export async function GET(request: NextRequest) {
 
     // Log for debugging
     console.log(
-      `[Orders API] User ${session.user.id}: Returning ${formattedOrders.length} orders`
+      `[Orders API] User ${authSession.user.id}: Returning ${formattedOrders.length} orders`
     );
     if (formattedOrders.length > 0) {
       console.log(`[Orders API] Sample order:`, {

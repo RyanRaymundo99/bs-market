@@ -22,13 +22,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useMobileMenuOpen } from "@/hooks/useMobileMenuOpen";
-import NavbarNew, { DESKTOP_SHELL_PL } from "@/components/ui/navbar-new";
-import { GlobalKYCBanner } from "@/components/GlobalKYCBanner";
+import { DESKTOP_SHELL_PL } from "@/constants/layout-shell";
 import { WelcomeTutorial } from "@/components/ui/welcome-tutorial";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePrimaryColor } from "@/hooks/use-primary-color";
 import { formatUSDT } from "../../lib/format-currency";
-import { handleLogout as performLogout } from "../../lib/auth-utils";
 import {
   buildUsdtBalanceSeries,
   getUsdtChartDaySpan,
@@ -82,11 +80,11 @@ export default function Dashboard() {
   const pathname = usePathname();
   const { toast } = useToast();
   const { t, language } = useLanguage();
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [balances, setBalances] = useState<Balance[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [showBalances, setShowBalances] = useState(true);
-  const [isLoading, setIsLoading] = useState(true);
+  /** First non-silent fetch finished — show real values vs inline skeletons */
+  const [dashboardReady, setDashboardReady] = useState(false);
   const [userStatus, setUserStatus] = useState<UserStatus | null>(null);
   const [chartData, setChartData] = useState<
     Array<{ date: string; BRL: number; USDT: number; timestamp: number }>
@@ -129,21 +127,48 @@ export default function Dashboard() {
     setShowWelcomeTutorial(false);
   };
 
-  // Check if user is authenticated
+  // Check authentication: rely on cookie session (better-auth); keep localStorage in sync for legacy code
   useEffect(() => {
-    const authSession = localStorage.getItem("auth-session");
     const justLoggedIn = sessionStorage.getItem("just-logged-in");
-
-    // If user just logged in, clear the flag
     if (justLoggedIn) {
       sessionStorage.removeItem("just-logged-in");
     }
 
-    // Only redirect to home if user is not authenticated
-    if (!authSession) {
-      router.replace("/");
-      return;
-    }
+    let cancelled = false;
+
+    const gateSession = async () => {
+      try {
+        const res = await fetch("/api/auth/validate-session", {
+          credentials: "include",
+          cache: "no-store",
+        });
+        const data = (await res.json()) as { authenticated?: boolean };
+        if (cancelled) return;
+        if (data.authenticated) {
+          try {
+            localStorage.setItem("auth-session", "true");
+          } catch {
+            /* quota / blocked storage — cookie session still holds */
+          }
+          return;
+        }
+        try {
+          localStorage.removeItem("auth-session");
+          localStorage.removeItem("auth-user");
+        } catch {
+          /* ignore */
+        }
+        router.replace("/");
+      } catch {
+        if (cancelled) return;
+        // Offline or transient failure: legacy flag avoids booting logged-in users
+        if (!localStorage.getItem("auth-session")) {
+          router.replace("/");
+        }
+      }
+    };
+
+    void gateSession();
 
     const handlePopState = () => {
       // If user tries to go back, redirect to home instead
@@ -154,7 +179,10 @@ export default function Dashboard() {
     };
 
     window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("popstate", handlePopState);
+    };
   }, [router]);
 
   // Format currency in Brazilian Real
@@ -216,7 +244,6 @@ export default function Dashboard() {
   // Fetch user data - OPTIMIZED: parallel API calls
   const fetchData = useCallback(async (isSilent = false) => {
     try {
-      if (!isSilent) setIsLoading(true);
       // Fetch all data in parallel for faster loading
       const [userStatusResponse, balanceResponse, transactionResponse] =
         await Promise.all([
@@ -279,7 +306,7 @@ export default function Dashboard() {
         });
       }
     } finally {
-      if (!isSilent) setIsLoading(false);
+      if (!isSilent) setDashboardReady(true);
     }
   }, [toast]);
 
@@ -303,92 +330,6 @@ export default function Dashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleLogout = async () => {
-    setIsLoggingOut(true);
-    await performLogout();
-    // The page will redirect, so no need to setIsLoggingOut(false)
-  };
-
-  if (isLoading) {
-    return (
-      <div
-        className={`min-h-screen bg-background text-foreground ${DESKTOP_SHELL_PL}`}
-      >
-        <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
-        <GlobalKYCBanner />
-        <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl">
-          {/* Skeleton loader for balance section */}
-          <div className="mb-6 sm:mb-8">
-            <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-6 shadow-xl animate-pulse">
-              <div className="text-center">
-                <div className="h-4 w-32 bg-gray-700 rounded mx-auto mb-4"></div>
-                <div className="h-12 w-48 bg-gray-700 rounded mx-auto mb-2"></div>
-                <div className="h-3 w-24 bg-gray-700 rounded mx-auto"></div>
-              </div>
-            </div>
-          </div>
-
-          {/* Skeleton loader for cards grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-            {[1, 2, 3].map((i) => (
-              <Card
-                key={i}
-                className="bg-gray-900 border-gray-800 animate-pulse"
-              >
-                <CardHeader className="pb-2">
-                  <div className="h-4 w-24 bg-gray-700 rounded"></div>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-8 w-32 bg-gray-700 rounded mb-2"></div>
-                  <div className="h-3 w-20 bg-gray-700 rounded"></div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {/* Skeleton for chart */}
-          <Card className="bg-gray-900 border-gray-800 mb-6 animate-pulse">
-            <CardHeader>
-              <div className="h-5 w-40 bg-gray-700 rounded"></div>
-            </CardHeader>
-            <CardContent>
-              <div className="h-64 bg-gray-800 rounded"></div>
-            </CardContent>
-          </Card>
-
-          {/* Skeleton for transactions */}
-          <Card className="bg-gray-900 border-gray-800 animate-pulse">
-            <CardHeader>
-              <div className="h-5 w-48 bg-gray-700 rounded"></div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between p-3 bg-gray-800 rounded-lg"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-gray-700 rounded-full"></div>
-                      <div>
-                        <div className="h-4 w-24 bg-gray-700 rounded mb-1"></div>
-                        <div className="h-3 w-16 bg-gray-700 rounded"></div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="h-4 w-20 bg-gray-700 rounded mb-1"></div>
-                      <div className="h-3 w-12 bg-gray-700 rounded"></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div
       className={`min-h-screen bg-background text-foreground ${DESKTOP_SHELL_PL}`}
@@ -398,8 +339,6 @@ export default function Dashboard() {
         onClose={handleWelcomeTutorialClose}
         userName={welcomeTutorialName}
       />
-      <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
-      <GlobalKYCBanner />
 
       <div
         className={`container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-7xl ${
@@ -424,6 +363,20 @@ export default function Dashboard() {
             {(() => {
               const usdtBalance = balances.find((b) => b.currency === "USDT");
               const usdtAmount = usdtBalance?.amount || 0;
+              if (!dashboardReady) {
+                return (
+                  <div
+                    className="flex items-center justify-center gap-2 mb-6"
+                    role="status"
+                    aria-busy
+                    aria-label={
+                      language === "pt" ? "Carregando saldo" : "Loading balance"
+                    }
+                  >
+                    <span className="inline-block h-12 sm:h-14 md:h-16 w-44 sm:w-56 max-w-[85vw] rounded-2xl bg-white/10 animate-pulse" />
+                  </div>
+                );
+              }
               return (
                 <div className="flex items-center justify-center gap-2 mb-6">
                   <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white">
@@ -466,8 +419,17 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Balance Chart Card - lazy loaded for faster initial paint */}
-        {chartData.length > 0 && (
+        {/* Balance chart — skeleton until first fetch; then show chart if there is series data */}
+        {!dashboardReady ? (
+          <Card className="mb-6 sm:mb-8 rounded-2xl sm:rounded-3xl border-gray-800 bg-black/40 backdrop-blur-sm shadow-xl overflow-hidden">
+            <CardContent className="p-6 sm:p-8">
+              <div
+                className="h-64 sm:h-80 w-full rounded-xl bg-white/5 animate-pulse"
+                aria-hidden
+              />
+            </CardContent>
+          </Card>
+        ) : chartData.length > 0 ? (
           <Card className="mb-6 sm:mb-8 rounded-2xl sm:rounded-3xl border-gray-800 bg-black/40 backdrop-blur-sm shadow-xl overflow-hidden">
             <CardContent className="p-6 sm:p-8">
               <DashboardChart
@@ -478,12 +440,28 @@ export default function Dashboard() {
               />
             </CardContent>
           </Card>
-        )}
+        ) : null}
 
         {/* Category Cards - Grid Layout */}
         <div className="mb-6 sm:mb-8">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
-            {(() => {
+            {!dashboardReady
+              ? [1, 2, 3].map((i) => (
+                  <Card
+                    key={i}
+                    className="rounded-xl border-border bg-card/60 backdrop-blur-sm shadow-lg"
+                  >
+                    <CardContent className="p-4 sm:p-5 space-y-3">
+                      <div className="h-12 w-12 rounded-xl bg-muted animate-pulse" />
+                      <div className="h-4 w-28 bg-muted animate-pulse rounded" />
+                      <div className="h-3 w-20 bg-muted animate-pulse rounded" />
+                      <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div className="h-full w-1/3 bg-muted-foreground/20 animate-pulse" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              : (() => {
               // Calculate category stats
               const deposits = transactions.filter(
                 (t) => t.type === "DEPOSIT" || t.type === "BUY_CRYPTO"
@@ -593,7 +571,7 @@ export default function Dashboard() {
                 <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                 {t("recentActivity")}
               </CardTitle>
-              {transactions.length > 5 && (
+              {dashboardReady && transactions.length > 5 && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -609,7 +587,32 @@ export default function Dashboard() {
             </div>
           </CardHeader>
           <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
-            {transactions.length > 0 ? (
+            {!dashboardReady ? (
+              <div
+                className="space-y-2"
+                role="status"
+                aria-busy
+                aria-label={
+                  language === "pt"
+                    ? "Carregando atividade"
+                    : "Loading activity"
+                }
+              >
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-muted/30"
+                  >
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-muted animate-pulse shrink-0" />
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <div className="h-4 max-w-[10rem] bg-muted animate-pulse rounded" />
+                      <div className="h-3 max-w-[6rem] bg-muted animate-pulse rounded" />
+                    </div>
+                    <div className="h-4 w-16 bg-muted animate-pulse rounded shrink-0" />
+                  </div>
+                ))}
+              </div>
+            ) : transactions.length > 0 ? (
               <div className="space-y-2">
                 {transactions.slice(0, 5).map((transaction, index) => {
                   const date = new Date(transaction.createdAt);

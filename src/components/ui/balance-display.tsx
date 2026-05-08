@@ -1,110 +1,57 @@
 "use client";
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Wallet } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
-
-interface Balance {
-  currency: string;
-  amount: number;
-  locked: number;
-}
+import { useWalletBalances } from "@/contexts/BalanceContext";
 
 interface BalanceDisplayProps {
   className?: string;
-  pollingInterval?: number; // allow custom interval (default 10s)
 }
 
-export function BalanceDisplay({ className, pollingInterval = 10000 }: BalanceDisplayProps) {
-  const [balances, setBalances] = useState<Balance[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export function BalanceDisplay({ className }: BalanceDisplayProps) {
+  const { balances, isLoading, error } = useWalletBalances();
+  const { language } = useLanguage();
   const [balanceChange, setBalanceChange] = useState<{
     direction: "up" | "down";
     amount: number;
   } | null>(null);
-  const lastBalanceRef = useRef<string>("");
   const previousUsdtBalanceRef = useRef<number | null>(null);
   const balanceChangeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null
   );
-  const { language } = useLanguage();
-
-  const fetchBalances = useCallback(async (isSilent = false) => {
-    try {
-      if (!isSilent) setIsLoading(true);
-      const response = await fetch("/api/balance", { cache: "no-store" });
-      if (response.ok) {
-        const data = await response.json();
-        const newBalances = data.balances || [];
-        const nextUsdtBalance =
-          newBalances.find((b: Balance) => b.currency === "USDT")?.amount || 0;
-        const previousUsdtBalance = previousUsdtBalanceRef.current;
-
-        if (
-          previousUsdtBalance !== null &&
-          nextUsdtBalance !== previousUsdtBalance
-        ) {
-          const delta = nextUsdtBalance - previousUsdtBalance;
-
-          setBalanceChange({
-            direction: delta < 0 ? "down" : "up",
-            amount: Math.abs(delta),
-          });
-
-          if (balanceChangeTimeoutRef.current) {
-            clearTimeout(balanceChangeTimeoutRef.current);
-          }
-
-          balanceChangeTimeoutRef.current = setTimeout(() => {
-            setBalanceChange(null);
-          }, 2200);
-        }
-
-        previousUsdtBalanceRef.current = nextUsdtBalance;
-        setBalances(newBalances);
-        
-        // Notify other components if balance changed
-        const balanceStr = JSON.stringify(newBalances);
-        if (balanceStr !== lastBalanceRef.current) {
-          lastBalanceRef.current = balanceStr;
-          window.dispatchEvent(new CustomEvent("balance-updated", { detail: { balances: newBalances } }));
-        }
-        
-        setError(null);
-      } else {
-        if (!isSilent) setError("Failed to fetch balances");
-      }
-    } catch (err) {
-      if (!isSilent) {
-        setError("Error loading balances");
-        console.error("Error fetching balances:", err);
-      }
-    } finally {
-      if (!isSilent) setIsLoading(false);
-    }
-  }, []);
 
   useEffect(() => {
-    // Initial fetch
-    fetchBalances();
+    const nextUsdtBalance =
+      balances.find((b) => b.currency === "USDT")?.amount ?? 0;
+    const previousUsdtBalance = previousUsdtBalanceRef.current;
 
-    // Set up polling
-    const interval = setInterval(() => {
-      fetchBalances(true); // silent fetch
-    }, pollingInterval);
+    if (
+      previousUsdtBalance !== null &&
+      nextUsdtBalance !== previousUsdtBalance
+    ) {
+      const delta = nextUsdtBalance - previousUsdtBalance;
+      setBalanceChange({
+        direction: delta < 0 ? "down" : "up",
+        amount: Math.abs(delta),
+      });
+      if (balanceChangeTimeoutRef.current) {
+        clearTimeout(balanceChangeTimeoutRef.current);
+      }
+      balanceChangeTimeoutRef.current = setTimeout(() => {
+        setBalanceChange(null);
+      }, 2200);
+    }
 
-    // Listen for external requests to refresh balance
-    const handleRefresh = () => fetchBalances(true);
-    window.addEventListener("refresh-balance", handleRefresh);
+    previousUsdtBalanceRef.current = nextUsdtBalance;
+  }, [balances]);
 
+  useEffect(() => {
     return () => {
-      clearInterval(interval);
-      window.removeEventListener("refresh-balance", handleRefresh);
       if (balanceChangeTimeoutRef.current) {
         clearTimeout(balanceChangeTimeoutRef.current);
       }
     };
-  }, [fetchBalances, pollingInterval]);
+  }, []);
 
   const formatBalance = (amount: number) =>
     new Intl.NumberFormat(language === "pt" ? "pt-BR" : "en-US", {
@@ -149,8 +96,8 @@ export function BalanceDisplay({ className, pollingInterval = 10000 }: BalanceDi
           balanceChange?.direction === "down"
             ? "border-destructive/60 bg-gradient-to-br from-destructive/20 via-card to-card shadow-[0_0_34px_rgba(239,68,68,0.22)]"
             : balanceChange?.direction === "up"
-            ? "border-primary/60 shadow-[0_0_34px_rgba(34,197,94,0.22)]"
-            : ""
+              ? "border-primary/60 shadow-[0_0_34px_rgba(34,197,94,0.22)]"
+              : ""
         }`}
         aria-label={`${language === "pt" ? "Saldo disponível" : "Available balance"}: ${formatBalance(usdtBalance)} USDT`}
       >

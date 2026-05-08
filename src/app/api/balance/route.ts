@@ -1,42 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError, jsonValidationError } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
+import { requireSession } from "@/lib/session";
+import { z } from "zod";
+
+const balancePostSchema = z.object({
+  currency: z.string().min(1, "Currency is required"),
+  amount: z.coerce.number().positive("Amount must be greater than 0"),
+  type: z.enum(["ADD", "SUBTRACT"], {
+    errorMap: () => ({ message: "Type must be ADD or SUBTRACT" }),
+  }),
+});
 
 export async function GET(request: NextRequest) {
   try {
-    // Get the session cookie
-    const sessionCookie = request.cookies.get("better-auth.session");
-
-    if (!sessionCookie?.value) {
-      return NextResponse.json(
-        { error: "No session cookie found" },
-        { status: 401 }
-      );
-    }
-
-    // Find the session in the database
-    const session = await prisma.session.findUnique({
-      where: { token: sessionCookie.value },
-      include: { user: true },
-    });
-
-    if (!session || session.expiresAt <= new Date()) {
-      return NextResponse.json(
-        { error: "Invalid or expired session" },
-        { status: 401 }
-      );
-    }
+    const auth = await requireSession(request);
+    if (!auth.ok) return auth.response;
 
     const balances = await prisma.balance.findMany({
-      where: { userId: session.user.id },
+      where: { userId: auth.session.user.id },
       orderBy: { currency: "asc" },
     });
 
-    // Ensure USDT balance exists (create if it doesn't)
     const usdtBalance = balances.find((b) => b.currency === "USDT");
     if (!usdtBalance) {
       const newUsdtBalance = await prisma.balance.create({
         data: {
-          userId: session.user.id,
+          userId: auth.session.user.id,
           currency: "USDT",
           amount: 0,
           locked: 0,
@@ -45,7 +35,6 @@ export async function GET(request: NextRequest) {
       balances.push(newUsdtBalance);
     }
 
-    // Convert Decimal to number for frontend compatibility
     const formattedBalances = balances.map((balance) => ({
       ...balance,
       amount: Number(balance.amount),
@@ -55,59 +44,25 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ balances: formattedBalances });
   } catch (error) {
     console.error("Balance fetch error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return jsonError(500, "Internal server error", "INTERNAL_ERROR");
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    // Get the session cookie
-    const sessionCookie = request.cookies.get("better-auth.session");
+    const auth = await requireSession(request);
+    if (!auth.ok) return auth.response;
 
-    if (!sessionCookie?.value) {
-      return NextResponse.json(
-        { error: "No session cookie found" },
-        { status: 401 }
-      );
-    }
+    const raw = await request.json().catch(() => null);
+    const parsed = balancePostSchema.safeParse(raw);
+    if (!parsed.success) return jsonValidationError(parsed.error);
 
-    // Find the session in the database
-    const session = await prisma.session.findUnique({
-      where: { token: sessionCookie.value },
-      include: { user: true },
-    });
+    const { currency, amount, type } = parsed.data;
 
-    if (!session || session.expiresAt <= new Date()) {
-      return NextResponse.json(
-        { error: "Invalid or expired session" },
-        { status: 401 }
-      );
-    }
-
-    const { currency, amount, type } = await request.json();
-
-    if (!currency || !amount || !type) {
-      return NextResponse.json(
-        { error: "Currency, amount, and type are required" },
-        { status: 400 }
-      );
-    }
-
-    if (amount <= 0) {
-      return NextResponse.json(
-        { error: "Amount must be greater than 0" },
-        { status: 400 }
-      );
-    }
-
-    // Get current balance
     const currentBalance = await prisma.balance.findUnique({
       where: {
         userId_currency: {
-          userId: session.user.id,
+          userId: auth.session.user.id,
           currency,
         },
       },
@@ -119,18 +74,14 @@ export async function POST(request: NextRequest) {
     } else if (currentBalance && type === "SUBTRACT") {
       newAmount = Number(currentBalance.amount) - amount;
       if (newAmount < 0) {
-        return NextResponse.json(
-          { error: "Insufficient balance" },
-          { status: 400 }
-        );
+        return jsonError(400, "Insufficient balance", "INSUFFICIENT_BALANCE");
       }
     }
 
-    // Update or create balance
     const balance = await prisma.balance.upsert({
       where: {
         userId_currency: {
-          userId: session.user.id,
+          userId: auth.session.user.id,
           currency,
         },
       },
@@ -139,7 +90,7 @@ export async function POST(request: NextRequest) {
         updatedAt: new Date(),
       },
       create: {
-        userId: session.user.id,
+        userId: auth.session.user.id,
         currency,
         amount: newAmount,
         locked: 0,
@@ -153,15 +104,10 @@ export async function POST(request: NextRequest) {
         amount: Number(balance.amount),
         locked: Number(balance.locked),
       },
-      message: `${
-        type === "ADD" ? "Added" : "Subtracted"
-      } ${amount} ${currency}`,
+      message: `${type === "ADD" ? "Added" : "Subtracted"} ${amount} ${currency}`,
     });
   } catch (error) {
     console.error("Balance update error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return jsonError(500, "Internal server error", "INTERNAL_ERROR");
   }
 }

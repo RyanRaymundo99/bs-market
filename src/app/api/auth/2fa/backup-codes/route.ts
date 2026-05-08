@@ -1,33 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { TwoFactorService } from "@/lib/two-factor";
 import prisma from "@/lib/prisma";
+import { validateSession } from "@/lib/session";
 
 export async function POST(request: NextRequest) {
   try {
-    // Get the session cookie
-    const sessionCookie = request.cookies.get("better-auth.session");
-
-    if (!sessionCookie?.value) {
+    const authSession = await validateSession(request);
+    if (!authSession) {
       return NextResponse.json(
         { error: "No session cookie found" },
         { status: 401 }
       );
     }
 
-    // Find the session in the database
-    const session = await prisma.session.findUnique({
-      where: { token: sessionCookie.value },
-      include: { user: true },
+    const user = await prisma.user.findUnique({
+      where: { id: authSession.userId },
+      select: {
+        id: true,
+        twoFactorEnabled: true,
+        twoFactorSecret: true,
+        twoFactorBackupCodes: true,
+      },
     });
 
-    if (!session || session.expiresAt <= new Date()) {
-      return NextResponse.json(
-        { error: "Invalid or expired session" },
-        { status: 401 }
-      );
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const user = session.user;
     const { token } = await request.json();
 
     if (!token) {
@@ -82,30 +81,26 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    // Get the session cookie
-    const sessionCookie = request.cookies.get("better-auth.session");
-
-    if (!sessionCookie?.value) {
+    const authSession = await validateSession(request);
+    if (!authSession) {
       return NextResponse.json(
         { error: "No session cookie found" },
         { status: 401 }
       );
     }
 
-    // Find the session in the database
-    const session = await prisma.session.findUnique({
-      where: { token: sessionCookie.value },
-      include: { user: true },
+    const user = await prisma.user.findUnique({
+      where: { id: authSession.userId },
+      select: {
+        id: true,
+        twoFactorEnabled: true,
+        twoFactorBackupCodes: true,
+      },
     });
 
-    if (!session || session.expiresAt <= new Date()) {
-      return NextResponse.json(
-        { error: "Invalid or expired session" },
-        { status: 401 }
-      );
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
-
-    const user = session.user;
 
     // Check if 2FA is enabled
     if (!user.twoFactorEnabled) {

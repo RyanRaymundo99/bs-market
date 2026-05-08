@@ -1,41 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { validateSession } from "@/lib/session";
 
 export async function GET(request: NextRequest) {
   try {
-    // Get the session cookie
-    const sessionCookie = request.cookies.get("better-auth.session");
-
-    if (!sessionCookie?.value) {
+    const cookie = request.cookies.get("better-auth.session")?.value;
+    if (!cookie) {
       return NextResponse.json({
         authenticated: false,
         message: "No session cookie found",
       });
     }
 
-    // Find the session in the database
-    const session = await prisma.session.findUnique({
-      where: { token: sessionCookie.value },
-      include: { user: true },
-    });
-
-    if (session && session.expiresAt > new Date()) {
-      return NextResponse.json({
-        authenticated: true,
-        user: {
-          id: session.user.id,
-          email: session.user.email,
-          name: session.user.name,
-        },
-        sessionId: session.id,
-        expiresAt: session.expiresAt,
-      });
-    } else {
+    const auth = await validateSession(request);
+    if (!auth) {
       return NextResponse.json({
         authenticated: false,
-        message: session ? "Session expired" : "Invalid session",
+        message: "Invalid session",
       });
     }
+
+    return NextResponse.json({
+      authenticated: true,
+      user: {
+        id: auth.user.id,
+        email: auth.user.email,
+        name: auth.user.name,
+      },
+      sessionId: auth.sessionId,
+      expiresAt: auth.expiresAt,
+    });
   } catch (error) {
     console.error("Session validation error:", error);
     return NextResponse.json(

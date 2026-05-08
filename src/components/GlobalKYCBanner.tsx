@@ -1,13 +1,27 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { usePathname } from "next/navigation";
 import KYCBanner from "@/components/ui/kyc-banner";
+import {
+  isApprovedCelebrationBannerDismissed,
+  persistApprovedCelebrationBannerDismiss,
+} from "@/lib/account-approved-banner-dismiss";
 
 interface UserStatus {
   id: string;
   approvalStatus: "PENDING" | "APPROVED" | "REJECTED";
   kycStatus: "PENDING" | "APPROVED" | "REJECTED";
+}
+
+/** What the KYC strip should show — KYC dominates, then approval. */
+export function deriveKycBannerStatus(u: UserStatus): "PENDING" | "APPROVED" | "REJECTED" {
+  if (u.kycStatus === "PENDING") return "PENDING";
+  if (u.kycStatus === "APPROVED") return "APPROVED";
+  if (u.kycStatus === "REJECTED") return "REJECTED";
+  if (u.approvalStatus === "PENDING") return "PENDING";
+  if (u.approvalStatus === "APPROVED") return "APPROVED";
+  return "REJECTED";
 }
 
 export function GlobalKYCBanner() {
@@ -16,7 +30,6 @@ export function GlobalKYCBanner() {
   const [loading, setLoading] = useState(true);
   const pathname = usePathname();
 
-  // Don't show banner on admin pages, login, or auth pages
   const excludedPaths = [
     "/admin",
     "/login",
@@ -26,8 +39,8 @@ export function GlobalKYCBanner() {
     "/reset-password",
   ];
 
-  const shouldShowBanner = !excludedPaths.some((path) =>
-    pathname.startsWith(path)
+  const shouldShowBanner = !excludedPaths.some((p) =>
+    pathname.startsWith(p)
   );
 
   useEffect(() => {
@@ -38,7 +51,7 @@ export function GlobalKYCBanner() {
 
     const fetchUserStatus = async () => {
       try {
-        const response = await fetch("/api/user/status");
+        const response = await fetch("/api/user/status", { cache: "no-store" });
         if (response.ok) {
           const data = await response.json();
           if (data.success && data.user) {
@@ -57,7 +70,7 @@ export function GlobalKYCBanner() {
     };
 
     fetchUserStatus();
-  }, [shouldShowBanner, pathname]);
+  }, [shouldShowBanner]);
 
   useEffect(() => {
     if (!userStatus || !shouldShowBanner) {
@@ -65,60 +78,53 @@ export function GlobalKYCBanner() {
       return;
     }
 
-    // Check if APPROVED banner was already dismissed for this user
-    if (userStatus.kycStatus === "APPROVED") {
-      const dismissedKey = `kyc-approved-banner-dismissed-${userStatus.id}`;
-      const wasDismissed = localStorage.getItem(dismissedKey) === "true";
-      setShowBanner(!wasDismissed);
-    } else if (userStatus.kycStatus === "PENDING") {
-      // For PENDING, always show banner (permanent)
-      setShowBanner(true);
-    } else if (userStatus.kycStatus === "REJECTED") {
-      // For REJECTED, show banner
-      setShowBanner(true);
-    } else {
-      setShowBanner(false);
+    const bannerKind = deriveKycBannerStatus(userStatus);
+
+    if (bannerKind === "APPROVED") {
+      const dismissed = isApprovedCelebrationBannerDismissed(userStatus.id);
+      setShowBanner(!dismissed);
+      return;
     }
+    if (bannerKind === "PENDING") {
+      setShowBanner(true);
+      return;
+    }
+    if (bannerKind === "REJECTED") {
+      setShowBanner(true);
+      return;
+    }
+    setShowBanner(false);
   }, [userStatus, shouldShowBanner]);
 
+  const displayStatus = useMemo(
+    () => (userStatus ? deriveKycBannerStatus(userStatus) : "PENDING"),
+    [userStatus]
+  );
+
   const handleDismiss = () => {
-    if (userStatus?.id && userStatus?.kycStatus === "APPROVED") {
-      // For APPROVED status, mark as dismissed permanently for this user
-      const dismissedKey = `kyc-approved-banner-dismissed-${userStatus.id}`;
-      localStorage.setItem(dismissedKey, "true");
+    if (!userStatus?.id) return;
+
+    const kind = deriveKycBannerStatus(userStatus);
+    if (kind === "APPROVED") {
+      persistApprovedCelebrationBannerDismiss(userStatus.id);
       setShowBanner(false);
-    } else if (userStatus?.kycStatus === "PENDING") {
-      // For PENDING status, do not allow dismissal (permanent banner)
       return;
-    } else {
-      // For other statuses (REJECTED), just hide temporarily
-      setShowBanner(false);
     }
+    if (kind === "PENDING") {
+      return;
+    }
+    setShowBanner(false);
   };
 
   if (loading || !showBanner || !userStatus) {
     return null;
   }
 
-  // Determine which status to show (prioritize KYC status)
-  const displayStatus =
-    userStatus.kycStatus === "PENDING"
-      ? "PENDING"
-      : userStatus.kycStatus === "APPROVED"
-      ? "APPROVED"
-      : userStatus.kycStatus === "REJECTED"
-      ? "REJECTED"
-      : userStatus.approvalStatus === "PENDING"
-      ? "PENDING"
-      : userStatus.approvalStatus === "APPROVED"
-      ? "APPROVED"
-      : "REJECTED";
-
   return (
-    <div className="w-full px-4 sm:px-6 lg:px-8 pt-4">
+    <div className="GlobalKYCBanner w-full px-4 sm:px-6 lg:px-8 pt-4">
       <div className="max-w-7xl mx-auto">
         <KYCBanner
-          status={displayStatus as "PENDING" | "APPROVED" | "REJECTED"}
+          status={displayStatus}
           onDismiss={handleDismiss}
           showDismiss={displayStatus !== "PENDING"}
         />

@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { InputField } from "@/components/Auth/FormFields";
 import { DocumentField } from "@/components/Auth/DocumentField";
@@ -44,6 +45,7 @@ const SignupWithMandatory2FA = () => {
   
   const [pending, setPending] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
   const steps: SignupStep[] = [
     {
@@ -125,7 +127,8 @@ const SignupWithMandatory2FA = () => {
     
     // Redirect to dashboard after a short delay
     setTimeout(() => {
-      window.location.href = "/dashboard";
+      router.replace("/dashboard");
+      router.refresh();
     }, 2000);
   };
 

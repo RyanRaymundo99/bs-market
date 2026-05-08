@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { ledgerService } from "@/lib/ledger";
 import { Decimal } from "@prisma/client/runtime/library";
+import { validateSession } from "@/lib/session";
 
 /**
  * Sync all pending orders by manually processing webhooks
@@ -9,30 +10,15 @@ import { Decimal } from "@prisma/client/runtime/library";
  */
 export async function POST(request: NextRequest) {
   try {
-    // Get the session cookie
-    const sessionCookie = request.cookies.get("better-auth.session");
-
-    if (!sessionCookie?.value) {
+    const authSession = await validateSession(request);
+    if (!authSession) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Find the session in the database
-    const session = await prisma.session.findUnique({
-      where: { token: sessionCookie.value },
-      include: { user: true },
-    });
-
-    if (!session || session.expiresAt <= new Date()) {
-      return NextResponse.json(
-        { error: "Invalid or expired session" },
-        { status: 401 }
-      );
     }
 
     // Get all pending orders for this user
     const pendingOrders = await prisma.order.findMany({
       where: {
-        userId: session.user.id,
+        userId: authSession.user.id,
         status: "PENDING",
         externalOrderId: { not: null },
       },

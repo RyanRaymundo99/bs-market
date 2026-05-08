@@ -30,9 +30,8 @@ import {
   MessageSquare,
   ShieldCheck,
 } from "lucide-react";
-import NavbarNew, { DESKTOP_SHELL_PL } from "@/components/ui/navbar-new";
+import { DESKTOP_SHELL_PL } from "@/constants/layout-shell";
 import { PageLoader, Spinner } from "@/components/ui/loading";
-import { GlobalKYCBanner } from "@/components/GlobalKYCBanner";
 import { useLanguage } from "@/contexts/LanguageContext";
 import Image from "next/image";
 import { formatUSDT, formatBRL } from "@/lib/format-currency";
@@ -71,21 +70,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
   const [loading, setLoading] = useState(true);
   const [transaction, setTransaction] = useState<TransactionData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
-
-  const handleLogout = useCallback(async () => {
-    setIsLoggingOut(true);
-    try {
-      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
-      localStorage.removeItem("auth-session");
-      localStorage.removeItem("user");
-      sessionStorage.clear();
-      window.location.href = "/";
-    } catch {
-      window.location.href = "/";
-    }
-  }, []);
 
   const fetchTransaction = useCallback(async () => {
     try {
@@ -178,8 +163,6 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
   if (loading) {
     return (
       <div className={`min-h-screen bg-background ${DESKTOP_SHELL_PL}`}>
-        <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
-        <GlobalKYCBanner />
         <div className="container mx-auto px-4 py-8">
           <PageLoader message={language === "pt" ? "Carregando detalhes da transação..." : "Loading transaction details..."} />
         </div>
@@ -190,7 +173,6 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
   if (error || !transaction) {
     return (
       <div className={`min-h-screen bg-background ${DESKTOP_SHELL_PL}`}>
-        <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
         <div className="container mx-auto px-4 py-16 flex flex-col items-center">
           <div className="p-4 rounded-full bg-destructive/10 text-destructive mb-4">
             <XCircle className="h-12 w-12" />
@@ -242,9 +224,6 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
 
   return (
     <div className={`min-h-screen bg-background selection:bg-primary/20 ${DESKTOP_SHELL_PL}`}>
-      <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
-      <GlobalKYCBanner />
-      
       {/* Dynamic Background Element */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
           <div className={`absolute top-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full opacity-10 blur-[120px] transition-colors duration-1000 ${

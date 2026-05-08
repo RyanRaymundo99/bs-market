@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LogOut,
@@ -20,8 +21,9 @@ import { FlagUS } from "@/components/icons/FlagUS";
 import { syncMobileMenuToBody } from "@/hooks/useMobileMenuOpen";
 import { cn } from "@/lib/utils";
 
-/** Left padding for main page wrappers so content clears the fixed desktop sidebar (`w-56`). */
-export const DESKTOP_SHELL_PL = "md:pl-56";
+import { DESKTOP_SHELL_PL } from "@/constants/layout-shell";
+
+export { DESKTOP_SHELL_PL } from "@/constants/layout-shell";
 
 const NAV_LINKS_KEYS = [
   { key: "dashboard", href: "/dashboard", icon: Home },
@@ -97,21 +99,8 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
     };
   }, [isMobileMenuOpen]);
 
-  const handleNavigation = (href: string) => {
-    if (href.startsWith("/")) {
-      window.location.href = window.location.origin + href;
-    } else {
-      window.location.href = window.location.origin + "/" + href;
-    }
-  };
-
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
-  };
-
-  const handleMobileNavigation = (href: string) => {
-    handleNavigation(href);
-    setIsMobileMenuOpen(false);
   };
 
   return (
@@ -123,9 +112,11 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
       >
         <div className="flex min-h-0 flex-1 flex-col gap-1 px-2 pt-3">
           <div className="mb-3 flex w-full shrink-0 items-center gap-1.5 px-0.5">
-            <div
+            <Link
+              href="/dashboard"
+              prefetch
+              scroll={false}
               className="min-w-0 flex-1 cursor-pointer py-0.5 transition-opacity hover:opacity-80"
-              onClick={() => handleNavigation("/dashboard")}
             >
               <Image
                 src="/shortname-logo.svg"
@@ -135,7 +126,7 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
                 className="block h-14 w-auto max-w-full origin-left scale-[1.8] object-contain object-left"
                 priority
               />
-            </div>
+            </Link>
             <div
               className="shrink-0"
               onClick={(e) => e.stopPropagation()}
@@ -159,10 +150,11 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
               const IconComponent = link.icon;
               const active = navItemActive(link.href);
               return (
-                <button
+                <Link
                   key={link.key}
-                  type="button"
-                  onClick={() => handleNavigation(link.href)}
+                  href={link.href}
+                  prefetch
+                  scroll={false}
                   className={cn(
                     "flex w-full items-center gap-3 rounded-xl px-2.5 py-3 text-left text-base font-medium transition-colors",
                     active
@@ -187,7 +179,7 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
                           : link.key === "profile"
                             ? "Perfil"
                             : link.key}
-                </button>
+                </Link>
               );
             })}
           </nav>
@@ -249,9 +241,11 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
 
       {/* Mobile Header with Logo, Sign Out, and Hamburger */}
       <header className="sticky top-0 z-50 flex w-full items-center justify-between border-b border-white/10 bg-black/60 px-4 py-3 backdrop-blur-[20px] md:hidden print:hidden">
-        <div
+        <Link
+          href="/dashboard"
+          prefetch
+          scroll={false}
           className="flex cursor-pointer items-center gap-2 transition-opacity hover:opacity-80"
-          onClick={() => handleNavigation("/dashboard")}
         >
           <Image
             src="/shortname-logo.svg"
@@ -261,7 +255,7 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
             className="h-12 w-auto"
             priority
           />
-        </div>
+        </Link>
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
@@ -313,11 +307,15 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
         </div>
       )}
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu — hide fully when closed (no clipped balance pill at the viewport edge) */}
       <div
-        className={`fixed right-0 top-0 z-50 h-full w-72 transform border-l border-white/10 bg-black/95 backdrop-blur-[20px] transition-transform duration-200 ease-out md:hidden ${
-          isMobileMenuOpen ? "translate-x-0" : "translate-x-full"
-        }`}
+        aria-hidden={!isMobileMenuOpen}
+        className={cn(
+          "fixed right-0 top-0 z-50 h-full w-72 transform border-l border-white/10 bg-black/95 backdrop-blur-[20px] md:hidden transition-[transform,opacity] duration-200 ease-out",
+          isMobileMenuOpen
+            ? "pointer-events-auto translate-x-0 opacity-100"
+            : "pointer-events-none translate-x-full opacity-0"
+        )}
       >
         {/* Mobile Menu Header */}
         <div className="flex items-center justify-between border-b border-white/10 p-6">
@@ -342,9 +340,12 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
               {NAV_LINKS_KEYS.map((link) => {
                 const IconComponent = link.icon;
                 return (
-                  <button
+                  <Link
                     key={link.key}
-                    onClick={() => handleMobileNavigation(link.href)}
+                    href={link.href}
+                    prefetch
+                    scroll={false}
+                    onClick={() => setIsMobileMenuOpen(false)}
                     className="group flex w-full items-center gap-3 rounded-lg p-3 text-white/80 transition-all duration-200 hover:bg-white/10 hover:text-white"
                   >
                     <IconComponent className="h-5 w-5 transition-colors group-hover:text-brand-300" />
@@ -361,7 +362,7 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
                                 ? "Perfil"
                                 : link.key}
                     </span>
-                  </button>
+                  </Link>
                 );
               })}
             </div>
