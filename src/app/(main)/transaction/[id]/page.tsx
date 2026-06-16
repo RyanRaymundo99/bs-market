@@ -30,7 +30,7 @@ import {
   MessageSquare,
   ShieldCheck,
 } from "lucide-react";
-import { DESKTOP_SHELL_PL } from "@/constants/layout-shell";
+import { DESKTOP_SHELL_PL, MOBILE_BOTTOM_NAV_PADDING } from "@/constants/layout-shell";
 import { PageLoader, Spinner } from "@/components/ui/loading";
 import { useLanguage } from "@/contexts/LanguageContext";
 import Image from "next/image";
@@ -163,7 +163,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
   if (loading) {
     return (
       <div className={`min-h-screen bg-background ${DESKTOP_SHELL_PL}`}>
-        <div className="transaction-print-root mx-auto w-full max-w-[1800px] px-3 sm:px-5 xl:px-8 py-4 sm:py-6">
+        <div className={`transaction-print-root mx-auto w-full max-w-[1800px] px-3 sm:px-5 xl:px-8 py-4 sm:py-6 ${MOBILE_BOTTOM_NAV_PADDING}`}>
           <PageLoader message={language === "pt" ? "Carregando detalhes da transação..." : "Loading transaction details..."} />
         </div>
       </div>
@@ -173,7 +173,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
   if (error || !transaction) {
     return (
       <div className={`min-h-screen bg-background ${DESKTOP_SHELL_PL}`}>
-        <div className="transaction-print-root mx-auto w-full max-w-[1800px] px-3 sm:px-5 xl:px-8 py-4 sm:py-16 flex flex-col items-center">
+        <div className={`transaction-print-root mx-auto w-full max-w-[1800px] px-3 sm:px-5 xl:px-8 py-4 sm:py-16 flex flex-col items-center ${MOBILE_BOTTOM_NAV_PADDING}`}>
           <div className="p-4 rounded-full bg-destructive/10 text-destructive mb-4">
             <XCircle className="h-12 w-12" />
           </div>
@@ -233,7 +233,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
           <div className="absolute bottom-[-5%] left-[-5%] w-[30%] h-[30%] bg-primary opacity-5 rounded-full blur-[100px]" />
       </div>
 
-      <div className="transaction-print-root mx-auto w-full max-w-[1800px] px-3 sm:px-5 xl:px-8 py-4 sm:py-6">
+      <div className={`transaction-print-root mx-auto w-full max-w-[1800px] px-3 sm:px-5 xl:px-8 py-4 sm:py-6 ${MOBILE_BOTTOM_NAV_PADDING}`}>
         {/* Header Navigation */}
         <div className="flex items-center justify-between mb-6 sm:mb-8">
             <Button variant="ghost" size="sm" onClick={() => router.back()} className="gap-2 text-muted-foreground hover:text-foreground">

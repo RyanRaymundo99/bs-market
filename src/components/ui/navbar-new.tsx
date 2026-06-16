@@ -8,10 +8,6 @@ import {
   LogOut,
   Menu,
   X,
-  Home,
-  TrendingDown,
-  BarChart3,
-  User,
 } from "lucide-react";
 import { BalanceDisplay } from "./balance-display";
 import { UserNotificationBell } from "./user-notification-bell";
@@ -20,17 +16,12 @@ import { FlagBR } from "@/components/icons/FlagBR";
 import { FlagUS } from "@/components/icons/FlagUS";
 import { syncMobileMenuToBody } from "@/hooks/useMobileMenuOpen";
 import { cn } from "@/lib/utils";
+import { useAppTabNavigation } from "@/components/navigation/app-tab-navigation";
+import { APP_TAB_HREF, APP_NAV_ITEMS } from "@/lib/app-tabs/types";
 
 import { DESKTOP_SHELL_PL } from "@/constants/layout-shell";
 
 export { DESKTOP_SHELL_PL } from "@/constants/layout-shell";
-
-const NAV_LINKS_KEYS = [
-  { key: "dashboard", href: "/dashboard", icon: Home },
-  { key: "trade", href: "/trade", icon: BarChart3 },
-  { key: "withdraw", href: "/withdraw", icon: TrendingDown },
-  { key: "profile", href: "/profile", icon: User },
-];
 
 interface NavbarProps {
   isLoggingOut: boolean;
@@ -44,8 +35,16 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
   const [moneyDisabledMessage, setMoneyDisabledMessage] = useState<string>("");
   const pathname = usePathname();
   const { language, setLanguage, t } = useLanguage();
+  const { navigateTab, displayTab } = useAppTabNavigation();
 
+  // Use pre-committed displayTab (from the tab shell context) exclusively for
+  // the 4 main tabs — this gives instant visual feedback on click and avoids
+  // dual-highlight where both old and new tabs appear active simultaneously.
   const navItemActive = (href: string) => {
+    const mainTabHref = APP_TAB_HREF[displayTab as keyof typeof APP_TAB_HREF];
+    // If on a main-tab route, only match the currently displayed tab
+    if (mainTabHref) return mainTabHref === href;
+    // Sub-route fallback: match by pathname
     if (!pathname) return false;
     if (pathname === href) return true;
     if (href === "/trade" && pathname === "/deposit") return true;
@@ -107,7 +106,7 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
     <>
       {/* Desktop: fixed sidebar */}
       <aside
-        aria-label={mounted ? t("menu") : "Menu"}
+        aria-label={t("menu")}
         className="fixed left-0 top-0 z-50 hidden h-dvh w-56 flex-col border-r border-white/10 bg-black/95 backdrop-blur-xl print:hidden md:flex"
       >
         <div className="flex min-h-0 flex-1 flex-col gap-1 px-2 pt-3">
@@ -145,40 +144,42 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
             </div>
           </div>
 
-          <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto pb-2 pr-0.5">
-            {NAV_LINKS_KEYS.map((link) => {
+          <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto pb-2 pr-0.5">
+            {APP_NAV_ITEMS.map((link) => {
               const IconComponent = link.icon;
               const active = navItemActive(link.href);
               return (
                 <Link
-                  key={link.key}
+                  key={link.labelKey}
                   href={link.href}
                   prefetch
                   scroll={false}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigateTab(link.href);
+                  }}
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-xl px-2.5 py-3 text-left text-base font-medium transition-colors",
+                    "flex w-full items-center gap-3 rounded-xl px-2 py-2.5 text-left text-[15px] font-medium transition-colors",
                     active
-                      ? "bg-primary/15 text-primary shadow-[inset_0_0_0_1px_rgba(34,197,94,0.2)]"
-                      : "text-foreground/85 hover:bg-white/5 hover:text-primary"
+                      ? "bg-primary/10 text-primary"
+                      : "text-foreground/80 hover:bg-white/5 hover:text-foreground"
                   )}
                 >
-                  <IconComponent
+                  <span
                     className={cn(
-                      "h-6 w-6 shrink-0",
-                      active ? "text-primary" : "opacity-90"
+                      "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors",
+                      active ? "bg-primary/15" : "bg-white/[0.04]"
                     )}
-                  />
-                  {mounted
-                    ? t(link.key)
-                    : link.key === "trade"
-                      ? "Depositar"
-                      : link.key === "dashboard"
-                        ? "Dashboard"
-                        : link.key === "withdraw"
-                          ? "Sacar"
-                          : link.key === "profile"
-                            ? "Perfil"
-                            : link.key}
+                  >
+                    <IconComponent
+                      className={cn(
+                        "h-[18px] w-[18px] shrink-0",
+                        active ? "text-primary" : "text-foreground/70"
+                      )}
+                      strokeWidth={active ? 2.25 : 1.75}
+                    />
+                  </span>
+                  {t(link.labelKey)}
                 </Link>
               );
             })}
@@ -186,39 +187,45 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
         </div>
 
         <div className="shrink-0 space-y-2 border-t border-white/10 p-2">
-          <BalanceDisplay className="w-full [&>div]:w-full [&>div]:justify-center" />
-          <div
-            className="flex h-10 items-center rounded-xl border border-border bg-muted/50 p-0.5 transition-colors hover:border-primary/30"
-            role="group"
-            aria-label="Idioma"
-          >
-            <button
-              type="button"
-              onClick={() => setLanguage("pt")}
-              className={cn(
-                "flex h-full flex-1 items-center justify-center rounded-lg transition-all duration-200",
-                language === "pt"
-                  ? "bg-primary/15 text-primary"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
-              title="Português"
+          {mounted ? (
+            <div
+              className="flex h-10 items-center rounded-xl border border-border bg-muted/50 p-0.5 transition-colors hover:border-primary/30"
+              role="group"
+              aria-label="Idioma"
             >
-              <FlagBR size={18} className="rounded-sm" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setLanguage("en")}
-              className={cn(
-                "flex h-full flex-1 items-center justify-center rounded-lg transition-all duration-200",
-                language === "en"
-                  ? "bg-primary/15 text-primary"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
-              title="English"
-            >
-              <FlagUS size={18} className="rounded-sm" />
-            </button>
-          </div>
+              <button
+                type="button"
+                onClick={() => setLanguage("pt")}
+                className={cn(
+                  "flex h-full flex-1 items-center justify-center rounded-lg transition-all duration-200",
+                  language === "pt"
+                    ? "bg-primary/15 text-primary"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+                title="Português"
+              >
+                <FlagBR size={18} className="rounded-sm" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setLanguage("en")}
+                className={cn(
+                  "flex h-full flex-1 items-center justify-center rounded-lg transition-all duration-200",
+                  language === "en"
+                    ? "bg-primary/15 text-primary"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+                title="English"
+              >
+                <FlagUS size={18} className="rounded-sm" />
+              </button>
+            </div>
+          ) : (
+            <div
+              className="h-10 rounded-xl border border-border bg-muted/50"
+              aria-hidden
+            />
+          )}
           <Button
             type="button"
             variant="ghost"
@@ -228,55 +235,41 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
             className="h-11 w-full gap-2 rounded-xl border border-border bg-muted/50 text-foreground/90 hover:border-primary/30 hover:bg-muted hover:text-primary"
           >
             <LogOut className="h-4 w-4 shrink-0" />
-            {mounted
-              ? isLoggingOut
-                ? t("loggingOut")
-                : t("logout")
-              : isLoggingOut
-                ? "Saindo..."
-                : "Sair"}
+            {isLoggingOut ? t("loggingOut") : t("logout")}
           </Button>
         </div>
       </aside>
 
-      {/* Mobile Header with Logo, Sign Out, and Hamburger */}
-      <header className="sticky top-0 z-50 flex w-full items-center justify-between border-b border-white/10 bg-black/60 px-4 py-3 backdrop-blur-[20px] md:hidden print:hidden">
+      {/* Mobile Header */}
+      <header className="sticky top-0 z-50 flex w-full items-center justify-between gap-2 border-b border-white/[0.08] bg-[#0a0a0a]/90 px-3 py-2.5 backdrop-blur-xl md:hidden print:hidden">
         <Link
           href="/dashboard"
           prefetch
           scroll={false}
-          className="flex cursor-pointer items-center gap-2 transition-opacity hover:opacity-80"
+          className="flex shrink-0 cursor-pointer items-center transition-opacity hover:opacity-85"
         >
           <Image
             src="/shortname-logo.svg"
             alt="Build Strategy"
             width={120}
             height={60}
-            className="h-12 w-auto"
+            className="h-9 w-auto"
             priority
           />
         </Link>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleLogout}
-            disabled={isLoggingOut}
-            className="p-2 text-foreground hover:bg-muted hover:text-primary"
-            title={mounted ? t("logout") : "Sair"}
-          >
-            <LogOut className="h-5 w-5" />
-          </Button>
+        <div className="flex min-w-0 items-center gap-2">
+          <BalanceDisplay compact className="min-w-0 shrink" />
           <Button
             variant="ghost"
             size="sm"
             onClick={toggleMobileMenu}
-            className="rounded-lg border border-border bg-card/60 p-2 text-foreground backdrop-blur-[20px] hover:bg-muted hover:text-primary"
+            aria-label={isMobileMenuOpen ? "Fechar menu" : "Abrir menu"}
+            className="h-10 w-10 shrink-0 rounded-xl border border-white/10 bg-white/[0.04] p-0 text-foreground hover:bg-white/10 hover:text-primary"
           >
             {isMobileMenuOpen ? (
-              <X className="h-5 w-5" />
+              <X className="h-[18px] w-[18px]" strokeWidth={2} />
             ) : (
-              <Menu className="h-5 w-5" />
+              <Menu className="h-[18px] w-[18px]" strokeWidth={2} />
             )}
           </Button>
         </div>
@@ -320,66 +313,73 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
         {/* Mobile Menu Header */}
         <div className="flex items-center justify-between border-b border-white/10 p-6">
           <span className="text-lg font-bold text-white">
-            {mounted ? t("menu") : "Menu"}
+            {t("menu")}
           </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={toggleMobileMenu}
-            className="p-2 text-foreground hover:bg-muted hover:text-primary"
-          >
-            <X className="h-6 w-6" />
-          </Button>
+          <div className="flex items-center gap-1">
+            {mounted ? (
+              <UserNotificationBell
+                triggerClassName="h-10 w-10 rounded-xl"
+                iconClassName="h-5 w-5"
+              />
+            ) : (
+              <div className="h-10 w-10 shrink-0 rounded-xl" aria-hidden />
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleMobileMenu}
+              className="p-2 text-foreground hover:bg-muted hover:text-primary"
+            >
+              <X className="h-6 w-6" />
+            </Button>
+          </div>
         </div>
 
         {/* Mobile Menu Content */}
         <div className="flex h-full flex-col">
           <nav className="flex-1 space-y-2 p-6">
             {/* Main Navigation Items */}
-            <div className="space-y-1">
-              {NAV_LINKS_KEYS.map((link) => {
+            <div className="space-y-0.5">
+              {APP_NAV_ITEMS.map((link) => {
                 const IconComponent = link.icon;
+                const active = navItemActive(link.href);
                 return (
                   <Link
-                    key={link.key}
+                    key={link.labelKey}
                     href={link.href}
                     prefetch
                     scroll={false}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="group flex w-full items-center gap-3 rounded-lg p-3 text-white/80 transition-all duration-200 hover:bg-white/10 hover:text-white"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setIsMobileMenuOpen(false);
+                      navigateTab(link.href);
+                    }}
+                    className={cn(
+                      "group flex w-full items-center gap-3 rounded-xl px-3 py-3 transition-colors",
+                      active
+                        ? "bg-primary/10 text-primary"
+                        : "text-white/75 hover:bg-white/5 hover:text-white"
+                    )}
                   >
-                    <IconComponent className="h-5 w-5 transition-colors group-hover:text-brand-300" />
-                    <span className="font-medium">
-                      {mounted
-                        ? t(link.key)
-                        : link.key === "trade"
-                          ? "Depositar"
-                          : link.key === "dashboard"
-                            ? "Dashboard"
-                            : link.key === "withdraw"
-                              ? "Sacar"
-                              : link.key === "profile"
-                                ? "Perfil"
-                                : link.key}
+                    <span
+                      className={cn(
+                        "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
+                        active ? "bg-primary/15" : "bg-white/[0.06]"
+                      )}
+                    >
+                      <IconComponent
+                        className="h-[18px] w-[18px]"
+                        strokeWidth={active ? 2.25 : 1.75}
+                      />
                     </span>
+                    <span className="font-medium">{t(link.labelKey)}</span>
                   </Link>
                 );
               })}
             </div>
           </nav>
-
           {/* Mobile Menu Footer */}
           <div className="border-t border-white/10 p-6">
-            {/* Notifications + Balance for Mobile */}
-            <div className="mb-4 flex items-center justify-center gap-3">
-              {mounted ? (
-                <UserNotificationBell />
-              ) : (
-                <div className="h-10 w-10 shrink-0 rounded-xl" aria-hidden />
-              )}
-              <BalanceDisplay className="flex-1 justify-center" />
-            </div>
-
             {/* Language Switcher for Mobile */}
             <div className="mb-4 flex items-center justify-center gap-1 rounded-lg border border-white/10 bg-white/5 p-1">
               <button
@@ -414,18 +414,13 @@ export default function NavbarNew({ isLoggingOut, handleLogout }: NavbarProps) {
               >
                 <LogOut className="h-5 w-5" />
                 <span className="font-medium">
-                  {mounted
-                    ? isLoggingOut
-                      ? t("loggingOut")
-                      : t("logout")
-                    : isLoggingOut
-                      ? "Saindo..."
-                      : "Sair"}
+                  {isLoggingOut ? t("loggingOut") : t("logout")}
                 </span>
               </button>
             </div>
           </div>
         </div>
+
       </div>
     </>
   );

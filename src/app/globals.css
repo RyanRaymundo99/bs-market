@@ -614,11 +614,8 @@
   color: white;
 }
 
-/* Smooth Transitions for All Elements */
-* {
-  transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease,
-    backdrop-filter 0.2s ease;
-}
+/* Do NOT apply blanket transitions to * — it makes every interaction sluggish.
+   Animations are applied per-component only. */
 
 /* Performance Optimizations */
 .blur-hover,
@@ -638,12 +635,9 @@
     margin-top: 80px;
   }
 
-  .blur-hover:hover,
-  .glass-blur:hover,
-  .btn-blur:hover,
-  .card-blur:hover {
-    transform: none;
-    backdrop-filter: blur(10px);
+  /* Eliminate rubber-band bounce that adds latency on tab switch */
+  html {
+    overscroll-behavior-y: none;
   }
 
   ::-webkit-scrollbar {

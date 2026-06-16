@@ -30,7 +30,7 @@ const nextConfig: NextConfig = {
 
   // Security headers
   async headers() {
-    return [
+    const routes: { source: string; headers: { key: string; value: string }[] }[] = [
       {
         source: "/(.*)",
         headers: [
@@ -57,6 +57,22 @@ const nextConfig: NextConfig = {
         ],
       },
     ];
+
+    // Immutable static caching only in production — in dev it causes stale
+    // client bundles and hydration mismatches after hot reloads.
+    if (process.env.NODE_ENV === "production") {
+      routes.push({
+        source: "/_next/static/(.*)",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      });
+    }
+
+    return routes;
   },
 
   // Performance optimizations

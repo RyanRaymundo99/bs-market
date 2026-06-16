@@ -87,6 +87,57 @@ export function safeLocalStorageRemove(key: string): boolean {
   }
 }
 
+const SESSION_CACHE_PREFIX = "bs-cache:";
+
+type SessionCacheEntry<T> = { ts: number; data: T };
+
+/** Read cached API data for instant paint (stale-while-revalidate). */
+export function readSessionCache<T>(
+  key: string,
+  maxAgeMs: number
+): T | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(`${SESSION_CACHE_PREFIX}${key}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as SessionCacheEntry<T>;
+    if (!parsed?.ts || Date.now() - parsed.ts > maxAgeMs) return null;
+    return parsed.data ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function writeSessionCache<T>(key: string, data: T): void {
+  if (typeof window === "undefined") return;
+  try {
+    const payload: SessionCacheEntry<T> = { ts: Date.now(), data };
+    sessionStorage.setItem(
+      `${SESSION_CACHE_PREFIX}${key}`,
+      JSON.stringify(payload)
+    );
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+export function scheduleIdleWork(work: () => void, timeoutMs = 1500): () => void {
+  if (typeof window === "undefined") return () => {};
+  const run = () => {
+    try {
+      work();
+    } catch {
+      /* non-critical warmup */
+    }
+  };
+  if (typeof window.requestIdleCallback === "function") {
+    const id = window.requestIdleCallback(run, { timeout: timeoutMs });
+    return () => window.cancelIdleCallback(id);
+  }
+  const timeoutId = setTimeout(run, Math.min(timeoutMs, 400));
+  return () => clearTimeout(timeoutId);
+}
+
 export function formatCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",

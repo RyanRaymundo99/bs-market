@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useLayoutEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,11 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { DESKTOP_SHELL_PL } from "@/constants/layout-shell";
+import { DESKTOP_SHELL_PL, MOBILE_BOTTOM_NAV_PADDING } from "@/constants/layout-shell";
 import Breadcrumb from "@/components/ui/breadcrumb";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getKycImageSrc } from "@/lib/kyc-image-src";
 import { formatUSDT } from "@/lib/format-currency";
+import { readSessionCache, writeSessionCache } from "@/lib/utils";
+
+const USER_STATUS_CACHE_KEY = "user-status";
+const PROFILE_CACHE_MS = 120_000;
 import { TransactionReceipt } from "@/components/TransactionReceipt";
 import {
   Dialog,
@@ -118,6 +122,22 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const { t, language } = useLanguage();
 
+  useLayoutEffect(() => {
+    const cached = readSessionCache<UserProfile>(
+      USER_STATUS_CACHE_KEY,
+      PROFILE_CACHE_MS
+    );
+    if (!cached) return;
+    setUserProfile(cached);
+    setFormData({
+      name: cached.name || "",
+      email: cached.email || "",
+      phone: cached.phone || "",
+      cpf: cached.cpf || "",
+    });
+    setProfileReady(true);
+  }, []);
+
   // Auto-enable editing mode when user is PENDING
   useEffect(() => {
     if (userProfile) {
@@ -159,6 +179,7 @@ export default function ProfilePage() {
           user.approvalStatus === "PENDING" || user.kycStatus === "PENDING";
 
         setUserProfile(user);
+        writeSessionCache(USER_STATUS_CACHE_KEY, user);
         setFormData({
           name: user.name || "",
           email: user.email || "",
@@ -514,7 +535,7 @@ export default function ProfilePage() {
 
   return (
     <div className={`min-h-screen bg-background text-foreground ${DESKTOP_SHELL_PL}`}>
-      <div className="container mx-auto px-4 py-6">
+      <div className={`container mx-auto px-4 py-6 ${MOBILE_BOTTOM_NAV_PADDING}`}>
         <Breadcrumb
           items={[
             { label: t("dashboard"), href: "/dashboard" },

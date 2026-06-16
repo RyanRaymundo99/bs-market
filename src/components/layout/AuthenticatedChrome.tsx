@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import NavbarNew from "@/components/ui/navbar-new";
 import { GlobalKYCBanner } from "@/components/GlobalKYCBanner";
-import { NavigationProgress } from "@/components/navigation/navigation-progress";
+import { MobileBottomNav } from "@/components/navigation/app-tab-navigation";
 import { handleLogout as performLogout } from "@/lib/auth-utils";
 
 /** Fixed shell for logged-in product routes; does not remount on child page changes. */
@@ -21,10 +21,10 @@ export function AuthenticatedChrome({ children }: { children: React.ReactNode })
 
   return (
     <>
-      <NavigationProgress />
       <NavbarNew isLoggingOut={isLoggingOut} handleLogout={handleLogout} />
       <GlobalKYCBanner />
       {children}
+      <MobileBottomNav />
     </>
   );
 }

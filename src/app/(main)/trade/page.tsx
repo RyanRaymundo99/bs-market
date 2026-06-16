@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { DESKTOP_SHELL_PL } from "@/constants/layout-shell";
+import { DESKTOP_SHELL_PL, MOBILE_BOTTOM_NAV_PADDING } from "@/constants/layout-shell";
 import Image from "next/image";
 import {
   Dialog,
@@ -30,9 +30,6 @@ import {
   QrCode,
   Wallet,
   Coins,
-  Home,
-  Plus,
-  Minus,
   MessageCircle,
   FileText,
   Download,
@@ -42,7 +39,6 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import QRCode from "qrcode";
 import { TransactionReceipt } from "@/components/TransactionReceipt";
 import { PixPaymentDialog } from "@/components/trade/PixPaymentDialog";
-import { useMobileMenuOpen } from "@/hooks/useMobileMenuOpen";
 import {
   CRYPTO_CURRENCIES,
   CRYPTO_NETWORK_LABELS,
@@ -78,23 +74,6 @@ const TradePage = () => {
   const [userDailyLimit, setUserDailyLimit] = useState(5000);
   const [inMaintenance, setInMaintenance] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState<string>("");
-
-  const [isMobile, setIsMobile] = useState(false);
-  const mobileMenuOpen = useMobileMenuOpen();
-
-  // Detect mobile device
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(
-        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-          navigator.userAgent,
-        ) || window.innerWidth <= 768,
-      );
-    };
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
 
   useEffect(() => {
     const loadMoneyStatus = async () => {
@@ -1219,14 +1198,7 @@ const TradePage = () => {
       className={`min-h-screen bg-background text-foreground ${DESKTOP_SHELL_PL}`}
     >
       <div
-        className={`mx-auto w-full max-w-[1800px] px-3 sm:px-5 xl:px-8 py-4 sm:py-6 ${
-          isMobile ? "pb-16" : ""
-        }`}
-        style={
-          isMobile
-            ? { paddingBottom: "calc(64px + env(safe-area-inset-bottom, 0px))" }
-            : undefined
-        }
+        className={`mx-auto w-full max-w-[1800px] px-3 sm:px-5 xl:px-8 py-4 sm:py-6 ${MOBILE_BOTTOM_NAV_PADDING}`}
       >
         {moneyDisabled ? (
           <div className="max-w-4xl mx-auto mb-6 rounded-xl border border-warning/30 bg-warning/10 p-4">
@@ -1724,59 +1696,57 @@ const TradePage = () => {
           {/* Transaction History */}
           <div className="min-w-0 lg:sticky lg:top-4 lg:z-0 lg:max-h-[calc(100dvh-5rem)] lg:self-start lg:overflow-y-auto">
             <Card className="rounded-xl sm:rounded-2xl border-border bg-card shadow-sm lg:mt-0">
-              <CardHeader>
-                <CardTitle className="text-lg sm:text-xl text-foreground flex items-center justify-between gap-2">
+              <CardHeader className="space-y-3">
+                <CardTitle className="flex flex-col gap-3 text-lg text-foreground sm:flex-row sm:items-center sm:justify-between sm:text-xl">
                   <div className="flex items-center gap-2">
                     <Clock className="w-5 h-5 text-primary" />
                     {t("purchaseHistory")}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 gap-2"
-                        >
-                          <Download className="w-4 h-4" />
-                          {language === "pt" ? "Exportar" : "Export"}
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent
-                        align="end"
-                        className="bg-card border-border"
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 w-full gap-2 sm:w-auto"
                       >
-                        <DropdownMenuItem
-                          onClick={() => exportHistory(7)}
-                          className="text-foreground hover:bg-primary/10 transition-colors"
-                        >
-                          {language === "pt" ? "Últimos 7 dias" : "Last 7 days"}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => exportHistory(15)}
-                          className="text-foreground hover:bg-primary/10 transition-colors"
-                        >
-                          {language === "pt"
-                            ? "Últimos 15 dias"
-                            : "Last 15 days"}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => exportHistory(30)}
-                          className="text-foreground hover:bg-primary/10 transition-colors"
-                        >
-                          {language === "pt"
-                            ? "Últimos 30 dias"
-                            : "Last 30 days"}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => exportHistory(365)}
-                          className="text-foreground hover:bg-primary/10 transition-colors"
-                        >
-                          {language === "pt" ? "Tudo" : "All"}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
+                        <Download className="w-4 h-4" />
+                        {language === "pt" ? "Exportar" : "Export"}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="end"
+                      className="bg-card border-border"
+                    >
+                      <DropdownMenuItem
+                        onClick={() => exportHistory(7)}
+                        className="text-foreground hover:bg-primary/10 transition-colors"
+                      >
+                        {language === "pt" ? "Últimos 7 dias" : "Last 7 days"}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => exportHistory(15)}
+                        className="text-foreground hover:bg-primary/10 transition-colors"
+                      >
+                        {language === "pt"
+                          ? "Últimos 15 dias"
+                          : "Last 15 days"}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => exportHistory(30)}
+                        className="text-foreground hover:bg-primary/10 transition-colors"
+                      >
+                        {language === "pt"
+                          ? "Últimos 30 dias"
+                          : "Last 30 days"}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => exportHistory(365)}
+                        className="text-foreground hover:bg-primary/10 transition-colors"
+                      >
+                        {language === "pt" ? "Tudo" : "All"}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -1804,11 +1774,11 @@ const TradePage = () => {
                           onClick={() =>
                             router.push(`/transaction/${transaction.id}`)
                           }
-                          className={`p-4 rounded-xl bg-muted/30 border border-border transition-colors hover:bg-muted/50 cursor-pointer hover:border-primary/30`}
+                          className="cursor-pointer rounded-xl border border-border bg-muted/30 p-3.5 transition-colors hover:border-primary/30 hover:bg-muted/50 sm:p-4"
                         >
-                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-3 mb-2">
+                          <div className="flex flex-col gap-2.5">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
                                 {isLoading ? (
                                   <Badge className="bg-primary/20 text-primary border-primary/30 flex items-center gap-1.5">
                                     <Spinner size="sm" />
@@ -1835,7 +1805,7 @@ const TradePage = () => {
                                         : t("failed")}
                                   </Badge>
                                 )}
-                                <span className="text-xs text-muted-foreground">
+                                <p className="mt-1.5 text-xs text-muted-foreground">
                                   {transaction.date.toLocaleDateString(
                                     language === "pt" ? "pt-BR" : "en-US",
                                   )}{" "}
@@ -1847,104 +1817,154 @@ const TradePage = () => {
                                       minute: "2-digit",
                                     },
                                   )}
-                                </span>
-                                {isPending && hasPixData && (
-                                  <span className="text-xs text-warning/80 flex items-center gap-1">
-                                    <QrCode className="w-3 h-3" />
-                                    {t("clickToSeeQRCode")}
-                                  </span>
-                                )}
-                                {isCompleted && (
-                                  <span className="text-xs text-primary/80 flex items-center gap-1">
-                                    <FileText className="w-3 h-3" />
-                                    {language === "pt"
-                                      ? "Ver Comprovante"
-                                      : "View Receipt"}
-                                  </span>
-                                )}
+                                </p>
                               </div>
+                              <p className="shrink-0 text-right text-sm font-semibold tabular-nums text-primary sm:text-base">
+                                {formatUSDT(transaction.received)}{" "}
+                                {transaction.source === "crypto"
+                                  ? (transaction.cryptoCurrency ?? "USDT")
+                                  : "USDT"}
+                              </p>
+                            </div>
 
-                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
-                                {transaction.source === "crypto" ? (
-                                  <>
-                                    <div>
-                                      <p className="text-gray-400 text-xs">
-                                        {language === "pt"
-                                          ? "Método"
-                                          : "Method"}
-                                      </p>
-                                      <p className="text-foreground font-medium">
-                                        {language === "pt"
-                                          ? "Depósito cripto"
-                                          : "Crypto deposit"}
-                                        {transaction.network ? (
-                                          <span className="block text-[11px] font-normal text-muted-foreground">
-                                            {CRYPTO_NETWORK_LABELS[
-                                              transaction.network as CryptoNetwork
-                                            ] ?? transaction.network}
-                                          </span>
-                                        ) : null}
-                                      </p>
-                                    </div>
-                                    <div>
-                                      <p className="text-muted-foreground text-xs">
-                                        {t("received")}
-                                      </p>
-                                      <p className="text-primary font-semibold">
-                                        {formatUSDT(transaction.received)}{" "}
-                                        {transaction.cryptoCurrency ?? "USDT"}
-                                      </p>
-                                    </div>
-                                    <div>
-                                      <p className="text-muted-foreground text-xs">
-                                        {t("feeAmount")}
-                                      </p>
-                                      <p className="text-foreground">—</p>
-                                    </div>
-                                    <div>
-                                      <p className="text-muted-foreground text-xs">
-                                        {language === "pt" ? "Cotação" : "Rate"}
-                                      </p>
-                                      <p className="text-foreground">—</p>
-                                    </div>
-                                  </>
-                                ) : (
-                                  <>
-                                    <div>
-                                      <p className="text-gray-400 text-xs">
-                                        {t("amountPaid")}
-                                      </p>
-                                      <p className="text-foreground font-medium">
-                                        {formatBRL(transaction.amount)}
-                                      </p>
-                                    </div>
-                                    <div>
-                                      <p className="text-muted-foreground text-xs">
-                                        {t("received")}
-                                      </p>
-                                      <p className="text-primary font-semibold">
-                                        {formatUSDT(transaction.received)} USDT
-                                      </p>
-                                    </div>
-                                    <div>
-                                      <p className="text-muted-foreground text-xs">
-                                        {t("feeAmount")}
-                                      </p>
-                                      <p className="text-foreground">
-                                        {formatBRL(transaction.fee)}
-                                      </p>
-                                    </div>
-                                    <div>
-                                      <p className="text-muted-foreground text-xs">
-                                        {t("feeAmount")}
-                                      </p>
-                                      <p className="text-foreground">
-                                        @ {formatBRL(transaction.rate)}
-                                      </p>
-                                    </div>
-                                  </>
-                                )}
+                            <div className="min-w-0">
+                              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                                {language === "pt" ? "Método" : "Method"}
+                              </p>
+                              <p className="text-sm font-medium text-foreground">
+                                {transaction.source === "crypto"
+                                  ? language === "pt"
+                                    ? "Depósito cripto"
+                                    : "Crypto deposit"
+                                  : "PIX"}
+                                {transaction.source === "crypto" &&
+                                transaction.network ? (
+                                  <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+                                    {CRYPTO_NETWORK_LABELS[
+                                      transaction.network as CryptoNetwork
+                                    ] ?? transaction.network}
+                                  </span>
+                                ) : null}
+                              </p>
+                            </div>
+
+                            {transaction.source === "pix" ? (
+                              <div className="grid grid-cols-2 gap-3 sm:hidden">
+                                <div>
+                                  <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                                    {t("amountPaid")}
+                                  </p>
+                                  <p className="text-sm font-medium text-foreground">
+                                    {formatBRL(transaction.amount)}
+                                  </p>
+                                </div>
+                                <div>
+                                  <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                                    {t("feeAmount")}
+                                  </p>
+                                  <p className="text-sm font-medium text-foreground">
+                                    {formatBRL(transaction.fee)}
+                                  </p>
+                                </div>
                               </div>
+                            ) : null}
+
+                            {isPending && hasPixData ? (
+                              <p className="text-xs text-warning/80 flex items-center gap-1">
+                                <QrCode className="w-3 h-3 shrink-0" />
+                                {t("clickToSeeQRCode")}
+                              </p>
+                            ) : null}
+
+                            {isCompleted ? (
+                              <p className="text-xs text-primary/80 flex items-center gap-1">
+                                <FileText className="w-3 h-3 shrink-0" />
+                                {language === "pt"
+                                  ? "Ver Comprovante"
+                                  : "View Receipt"}
+                              </p>
+                            ) : null}
+
+                            <div className="hidden sm:grid sm:grid-cols-4 gap-2 text-sm">
+                              {transaction.source === "crypto" ? (
+                                <>
+                                  <div>
+                                    <p className="text-gray-400 text-xs">
+                                      {language === "pt"
+                                        ? "Método"
+                                        : "Method"}
+                                    </p>
+                                    <p className="text-foreground font-medium">
+                                      {language === "pt"
+                                        ? "Depósito cripto"
+                                        : "Crypto deposit"}
+                                      {transaction.network ? (
+                                        <span className="block text-[11px] font-normal text-muted-foreground">
+                                          {CRYPTO_NETWORK_LABELS[
+                                            transaction.network as CryptoNetwork
+                                          ] ?? transaction.network}
+                                        </span>
+                                      ) : null}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-muted-foreground text-xs">
+                                      {t("received")}
+                                    </p>
+                                    <p className="text-primary font-semibold">
+                                      {formatUSDT(transaction.received)}{" "}
+                                      {transaction.cryptoCurrency ?? "USDT"}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-muted-foreground text-xs">
+                                      {t("feeAmount")}
+                                    </p>
+                                    <p className="text-foreground">—</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-muted-foreground text-xs">
+                                      {language === "pt" ? "Cotação" : "Rate"}
+                                    </p>
+                                    <p className="text-foreground">—</p>
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <div>
+                                    <p className="text-gray-400 text-xs">
+                                      {t("amountPaid")}
+                                    </p>
+                                    <p className="text-foreground font-medium">
+                                      {formatBRL(transaction.amount)}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-muted-foreground text-xs">
+                                      {t("received")}
+                                    </p>
+                                    <p className="text-primary font-semibold">
+                                      {formatUSDT(transaction.received)} USDT
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-muted-foreground text-xs">
+                                      {t("feeAmount")}
+                                    </p>
+                                    <p className="text-foreground">
+                                      {formatBRL(transaction.fee)}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-muted-foreground text-xs">
+                                      {language === "pt" ? "Cotação" : "Rate"}
+                                    </p>
+                                    <p className="text-foreground">
+                                      @ {formatBRL(transaction.rate)}
+                                    </p>
+                                  </div>
+                                </>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -2021,54 +2041,6 @@ const TradePage = () => {
           )}
         </DialogContent>
       </Dialog>
-
-      {/* Mobile Page Indicator - Bottom Navigation */}
-      {isMobile && !mobileMenuOpen && (
-        <div
-          className="fixed bottom-0 left-0 right-0 z-50"
-          style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}
-        >
-          <div className="flex justify-center pb-2 px-4">
-            <div className="relative inline-flex items-center bg-card/95 backdrop-blur-sm border border-border rounded-full px-1 py-1.5 shadow-lg">
-              <button
-                onClick={() => router.push("/trade")}
-                className={`relative px-3 sm:px-4 py-1.5 rounded-full text-xs font-medium transition-all touch-manipulation ${
-                  pathname === "/trade" || pathname === "/deposit"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground active:bg-muted"
-                }`}
-                style={{ minWidth: "44px", minHeight: "44px" }}
-              >
-                <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </button>
-
-              <button
-                onClick={() => router.push("/dashboard")}
-                className={`relative px-3 sm:px-4 py-1.5 rounded-full text-xs font-medium transition-all touch-manipulation ${
-                  pathname === "/dashboard"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground active:bg-muted"
-                }`}
-                style={{ minWidth: "44px", minHeight: "44px" }}
-              >
-                <Home className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </button>
-
-              <button
-                onClick={() => router.push("/withdraw")}
-                className={`relative px-3 sm:px-4 py-1.5 rounded-full text-xs font-medium transition-all touch-manipulation ${
-                  pathname === "/withdraw"
-                    ? "bg-destructive text-destructive-foreground"
-                    : "text-muted-foreground hover:text-foreground active:bg-muted"
-                }`}
-                style={{ minWidth: "44px", minHeight: "44px" }}
-              >
-                <Minus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

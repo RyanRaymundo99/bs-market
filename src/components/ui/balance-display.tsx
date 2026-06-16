@@ -6,9 +6,13 @@ import { useWalletBalances } from "@/contexts/BalanceContext";
 
 interface BalanceDisplayProps {
   className?: string;
+  compact?: boolean;
 }
 
-export function BalanceDisplay({ className }: BalanceDisplayProps) {
+export function BalanceDisplay({
+  className,
+  compact = false,
+}: BalanceDisplayProps) {
   const { balances, isLoading, error } = useWalletBalances();
   const { language } = useLanguage();
   const [balanceChange, setBalanceChange] = useState<{
@@ -64,25 +68,33 @@ export function BalanceDisplay({ className }: BalanceDisplayProps) {
     return balance ? balance.amount : 0;
   };
 
-  const pillBase =
-    "flex items-center rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/15 via-card to-card shadow-[0_0_24px_rgba(34,197,94,0.08)] transition-all duration-300";
+  const pillBase = compact
+    ? "flex items-center rounded-xl border border-white/10 bg-white/[0.04] transition-colors duration-200"
+    : "flex items-center rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/15 via-card to-card shadow-[0_0_24px_rgba(34,197,94,0.08)] transition-all duration-300";
+  const pillSize = compact ? "h-10 gap-2 px-2.5" : "h-11 gap-3 px-3.5";
+  const iconBoxSize = compact ? "h-7 w-7" : "h-8 w-8";
+  const iconSize = compact ? "h-3.5 w-3.5" : "h-4 w-4";
+  const amountSize = compact ? "text-sm font-semibold" : "text-base";
+  const currencySize = compact ? "text-xs" : "text-sm";
 
   if (isLoading && balances.length === 0) {
     return (
-      <div className={`${pillBase} h-11 gap-3 px-3 ${className || ""}`}>
-        <div className="h-8 w-8 shrink-0 rounded-xl bg-muted animate-pulse" />
-        <div className="h-4 w-24 rounded bg-muted animate-pulse" />
+      <div className={`${pillBase} ${pillSize} ${className || ""}`}>
+        <div className={`${iconBoxSize} shrink-0 rounded-xl bg-muted animate-pulse`} />
+        <div className={`${compact ? "h-3.5 w-16" : "h-4 w-24"} rounded bg-muted animate-pulse`} />
       </div>
     );
   }
 
   if (error && balances.length === 0) {
     return (
-      <div className={`${pillBase} h-11 gap-3 px-3 ${className || ""}`}>
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/15 ring-1 ring-primary/20">
-          <Wallet className="h-4 w-4 text-primary" />
+      <div className={`${pillBase} ${pillSize} ${className || ""}`}>
+        <div
+          className={`flex ${iconBoxSize} shrink-0 items-center justify-center rounded-xl bg-primary/15 ring-1 ring-primary/20`}
+        >
+          <Wallet className={`${iconSize} text-primary`} />
         </div>
-        <p className="text-base font-black text-primary tabular-nums">$ 0.00</p>
+        <p className={`${amountSize} font-black text-primary tabular-nums`}>$ 0.00</p>
       </div>
     );
   }
@@ -92,7 +104,11 @@ export function BalanceDisplay({ className }: BalanceDisplayProps) {
   return (
     <div className={className || ""}>
       <div
-        className={`${pillBase} relative h-11 gap-3 overflow-visible px-3.5 hover:border-primary/40 hover:shadow-[0_0_32px_rgba(34,197,94,0.14)] active:scale-95 cursor-default ${
+        className={`${pillBase} relative ${pillSize} overflow-visible ${
+          compact
+            ? ""
+            : "hover:border-primary/40 hover:shadow-[0_0_32px_rgba(34,197,94,0.14)] active:scale-95 cursor-default"
+        } ${
           balanceChange?.direction === "down"
             ? "border-destructive/60 bg-gradient-to-br from-destructive/20 via-card to-card shadow-[0_0_34px_rgba(239,68,68,0.22)]"
             : balanceChange?.direction === "up"
@@ -114,23 +130,25 @@ export function BalanceDisplay({ className }: BalanceDisplayProps) {
           </span>
         ) : null}
         <div
-          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ring-1 ${
-            balanceChange?.direction === "down"
-              ? "bg-destructive/15 ring-destructive/30"
-              : "bg-primary/15 ring-primary/25"
+          className={`flex ${iconBoxSize} shrink-0 items-center justify-center rounded-lg ring-1 ${
+            compact
+              ? "bg-primary/10 ring-primary/20"
+              : balanceChange?.direction === "down"
+                ? "bg-destructive/15 ring-destructive/30"
+                : "bg-primary/15 ring-primary/25"
           }`}
         >
           <Wallet
-            className={`h-4 w-4 ${
+            className={`${iconSize} ${
               balanceChange?.direction === "down"
                 ? "text-destructive"
                 : "text-primary"
             }`}
           />
         </div>
-        <div className="flex min-w-0 items-baseline gap-1.5 leading-none">
+        <div className="flex min-w-0 items-baseline gap-1 leading-none">
           <span
-            className={`text-sm font-bold ${
+            className={`${currencySize} font-bold ${
               balanceChange?.direction === "down"
                 ? "text-destructive/80"
                 : "text-primary/80"
@@ -139,7 +157,7 @@ export function BalanceDisplay({ className }: BalanceDisplayProps) {
             $
           </span>
           <span
-            className={`text-base font-black tabular-nums animate-in fade-in duration-500 ${
+            className={`${amountSize} font-black tabular-nums animate-in fade-in duration-500 ${
               balanceChange?.direction === "down"
                 ? "text-destructive"
                 : "text-primary"

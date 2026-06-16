@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import React, { useState, useEffect, useLayoutEffect, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -35,14 +35,10 @@ import {
   Clock,
   XCircle,
   ExternalLink,
-  Home,
-  Plus,
-  Minus,
 } from "lucide-react";
-import { DESKTOP_SHELL_PL } from "@/constants/layout-shell";
+import { DESKTOP_SHELL_PL, MOBILE_BOTTOM_NAV_PADDING } from "@/constants/layout-shell";
 import { ButtonLoader } from "@/components/ui/loading";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useMobileMenuOpen } from "@/hooks/useMobileMenuOpen";
 import { formatCurrency, formatBRL } from "@/lib/format-currency";
 import {
   DigitalReceipt,
@@ -61,6 +57,10 @@ import {
   getUsdtDebitedPerUnitWithdrawnClient,
   usdcWithdrawalCapacityUsdt,
 } from "@/lib/stablecoin-withdraw";
+import { readSessionCache, writeSessionCache } from "@/lib/utils";
+
+const WALLET_CACHE_KEY = "crypto-wallet";
+const WALLET_CACHE_MS = 120_000;
 
 interface CryptoBalance {
   currency: string;
@@ -157,7 +157,6 @@ function withdrawReceiptBadgeTone(
 
 export default function WithdrawPage() {
   const router = useRouter();
-  const pathname = usePathname();
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [historyLoading, setHistoryLoading] = useState(true);
 
@@ -165,23 +164,6 @@ export default function WithdrawPage() {
   const [withdrawalsDisabled, setWithdrawalsDisabled] = useState(false);
   const [withdrawalsDisabledMessage, setWithdrawalsDisabledMessage] =
     useState<string>("");
-
-  const [isMobile, setIsMobile] = useState(false);
-  const mobileMenuOpen = useMobileMenuOpen();
-
-  // Detect mobile device
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(
-        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-          navigator.userAgent
-        ) || window.innerWidth <= 768
-      );
-    };
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
 
   const [processing, setProcessing] = useState(false);
   const [withdrawalHistory, setWithdrawalHistory] = useState<
@@ -214,6 +196,11 @@ export default function WithdrawPage() {
 
   const { toast } = useToast();
   const { t, language } = useLanguage();
+
+  useLayoutEffect(() => {
+    const cached = readSessionCache<WalletData>(WALLET_CACHE_KEY, WALLET_CACHE_MS);
+    if (cached) setWalletData(cached);
+  }, []);
 
   const usdtBalanceAmount = useMemo(() => {
     const row = walletData?.balances.find((b) => b.currency === "USDT");
@@ -355,6 +342,7 @@ export default function WithdrawPage() {
       if (walletResponse.ok) {
         const data = await walletResponse.json();
         setWalletData(data.data);
+        if (data.data) writeSessionCache(WALLET_CACHE_KEY, data.data);
       } else {
         throw new Error("Failed to fetch wallet data");
       }
@@ -784,6 +772,54 @@ export default function WithdrawPage() {
     }
   };
 
+  const formatWithdrawalDate = (createdAt: string) =>
+    new Date(createdAt).toLocaleDateString(
+      language === "pt" ? "pt-BR" : "en-US",
+      {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }
+    );
+
+  const formatWithdrawalAmount = (withdrawal: WithdrawalHistory) =>
+    withdrawal.type === "PIX"
+      ? formatBRL(withdrawal.amount)
+      : formatCurrency(withdrawal.amount, withdrawal.currency || withdrawal.type, {
+          maxDecimals: 4,
+        });
+
+  const renderWithdrawalProtocol = (withdrawal: WithdrawalHistory) => {
+    if (withdrawal.type === "PIX" && withdrawal.protocol) {
+      return (
+        <code
+          className="block max-w-full truncate rounded bg-muted px-2 py-1 text-left text-xs text-foreground"
+          title={withdrawal.protocol}
+        >
+          {withdrawal.protocol}
+        </code>
+      );
+    }
+
+    if (withdrawal.hash) {
+      return (
+        <div className="flex min-w-0 items-center gap-1.5">
+          <code
+            className="min-w-0 flex-1 truncate rounded bg-muted px-2 py-1 text-xs text-foreground"
+            title={withdrawal.hash}
+          >
+            {withdrawal.hash}
+          </code>
+          <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground" />
+        </div>
+      );
+    }
+
+    return <span className="text-muted-foreground">-</span>;
+  };
+
   useEffect(() => {
     void Promise.all([fetchWalletData(), fetchWithdrawalHistory()]);
 
@@ -809,14 +845,7 @@ export default function WithdrawPage() {
   return (
     <div className={`min-h-screen bg-background ${DESKTOP_SHELL_PL}`}>
       <div
-        className={`mx-auto w-full max-w-[1800px] px-3 sm:px-5 xl:px-8 py-4 sm:py-6 ${
-          isMobile ? "pb-16" : ""
-        }`}
-        style={
-          isMobile
-            ? { paddingBottom: "calc(64px + env(safe-area-inset-bottom, 0px))" }
-            : undefined
-        }
+        className={`mx-auto w-full max-w-[1800px] px-3 sm:px-5 xl:px-8 py-4 sm:py-6 ${MOBILE_BOTTOM_NAV_PADDING}`}
       >
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,28rem)_minmax(0,1fr)] lg:items-start lg:gap-6 xl:grid-cols-[minmax(0,32rem)_minmax(0,1fr)] xl:gap-10">
           {/* Withdrawal form */}
@@ -840,7 +869,7 @@ export default function WithdrawPage() {
                 ) : null}
 
                 <div
-                  className="flex min-w-0 flex-nowrap items-center gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-3 [&::-webkit-scrollbar]:hidden"
+                  className="space-y-3"
                   role="group"
                   aria-label={
                     language === "pt"
@@ -848,18 +877,11 @@ export default function WithdrawPage() {
                       : "Withdraw header"
                   }
                 >
-                  <h1 className="shrink-0 text-lg font-bold tracking-tight text-foreground sm:text-2xl">
-                    {language === "pt" ? "Sacar" : "Withdraw"}
-                  </h1>
-                  <span
-                    className="hidden h-4 w-px shrink-0 bg-border sm:block"
-                    aria-hidden
-                  />
-                  <p className="min-w-0 max-w-[11rem] truncate text-xs text-muted-foreground sm:max-w-[16rem] sm:text-sm md:max-w-[22rem]">
-                    {t("chooseWithdrawalMethod")}
-                  </p>
-                  <div className="shrink-0">
-                    <div className="relative inline-flex items-center rounded-xl border border-border bg-muted/60 p-0.5 sm:p-1">
+                  <div className="flex items-center justify-between gap-3">
+                    <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-2xl">
+                      {language === "pt" ? "Sacar" : "Withdraw"}
+                    </h1>
+                    <div className="relative inline-flex shrink-0 items-center rounded-xl border border-border bg-muted/60 p-0.5 sm:p-1">
                       <button
                         type="button"
                         onClick={() => setWithdrawalType("CRYPTO")}
@@ -891,71 +913,79 @@ export default function WithdrawPage() {
                       </button>
                     </div>
                   </div>
-                  <span
-                    className="hidden h-4 w-px shrink-0 bg-border md:block"
-                    aria-hidden
-                  />
-                  <div className="flex shrink-0 items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-foreground sm:gap-2 sm:text-base">
+
+                  <p className="hidden text-sm text-muted-foreground sm:block">
+                    {t("chooseWithdrawalMethod")}
+                  </p>
+
+                  <div className="flex items-start gap-2.5 rounded-xl border border-border/70 bg-muted/25 px-3 py-2.5 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
                     {withdrawalType === "CRYPTO" ? (
                       <>
-                        <Coins className="h-4 w-4 shrink-0 text-primary sm:h-5 sm:w-5" />
-                        {language === "pt"
-                          ? `Saque via ${selectedCurrency}`
-                          : `Withdraw via ${selectedCurrency}`}
+                        <Coins className="mt-0.5 h-4 w-4 shrink-0 text-primary sm:h-5 sm:w-5" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-foreground sm:text-base">
+                            {language === "pt"
+                              ? `Saque via ${selectedCurrency}`
+                              : `Withdraw via ${selectedCurrency}`}
+                          </p>
+                          <p className="mt-0.5 text-xs leading-snug text-muted-foreground sm:text-sm">
+                            {language === "pt"
+                              ? `Envie ${selectedCurrency} para sua carteira`
+                              : `Send ${selectedCurrency} to your wallet`}
+                          </p>
+                        </div>
                       </>
                     ) : (
                       <>
-                        <Wallet className="h-4 w-4 shrink-0 text-primary sm:h-5 sm:w-5" />
-                        {language === "pt"
-                          ? "Saque via PIX"
-                          : "Withdraw via PIX"}
+                        <Wallet className="mt-0.5 h-4 w-4 shrink-0 text-primary sm:h-5 sm:w-5" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-foreground sm:text-base">
+                            {language === "pt"
+                              ? "Saque via PIX"
+                              : "Withdraw via PIX"}
+                          </p>
+                          <p className="mt-0.5 text-xs leading-snug text-muted-foreground sm:text-sm">
+                            {language === "pt"
+                              ? "Receba em reais na sua chave PIX"
+                              : "Receive in reais on your PIX key"}
+                          </p>
+                        </div>
                       </>
                     )}
                   </div>
-                  <span
-                    className="hidden h-4 w-px shrink-0 bg-border sm:block"
-                    aria-hidden
-                  />
-                  <p className="min-w-0 max-w-[9rem] truncate text-[11px] leading-snug text-muted-foreground sm:max-w-[11rem] sm:text-xs md:max-w-[18rem] lg:max-w-[24rem]">
-                    {withdrawalType === "CRYPTO"
-                      ? language === "pt"
-                        ? `Envie ${selectedCurrency} para sua carteira`
-                        : `Send ${selectedCurrency} to your wallet`
-                      : language === "pt"
-                        ? "Receba em reais na sua chave PIX"
-                        : "Receive in reais on your PIX key"}
-                  </p>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4 sm:space-y-6">
                 {withdrawalType === "CRYPTO" ? (
                   <>
-                    <div className="p-4 sm:p-6 bg-primary/10 rounded-xl border border-primary/30">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Coins className="h-5 w-5 text-primary" />
-                        <span className="text-sm font-medium text-muted-foreground">
-                          {t("availableBalance")}
-                        </span>
+                    <div className="rounded-xl border border-primary/30 bg-primary/10 p-4 sm:p-6">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <Coins className="h-5 w-5 shrink-0 text-primary" />
+                          <span className="text-sm font-medium text-muted-foreground">
+                            {t("availableBalance")}
+                          </span>
+                        </div>
+                        <p className="shrink-0 text-xl font-bold tabular-nums text-primary sm:text-3xl">
+                          {!walletData ? (
+                            <span
+                              className="inline-block h-8 w-24 rounded-lg bg-muted animate-pulse sm:h-9 sm:w-40"
+                              aria-busy="true"
+                              aria-label={
+                                language === "pt"
+                                  ? "Carregando saldo"
+                                  : "Loading balance"
+                              }
+                            />
+                          ) : (
+                            formatCurrency(
+                              maxCryptoWithdrawGross,
+                              selectedCurrency,
+                              { maxDecimals: 4 }
+                            )
+                          )}
+                        </p>
                       </div>
-                      <p className="text-2xl sm:text-3xl font-bold text-primary tabular-nums">
-                        {!walletData ? (
-                          <span
-                            className="inline-block h-9 min-w-[10rem] max-w-[16rem] rounded-lg bg-muted animate-pulse"
-                            aria-busy="true"
-                            aria-label={
-                              language === "pt"
-                                ? "Carregando saldo"
-                                : "Loading balance"
-                            }
-                          />
-                        ) : (
-                          formatCurrency(
-                            maxCryptoWithdrawGross,
-                            selectedCurrency,
-                            { maxDecimals: 4 }
-                          )
-                        )}
-                      </p>
                       {selectedCurrency === "USDC" && walletData ? (
                         <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
                           {language === "pt"
@@ -1130,32 +1160,34 @@ export default function WithdrawPage() {
                   </>
                 ) : (
                   <>
-                    <div className="p-4 sm:p-6 bg-primary/10 rounded-xl border border-primary/30">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Wallet className="h-5 w-5 text-primary" />
-                        <span className="text-sm font-medium text-muted-foreground">
-                          {language === "pt"
-                            ? "Saldo disponível para PIX"
-                            : "Available balance for PIX"}
-                        </span>
+                    <div className="rounded-xl border border-primary/30 bg-primary/10 p-4 sm:p-6">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <Wallet className="h-5 w-5 shrink-0 text-primary" />
+                          <span className="text-sm font-medium text-muted-foreground">
+                            {language === "pt"
+                              ? "Saldo disponível para PIX"
+                              : "Available balance for PIX"}
+                          </span>
+                        </div>
+                        <p className="shrink-0 text-xl font-bold tabular-nums text-primary sm:text-3xl">
+                          {!walletData ? (
+                            <span
+                              className="inline-block h-8 w-24 rounded-lg bg-muted animate-pulse sm:h-9 sm:w-32"
+                              aria-busy="true"
+                              aria-label={
+                                language === "pt"
+                                  ? "Carregando saldo"
+                                  : "Loading balance"
+                              }
+                            />
+                          ) : brlAvailableForPix != null ? (
+                            formatBRL(brlAvailableForPix)
+                          ) : (
+                            "—"
+                          )}
+                        </p>
                       </div>
-                      <p className="text-2xl sm:text-3xl font-bold text-primary tabular-nums">
-                        {!walletData ? (
-                          <span
-                            className="inline-block h-9 min-w-[9rem] rounded-lg bg-muted animate-pulse"
-                            aria-busy="true"
-                            aria-label={
-                              language === "pt"
-                                ? "Carregando saldo"
-                                : "Loading balance"
-                            }
-                          />
-                        ) : brlAvailableForPix != null ? (
-                          formatBRL(brlAvailableForPix)
-                        ) : (
-                          "—"
-                        )}
-                      </p>
                       {(walletData && brlAvailableForPix == null) ? (
                         <p className="text-xs text-muted-foreground mt-1">
                           {language === "pt"
@@ -1315,105 +1347,115 @@ export default function WithdrawPage() {
                 ))}
               </div>
             ) : withdrawalHistory.length > 0 ? (
-              <div className="overflow-x-auto lg:overflow-x-visible">
-                <table className="w-full min-w-0 table-fixed text-sm">
-                  <colgroup>
-                    <col className="w-[22%]" />
-                    <col className="w-[12%]" />
-                    <col className="w-[18%]" />
-                    <col className="w-[20%]" />
-                    <col className="min-w-0 w-[28%]" />
-                  </colgroup>
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-2.5 px-2 lg:py-3 lg:px-3">
-                        {t("date")}
-                      </th>
-                      <th className="text-left py-2.5 px-2 lg:py-3 lg:px-3">
-                        {t("type")}
-                      </th>
-                      <th className="text-left py-2.5 px-2 lg:py-3 lg:px-3">
-                        {t("value")}
-                      </th>
-                      <th className="text-left py-2.5 px-2 lg:py-3 lg:px-3">
-                        {t("status")}
-                      </th>
-                      <th className="min-w-0 text-left py-2.5 px-2 lg:py-3 lg:px-3">
-                        {t("hashProtocol")}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {withdrawalHistory.map((withdrawal) => (
-                      <tr
-                        key={withdrawal.id}
-                        className="border-b hover:bg-muted/50 cursor-pointer"
-                        onClick={() => router.push(`/transaction/${withdrawal.id}`)}
-                      >
-                        <td className="py-2.5 px-2 align-middle lg:py-3 lg:px-3">
-                          {new Date(withdrawal.createdAt).toLocaleDateString(
-                            language === "pt" ? "pt-BR" : "en-US",
-                            {
-                              day: "2-digit",
-                              month: "2-digit",
-                              year: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            }
-                          )}
-                        </td>
-                        <td className="py-2.5 px-2 align-middle lg:py-3 lg:px-3">
-                          <Badge
-                            variant="secondary"
-                            className="bg-primary/20 text-primary border-primary/30"
-                          >
-                            {withdrawal.type === "PIX"
-                              ? "PIX"
-                              : withdrawal.currency || withdrawal.type}
-                          </Badge>
-                        </td>
-                        <td className="py-2.5 px-2 align-middle font-medium text-foreground lg:py-3 lg:px-3">
+              <>
+                <div className="space-y-3 lg:hidden">
+                  {withdrawalHistory.map((withdrawal) => (
+                    <button
+                      key={withdrawal.id}
+                      type="button"
+                      className="w-full rounded-xl border border-border bg-muted/20 p-3 text-left transition-colors hover:bg-muted/40 active:bg-muted/50"
+                      onClick={() => router.push(`/transaction/${withdrawal.id}`)}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="text-xs text-muted-foreground">
+                          {formatWithdrawalDate(withdrawal.createdAt)}
+                        </p>
+                        <p className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
+                          {formatWithdrawalAmount(withdrawal)}
+                        </p>
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <Badge
+                          variant="secondary"
+                          className="bg-primary/20 text-primary border-primary/30"
+                        >
                           {withdrawal.type === "PIX"
-                            ? formatBRL(withdrawal.amount)
-                            : formatCurrency(
-                                withdrawal.amount,
-                                withdrawal.currency || withdrawal.type,
-                                { maxDecimals: 4 }
-                              )}
-                        </td>
-                        <td className="py-2.5 px-2 align-middle lg:py-3 lg:px-3">
-                          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                            {getStatusIcon(withdrawal.status)}
-                            {getStatusBadge(withdrawal.status)}
-                          </div>
-                        </td>
-                        <td className="min-w-0 py-2.5 px-2 align-middle lg:py-3 lg:px-3">
-                          {withdrawal.type === "PIX" && withdrawal.protocol ? (
-                            <code
-                              className="block max-w-full truncate rounded bg-muted px-2 py-1 text-left text-xs text-foreground"
-                              title={withdrawal.protocol}
-                            >
-                              {withdrawal.protocol}
-                            </code>
-                          ) : withdrawal.hash ? (
-                            <div className="flex min-w-0 items-center gap-1.5">
-                              <code
-                                className="min-w-0 flex-1 truncate rounded bg-muted px-2 py-1 text-xs text-foreground"
-                                title={withdrawal.hash}
-                              >
-                                {withdrawal.hash}
-                              </code>
-                              <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground" />
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </td>
+                            ? "PIX"
+                            : withdrawal.currency || withdrawal.type}
+                        </Badge>
+                        <div className="flex items-center gap-1.5">
+                          {getStatusIcon(withdrawal.status)}
+                          {getStatusBadge(withdrawal.status)}
+                        </div>
+                      </div>
+                      {(withdrawal.protocol || withdrawal.hash) && (
+                        <div className="mt-2.5 min-w-0">
+                          <p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                            {t("hashProtocol")}
+                          </p>
+                          {renderWithdrawalProtocol(withdrawal)}
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="hidden overflow-x-auto lg:block lg:overflow-x-visible">
+                  <table className="w-full min-w-0 table-fixed text-sm">
+                    <colgroup>
+                      <col className="w-[22%]" />
+                      <col className="w-[12%]" />
+                      <col className="w-[18%]" />
+                      <col className="w-[20%]" />
+                      <col className="min-w-0 w-[28%]" />
+                    </colgroup>
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-2.5 px-2 lg:py-3 lg:px-3">
+                          {t("date")}
+                        </th>
+                        <th className="text-left py-2.5 px-2 lg:py-3 lg:px-3">
+                          {t("type")}
+                        </th>
+                        <th className="text-left py-2.5 px-2 lg:py-3 lg:px-3">
+                          {t("value")}
+                        </th>
+                        <th className="text-left py-2.5 px-2 lg:py-3 lg:px-3">
+                          {t("status")}
+                        </th>
+                        <th className="min-w-0 text-left py-2.5 px-2 lg:py-3 lg:px-3">
+                          {t("hashProtocol")}
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {withdrawalHistory.map((withdrawal) => (
+                        <tr
+                          key={withdrawal.id}
+                          className="border-b hover:bg-muted/50 cursor-pointer"
+                          onClick={() => router.push(`/transaction/${withdrawal.id}`)}
+                        >
+                          <td className="py-2.5 px-2 align-middle lg:py-3 lg:px-3">
+                            {formatWithdrawalDate(withdrawal.createdAt)}
+                          </td>
+                          <td className="py-2.5 px-2 align-middle lg:py-3 lg:px-3">
+                            <Badge
+                              variant="secondary"
+                              className="bg-primary/20 text-primary border-primary/30"
+                            >
+                              {withdrawal.type === "PIX"
+                                ? "PIX"
+                                : withdrawal.currency || withdrawal.type}
+                            </Badge>
+                          </td>
+                          <td className="py-2.5 px-2 align-middle font-medium text-foreground lg:py-3 lg:px-3">
+                            {formatWithdrawalAmount(withdrawal)}
+                          </td>
+                          <td className="py-2.5 px-2 align-middle lg:py-3 lg:px-3">
+                            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                              {getStatusIcon(withdrawal.status)}
+                              {getStatusBadge(withdrawal.status)}
+                            </div>
+                          </td>
+                          <td className="min-w-0 py-2.5 px-2 align-middle lg:py-3 lg:px-3">
+                            {renderWithdrawalProtocol(withdrawal)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             ) : (
               <p className="text-center text-muted-foreground py-8">
                 {t("noWithdrawalHistory")}
@@ -1627,54 +1669,6 @@ export default function WithdrawPage() {
           ) : null}
         </DialogContent>
       </Dialog>
-
-      {/* Mobile Page Indicator - Bottom Navigation (hidden when mobile menu is open) */}
-      {isMobile && !mobileMenuOpen && (
-        <div
-          className="fixed bottom-0 left-0 right-0 z-50"
-          style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}
-        >
-          <div className="flex justify-center pb-2 px-4">
-            <div className="relative inline-flex items-center bg-card/95 backdrop-blur-sm border border-border rounded-full px-1 py-1.5 shadow-lg">
-              <button
-                onClick={() => router.push("/trade")}
-                className={`relative px-3 sm:px-4 py-1.5 rounded-full text-xs font-medium transition-all touch-manipulation ${
-                  pathname === "/trade"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground active:bg-muted"
-                }`}
-                style={{ minWidth: "44px", minHeight: "44px" }}
-              >
-                <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </button>
-
-              <button
-                onClick={() => router.push("/dashboard")}
-                className={`relative px-3 sm:px-4 py-1.5 rounded-full text-xs font-medium transition-all touch-manipulation ${
-                  pathname === "/dashboard"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground active:bg-muted"
-                }`}
-                style={{ minWidth: "44px", minHeight: "44px" }}
-              >
-                <Home className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </button>
-
-              <button
-                onClick={() => router.push("/withdraw")}
-                className={`relative px-3 sm:px-4 py-1.5 rounded-full text-xs font-medium transition-all touch-manipulation ${
-                  pathname === "/withdraw"
-                    ? "bg-destructive text-destructive-foreground"
-                    : "text-muted-foreground hover:text-foreground active:bg-muted"
-                }`}
-                style={{ minWidth: "44px", minHeight: "44px" }}
-              >
-                <Minus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

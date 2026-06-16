@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { MessageCircle, Mail, X } from "lucide-react";
+import { Headset, Mail, X } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useMobileMenuOpen } from "@/hooks/useMobileMenuOpen";
+import { cn } from "@/lib/utils";
 
 const WHATSAPP_NUMBER =
   process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP || "5511984284867";
@@ -39,11 +40,14 @@ export function FloatingSupportWidget() {
 
   return (
     <div
-      className={`fixed z-50 flex flex-col items-end gap-2 md:bottom-6 md:right-6 ${
-        alignBottomRight ? "bottom-0 right-0" : "bottom-6 right-6"
-      }`}
+      className={cn(
+        "fixed z-40 flex flex-col items-end gap-2",
+        alignBottomRight
+          ? "bottom-0 right-0"
+          : "bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] right-3 md:bottom-6 md:right-6"
+      )}
       style={{
-        paddingBottom: "env(safe-area-inset-bottom, 0)",
+        paddingBottom: alignBottomRight ? "env(safe-area-inset-bottom, 0)" : undefined,
         paddingRight: "env(safe-area-inset-right, 0)",
       }}
     >
@@ -51,7 +55,7 @@ export function FloatingSupportWidget() {
         <div className="rounded-xl border border-white/20 bg-black/95 backdrop-blur-xl shadow-xl p-4 w-72 animate-in fade-in slide-in-from-bottom-2 duration-200">
           <div className="flex items-center justify-between mb-3">
             <span className="font-medium text-white flex items-center gap-2">
-              <MessageCircle className="w-4 h-4 text-primary" />
+              <Headset className="w-4 h-4 text-primary" />
               {t("contactSupport")}
             </span>
             <button
@@ -72,7 +76,7 @@ export function FloatingSupportWidget() {
               rel="noopener noreferrer"
               className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-[#25D366]/20 text-[#25D366] hover:bg-[#25D366]/30 border border-[#25D366]/40 transition-colors text-sm font-medium"
             >
-              <MessageCircle className="w-4 h-4 shrink-0" />
+              <Headset className="w-4 h-4 shrink-0" />
               <span>{t("contactViaWhatsApp")}</span>
               <span className="text-xs opacity-80">+55 11 98428-4867</span>
             </a>
@@ -88,11 +92,11 @@ export function FloatingSupportWidget() {
       )}
       <button
         onClick={() => setOpen(!open)}
-        className="rounded-full bg-primary text-primary-foreground shadow-lg hover:opacity-90 transition-all p-3 md:p-4"
+        className="rounded-full border border-primary/30 bg-primary/90 text-primary-foreground shadow-md hover:bg-primary transition-colors p-2.5 md:p-3.5"
         aria-label={t("contactSupport")}
         title={t("contactSupport")}
       >
-        <MessageCircle className="w-5 h-5 md:w-6 md:h-6" />
+        <Headset className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2} />
       </button>
     </div>
   );

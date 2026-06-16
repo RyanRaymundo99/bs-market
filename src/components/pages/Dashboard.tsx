@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useLayoutEffect, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   TrendingDown,
   ArrowUpRight,
@@ -14,15 +14,11 @@ import {
   Wallet,
   ArrowDownRight,
   ArrowRight,
-  Home,
-  Plus,
-  Minus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { useMobileMenuOpen } from "@/hooks/useMobileMenuOpen";
-import { DESKTOP_SHELL_PL } from "@/constants/layout-shell";
+import { DESKTOP_SHELL_PL, MOBILE_BOTTOM_NAV_PADDING } from "@/constants/layout-shell";
 import { WelcomeTutorial } from "@/components/ui/welcome-tutorial";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePrimaryColor } from "@/hooks/use-primary-color";
@@ -31,6 +27,12 @@ import {
   buildUsdtBalanceSeries,
   getUsdtChartDaySpan,
 } from "@/lib/dashboard-balance-series";
+import { useWalletBalances } from "@/contexts/BalanceContext";
+import { readSessionCache, writeSessionCache } from "@/lib/utils";
+
+const USER_STATUS_CACHE_KEY = "user-status";
+const TRANSACTIONS_CACHE_KEY = "transactions-preview";
+const DASHBOARD_CACHE_MS = 120_000;
 
 const DashboardChart = dynamic(
   () =>
@@ -78,38 +80,21 @@ interface UserStatus {
 
 export default function Dashboard() {
   const router = useRouter();
-  const pathname = usePathname();
   const { toast } = useToast();
   const { t, language } = useLanguage();
-  const [balances, setBalances] = useState<Balance[]>([]);
+  const { balances } = useWalletBalances();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [showBalances, setShowBalances] = useState(true);
-  /** First non-silent fetch finished — show real values vs inline skeletons */
+  /** First fetch finished — show real values vs inline skeletons */
   const [dashboardReady, setDashboardReady] = useState(false);
   const [userStatus, setUserStatus] = useState<UserStatus | null>(null);
   const [chartData, setChartData] = useState<
     Array<{ date: string; BRL: number; USDT: number; timestamp: number }>
   >([]);
 
-  const [isMobile, setIsMobile] = useState(false);
-  const mobileMenuOpen = useMobileMenuOpen();
   const primaryHex = usePrimaryColor();
   const [showWelcomeTutorial, setShowWelcomeTutorial] = useState(false);
   const [welcomeTutorialName, setWelcomeTutorialName] = useState("");
-
-  // Detect mobile device
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(
-        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-          navigator.userAgent
-        ) || window.innerWidth <= 768
-      );
-    };
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
 
   // Show welcome tutorial after signup redirect (pre-load dashboard then show tutorial)
   useEffect(() => {
@@ -127,6 +112,22 @@ export default function Dashboard() {
     sessionStorage.removeItem("welcome-tutorial-name");
     setShowWelcomeTutorial(false);
   };
+
+  useLayoutEffect(() => {
+    const cachedUser = readSessionCache<UserStatus>(
+      USER_STATUS_CACHE_KEY,
+      DASHBOARD_CACHE_MS
+    );
+    const cachedTx = readSessionCache<Transaction[]>(
+      TRANSACTIONS_CACHE_KEY,
+      DASHBOARD_CACHE_MS
+    );
+    if (cachedUser) setUserStatus(cachedUser);
+    if (cachedTx?.length) setTransactions(cachedTx);
+    if (cachedUser || cachedTx?.length || balances.length > 0) {
+      setDashboardReady(true);
+    }
+  }, [balances.length]);
 
   // Check authentication: rely on cookie session (better-auth); keep localStorage in sync for legacy code
   useEffect(() => {
@@ -259,19 +260,21 @@ export default function Dashboard() {
         const userStatusData = await userStatusResponse.json();
         currentUserStatus = userStatusData.user;
         setUserStatus(currentUserStatus);
+        if (currentUserStatus) {
+          writeSessionCache(USER_STATUS_CACHE_KEY, currentUserStatus);
+        }
       }
 
-      // Process balances
+      // Process balances (shared BalanceProvider also fetches; keep chart math in sync)
       let currentUsdtBalance = 0;
       if (balanceResponse.ok) {
         const balanceData = await balanceResponse.json();
-        setBalances(balanceData.balances || []);
-
-
-
         currentUsdtBalance =
           balanceData.balances?.find((b: Balance) => b.currency === "USDT")
             ?.amount || 0;
+      } else if (balances.length > 0) {
+        currentUsdtBalance =
+          balances.find((b) => b.currency === "USDT")?.amount || 0;
       }
 
       // Process transactions
@@ -280,6 +283,7 @@ export default function Dashboard() {
         const transactionData = await transactionResponse.json();
         allTransactions = transactionData.transactions || [];
         setTransactions(allTransactions);
+        writeSessionCache(TRANSACTIONS_CACHE_KEY, allTransactions);
       }
 
 
@@ -309,7 +313,7 @@ export default function Dashboard() {
     } finally {
       if (!isSilent) setDashboardReady(true);
     }
-  }, [toast]);
+  }, [toast, balances]);
 
   // Initial load and background polling setup
   useEffect(() => {
@@ -417,14 +421,7 @@ export default function Dashboard() {
       />
 
       <div
-        className={`mx-auto w-full max-w-[1800px] px-3 sm:px-5 xl:px-8 py-4 sm:py-6 ${
-          isMobile ? "pb-16" : ""
-        }`}
-        style={
-          isMobile
-            ? { paddingBottom: "calc(64px + env(safe-area-inset-bottom, 0px))" }
-            : undefined
-        }
+        className={`mx-auto w-full max-w-[1800px] px-3 sm:px-5 xl:px-8 py-4 sm:py-6 ${MOBILE_BOTTOM_NAV_PADDING}`}
       >
 
         {/* Header: balance first (left), category stats (right) */}
@@ -502,25 +499,23 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div
-            className="flex min-w-0 flex-1 flex-nowrap items-stretch justify-start gap-4 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:justify-end sm:overflow-visible [&::-webkit-scrollbar]:hidden lg:justify-end"
-          >
+          <div className="grid w-full grid-cols-3 gap-2 sm:flex sm:min-w-0 sm:flex-1 sm:flex-wrap sm:items-stretch sm:justify-end sm:gap-4 lg:justify-end">
             {!dashboardReady
               ? [1, 2, 3].map((i) => (
                   <div
                     key={i}
-                    className="flex w-[7.75rem] shrink-0 flex-col gap-2 sm:w-auto"
+                    className="flex min-w-0 flex-col gap-2 rounded-xl border border-border/40 bg-muted/20 p-2 sm:w-[9.5rem] sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0"
                     aria-hidden
                   >
-                    <div className="flex items-center gap-2.5">
-                      <div className="h-9 w-9 shrink-0 rounded-lg bg-white/10 animate-pulse" />
-                      <div className="min-w-0 flex-1 space-y-1.5">
-                        <div className="h-3.5 w-16 rounded bg-white/10 animate-pulse" />
-                        <div className="h-2.5 w-20 rounded bg-white/10 animate-pulse" />
+                    <div className="flex flex-col items-center gap-1.5 sm:flex-row sm:items-center sm:gap-2.5">
+                      <div className="h-8 w-8 shrink-0 rounded-lg bg-white/10 animate-pulse sm:h-9 sm:w-9" />
+                      <div className="min-w-0 w-full space-y-1.5 text-center sm:text-left">
+                        <div className="mx-auto h-3 w-14 rounded bg-white/10 animate-pulse sm:mx-0" />
+                        <div className="mx-auto h-2.5 w-16 rounded bg-white/10 animate-pulse sm:mx-0" />
                       </div>
                     </div>
-                    <div className="h-1 rounded-full bg-white/5">
-                      <div className="hidden h-full w-1/3 rounded-full bg-white/10 sm:block" />
+                    <div className="hidden h-1 rounded-full bg-white/5 sm:block">
+                      <div className="h-full w-1/3 rounded-full bg-white/10" />
                     </div>
                   </div>
                 ))
@@ -529,24 +524,24 @@ export default function Dashboard() {
                   return (
                     <div
                       key={index}
-                      className="flex w-[7.75rem] shrink-0 flex-col gap-2 sm:w-[9.5rem]"
+                      className="flex min-w-0 flex-col gap-1.5 rounded-xl border border-border/40 bg-muted/20 p-2 sm:w-[9.5rem] sm:rounded-none sm:border-0 sm:bg-transparent sm:gap-2 sm:p-0"
                     >
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex flex-col items-center gap-1.5 text-center sm:flex-row sm:items-center sm:gap-2.5 sm:text-left">
                         <div
-                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${category.bgColor}`}
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg sm:h-9 sm:w-9 ${category.bgColor}`}
                         >
-                          <Icon className={`h-4 w-4 ${category.iconColor}`} />
+                          <Icon className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${category.iconColor}`} />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-sm font-semibold leading-tight text-foreground">
+                          <p className="truncate text-xs font-semibold leading-tight text-foreground sm:text-sm">
                             {category.name}
                           </p>
-                          <p className="text-[11px] text-muted-foreground sm:text-xs">
+                          <p className="truncate text-[10px] text-muted-foreground sm:text-xs">
                             {category.txLabel}
                           </p>
                         </div>
                       </div>
-                      <div className="h-1 w-full rounded-full bg-muted/80 overflow-hidden">
+                      <div className="hidden h-1 w-full overflow-hidden rounded-full bg-muted/80 sm:block">
                         <div
                           className={`h-full rounded-full ${category.progressColor} transition-all duration-300`}
                           style={{ width: `${category.progressPct}%` }}
@@ -803,54 +798,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Mobile Page Indicator - Bottom Navigation (hidden when mobile menu is open) */}
-      {isMobile && !mobileMenuOpen && (
-        <div
-          className="fixed bottom-0 left-0 right-0 z-50"
-          style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}
-        >
-          <div className="flex justify-center pb-2 px-4">
-            <div className="relative inline-flex items-center bg-card/95 backdrop-blur-sm border border-border rounded-full px-1 py-1.5 shadow-lg">
-              <button
-                onClick={() => router.push("/trade")}
-                className={`relative px-3 sm:px-4 py-1.5 rounded-full text-xs font-medium transition-all touch-manipulation ${
-                  pathname === "/trade"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground active:bg-muted"
-                }`}
-                style={{ minWidth: "44px", minHeight: "44px" }}
-              >
-                <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </button>
-
-              <button
-                onClick={() => router.push("/dashboard")}
-                className={`relative px-3 sm:px-4 py-1.5 rounded-full text-xs font-medium transition-all touch-manipulation ${
-                  pathname === "/dashboard"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground active:bg-muted"
-                }`}
-                style={{ minWidth: "44px", minHeight: "44px" }}
-              >
-                <Home className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </button>
-
-              <button
-                onClick={() => router.push("/withdraw")}
-                className={`relative px-3 sm:px-4 py-1.5 rounded-full text-xs font-medium transition-all touch-manipulation ${
-                  pathname === "/withdraw"
-                    ? "bg-destructive text-destructive-foreground"
-                    : "text-muted-foreground hover:text-foreground active:bg-muted"
-                }`}
-                style={{ minWidth: "44px", minHeight: "44px" }}
-              >
-                <Minus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -5,10 +5,12 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
+import { readSessionCache, writeSessionCache } from "@/lib/utils";
 
 export interface WalletBalance {
   currency: string;
@@ -17,6 +19,8 @@ export interface WalletBalance {
 }
 
 const POLL_MS = 10_000;
+const BALANCE_CACHE_MS = 120_000;
+const BALANCE_CACHE_KEY = "balance";
 
 type BalanceContextValue = {
   balances: WalletBalance[];
@@ -35,6 +39,18 @@ export function BalanceProvider({ children }: { children: React.ReactNode }) {
     useState(false);
   const lastSerializedRef = useRef<string>("");
 
+  useLayoutEffect(() => {
+    const cached = readSessionCache<WalletBalance[]>(
+      BALANCE_CACHE_KEY,
+      BALANCE_CACHE_MS
+    );
+    if (cached?.length) {
+      setBalances(cached);
+      setHasCompletedInitialFetch(true);
+      lastSerializedRef.current = JSON.stringify(cached);
+    }
+  }, []);
+
   const fetchBalances = useCallback(async (silent = false) => {
     try {
       const response = await fetch("/api/balance", { cache: "no-store" });
@@ -43,6 +59,7 @@ export function BalanceProvider({ children }: { children: React.ReactNode }) {
         const next: WalletBalance[] = data.balances || [];
         setBalances(next);
         setError(null);
+        writeSessionCache(BALANCE_CACHE_KEY, next);
 
         const serialized = JSON.stringify(next);
         if (serialized !== lastSerializedRef.current) {

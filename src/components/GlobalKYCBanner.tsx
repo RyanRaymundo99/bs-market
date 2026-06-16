@@ -1,21 +1,24 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { usePathname } from "next/navigation";
 import KYCBanner from "@/components/ui/kyc-banner";
 import {
   isApprovedCelebrationBannerDismissed,
-  persistApprovedCelebrationBannerDismiss,
+  syncApprovedCelebrationBannerDismissToServer,
 } from "@/lib/account-approved-banner-dismiss";
 
 interface UserStatus {
   id: string;
   approvalStatus: "PENDING" | "APPROVED" | "REJECTED";
   kycStatus: "PENDING" | "APPROVED" | "REJECTED";
+  approvedCelebrationBannerDismissed?: boolean;
 }
 
 /** What the KYC strip should show — KYC dominates, then approval. */
-export function deriveKycBannerStatus(u: UserStatus): "PENDING" | "APPROVED" | "REJECTED" {
+export function deriveKycBannerStatus(
+  u: UserStatus
+): "PENDING" | "APPROVED" | "REJECTED" {
   if (u.kycStatus === "PENDING") return "PENDING";
   if (u.kycStatus === "APPROVED") return "APPROVED";
   if (u.kycStatus === "REJECTED") return "REJECTED";
@@ -24,77 +27,93 @@ export function deriveKycBannerStatus(u: UserStatus): "PENDING" | "APPROVED" | "
   return "REJECTED";
 }
 
+const EXCLUDED_PATHS = [
+  "/admin",
+  "/login",
+  "/signup",
+  "/auth",
+  "/forgot-password",
+  "/reset-password",
+];
+
 export function GlobalKYCBanner() {
   const [userStatus, setUserStatus] = useState<UserStatus | null>(null);
   const [showBanner, setShowBanner] = useState(false);
   const [loading, setLoading] = useState(true);
+  const markedSeenRef = useRef(false);
   const pathname = usePathname();
 
-  const excludedPaths = [
-    "/admin",
-    "/login",
-    "/signup",
-    "/auth",
-    "/forgot-password",
-    "/reset-password",
-  ];
-
-  const shouldShowBanner = !excludedPaths.some((p) =>
-    pathname.startsWith(p)
-  );
+  const shouldShowBanner = !EXCLUDED_PATHS.some((p) => pathname.startsWith(p));
 
   useEffect(() => {
+    markedSeenRef.current = false;
+
     if (!shouldShowBanner) {
       setLoading(false);
-      return;
-    }
-
-    const fetchUserStatus = async () => {
-      try {
-        const response = await fetch("/api/user/status", { cache: "no-store" });
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.user) {
-            setUserStatus({
-              id: data.user.id,
-              approvalStatus: data.user.approvalStatus,
-              kycStatus: data.user.kycStatus,
-            });
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching user status:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUserStatus();
-  }, [shouldShowBanner]);
-
-  useEffect(() => {
-    if (!userStatus || !shouldShowBanner) {
       setShowBanner(false);
       return;
     }
 
-    const bannerKind = deriveKycBannerStatus(userStatus);
+    let cancelled = false;
 
-    if (bannerKind === "APPROVED") {
-      const dismissed = isApprovedCelebrationBannerDismissed(userStatus.id);
-      setShowBanner(!dismissed);
+    const load = async () => {
+      try {
+        const response = await fetch("/api/user/status", { cache: "no-store" });
+        if (!response.ok || cancelled) return;
+
+        const data = await response.json();
+        if (!data.success || !data.user || cancelled) return;
+
+        const status: UserStatus = {
+          id: data.user.id,
+          approvalStatus: data.user.approvalStatus,
+          kycStatus: data.user.kycStatus,
+          approvedCelebrationBannerDismissed:
+            data.user.approvedCelebrationBannerDismissed === true,
+        };
+
+        setUserStatus(status);
+
+        const bannerKind = deriveKycBannerStatus(status);
+
+        if (bannerKind === "APPROVED") {
+          const dismissed = isApprovedCelebrationBannerDismissed(
+            status.id,
+            status.approvedCelebrationBannerDismissed
+          );
+          setShowBanner(!dismissed);
+          return;
+        }
+
+        setShowBanner(bannerKind === "PENDING" || bannerKind === "REJECTED");
+      } catch (error) {
+        console.error("Error fetching user status:", error);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    setLoading(true);
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [shouldShowBanner, pathname]);
+
+  useEffect(() => {
+    if (
+      !showBanner ||
+      !userStatus ||
+      markedSeenRef.current ||
+      deriveKycBannerStatus(userStatus) !== "APPROVED"
+    ) {
       return;
     }
-    if (bannerKind === "PENDING") {
-      setShowBanner(true);
-      return;
-    }
-    if (bannerKind === "REJECTED") {
-      setShowBanner(true);
-      return;
-    }
-    setShowBanner(false);
-  }, [userStatus, shouldShowBanner]);
+
+    markedSeenRef.current = true;
+    syncApprovedCelebrationBannerDismissToServer(userStatus.id);
+  }, [showBanner, userStatus]);
 
   const displayStatus = useMemo(
     () => (userStatus ? deriveKycBannerStatus(userStatus) : "PENDING"),
@@ -106,7 +125,7 @@ export function GlobalKYCBanner() {
 
     const kind = deriveKycBannerStatus(userStatus);
     if (kind === "APPROVED") {
-      persistApprovedCelebrationBannerDismiss(userStatus.id);
+      syncApprovedCelebrationBannerDismissToServer(userStatus.id);
       setShowBanner(false);
       return;
     }
