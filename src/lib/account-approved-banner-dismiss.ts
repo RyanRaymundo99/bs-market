@@ -2,6 +2,8 @@
  * "Conta Aprovada" one-time banner: in-memory set, localStorage, sessionStorage,
  * and optional server flag from GET /api/user/status.
  */
+import type { Prisma } from "../../prisma/generated/client";
+
 export const APPROVED_CELEBRATION_DISMISSED_KEY =
   "approvedCelebrationBannerDismissedAt";
 
@@ -25,15 +27,17 @@ export function isApprovedCelebrationDismissedInKycData(
 
 export function mergeApprovedCelebrationDismissed(
   kycData: unknown
-): Record<string, unknown> {
+): Prisma.InputJsonValue {
   const prev =
     kycData && typeof kycData === "object" && !Array.isArray(kycData)
       ? (kycData as Record<string, unknown>)
       : {};
-  return {
-    ...prev,
-    [APPROVED_CELEBRATION_DISMISSED_KEY]: new Date().toISOString(),
-  };
+  return JSON.parse(
+    JSON.stringify({
+      ...prev,
+      [APPROVED_CELEBRATION_DISMISSED_KEY]: new Date().toISOString(),
+    })
+  ) as Prisma.InputJsonValue;
 }
 
 const SESSION_DISMISSED = new Set<string>();

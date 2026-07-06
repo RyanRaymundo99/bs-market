@@ -124,13 +124,16 @@ export default function NotificationCenterPage() {
         if (response.ok) {
           const data = await response.json();
           if (data.settings) {
-            const emails = Array.isArray(data.settings.emails) && data.settings.emails.length > 0
-              ? data.settings.emails
-              : ["rian981265@gmail.com"];
+            const emails =
+              Array.isArray(data.settings.emails) &&
+              data.settings.emails.length > 0
+                ? data.settings.emails
+                : ["rian981265@gmail.com"];
             setAlertSettings({
               emails,
               notifyDepositOver500: data.settings.notifyDepositOver500 ?? true,
-              notifyWithdrawOver500: data.settings.notifyWithdrawOver500 ?? true,
+              notifyWithdrawOver500:
+                data.settings.notifyWithdrawOver500 ?? true,
               notifyNewAccount: data.settings.notifyNewAccount ?? true,
               notifyKycReady: data.settings.notifyKycReady ?? true,
             });
@@ -148,13 +151,16 @@ export default function NotificationCenterPage() {
   const saveAlertSettings = async () => {
     try {
       setSavingAlertSettings(true);
-      const emailsToSave = alertSettings.emails.map((e) => e.trim()).filter(Boolean);
+      const emailsToSave = alertSettings.emails
+        .map((e) => e.trim())
+        .filter(Boolean);
       const response = await fetch("/api/admin/notifications/alert-settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...alertSettings,
-          emails: emailsToSave.length > 0 ? emailsToSave : ["rian981265@gmail.com"],
+          emails:
+            emailsToSave.length > 0 ? emailsToSave : ["rian981265@gmail.com"],
         }),
       });
       const data = await response.json();
@@ -183,8 +189,8 @@ export default function NotificationCenterPage() {
       setLoading(true);
       const response = await fetch(
         `/api/admin/notification-center/users?search=${encodeURIComponent(
-          searchTerm
-        )}&limit=100`
+          searchTerm,
+        )}&limit=100`,
       );
       if (response.ok) {
         const data = await response.json();
@@ -208,25 +214,22 @@ export default function NotificationCenterPage() {
     }
   }, [searchTerm, toast]);
 
-  const fetchUserNotifications = useCallback(
-    async (userId: string) => {
-      try {
-        const response = await fetch(
-          `/api/admin/notification-center/users/${userId}/notifications?limit=50`
-        );
-        if (response.ok) {
-          const data = await response.json();
-          setUserNotifications((prev) => ({
-            ...prev,
-            [userId]: data.notifications || [],
-          }));
-        }
-      } catch (error) {
-        console.error("Error fetching user notifications:", error);
+  const fetchUserNotifications = useCallback(async (userId: string) => {
+    try {
+      const response = await fetch(
+        `/api/admin/notification-center/users/${userId}/notifications?limit=50`,
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setUserNotifications((prev) => ({
+          ...prev,
+          [userId]: data.notifications || [],
+        }));
       }
-    },
-    []
-  );
+    } catch (error) {
+      console.error("Error fetching user notifications:", error);
+    }
+  }, []);
 
   const toggleUserExpanded = (userId: string) => {
     setExpandedUsers((prev) => {
@@ -385,11 +388,12 @@ export default function NotificationCenterPage() {
     if (statusFilter !== "ALL") {
       if (statusFilter === "APPROVED") {
         filtered = filtered.filter(
-          (u) => u.approvalStatus === "APPROVED" && u.kycStatus === "APPROVED"
+          (u) => u.approvalStatus === "APPROVED" && u.kycStatus === "APPROVED",
         );
       } else {
         filtered = filtered.filter(
-          (u) => u.approvalStatus === statusFilter || u.kycStatus === statusFilter
+          (u) =>
+            u.approvalStatus === statusFilter || u.kycStatus === statusFilter,
         );
       }
     }
@@ -400,9 +404,17 @@ export default function NotificationCenterPage() {
   // Statistics
   const stats = useMemo(() => {
     const total = users.length;
-    const withUnread = users.filter((u) => u.unreadNotificationCount > 0).length;
-    const totalNotifications = users.reduce((sum, u) => sum + u.notificationCount, 0);
-    const totalUnread = users.reduce((sum, u) => sum + u.unreadNotificationCount, 0);
+    const withUnread = users.filter(
+      (u) => u.unreadNotificationCount > 0,
+    ).length;
+    const totalNotifications = users.reduce(
+      (sum, u) => sum + u.notificationCount,
+      0,
+    );
+    const totalUnread = users.reduce(
+      (sum, u) => sum + u.unreadNotificationCount,
+      0,
+    );
     return { total, withUnread, totalNotifications, totalUnread };
   }, [users]);
 
@@ -421,7 +433,7 @@ export default function NotificationCenterPage() {
     const now = new Date();
     const date = new Date(dateString);
     const diffInMinutes = Math.floor(
-      (now.getTime() - date.getTime()) / (1000 * 60)
+      (now.getTime() - date.getTime()) / (1000 * 60),
     );
 
     if (diffInMinutes < 1) return "Agora";
@@ -434,19 +446,27 @@ export default function NotificationCenterPage() {
     switch (status) {
       case "APPROVED":
         return (
-          <Badge className="bg-primary text-primary-foreground text-xs">Aprovado</Badge>
+          <Badge className="bg-primary text-primary-foreground text-xs">
+            Aprovado
+          </Badge>
         );
       case "PENDING":
         return (
-          <Badge className="bg-yellow-600 text-foreground text-xs">Pendente</Badge>
+          <Badge className="bg-yellow-600 text-foreground text-xs">
+            Pendente
+          </Badge>
         );
       case "REJECTED":
         return (
-          <Badge className="bg-red-600 text-foreground text-xs">Rejeitado</Badge>
+          <Badge className="bg-red-600 text-foreground text-xs">
+            Rejeitado
+          </Badge>
         );
       default:
         return (
-          <Badge className="bg-muted text-muted-foreground text-xs">{status}</Badge>
+          <Badge className="bg-muted text-muted-foreground text-xs">
+            {status}
+          </Badge>
         );
     }
   };
@@ -501,8 +521,12 @@ export default function NotificationCenterPage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground">Total Usuários</p>
-                  <p className="text-2xl font-bold text-foreground">{stats.total}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Total Usuários
+                  </p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {stats.total}
+                  </p>
                 </div>
                 <User className="w-8 h-8 text-primary opacity-50" />
               </div>
@@ -513,7 +537,9 @@ export default function NotificationCenterPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-muted-foreground">Com Não Lidas</p>
-                  <p className="text-2xl font-bold text-yellow-400">{stats.withUnread}</p>
+                  <p className="text-2xl font-bold text-yellow-400">
+                    {stats.withUnread}
+                  </p>
                 </div>
                 <Bell className="w-8 h-8 text-yellow-400 opacity-50" />
               </div>
@@ -523,8 +549,12 @@ export default function NotificationCenterPage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground">Total Notificações</p>
-                  <p className="text-2xl font-bold text-foreground">{stats.totalNotifications}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Total Notificações
+                  </p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {stats.totalNotifications}
+                  </p>
                 </div>
                 <Mail className="w-8 h-8 text-primary opacity-50" />
               </div>
@@ -535,7 +565,9 @@ export default function NotificationCenterPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-muted-foreground">Não Lidas</p>
-                  <p className="text-2xl font-bold text-red-400">{stats.totalUnread}</p>
+                  <p className="text-2xl font-bold text-red-400">
+                    {stats.totalUnread}
+                  </p>
                 </div>
                 <AlertCircle className="w-8 h-8 text-red-400 opacity-50" />
               </div>
@@ -551,7 +583,8 @@ export default function NotificationCenterPage() {
               Alertas por email
             </CardTitle>
             <p className="text-muted-foreground text-sm">
-              Receba um email nos endereços abaixo quando esses eventos acontecerem.
+              Receba um email nos endereços abaixo quando esses eventos
+              acontecerem.
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -560,7 +593,9 @@ export default function NotificationCenterPage() {
             ) : (
               <>
                 <div className="space-y-2">
-                  <Label className="text-muted-foreground">Emails para notificar</Label>
+                  <Label className="text-muted-foreground">
+                    Emails para notificar
+                  </Label>
                   <div className="space-y-2">
                     {alertSettings.emails.map((email, i) => (
                       <div key={i} className="flex gap-2 items-center">
@@ -581,7 +616,9 @@ export default function NotificationCenterPage() {
                           size="icon"
                           className="text-muted-foreground hover:text-destructive shrink-0"
                           onClick={() => {
-                            const next = alertSettings.emails.filter((_, j) => j !== i);
+                            const next = alertSettings.emails.filter(
+                              (_, j) => j !== i,
+                            );
                             setAlertSettings((s) => ({
                               ...s,
                               emails: next.length > 0 ? next : [""],
@@ -600,7 +637,10 @@ export default function NotificationCenterPage() {
                     size="sm"
                     className="border-border text-muted-foreground hover:bg-muted"
                     onClick={() =>
-                      setAlertSettings((s) => ({ ...s, emails: [...s.emails, ""] }))
+                      setAlertSettings((s) => ({
+                        ...s,
+                        emails: [...s.emails, ""],
+                      }))
                     }
                   >
                     <Plus className="w-4 h-4 mr-2" />
@@ -608,7 +648,9 @@ export default function NotificationCenterPage() {
                   </Button>
                 </div>
                 <div className="flex flex-col gap-3">
-                  <Label className="text-muted-foreground">Notificar quando:</Label>
+                  <Label className="text-muted-foreground">
+                    Notificar quando:
+                  </Label>
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="deposit-over-500"
@@ -801,7 +843,9 @@ export default function NotificationCenterPage() {
           <Card className="bg-card border-border">
             <CardContent className="p-8 text-center">
               <User className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Nenhum usuário encontrado</h3>
+              <h3 className="text-xl font-semibold mb-2">
+                Nenhum usuário encontrado
+              </h3>
               <p className="text-muted-foreground">
                 {searchTerm
                   ? "Tente uma busca diferente"
@@ -818,16 +862,29 @@ export default function NotificationCenterPage() {
                     <TableRow className="border-border hover:bg-muted">
                       <TableHead className="w-12">
                         <Checkbox
-                          checked={selectedUsers.size === filteredUsers.length && filteredUsers.length > 0}
+                          checked={
+                            selectedUsers.size === filteredUsers.length &&
+                            filteredUsers.length > 0
+                          }
                           onCheckedChange={selectAllUsers}
                           className="border-border"
                         />
                       </TableHead>
-                      <TableHead className="text-muted-foreground">Usuário</TableHead>
-                      <TableHead className="text-muted-foreground">Status</TableHead>
-                      <TableHead className="text-muted-foreground">Notificações</TableHead>
-                      <TableHead className="text-muted-foreground">Não Lidas</TableHead>
-                      <TableHead className="text-muted-foreground text-right">Ações</TableHead>
+                      <TableHead className="text-muted-foreground">
+                        Usuário
+                      </TableHead>
+                      <TableHead className="text-muted-foreground">
+                        Status
+                      </TableHead>
+                      <TableHead className="text-muted-foreground">
+                        Notificações
+                      </TableHead>
+                      <TableHead className="text-muted-foreground">
+                        Não Lidas
+                      </TableHead>
+                      <TableHead className="text-muted-foreground text-right">
+                        Ações
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -839,11 +896,15 @@ export default function NotificationCenterPage() {
 
                       return (
                         <React.Fragment key={user.id}>
-                          <TableRow className={`border-border hover:bg-muted/50 ${hasUnread ? "bg-primary/10" : ""}`}>
+                          <TableRow
+                            className={`border-border hover:bg-muted/50 ${hasUnread ? "bg-primary/10" : ""}`}
+                          >
                             <TableCell>
                               <Checkbox
                                 checked={isSelected}
-                                onCheckedChange={() => toggleUserSelection(user.id)}
+                                onCheckedChange={() =>
+                                  toggleUserSelection(user.id)
+                                }
                                 className="border-border"
                               />
                             </TableCell>
@@ -853,10 +914,16 @@ export default function NotificationCenterPage() {
                                   <User className="w-4 h-4 text-foreground" />
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                  <p className="font-medium text-foreground truncate">{user.name}</p>
-                                  <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                                  <p className="font-medium text-foreground truncate">
+                                    {user.name}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground truncate">
+                                    {user.email}
+                                  </p>
                                   {user.cpf && (
-                                    <p className="text-xs text-muted-foreground">CPF: {user.cpf}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      CPF: {user.cpf}
+                                    </p>
                                   )}
                                 </div>
                               </div>
@@ -870,7 +937,9 @@ export default function NotificationCenterPage() {
                             <TableCell>
                               <div className="flex items-center gap-2">
                                 <Bell className="w-4 h-4 text-muted-foreground" />
-                                <span className="text-sm text-muted-foreground">{user.notificationCount}</span>
+                                <span className="text-sm text-muted-foreground">
+                                  {user.notificationCount}
+                                </span>
                               </div>
                             </TableCell>
                             <TableCell>
@@ -879,7 +948,9 @@ export default function NotificationCenterPage() {
                                   {user.unreadNotificationCount}
                                 </Badge>
                               ) : (
-                                <span className="text-sm text-muted-foreground">0</span>
+                                <span className="text-sm text-muted-foreground">
+                                  0
+                                </span>
                               )}
                             </TableCell>
                             <TableCell className="text-right">
@@ -948,13 +1019,24 @@ export default function NotificationCenterPage() {
                                             <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
                                               <span className="flex items-center gap-1">
                                                 <Clock className="w-3 h-3" />
-                                                {formatTimeAgo(notification.createdAt)}
+                                                {formatTimeAgo(
+                                                  notification.createdAt,
+                                                )}
                                               </span>
-                                              <span>{formatDate(notification.createdAt)}</span>
+                                              <span>
+                                                {formatDate(
+                                                  notification.createdAt,
+                                                )}
+                                              </span>
                                               {notification.metadata &&
-                                                typeof notification.metadata === "object" &&
-                                                "emailSent" in notification.metadata &&
-                                                Boolean(notification.metadata.emailSent) && (
+                                                typeof notification.metadata ===
+                                                  "object" &&
+                                                "emailSent" in
+                                                  notification.metadata &&
+                                                Boolean(
+                                                  notification.metadata
+                                                    .emailSent,
+                                                ) && (
                                                   <span className="flex items-center gap-1 text-primary">
                                                     <Mail className="w-3 h-3" />
                                                     Email enviado
@@ -999,8 +1081,12 @@ export default function NotificationCenterPage() {
                           <User className="w-5 h-5 text-foreground" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h3 className="font-semibold text-foreground truncate">{user.name}</h3>
-                          <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                          <h3 className="font-semibold text-foreground truncate">
+                            {user.name}
+                          </h3>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {user.email}
+                          </p>
                         </div>
                       </div>
                       <Checkbox
@@ -1016,11 +1102,17 @@ export default function NotificationCenterPage() {
                         {getStatusBadge(user.kycStatus)}
                       </div>
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">Notificações:</span>
-                        <span className="text-foreground font-medium">{user.notificationCount}</span>
+                        <span className="text-muted-foreground">
+                          Notificações:
+                        </span>
+                        <span className="text-foreground font-medium">
+                          {user.notificationCount}
+                        </span>
                       </div>
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">Não lidas:</span>
+                        <span className="text-muted-foreground">
+                          Não lidas:
+                        </span>
                         {hasUnread ? (
                           <Badge className="bg-primary text-primary-foreground">
                             {user.unreadNotificationCount}
@@ -1043,8 +1135,12 @@ export default function NotificationCenterPage() {
                                 : "bg-primary/20 border-primary/30"
                             }`}
                           >
-                            <p className="font-medium text-foreground truncate">{notification.title}</p>
-                            <p className="text-muted-foreground line-clamp-1">{notification.message}</p>
+                            <p className="font-medium text-foreground truncate">
+                              {notification.title}
+                            </p>
+                            <p className="text-muted-foreground line-clamp-1">
+                              {notification.message}
+                            </p>
                           </div>
                         ))}
                       </div>
@@ -1088,16 +1184,22 @@ export default function NotificationCenterPage() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Send className="w-5 h-5" />
-                {selectedUsers.size > 0 ? "Enviar Notificação em Lote" : "Enviar Notificação"}
+                {selectedUsers.size > 0
+                  ? "Enviar Notificação em Lote"
+                  : "Enviar Notificação"}
               </DialogTitle>
               <DialogDescription className="text-muted-foreground">
                 {selectedUsers.size > 0 ? (
-                  <>Enviar para {selectedUsers.size} usuário(s) selecionado(s)</>
+                  <>
+                    Enviar para {selectedUsers.size} usuário(s) selecionado(s)
+                  </>
                 ) : selectedUser ? (
                   <>
                     Enviar notificação para{" "}
-                    <span className="font-semibold text-foreground">{selectedUser.name}</span> (
-                    {selectedUser.email})
+                    <span className="font-semibold text-foreground">
+                      {selectedUser.name}
+                    </span>{" "}
+                    ({selectedUser.email})
                   </>
                 ) : null}
               </DialogDescription>
@@ -1137,14 +1239,20 @@ export default function NotificationCenterPage() {
                     <Checkbox
                       id="send-email"
                       checked={sendEmail}
-                      onCheckedChange={(checked) => setSendEmail(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setSendEmail(checked === true)
+                      }
                     />
-                    <Label htmlFor="send-email" className="text-foreground cursor-pointer">
+                    <Label
+                      htmlFor="send-email"
+                      className="text-foreground cursor-pointer"
+                    >
                       Enviar também por email
                     </Label>
                   </div>
                   <p className="text-sm text-muted-foreground mt-1 ml-6">
-                    A notificação será salva e um email será enviado para o(s) usuário(s)
+                    A notificação será salva e um email será enviado para o(s)
+                    usuário(s)
                   </p>
                 </div>
               </div>
@@ -1165,7 +1273,9 @@ export default function NotificationCenterPage() {
                 </Button>
                 <Button
                   onClick={
-                    selectedUsers.size > 0 ? handleBatchSend : handleSendNotification
+                    selectedUsers.size > 0
+                      ? handleBatchSend
+                      : handleSendNotification
                   }
                   disabled={
                     sending ||

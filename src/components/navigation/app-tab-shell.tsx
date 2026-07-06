@@ -13,7 +13,6 @@ import Dashboard from "@/components/pages/Dashboard";
 import TradePage from "@/app/(main)/trade/page";
 import WithdrawPage from "@/app/(main)/withdraw/page";
 import ProfilePage from "@/app/(main)/profile/page";
-import ActivityPage from "@/app/(main)/activity/page";
 
 /**
  * Renders one <section> per tab. Active tab is visible; inactive tabs are

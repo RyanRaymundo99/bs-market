@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useEffect, useRef } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { DESKTOP_SHELL_PL, MOBILE_BOTTOM_NAV_PADDING } from "@/constants/layout-shell";
 import Image from "next/image";
 import {
@@ -63,7 +63,6 @@ const WHATSAPP_SUPPORT_URL = `https://wa.me/${
 
 const TradePage = () => {
   const router = useRouter();
-  const pathname = usePathname();
   const { toast } = useToast();
   const { t, language } = useLanguage();
 
