@@ -121,6 +121,15 @@ export function writeSessionCache<T>(key: string, data: T): void {
   }
 }
 
+export function clearSessionCache(key: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.removeItem(`${SESSION_CACHE_PREFIX}${key}`);
+  } catch {
+    /* quota / private mode */
+  }
+}
+
 export function scheduleIdleWork(work: () => void, timeoutMs = 1500): () => void {
   if (typeof window === "undefined") return () => {};
   const run = () => {

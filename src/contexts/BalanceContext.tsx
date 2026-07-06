@@ -10,7 +10,11 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { readSessionCache, writeSessionCache } from "@/lib/utils";
+import {
+  clearSessionCache,
+  readSessionCache,
+  writeSessionCache,
+} from "@/lib/utils";
 
 export interface WalletBalance {
   currency: string;
@@ -38,6 +42,16 @@ export function BalanceProvider({ children }: { children: React.ReactNode }) {
   const [hasCompletedInitialFetch, setHasCompletedInitialFetch] =
     useState(false);
   const lastSerializedRef = useRef<string>("");
+  const pollingEnabledRef = useRef(true);
+  const intervalRef = useRef<number | null>(null);
+
+  const stopPolling = useCallback(() => {
+    pollingEnabledRef.current = false;
+    if (intervalRef.current !== null) {
+      window.clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, []);
 
   useLayoutEffect(() => {
     const cached = readSessionCache<WalletBalance[]>(
@@ -51,53 +65,73 @@ export function BalanceProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const fetchBalances = useCallback(async (silent = false) => {
-    try {
-      const response = await fetch("/api/balance", { cache: "no-store" });
-      if (response.ok) {
-        const data = await response.json();
-        const next: WalletBalance[] = data.balances || [];
-        setBalances(next);
-        setError(null);
-        writeSessionCache(BALANCE_CACHE_KEY, next);
+  const fetchBalances = useCallback(
+    async (silent = false) => {
+      try {
+        const response = await fetch("/api/balance", { cache: "no-store" });
+        if (response.ok) {
+          const data = await response.json();
+          const next: WalletBalance[] = data.balances || [];
+          setBalances(next);
+          setError(null);
+          writeSessionCache(BALANCE_CACHE_KEY, next);
+          pollingEnabledRef.current = true;
 
-        const serialized = JSON.stringify(next);
-        if (serialized !== lastSerializedRef.current) {
-          lastSerializedRef.current = serialized;
-          window.dispatchEvent(
-            new CustomEvent("balance-updated", {
-              detail: { balances: next },
-            })
-          );
-        }
-      } else {
-        if (response.status === 401) {
+          const serialized = JSON.stringify(next);
+          if (serialized !== lastSerializedRef.current) {
+            lastSerializedRef.current = serialized;
+            window.dispatchEvent(
+              new CustomEvent("balance-updated", {
+                detail: { balances: next },
+              })
+            );
+          }
+        } else if (response.status === 401) {
           setBalances([]);
           setError(null);
           lastSerializedRef.current = "";
+          clearSessionCache(BALANCE_CACHE_KEY);
+          stopPolling();
         } else if (!silent) {
           setError("Failed to fetch balances");
         }
+      } catch (err) {
+        if (!silent) {
+          setError("Error loading balances");
+          console.error("Error fetching balances:", err);
+        }
+      } finally {
+        setHasCompletedInitialFetch(true);
       }
-    } catch (err) {
-      if (!silent) {
-        setError("Error loading balances");
-        console.error("Error fetching balances:", err);
-      }
-    } finally {
-      setHasCompletedInitialFetch(true);
-    }
-  }, []);
+    },
+    [stopPolling]
+  );
 
   useEffect(() => {
     void fetchBalances(false);
-    const interval = window.setInterval(() => {
-      void fetchBalances(true);
+    intervalRef.current = window.setInterval(() => {
+      if (pollingEnabledRef.current) {
+        void fetchBalances(true);
+      }
     }, POLL_MS);
-    const onRefresh = () => void fetchBalances(true);
+
+    const onRefresh = () => {
+      pollingEnabledRef.current = true;
+      if (intervalRef.current === null) {
+        intervalRef.current = window.setInterval(() => {
+          if (pollingEnabledRef.current) {
+            void fetchBalances(true);
+          }
+        }, POLL_MS);
+      }
+      void fetchBalances(true);
+    };
+
     window.addEventListener("refresh-balance", onRefresh);
     return () => {
-      window.clearInterval(interval);
+      if (intervalRef.current !== null) {
+        window.clearInterval(intervalRef.current);
+      }
       window.removeEventListener("refresh-balance", onRefresh);
     };
   }, [fetchBalances]);

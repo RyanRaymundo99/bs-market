@@ -55,19 +55,6 @@ export default function RootLayout({
       <head>
         {/* Fallback for older browsers */}
         <link rel="alternate icon" type="image/x-icon" href="/favicon.ico" />
-        {/* Preload critical resources */}
-        <link
-          rel="preload"
-          href="/shortname-logo.svg"
-          as="image"
-          type="image/svg+xml"
-        />
-        <link
-          rel="preload"
-          href="/user-profile.svg"
-          as="image"
-          type="image/svg+xml"
-        />
 
         {/* Preconnect to external domains */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
