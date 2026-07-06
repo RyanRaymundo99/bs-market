@@ -22,7 +22,7 @@ import { DESKTOP_SHELL_PL, MOBILE_BOTTOM_NAV_PADDING } from "@/constants/layout-
 import { WelcomeTutorial } from "@/components/ui/welcome-tutorial";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePrimaryColor } from "@/hooks/use-primary-color";
-import { formatUSDT } from "../../lib/format-currency";
+import { formatUSDT, formatUSDTAmount } from "../../lib/format-currency";
 import {
   buildUsdtBalanceSeries,
   getUsdtChartDaySpan,
@@ -448,34 +448,46 @@ export default function Dashboard() {
                 );
               }
               return (
-                <div className="flex items-center gap-2">
-                  <h2
-                    className="text-2xl font-bold tracking-tight text-white sm:text-3xl md:text-4xl"
-                    aria-label={
-                      showBalances
-                        ? `${t("totalBalance")}, ${formatUSDT(usdtAmount)}`
-                        : language === "pt"
-                        ? `${t("totalBalance")}, oculto`
-                        : `${t("totalBalance")}, hidden`
-                    }
-                  >
-                    {showBalances
-                      ? `U$ ${formatUSDT(usdtAmount).replace(" USDT", "")}`
-                      : "U$ ••••••"}
-                  </h2>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowBalances(!showBalances)}
-                    className="text-white hover:bg-white/10 rounded-full w-8 h-8 sm:w-9 sm:h-9 p-0 shrink-0"
-                    aria-pressed={showBalances}
-                  >
-                    {showBalances ? (
-                      <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" />
-                    ) : (
-                      <Eye className="w-4 h-4 sm:w-5 sm:h-5" />
-                    )}
-                  </Button>
+                <div className="flex min-w-0 flex-col gap-0.5">
+                  <div className="flex items-center gap-2">
+                    <h2
+                      className="text-2xl font-bold tracking-tight text-white sm:text-3xl md:text-4xl tabular-nums"
+                      aria-label={
+                        showBalances
+                          ? `${t("totalBalance")}, ${formatUSDTAmount(usdtAmount, language)} USDT`
+                          : language === "pt"
+                            ? `${t("totalBalance")}, oculto`
+                            : `${t("totalBalance")}, hidden`
+                      }
+                    >
+                      {showBalances ? (
+                        <>
+                          <span className="text-white/70">U$</span>{" "}
+                          {formatUSDTAmount(usdtAmount, language)}
+                        </>
+                      ) : (
+                        "U$ ••••••"
+                      )}
+                    </h2>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowBalances(!showBalances)}
+                      className="text-white hover:bg-white/10 rounded-full w-8 h-8 sm:w-9 sm:h-9 p-0 shrink-0"
+                      aria-pressed={showBalances}
+                    >
+                      {showBalances ? (
+                        <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" />
+                      ) : (
+                        <Eye className="w-4 h-4 sm:w-5 sm:h-5" />
+                      )}
+                    </Button>
+                  </div>
+                  {showBalances ? (
+                    <p className="text-xs font-medium text-white/45 sm:text-sm">
+                      USDT
+                    </p>
+                  ) : null}
                 </div>
               );
             })()}

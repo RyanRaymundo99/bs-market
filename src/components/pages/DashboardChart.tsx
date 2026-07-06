@@ -18,6 +18,7 @@ import {
 } from "recharts";
 import { TrendingDown, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatUSDTAmount } from "@/lib/format-currency";
 
 export interface ChartDataPoint {
   date: string;
@@ -51,11 +52,7 @@ function ChartTooltipBody({
     }
   }, [active, point, onHighlight]);
 
-  const formatUSDT = (value: number) =>
-    new Intl.NumberFormat(language === "pt" ? "pt-BR" : "en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 4,
-    }).format(value);
+  const formatAmount = (value: number) => formatUSDTAmount(value, language);
 
   if (!active || !point) {
     return null;
@@ -80,7 +77,7 @@ function ChartTooltipBody({
       <div className="mt-2 border-t border-border pt-2">
         <p className="text-[10px] text-muted-foreground">{t("balance")}</p>
         <p className="text-base font-bold text-primary">
-          U$ {formatUSDT(point.USDT)}
+          U$ {formatAmount(point.USDT)}
         </p>
         <p className="text-[10px] text-muted-foreground">USDT</p>
       </div>
@@ -124,11 +121,7 @@ export function DashboardChart({
   const displayPoint =
     highlighted ?? (sliced.length ? sliced[sliced.length - 1] : null);
 
-  const formatUSDT = (value: number) =>
-    new Intl.NumberFormat(language === "pt" ? "pt-BR" : "en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 4,
-    }).format(value);
+  const formatAmount = (value: number) => formatUSDTAmount(value, language);
 
   const formatTick = useCallback(
     (dayId: string) => {
@@ -220,7 +213,7 @@ export function DashboardChart({
         <div className="absolute right-2 top-2 z-10 max-w-[160px] rounded-xl border border-primary/30 bg-card/90 px-2.5 py-2 shadow-xl backdrop-blur-sm md:hidden">
           <div className="text-[10px] text-muted-foreground">{t("balance")}</div>
           <div className="text-sm font-bold text-primary">
-            U$ {displayPoint ? formatUSDT(displayPoint.USDT) : "—"}
+            U$ {displayPoint ? formatAmount(displayPoint.USDT) : "—"}
           </div>
           {sliced.length >= 2 && displayPoint && (
             <div className="mt-1 flex items-center gap-1 border-t border-border pt-1">
@@ -268,7 +261,7 @@ export function DashboardChart({
               </div>
               <div className="text-base font-bold text-primary">
                 U${" "}
-                {displayPoint ? formatUSDT(displayPoint.USDT) : "—"}
+                {displayPoint ? formatAmount(displayPoint.USDT) : "—"}
               </div>
               <div className="mt-1 text-xs text-muted-foreground">USDT</div>
             </div>

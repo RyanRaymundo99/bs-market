@@ -79,6 +79,25 @@ export function formatCurrencyCompact(
 }
 
 /**
+ * Human-readable USDT amount for balances and summaries (locale + 2 decimals).
+ */
+export function formatUSDTAmount(
+  value: number | string,
+  language: "pt" | "en" = "pt"
+): string {
+  const numValue = typeof value === "string" ? parseFloat(value) : value;
+
+  if (isNaN(numValue)) {
+    return language === "pt" ? "0,00" : "0.00";
+  }
+
+  return new Intl.NumberFormat(language === "pt" ? "pt-BR" : "en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(numValue);
+}
+
+/**
  * Formats a number for USDT display (up to 4 decimals)
  * @param value - The number to format
  * @returns Formatted string
