@@ -18,13 +18,23 @@ export async function POST(request: NextRequest) {
     try {
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { id: true, kycStatus: true },
+        select: {
+          id: true,
+          kycStatus: true,
+          documentFront: true,
+          documentBack: true,
+          documentSelfie: true,
+        },
       });
       if (!user) {
         results.skipped++;
         continue;
       }
       if (user.kycStatus === "APPROVED") {
+        results.skipped++;
+        continue;
+      }
+      if (!user.documentFront || !user.documentBack || !user.documentSelfie) {
         results.skipped++;
         continue;
       }

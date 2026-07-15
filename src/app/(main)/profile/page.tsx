@@ -901,6 +901,9 @@ export default function ProfilePage() {
                         className="w-full h-28 object-cover rounded-lg"
                         unoptimized={true}
                       />
+                      <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-500">
+                        {t("pendingUploadBadge")}
+                      </Badge>
                       <p className="text-xs text-muted-foreground truncate">
                         {pendingFiles.front.name}
                       </p>
@@ -1038,6 +1041,9 @@ export default function ProfilePage() {
                         className="w-full h-28 object-cover rounded-lg"
                         unoptimized={true}
                       />
+                      <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-500">
+                        {t("pendingUploadBadge")}
+                      </Badge>
                       <p className="text-xs text-muted-foreground truncate">
                         {pendingFiles.back.name}
                       </p>
@@ -1175,6 +1181,9 @@ export default function ProfilePage() {
                         className="w-full h-28 object-cover rounded-lg"
                         unoptimized={true}
                       />
+                      <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-500">
+                        {t("pendingUploadBadge")}
+                      </Badge>
                       <p className="text-xs text-muted-foreground truncate">
                         {pendingFiles.selfie.name}
                       </p>
@@ -1288,8 +1297,8 @@ export default function ProfilePage() {
 
             {/* Send all documents at once */}
             {!isApproved && (pendingFiles.front || pendingFiles.back || pendingFiles.selfie) && (
-              <div className="mt-6 p-5 rounded-xl border border-border bg-muted/30">
-                <p className="text-sm text-muted-foreground mb-3">
+              <div className="mt-6 p-5 rounded-xl border-2 border-amber-500/40 bg-amber-500/10">
+                <p className="text-sm text-foreground mb-3 font-medium">
                   {[pendingFiles.front, pendingFiles.back, pendingFiles.selfie].filter(Boolean).length}{" "}
                   {t("documentsSelected")}
                 </p>
@@ -1301,7 +1310,7 @@ export default function ProfilePage() {
                       ? false
                       : !pendingFiles.front || !pendingFiles.back || !pendingFiles.selfie)
                   }
-                  className="w-full bg-primary text-primary-foreground hover:opacity-90"
+                  className="w-full bg-primary text-primary-foreground hover:opacity-90 py-6 text-base font-medium"
                 >
                   {uploading ? (
                     <>

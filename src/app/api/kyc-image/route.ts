@@ -11,23 +11,25 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Missing url" }, { status: 400 });
   }
 
-  // Only allow our own blob storage and relative uploads
-  const allowedHosts = [
-    "blob.vercel-storage.com",
-    "haisxgilinyuotni.public.blob.vercel-storage.com",
-    new URL(request.url).host,
-  ];
-  let parsed: URL;
-  try {
-    parsed = new URL(url);
-  } catch {
-    return NextResponse.json({ error: "Invalid url" }, { status: 400 });
-  }
-  if (
-    !allowedHosts.some((h) => parsed.host === h) &&
-    !url.startsWith("/uploads/")
-  ) {
-    return NextResponse.json({ error: "URL not allowed" }, { status: 400 });
+  // Only allow our own blob storage and relative uploads.
+  // Relative paths like /uploads/... must be accepted before absolute URL parsing
+  // (new URL("/uploads/...") throws without a base).
+  const isRelativeUpload = url.startsWith("/uploads/");
+  if (!isRelativeUpload) {
+    const allowedHosts = [
+      "blob.vercel-storage.com",
+      "haisxgilinyuotni.public.blob.vercel-storage.com",
+      new URL(request.url).host,
+    ];
+    let parsed: URL;
+    try {
+      parsed = new URL(url);
+    } catch {
+      return NextResponse.json({ error: "Invalid url" }, { status: 400 });
+    }
+    if (!allowedHosts.some((h) => parsed.host === h)) {
+      return NextResponse.json({ error: "URL not allowed" }, { status: 400 });
+    }
   }
 
   try {
