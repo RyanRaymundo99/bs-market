@@ -28,6 +28,8 @@ export async function POST(request: NextRequest) {
       where: { id: authSession.userId },
       select: {
         id: true,
+        cpf: true,
+        documentNumber: true,
         documentFront: true,
         documentBack: true,
         documentSelfie: true,
@@ -64,6 +66,11 @@ export async function POST(request: NextRequest) {
     if (isFirstSubmission) {
       updateData.kycStatus = "PENDING";
       updateData.kycSubmittedAt = new Date();
+    }
+
+    // Persist CPF/CNPJ as document number when missing so admin review is complete
+    if (!user.documentNumber && user.cpf) {
+      updateData.documentNumber = user.cpf;
     }
 
     for (const type of TYPES) {

@@ -401,6 +401,8 @@ export default function ProfilePage() {
     }
   };
 
+  const autoUploadKeyRef = useRef("");
+
   const handleFileSelect = (type: "front" | "back" | "selfie", file: File) => {
     setPendingFiles((prev) => ({ ...prev, [type]: file }));
     setPendingPreviews((prev) => {
@@ -467,6 +469,7 @@ export default function ProfilePage() {
         throw new Error(data?.error || "Failed to upload documents");
       }
     } catch (e) {
+      autoUploadKeyRef.current = "";
       toast({
         variant: "destructive",
         title: t("uploadFailed"),
@@ -477,6 +480,18 @@ export default function ProfilePage() {
       setUploading(false);
     }
   };
+
+  // Auto-upload once all three documents are selected to avoid
+  // local previews being mistaken for a completed server upload.
+  useEffect(() => {
+    const { front, back, selfie } = pendingFiles;
+    if (!front || !back || !selfie || uploading) return;
+    const key = `${front.name}:${front.size}:${front.lastModified}|${back.name}:${back.size}:${back.lastModified}|${selfie.name}:${selfie.size}:${selfie.lastModified}`;
+    if (autoUploadKeyRef.current === key) return;
+    autoUploadKeyRef.current = key;
+    void handleUploadAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally trigger only when pending file set completes
+  }, [pendingFiles, uploading]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
