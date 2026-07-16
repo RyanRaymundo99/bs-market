@@ -95,12 +95,14 @@ export async function GET(
       }
     }
 
-    // If still not found, try searching by Withdrawal ID
+    // If still not found, try searching by Withdrawal. Like deposits, the id
+    // may be the withdrawal primary key or its externalId, depending on which
+    // flow linked here.
     if (!transaction) {
       const withdrawal = await prisma.withdrawal.findFirst({
         where: {
-          id: id,
           userId: userId,
+          OR: [{ id: id }, { externalId: id }],
         },
         include: {
           transaction: true,
