@@ -297,6 +297,10 @@ export async function POST(request: NextRequest) {
             status: isCompleted ? "CONFIRMED" : "PENDING",
             paymentMethod: "PIX",
             externalId: externalId,
+            // Store the provider payment id so the transaction detail page can
+            // resolve this deposit via the Order's externalOrderId (which the
+            // purchase history links to). Otherwise it 404s as "Transaction not found".
+            paymentId: finalTransactionId,
             pixQrCode: pixCode,
             pixQrCodeBase64: paymentResponse.qrCodeBase64 || null,
           },
