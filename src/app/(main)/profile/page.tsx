@@ -13,6 +13,7 @@ import Breadcrumb from "@/components/ui/breadcrumb";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { getKycImageSrc } from "@/lib/kyc-image-src";
 import { formatUSDT } from "@/lib/format-currency";
+import { compressImageForUpload } from "@/lib/compress-image";
 import { readSessionCache, writeSessionCache } from "@/lib/utils";
 
 const USER_STATUS_CACHE_KEY = "user-status";
@@ -441,37 +442,70 @@ export default function ProfilePage() {
 
     try {
       setUploading(true);
-      const formData = new FormData();
-      if (front) formData.append("documentFront", front);
-      if (back) formData.append("documentBack", back);
-      if (selfie) formData.append("documentSelfie", selfie);
 
-      const response = await fetch("/api/user/upload-kyc-documents", {
-        method: "POST",
-        body: formData,
-      });
+      const entries = (
+        [
+          ["front", front],
+          ["back", back],
+          ["selfie", selfie],
+        ] as const
+      ).filter((entry): entry is [typeof entry[0], File] => !!entry[1]);
 
-      const data = await response.json().catch(() => ({}));
-      if (response.ok) {
-        toast({
-          title: t("documentUploaded"),
-          description:
-            language === "pt"
-              ? "Seus documentos foram enviados com sucesso."
-              : "Your documents have been uploaded successfully.",
+      // Compress + upload one-by-one to stay under Vercel request body limits
+      for (const [type, file] of entries) {
+        const compressed = await compressImageForUpload(file);
+        const formData = new FormData();
+        formData.append("file", compressed);
+        formData.append("type", type);
+
+        const response = await fetch("/api/user/upload-kyc-document", {
+          method: "POST",
+          body: formData,
         });
-        clearPending();
-        fetchKycDocuments();
-        fetchUserProfile();
-      } else {
-        throw new Error(data?.error || "Failed to upload documents");
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          const label =
+            type === "front"
+              ? language === "pt"
+                ? "frente do documento"
+                : "document front"
+              : type === "back"
+                ? language === "pt"
+                  ? "verso do documento"
+                  : "document back"
+                : language === "pt"
+                  ? "selfie com documento"
+                  : "selfie with document";
+          throw new Error(
+            data?.error ||
+              (language === "pt"
+                ? `Falha ao enviar ${label}. Tente uma imagem menor em JPG/PNG.`
+                : `Failed to upload ${label}. Try a smaller JPG/PNG image.`)
+          );
+        }
       }
+
+      toast({
+        title: t("documentUploaded"),
+        description:
+          language === "pt"
+            ? "Seus documentos foram enviados com sucesso."
+            : "Your documents have been uploaded successfully.",
+      });
+      clearPending();
+      fetchKycDocuments();
+      fetchUserProfile();
     } catch (e) {
       toast({
         variant: "destructive",
         title: t("uploadFailed"),
         description:
-          e instanceof Error ? e.message : t("failedToUpload"),
+          e instanceof Error
+            ? e.message
+            : language === "pt"
+              ? "Falha ao enviar documentos. Tente imagens menores em JPG/PNG."
+              : t("failedToUpload"),
       });
     } finally {
       setUploading(false);

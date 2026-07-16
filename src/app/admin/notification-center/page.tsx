@@ -277,12 +277,22 @@ export default function NotificationCenterPage() {
       const data = await response.json();
 
       if (response.ok) {
-        toast({
-          title: "Sucesso",
-          description: sendEmail
-            ? "Notificação enviada e email entregue com sucesso"
-            : "Notificação criada com sucesso",
-        });
+        if (sendEmail && data.emailSent === false) {
+          toast({
+            variant: "destructive",
+            title: "Notificação criada, mas o email falhou",
+            description:
+              data.emailResult?.message ||
+              "A mensagem ficou no app, porém o email não foi enviado. Verifique RESEND_API_KEY e FROM_EMAIL.",
+          });
+        } else {
+          toast({
+            title: "Sucesso",
+            description: sendEmail
+              ? "Notificação enviada e email entregue com sucesso"
+              : "Notificação criada com sucesso",
+          });
+        }
 
         // Reset form
         setNotificationSubject("");
@@ -336,6 +346,7 @@ export default function NotificationCenterPage() {
 
     let successCount = 0;
     let failCount = 0;
+    let emailFailCount = 0;
 
     for (const userId of Array.from(selectedUsers)) {
       try {
@@ -352,8 +363,12 @@ export default function NotificationCenterPage() {
           }),
         });
 
+        const data = await response.json().catch(() => ({}));
         if (response.ok) {
           successCount++;
+          if (sendEmail && data.emailSent === false) {
+            emailFailCount++;
+          }
         } else {
           failCount++;
         }
@@ -363,8 +378,11 @@ export default function NotificationCenterPage() {
     }
 
     toast({
+      variant: failCount > 0 || emailFailCount > 0 ? "destructive" : "default",
       title: "Envio em lote concluído",
-      description: `Enviados: ${successCount}${failCount > 0 ? ` | Falhas: ${failCount}` : ""}`,
+      description: `Enviados: ${successCount}${failCount > 0 ? ` | Falhas: ${failCount}` : ""}${
+        emailFailCount > 0 ? ` | Emails falharam: ${emailFailCount}` : ""
+      }`,
     });
 
     setNotificationSubject("");

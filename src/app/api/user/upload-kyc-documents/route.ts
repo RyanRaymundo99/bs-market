@@ -7,6 +7,8 @@ import { existsSync } from "fs";
 import { put } from "@vercel/blob";
 import { heicToJpegBuffer, isHeicFile } from "@/lib/heic-to-jpeg";
 
+export const maxDuration = 60;
+
 const TYPES = ["front", "back", "selfie"] as const;
 type DocType = (typeof TYPES)[number];
 
@@ -55,6 +57,18 @@ export async function POST(request: NextRequest) {
     }
 
     const isVercel = process.env.VERCEL === "1";
+    if (isVercel && !process.env.BLOB_READ_WRITE_TOKEN) {
+      console.error("KYC batch upload - missing BLOB_READ_WRITE_TOKEN");
+      return NextResponse.json(
+        {
+          error:
+            "Armazenamento de documentos não configurado no servidor (Vercel Blob). Contate o suporte.",
+          code: "BLOB_TOKEN_MISSING",
+        },
+        { status: 500 }
+      );
+    }
+
     const updateData: Record<string, string | Date> = {
       updatedAt: new Date(),
     };
