@@ -47,7 +47,9 @@ import {
   ChevronRight,
   AlertTriangle,
   Trash2,
+  LogOut,
 } from "lucide-react";
+import { handleLogout as performLogout } from "@/lib/auth-utils";
 
 interface UserProfile {
   id: string;
@@ -119,9 +121,19 @@ export default function ProfilePage() {
   const [deleteStep2, setDeleteStep2] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const { toast } = useToast();
   const { t, language } = useLanguage();
+
+  const onLogout = useCallback(async () => {
+    setIsLoggingOut(true);
+    try {
+      await performLogout();
+    } finally {
+      setIsLoggingOut(false);
+    }
+  }, []);
 
   useLayoutEffect(() => {
     const cached = readSessionCache<UserProfile>(
@@ -1534,6 +1546,35 @@ export default function ProfilePage() {
                 <p className="text-muted-foreground">Nenhuma transação encontrada.</p>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Account / Logout Section */}
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <LogOut className="w-5 h-5" />
+              {language === "pt" ? "Conta" : "Account"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-muted-foreground">
+                {language === "pt"
+                  ? "Encerre sua sessão neste dispositivo."
+                  : "Sign out of your session on this device."}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onLogout}
+                disabled={isLoggingOut}
+                className="w-full gap-2 sm:w-auto"
+              >
+                <LogOut className="h-4 w-4 shrink-0" />
+                {isLoggingOut ? t("loggingOut") : t("logout")}
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
