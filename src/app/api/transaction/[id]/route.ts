@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { validateSession } from "@/lib/session";
+import type { Prisma } from "../../../../../prisma/generated/client";
 
 function getMetadataString(metadata: unknown, key: string) {
   if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
@@ -18,6 +19,31 @@ function getAdminMessage(metadata: unknown) {
     getMetadataString(metadata, "reason") ||
     getMetadataString(metadata, "refundReason")
   );
+}
+
+type DepositWithTransaction = Prisma.DepositGetPayload<{
+  include: { transaction: true };
+}>;
+
+function buildDepositData(deposit: DepositWithTransaction) {
+  const metadata = deposit.transaction?.metadata ?? null;
+  return {
+    id: deposit.id,
+    type: "DEPOSIT" as const,
+    amount: Number(deposit.amount),
+    currency: deposit.currency,
+    status: deposit.status,
+    createdAt: deposit.createdAt,
+    paymentMethod: deposit.paymentMethod,
+    pixQrCode: deposit.pixQrCode,
+    pixQrCodeBase64: deposit.pixQrCodeBase64,
+    externalId: deposit.externalId,
+    transactionId: deposit.transactionId,
+    proofUrl: deposit.proofUrl,
+    adminMessage: getAdminMessage(metadata),
+    adminActionAt: getMetadataString(metadata, "rejectedAt"),
+    adminActionBy: getMetadataString(metadata, "rejectedBy"),
+  };
 }
 
 export async function GET(
@@ -46,12 +72,15 @@ export async function GET(
       },
     });
 
-    // If not found, try searching by Deposit ID
+    // If not found, try searching by Deposit.
+    // The purchase history (crypto buy via PIX) links to this page using the
+    // Order's externalOrderId / provider payment id, so we must also resolve
+    // deposits by externalId and paymentId — not only by the primary key.
     if (!transaction) {
       const deposit = await prisma.deposit.findFirst({
         where: {
-          id: id,
           userId: userId,
+          OR: [{ id: id }, { externalId: id }, { paymentId: id }],
         },
         include: {
           transaction: true,
@@ -59,38 +88,21 @@ export async function GET(
       });
 
       if (deposit) {
-        const metadata = deposit.transaction?.metadata ?? null;
-        // Return structured data for the page
         return NextResponse.json({
           success: true,
-          data: {
-            id: deposit.id,
-            type: "DEPOSIT",
-            amount: Number(deposit.amount),
-            currency: deposit.currency,
-            status: deposit.status,
-            createdAt: deposit.createdAt,
-            paymentMethod: deposit.paymentMethod,
-            pixQrCode: deposit.pixQrCode,
-            pixQrCodeBase64: deposit.pixQrCodeBase64,
-            externalId: deposit.externalId,
-            transactionId: deposit.transactionId,
-            proofUrl: deposit.proofUrl,
-            adminMessage: getAdminMessage(metadata),
-            adminActionAt: getMetadataString(metadata, "rejectedAt"),
-            adminActionBy: getMetadataString(metadata, "rejectedBy"),
-            // Add other relevant fields
-          },
+          data: buildDepositData(deposit),
         });
       }
     }
 
-    // If still not found, try searching by Withdrawal ID
+    // If still not found, try searching by Withdrawal. Like deposits, the id
+    // may be the withdrawal primary key or its externalId, depending on which
+    // flow linked here.
     if (!transaction) {
       const withdrawal = await prisma.withdrawal.findFirst({
         where: {
-          id: id,
           userId: userId,
+          OR: [{ id: id }, { externalId: id }],
         },
         include: {
           transaction: true,
@@ -120,6 +132,67 @@ export async function GET(
             adminMessage: getAdminMessage(metadata),
             adminActionAt: getMetadataString(metadata, "rejectedAt"),
             adminActionBy: getMetadataString(metadata, "rejectedBy"),
+          },
+        });
+      }
+    }
+
+    // If still not found, resolve as an Order (crypto buy). Pending PIX
+    // purchases only have an Order + Deposit (no Transaction yet), and the UI
+    // links here using the Order id or its externalOrderId.
+    if (!transaction) {
+      const order = await prisma.order.findFirst({
+        where: {
+          userId: userId,
+          OR: [{ id: id }, { externalOrderId: id }],
+        },
+        include: {
+          transaction: {
+            include: { deposit: true, withdrawal: true },
+          },
+        },
+      });
+
+      if (order) {
+        // Prefer the related deposit (has PIX QR code + BRL amount).
+        const orderExternalId = order.externalOrderId ?? undefined;
+        const relatedDeposit = await prisma.deposit.findFirst({
+          where: {
+            userId: userId,
+            OR: [
+              ...(order.transactionId
+                ? [{ transactionId: order.transactionId }]
+                : []),
+              ...(orderExternalId
+                ? [{ paymentId: orderExternalId }, { externalId: orderExternalId }]
+                : []),
+            ],
+          },
+          include: { transaction: true },
+        });
+
+        if (relatedDeposit) {
+          return NextResponse.json({
+            success: true,
+            data: buildDepositData(relatedDeposit),
+          });
+        }
+
+        // Fall back to the order's own data so a real purchase never shows
+        // "Transaction not found".
+        const metadata = order.transaction?.metadata ?? null;
+        return NextResponse.json({
+          success: true,
+          data: {
+            id: order.externalOrderId || order.id,
+            type: "BUY_CRYPTO",
+            amount: Number(order.amount),
+            currency: order.baseCurrency,
+            status: order.status,
+            createdAt: order.createdAt,
+            paymentMethod: "PIX",
+            transactionId: order.transactionId,
+            adminMessage: getAdminMessage(metadata),
           },
         });
       }
