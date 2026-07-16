@@ -54,7 +54,16 @@ const Home = () => {
       <div className="relative z-10 flex flex-col min-h-screen">
         {/* Hero area: image behind header + hero content */}
         <div className="relative min-h-[85vh] flex flex-col">
-          <div className="absolute inset-0 hero-bg-image" aria-hidden />
+          <Image
+            src="/imgs/becca-tapert-QofjUnxy9LY-unsplash.jpg"
+            alt=""
+            aria-hidden
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover object-center"
+          />
+          <div className="absolute inset-0 landing-hero-overlay" aria-hidden />
           <header className="relative z-10 shrink-0 bg-transparent">
             <nav className="container mx-auto pl-4 pr-4 md:pl-6 md:pr-8 lg:pr-12 xl:pr-16 max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px]">
               <div className="flex items-center justify-start h-20 md:h-24 py-2 md:py-3">
@@ -193,7 +202,16 @@ const Home = () => {
 
           {/* Use cases */}
           <section id="para-quem" className="relative py-20 md:py-28 lg:py-32">
-            <div className="absolute inset-0 para-quem-bg-image" aria-hidden />
+            <Image
+              src="/imgs/guilherme-stecanella-4jy1DQKmX2w-unsplash.jpg"
+              alt=""
+              aria-hidden
+              fill
+              loading="lazy"
+              sizes="100vw"
+              className="object-cover object-center"
+            />
+            <div className="absolute inset-0 landing-para-quem-overlay" aria-hidden />
             <div className="container relative z-10 mx-auto px-4 md:px-6 lg:px-8 max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px]">
               <p className="landing-section-label">Para quem é</p>
               <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground mt-1 mb-3">
@@ -266,7 +284,16 @@ const Home = () => {
 
           {/* Testimonials */}
           <section id="depoimentos" className="relative py-20 md:py-28 lg:py-32">
-            <div className="absolute inset-0 depoimentos-bg-image" aria-hidden />
+            <Image
+              src="/imgs/samuel-cruz-gjwBBhPPvOs-unsplash.jpg"
+              alt=""
+              aria-hidden
+              fill
+              loading="lazy"
+              sizes="100vw"
+              className="object-cover object-center"
+            />
+            <div className="absolute inset-0 landing-depoimentos-overlay" aria-hidden />
             <div className="container relative z-10 mx-auto px-4 md:px-6 lg:px-8 max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px]">
               <p className="landing-section-label">Depoimentos</p>
               <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground mt-1 mb-3">

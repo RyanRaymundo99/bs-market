@@ -685,20 +685,13 @@
   background-color: hsl(var(--background));
 }
 
-.home-bg-image {
-  position: absolute;
-  inset: 0;
-  background-image: url("/imgs/vitalii-khodzinskyi-UZwaWf6lrNY-unsplash.jpg");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  pointer-events: none;
-}
-
-.home-bg-image::after {
-  content: "";
-  position: absolute;
-  inset: 0;
+/*
+ * Landing background images are rendered via next/image (<Image fill>) for
+ * automatic AVIF/WebP + responsive sizing, so only the darkening gradient
+ * overlays live in CSS. Previously these were multi-MB raw JPEGs loaded as CSS
+ * background-images, which caused a slow "black screen" on mobile.
+ */
+.landing-hero-overlay {
   background: linear-gradient(
     180deg,
     rgba(0, 0, 0, 0.75) 0%,
@@ -708,45 +701,7 @@
   pointer-events: none;
 }
 
-/* Hero section only — image and overlay, scoped to hero */
-.hero-bg-image {
-  position: absolute;
-  inset: 0;
-  background-image: url("/imgs/becca-tapert-QofjUnxy9LY-unsplash.jpg");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  pointer-events: none;
-}
-
-.hero-bg-image::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    180deg,
-    rgba(0, 0, 0, 0.75) 0%,
-    rgba(0, 0, 0, 0.5) 40%,
-    rgba(0, 0, 0, 0.7) 100%
-  );
-  pointer-events: none;
-}
-
-/* "Para quem é" section background */
-.para-quem-bg-image {
-  position: absolute;
-  inset: 0;
-  background-image: url("/imgs/guilherme-stecanella-4jy1DQKmX2w-unsplash.jpg");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  pointer-events: none;
-}
-
-.para-quem-bg-image::after {
-  content: "";
-  position: absolute;
-  inset: 0;
+.landing-para-quem-overlay {
   background: linear-gradient(
     180deg,
     rgba(0, 0, 0, 0.8) 0%,
@@ -756,21 +711,7 @@
   pointer-events: none;
 }
 
-/* Depoimentos (Testimonials) section background */
-.depoimentos-bg-image {
-  position: absolute;
-  inset: 0;
-  background-image: url("/imgs/samuel-cruz-gjwBBhPPvOs-unsplash.jpg");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  pointer-events: none;
-}
-
-.depoimentos-bg-image::after {
-  content: "";
-  position: absolute;
-  inset: 0;
+.landing-depoimentos-overlay {
   background: linear-gradient(
     180deg,
     rgba(0, 0, 0, 0.82) 0%,
