@@ -11,7 +11,16 @@ export async function POST(request: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { id: authSession.userId },
-      select: { id: true, name: true, email: true, cpf: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        cpf: true,
+        documentFront: true,
+        documentBack: true,
+        documentSelfie: true,
+        documentNumber: true,
+      },
     });
 
     if (!user) {
@@ -29,13 +38,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update user status to indicate KYC has been submitted
+    if (!user.documentFront || !user.documentBack || !user.documentSelfie) {
+      return NextResponse.json(
+        {
+          error:
+            "Please upload front, back, and selfie documents before submitting for review",
+          code: "KYC_DOCUMENTS_MISSING",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Mark KYC as submitted for review. Do not demote account approval —
+    // signup already auto-approves; only KYC remains pending admin review.
     const updatedUser = await prisma.user.update({
       where: { id: user.id },
       data: {
         kycStatus: "PENDING",
-        approvalStatus: "PENDING",
         kycSubmittedAt: new Date(),
+        ...(user.documentNumber ? {} : { documentNumber: user.cpf }),
         updatedAt: new Date(),
       },
       select: {

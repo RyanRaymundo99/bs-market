@@ -868,7 +868,8 @@ export default function AdminUsersPage() {
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Falha ao aprovar KYC",
+        description:
+          error instanceof Error ? error.message : "Falha ao aprovar KYC",
       });
     } finally {
       setKycActionLoading(null);
@@ -2988,9 +2989,24 @@ export default function AdminUsersPage() {
               <div className="flex flex-wrap gap-4 pt-4 border-t border-border">
                 {viewingKYCUser.kycStatus === "PENDING" && (
                   <>
+                    {!(
+                      viewingKYCUser.documentFront &&
+                      viewingKYCUser.documentBack &&
+                      viewingKYCUser.documentSelfie
+                    ) && (
+                      <p className="w-full text-sm text-amber-400">
+                        Envio incompleto: o usuário precisa enviar frente, verso e
+                        selfie antes da aprovação.
+                      </p>
+                    )}
                     <Button
                       onClick={() => handleKYCApprove(viewingKYCUser.id)}
-                      disabled={kycActionLoading === viewingKYCUser.id}
+                      disabled={
+                        kycActionLoading === viewingKYCUser.id ||
+                        !viewingKYCUser.documentFront ||
+                        !viewingKYCUser.documentBack ||
+                        !viewingKYCUser.documentSelfie
+                      }
                       className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       <CheckCircle className="w-4 h-4 mr-2" />

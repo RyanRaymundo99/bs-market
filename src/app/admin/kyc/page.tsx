@@ -202,7 +202,8 @@ const AdminKYCPage = () => {
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Falha ao aprovar KYC",
+        description:
+          error instanceof Error ? error.message : "Falha ao aprovar KYC",
       });
     } finally {
       setActionLoading(null);

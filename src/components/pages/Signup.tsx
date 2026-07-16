@@ -206,9 +206,10 @@ const Signup = () => {
                 <div className="flex items-start gap-3">
                   <FormControl>
                     <Checkbox
+                      id="acceptTerms"
                       checked={field.value}
                       onCheckedChange={field.onChange}
-                      className="border-border data-[state=checked]:bg-primary data-[state=checked]:border-primary bg-input mt-0.5"
+                      className="border-border data-[state=checked]:bg-primary data-[state=checked]:border-primary bg-input mt-0.5 shrink-0"
                     />
                   </FormControl>
                   <label

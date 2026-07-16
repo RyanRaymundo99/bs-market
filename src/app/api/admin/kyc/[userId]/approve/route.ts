@@ -17,6 +17,35 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const existingUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        documentFront: true,
+        documentBack: true,
+        documentSelfie: true,
+      },
+    });
+
+    if (!existingUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    if (
+      !existingUser.documentFront ||
+      !existingUser.documentBack ||
+      !existingUser.documentSelfie
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Cannot approve KYC without all three documents (front, back, and selfie).",
+          code: "KYC_DOCUMENTS_MISSING",
+        },
+        { status: 400 }
+      );
+    }
+
     // Update user KYC status to approved
     const user = await prisma.user.update({
       where: { id: userId },

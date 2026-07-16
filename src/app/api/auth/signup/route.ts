@@ -92,14 +92,14 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Notify admin email when new account is created (ready for approval) - non-blocking
+      // Notify admin email when new account is created (KYC still pending) - non-blocking
       getAdminAlertSettings()
         .then((settings) => {
           if (settings.notifyNewAccount && settings.emails?.length) {
             return sendAdminAlertToAll(
               settings,
-              "New account created – ready for approval",
-              `${user.name} (${user.email}) has registered and is pending approval. User ID: ${user.id}.`
+              "New account created – KYC pending",
+              `${user.name} (${user.email}) has registered. Account is approved; KYC is still pending. User ID: ${user.id}.`
             );
           }
         })
