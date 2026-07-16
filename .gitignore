@@ -129,6 +129,7 @@ docs/
 !DEPLOY.md
 !DEPLOYMENT_GUIDE.md
 !VERCEL_DEPLOY.md
+!AGENTS.md
 
 # Security
 *.pem
